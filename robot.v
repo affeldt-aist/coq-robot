@@ -190,18 +190,22 @@ Lemma dotmulC (u v : vector) : u *d v = v *d u.
 Proof. by rewrite /dotmul -{1}[u]trmxK -trmx_mul mxE. Qed.
 
 Lemma normal_sym (u v : vector) : u _|_ v = v _|_ u.
-Proof. by rewrite !normalvv dotmulC. Qed.
+Proof.
+rewrite !(sameP sub_kermxP eqP) -{1}[u]trmxK -trmx_mul.
+by rewrite -{1}trmx0 (inj_eq (@trmx_inj _ _ _)).
+Qed.
 
-Lemma normalvN (u v : vector) : (- u) _|_ v = u _|_ v.
-Proof. rewrite -scaleN1r scalemx_sub.
+Lemma normalNv (u v : vector) : (- u) _|_ v = u _|_ v.
+Proof. by rewrite !(sameP sub_kermxP eqP) mulNmx oppr_eq0. Qed.
+
+Lemma normalvN (u v : vector) : u _|_ (- v) = u _|_ v.
+Proof. by rewrite [LHS]normal_sym normalNv normal_sym. Qed.
+
 
 Lemma common_normal_crossmul u v : (crossmul u v) _|_ u, v.
 Proof.
-rewrite normalv2E ![(_ *v _) _|_ _]normal_sym.
-rewrite crossmulC.
- -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx_mul !trmxK trmx0.
-rewrite andbC {1}crossmulC linearN mulmxN !crossmul_orthogonal.
-by rewrite oppr0 eqxx.
+rewrite normalv2E ![(_ *v _) _|_ _]normal_sym crossmul_normal.
+by rewrite crossmulC normalvN crossmul_normal.
 Qed.
 
 (* u /\ (v + w) = u /\ v + u /\ w *)
