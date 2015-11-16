@@ -358,6 +358,21 @@ rewrite inE => /eqP ->.
   by rewrite addrK.
 Qed.
 
+Record homogeneous_spec (A B : frame) : Type := {
+  rotation : 'M[R]_3 ;
+  position : vec A }.
+
+Definition homogeneous_mx A B (T : homogeneous_spec A B) : 'M[R]_4 :=
+  row_mx (col_mx (rotation T) 0) (col_mx (let: Vec x := position T in x^T) 1).
+
+Definition homogeneous_trans A B (T : homogeneous_spec A B) (x : vec B) : vec A :=
+  Vec _ (\row_(i < 3) (homogeneous_mx T *m col_mx (let: Vec x' := x in x'^T) 1)^T 0 (inord i)).
+
+
+
+
+
+
   option ('rV[R]_3 (* point *) * 'rV[R]_3 (* vec *) ).
 Admitted.
 
