@@ -56,8 +56,10 @@ Definition joints := fun i => (chain (insubd ord0 i)).2.
 
 (* by definition, zi = axis of joint i *)
 
-Definition common_normal (u v : vector) :=
-  fun w : vector => (w <= kermx (col_mx u v)^T)%MS.
+Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
+Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
+ (A at next level, at level 8,
+ format "u  _|_  A , B ").
 
 Lemma row_mx_eq0 (M : zmodType) (m n1 n2 : nat) (A1 : 'M[M]_(m, n1)) (A2 : 'M_(m, n2)):
  (row_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
@@ -66,14 +68,22 @@ apply/eqP/andP; last by case=> /eqP -> /eqP ->; rewrite row_mx0.
 by rewrite -row_mx0 => /eq_row_mx [-> ->].
 Qed.
 
-Lemma common_normalE (u v w : vector) :
-  common_normal u v w = (w *m u^T == 0) && (w *m v^T == 0).
-Proof.
-by rewrite /common_normal (sameP sub_kermxP eqP) tr_col_mx mul_mx_row row_mx_eq0.
-Qed.
+Definition dotmul (u v : 'rV[R]_3) : R := (u *m v^T) 0 0.
+Local Notation "*d%R" := (@dotmul _).
+Local Notation "u *d w" := (dotmul u w) (at level 40).
+
+Lemma dotmulE (u v : 'rV[R]_3) : u *d v = \sum_k u 0 k * v 0 k.
+Proof. by rewrite [LHS]mxE; apply: eq_bigr=> i; rewrite mxE. Qed.
+
+Lemma normalvv (u v : 'rV[R]_3) : (u _|_ v) = (u *d v == 0).
+Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
+
+Lemma normalv2E m p (u : 'rV[R]_3) (A : 'M[R]_(m,3)) (B : 'M[R]_(p,3)) :
+  (u _|_ A, B) = (u _|_ A) && (u _|_ B).
+Proof. by rewrite !(sameP sub_kermxP eqP) tr_col_mx mul_mx_row row_mx_eq0. Qed.
 
 Definition common_normal_xz (i : 'I_n) :=
-  common_normal (z_ax (frames i.-1)) (z_ax (frames i))(x_ax (frames i.-1)).
+  (z_ax (frames i.-1)) _|_ (z_ax (frames i)), (x_ax (frames i.-1)).
 
 (* coordinate in frame f *)
 Inductive coor (f : frame) : Type := Coor of 'rV[R]_3.
@@ -110,180 +120,145 @@ Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
 
 (* find a better name *)
 Definition triple_product_mat (u v w : vector) :=
-  \matrix_(i < 3, j < 3) if i == 0 then u 0 j
-                         else if i == 1 then v 0 j
-                         else w 0 j.
+  \matrix_(i < 3, j < 3) tnth [tuple u 0 j; v 0 j; w 0 j] i.
 
 (* Definition mixed_product_mat n (u : 'I_n -> 'rV[R]_n) :=  *)
 (*   \matrix_(i < n, j < n) u i ord0 j. *)
 
-(* Definition cross_product (u : 'rV[R]_n.+1) (v : 'I_n -> 'rV[R]_n.+1) : 'rV[R]_n.+1 := *)
+(* Definition crossmul (u : 'rV[R]_n.+1) (v : 'I_n -> 'rV[R]_n.+1) : 'rV[R]_n.+1 := *)
 (*   \row_(k < n) \det (mixed_product_mat (delta_mx 0 k)). *)
 
-Definition cross_product (u v : vector) : vector :=
+Definition crossmul (u v : vector) : vector :=
   \row_(k < 3) \det (triple_product_mat (delta_mx 0 k) u v).
 
-(*Definition cross_product (u v : vector) : vector :=
+Local Notation "*v%R" := (@crossmul _).
+Local Notation "u *v w" := (crossmul u w) (at level 40).
+
+(*Definition crossmul (u v : vector) : vector :=
   \row_(i < 3) \det (col_mx (delta_mx (ord0 : 'I_1) i) (col_mx u v)).*)
 
-Lemma cross_productC u v : cross_product u v = - cross_product v u.
+Lemma crossmulC u v : crossmul u v = - crossmul v u.
 Proof.
-rewrite /cross_product; apply/rowP => i; rewrite !mxE.
+rewrite /crossmul; apply/rowP => k; rewrite !mxE.
 set M := (X in - \det X).
 transitivity (\det (row_perm (tperm (1 : 'I__) 2%:R) M)); last first.
   by rewrite row_permE detM det_perm odd_tperm /= expr1 mulN1r.
-congr (\det _); apply/matrixP => a b; rewrite !mxE.
-rewrite -![tperm _ _ a == _](inj_eq (@perm_inj _ (tperm (1 : 'I__) 2%:R))).
-by rewrite !tpermK !permE; move: a; do !case=> //.
+congr (\det _); apply/matrixP => i j; rewrite !mxE eqxx /=.
+by case: i => [[|[|[]]]] ? //=; rewrite permE.
 Qed.
 
-Lemma cross_product_triple (u v w : 'rV[R]_3) :
-  u *m (cross_product v w)^T = (\det (triple_product_mat u v w))%:M.
+Lemma lift0E m (i : 'I_m.+1) : fintype.lift ord0 i = i.+1%:R.
+Proof. by apply/val_inj; rewrite Zp_nat /= modn_small // ltnS. Qed.
+
+Ltac simp_ord :=
+  do ?[rewrite !lift0E
+      |rewrite ord1
+      |rewrite -[fintype.lift _ _]natr_Zp /=
+      |rewrite -[Ordinal _]natr_Zp /=].
+Ltac simpr := rewrite ?(mulr0,mul0r,mul1r,mulr1,addr0,add0r).
+
+(* Lemma lift1E m (i : 'I_m.+2) : fintype.lift 1 i = i.+1%:R. *)
+(* Proof. apply/val_inj; rewrite Zp_nat /= !modn_small 1?ltnS //. Qed. *)
+
+Lemma crossmul_triple (u v w : 'rV[R]_3) :
+  u *d (v *v w) = \det (triple_product_mat u v w).
 Proof.
 pose M (k : 'I_3) : 'M_3 := triple_product_mat (delta_mx 0 k) v w.
-pose o1 : 'I_3 := fintype.lift 0 0; pose o2 : 'I_3 := fintype.lift 0 (fintype.lift 0 0).
-pose Mu12 := triple_product_mat (u 0 o1 *: delta_mx 0 o1 + u 0 o2 *: delta_mx 0 o2) v w.
+pose Mu12 := triple_product_mat (u 0 1 *: delta_mx 0 1 + u 0 2%:R *: delta_mx 0 2%:R) v w.
 rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u 0 0) 1) ?mul1r; last 3 first.
-- rewrite -!linearZ -!linearD /= scale1r.
-  apply/rowP => j; rewrite !mxE !eqxx.
-  by rewrite {1}[u]row_sum_delta !big_ord_recl big_ord0 !mxE !addrA addr0 -!val_eqE.
-- by apply/matrixP => i j; rewrite !mxE.
-- by apply/matrixP => i j; rewrite !mxE.
+- apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
+  by case: j => [[|[|[]]]] ? //=; simp_ord; simpr.
+- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
+- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
 rewrite [\det Mu12](@determinant_multilinear _ _ _
-  (M o1) (M o2) 0 (u 0 o1) (u 0 o2)); last 3 first.
-- rewrite -!linearZ -!linearD /=.
-  by apply/rowP => j; rewrite !mxE !eqxx.
-- by apply/matrixP => i j; rewrite !mxE.
-- by apply/matrixP => i j; rewrite !mxE.
-rewrite mulmx_sum_row !big_ord_recl big_ord0 /=.
-rewrite -!tr_col addr0 !addrA !rmorphD /=.
-by congr (_ + _ + _); apply/rowP=> j0; rewrite !ord1 !mxE ?mulr1n.
+  (M 1) (M 2%:R) 0 (u 0 1) (u 0 2%:R)); last 3 first.
+- apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
+  by case: j => [[|[|[]]]] ? //=; simp_ord; simpr.
+- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
+- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
+by rewrite dotmulE !big_ord_recl big_ord0 addr0 /= !mxE; simp_ord.
 Qed.
 
-Lemma cross_product_orthogonal (u v : 'rV[R]_3) :
-  u *m (cross_product u v)^T = 0.
+Lemma crossmul_normal (u v : 'rV[R]_3) : u _|_ (u *v v).
 Proof.
-rewrite cross_product_triple (determinant_alternate (oner_neq0 _)) => [|i].
-  by rewrite [RHS]mx11_scalar mxE.
+rewrite normalvv crossmul_triple.
+rewrite (determinant_alternate (oner_neq0 _)) => [|i] //.
 by rewrite !mxE.
 Qed.
 
-Lemma common_normal_cross_product u v : common_normal u v (cross_product u v).
+Lemma dotmulC (u v : vector) : u *d v = v *d u.
+Proof. by rewrite /dotmul -{1}[u]trmxK -trmx_mul mxE. Qed.
+
+Lemma normal_sym (u v : vector) : u _|_ v = v _|_ u.
+Proof. by rewrite !normalvv dotmulC. Qed.
+
+Lemma normalvN (u v : vector) : (- u) _|_ v = u _|_ v.
+Proof. rewrite -scaleN1r scalemx_sub.
+
+Lemma common_normal_crossmul u v : (crossmul u v) _|_ u, v.
 Proof.
-rewrite common_normalE -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx_mul !trmxK trmx0.
-rewrite andbC {1}cross_productC linearN mulmxN !cross_product_orthogonal.
+rewrite normalv2E ![(_ *v _) _|_ _]normal_sym.
+rewrite crossmulC.
+ -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx_mul !trmxK trmx0.
+rewrite andbC {1}crossmulC linearN mulmxN !crossmul_orthogonal.
 by rewrite oppr0 eqxx.
 Qed.
 
-Let o1 : 'I_3 := fintype.lift 0 0.
-Let o2 : 'I_3 := fintype.lift 0 (fintype.lift 0 0).
-
 (* u /\ (v + w) = u /\ v + u /\ w *)
-Lemma cross_productDl : left_distributive cross_product (fun x y => x + y).
+Lemma crossmulDl : left_distributive crossmul +%R.
 Proof.
-move=> u v w; apply/rowP => i; rewrite 2!mxE.
-pose B := triple_product_mat (delta_mx 0 i) u w.
-pose C := triple_product_mat (delta_mx 0 i) v w.
-rewrite (@determinant_multilinear _ _ (triple_product_mat _ _ _) B C o1 1 1); last 3 first.
-- apply/rowP => i'; rewrite mxE /triple_product_mat mxE /= mxE mxE.
-  congr GRing.add; by rewrite mxE {}/B /triple_product_mat !mxE /= mul1r.
-- apply/matrixP => i' j; rewrite !mxE /=.
-  by move: (neq_lift o1 i') => /negbTE; rewrite eq_sym (val_inj o1 1) // => ->.
-- apply/matrixP => i' j; rewrite !mxE /=.
-  by move: (neq_lift o1 i') => /negbTE; rewrite eq_sym (val_inj o1 1) // => ->.
-by rewrite 2!mul1r /cross_product 2!mxE.
+move=> u v w; apply/rowP => k; rewrite 2!mxE.
+pose M u := triple_product_mat (delta_mx 0 k) u w.
+rewrite (@determinant_multilinear _ _ (triple_product_mat _ _ _)
+        (M u) (M v) 1 1 1); first by rewrite !mul1r 2!mxE.
+- by apply/rowP => j; rewrite !mxE /= !mul1r.
+- by apply/matrixP=> i j; rewrite !mxE /= [_ == 1]eq_sym (negPf (neq_lift _ _)). 
+- by apply/matrixP=> i j; rewrite !mxE /= [_ == 1]eq_sym (negPf (neq_lift _ _)). 
 Qed.
 
-Local Notation "u ./\ w" := (cross_product u w) (at level 9).
+Lemma det_mx11 (A : 'M[R]_1) : \det A = A 0 0.
+Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
 
-Lemma cross_product_0 u v : (u ./\ v) 0 0 = u 0 o1 * v 0 o2 - u 0 o2 * v 0 o1.
+Lemma cofactor_mx22 (A : 'M[R]_2) i j :
+  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
 Proof.
-rewrite /cross_product !mxE (expand_det_row _ ord0) 3!big_ord_recl /= big_ord0.
-rewrite !mxE /= !(mul1r, mul0r, add0r, addr0) /cofactor expr0 mul1r.
-rewrite (_ : row' ord0 _ = \matrix_(i, j)
-  if i == 0 then u 0 (fintype.lift 0 j) else v 0 (fintype.lift 0 j)); last first.
-  apply/matrixP => i j; rewrite !mxE /=; by case: ifP.
-rewrite (expand_det_row _ ord0) 2!big_ord_recl /= big_ord0 /=.
-rewrite !mxE /= /cofactor /= expr0 mul1r /bump expr1 mulN1r.
-rewrite (_ : row' ord0 _ = (v 0 o2)%:M); last first.
-  apply/matrixP => i j; by rewrite (ord1 i) (ord1 j) !mxE /= mulr1n.
-rewrite (_ : row' ord0 _ = (v 0 o1)%:M); last first.
-  apply/matrixP => i j; rewrite (ord1 i) (ord1 j) !mxE /= mulr1n.
-  congr (v 0); by apply val_inj.
-by rewrite mulrN 2!det_scalar expr1 addr0 expr1.
+rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
+by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
 Qed.
 
-Lemma I20false (i : 'I_2) : i != 0 -> i = fintype.lift 0 0.
-Proof.
-move=> i0.
-have : i \in enum 'I_2 by rewrite mem_enum.
-rewrite 2!enum_ordS (_ : enum 'I_0 = nil) // -enum0; last first.
-  apply eq_enum => i'; by move: (ltn_ord i').
-rewrite inE (negbTE i0) /= inE; case/orP => [/eqP // |].
-by rewrite enum0.
+Lemma det_mx22 (A : 'M[R]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
+Proof. 
+rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
+rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
+by rewrite !(lift0E, add0r) /= addrr_char2.
 Qed.
 
-Lemma cross_product_1 u v : (u ./\ v) 0 o1 = u 0 o2 * v 0 0 - u 0 0 * v 0 o2.
+Lemma crossmulE u v : (u *v v) = \row_j tnth [tuple
+  u 0 1 * v 0 2%:R - u 0 2%:R * v 0 1 ;
+  u 0 2%:R * v 0 0 - u 0 0 * v 0 2%:R ;
+  u 0 0 * v 0 1 - u 0 1 * v 0 0] j.
 Proof.
-rewrite /cross_product !mxE (expand_det_row _ ord0) 3!big_ord_recl /= big_ord0.
-rewrite !mxE /= !(mul1r, mul0r, add0r, addr0) /cofactor expr1 mulN1r.
-rewrite (_ : row' ord0 _ = \matrix_(i, j)
-  if i == 0 then if j == 0 then u 0 0 else u 0 o2
-  else if j == 0 then v 0 0 else v 0 o2); last first.
-  apply/matrixP => i j; rewrite !mxE /=.
-  case: ifP.
-    case: ifP => [/eqP -> _| /negbT/I20false -> //].
-    case: ifP => [/eqP -> | /negbT/I20false ->]; congr (u 0); by apply val_inj.
-  case: ifP => [/eqP -> // | /negbT/I20false -> ].
-  case: ifP => [/eqP -> _ | /negbT/I20false -> _]; congr (v 0); by apply val_inj.
-rewrite (expand_det_row _ ord0) 2!big_ord_recl /= big_ord0 /=.
-rewrite !mxE /= /cofactor /= expr0 mul1r /bump expr1 mulN1r.
-rewrite (_ : row' ord0 _ = (v 0 o2)%:M); last first.
-  apply/matrixP => i j; by rewrite (ord1 i) (ord1 j) !mxE /= mulr1n.
-rewrite (_ : row' ord0 _ = (v 0 0)%:M); last first.
-  apply/matrixP => i j; by rewrite (ord1 i) (ord1 j) !mxE /= mulr1n.
-by rewrite mulrN 2!det_scalar expr1 addr0 expr1 opprB.
-Qed.
-
-Lemma cross_product_2 u v : (u ./\ v) 0 o2 = u 0 0 * v 0 o1 - u 0 o1 * v 0 0.
-Proof.
-rewrite /cross_product !mxE (expand_det_row _ ord0) 3!big_ord_recl /= big_ord0.
-rewrite !mxE /= !(mul1r, mul0r, add0r, addr0) /cofactor /= expr2 mulrN1 opprK mul1r.
-rewrite (_ : row' ord0 _ = \matrix_(i, j) if i == 0 then u 0 (inord j) else v 0 (inord j)); last first.
-  apply/matrixP => i j; rewrite !mxE /=.
-  case: ifP.
-    case: ifP => [/eqP -> _| /negbT/I20false -> //].
-    congr (u 0); apply val_inj => /=.
-    by rewrite /bump /= addn0 add1n ltnNge -ltnS (ltn_ord j) /= add0n inordK // (ltn_trans (ltn_ord j)).
-  case: ifP => [/eqP -> // | /negbT/I20false -> _].
-  congr (v 0); apply val_inj => /=.
-  by rewrite /bump /= addn0 add1n ltnNge -ltnS (ltn_ord j) /= add0n inordK // (ltn_trans (ltn_ord j)).
-rewrite (expand_det_row _ ord0) 2!big_ord_recl /= big_ord0 /=.
-rewrite !mxE /= /cofactor /= expr0 mul1r /bump expr1 mulN1r.
-rewrite (_ : row' ord0 _ = (v 0 o1)%:M); last first.
-  apply/matrixP => i j; rewrite (ord1 i) (ord1 j) !mxE /= mulr1n.
-  congr (v 0); apply val_inj => /=; by rewrite inordK.
-rewrite (_ : row' ord0 _ = (v 0 0)%:M); last first.
-  apply/matrixP => i j; rewrite (ord1 i) (ord1 j) !mxE /= mulr1n.
-  congr (v 0); apply val_inj => /=; by rewrite inordK.
-rewrite mulrN 2!det_scalar expr1 addr0 expr1 leqnn addn0 /=.
-congr (u 0 _ * _ - u 0 _ * _); apply val_inj => /=; by rewrite inordK.
+apply/rowP => i; rewrite !mxE (expand_det_row _ ord0).
+rewrite !(mxE, big_ord_recl, big_ord0) !(mul0r, mul1r, addr0).
+rewrite /cofactor !det_mx22 !mxE /= mul1r mulN1r opprB -signr_odd mul1r.
+do !rewrite -[fintype.lift _ _]natr_Zp /=.
+by case: i => [[|[|[]]]] //= ?; rewrite ?(mul1r,mul0r,add0r,addr0).
 Qed.
 
 Definition dotmul (u v : 'rV[R]_3) : R := (u *m v^T) 0 0.
 
-Lemma double_cross_product (u v w : 'rV[R]_3) : u ./\ (v ./\ w) = (dotmul u w) *: v - (dotmul u v) *: w.
+Lemma double_crossmul (u v w : 'rV[R]_3) : u *v (v *v w) = (dotmul u w) *: v - (dotmul u v) *: w.
 Proof.
 apply/rowP => i.
-have : i \in [:: ord0 ; o1 ; o2].
+have : i \in [:: ord0 ; 1 ; 2%:R].
   have : i \in enum 'I_3 by rewrite mem_enum.
   rewrite 3!enum_ordS (_ : enum 'I_0 = nil) // -enum0.
   apply eq_enum => i'; by move: (ltn_ord i').
 rewrite inE; case/orP => [/eqP ->|].
-  rewrite cross_product_0 cross_product_1 cross_product_2 /dotmul !mxE.
+  rewrite crossmul_0 crossmul_1 crossmul_2 /dotmul !mxE.
   do 2 rewrite 3!big_ord_recl big_ord0 /= !mxE.
-  rewrite -/o1 -/o2 !addr0 !mulrDl !mulrDr.
-  rewrite 2!mulrN -!mulrA (mulrC (w 0 0)) (mulrC (w 0 o1)) (mulrC (w 0 o2)).
+  rewrite -/1 -/2%:R !addr0 !mulrDl !mulrDr.
+  rewrite 2!mulrN -!mulrA (mulrC (w 0 0)) (mulrC (w 0 1)) (mulrC (w 0 2%:R)).
   move : (_ * (_ * _)) => a.
   move : (_ * (_ * _)) => b.
   move : (_ * (_ * _)) => c.
@@ -303,10 +278,10 @@ rewrite inE; case/orP => [/eqP ->|].
   rewrite addrA.
   by rewrite addrK.
 rewrite inE; case/orP => [/eqP ->|].
-  rewrite cross_product_1 cross_product_0 cross_product_2 /dotmul !mxE.
+  rewrite crossmul_1 crossmul_0 crossmul_2 /dotmul !mxE.
   do 2 rewrite 3!big_ord_recl big_ord0 /= !mxE.
-  rewrite -/o1 -/o2 !addr0 !mulrDl !mulrDr.
-  rewrite 2!mulrN -!mulrA (mulrC (w 0 0)) (mulrC (w 0 o1)) (mulrC (w 0 o2)).
+  rewrite -/1 -/2%:R !addr0 !mulrDl !mulrDr.
+  rewrite 2!mulrN -!mulrA (mulrC (w 0 0)) (mulrC (w 0 1)) (mulrC (w 0 2%:R)).
   move : (_ * (_ * _)) => a.
   move : (_ * (_ * _)) => b.
   move : (_ * (_ * _)) => c.
@@ -332,10 +307,10 @@ rewrite inE; case/orP => [/eqP ->|].
   rewrite addrA.
   by rewrite addrK.
 rewrite inE => /eqP ->.
-  rewrite cross_product_2 cross_product_0 cross_product_1 /dotmul !mxE.
+  rewrite crossmul_2 crossmul_0 crossmul_1 /dotmul !mxE.
   do 2 rewrite 3!big_ord_recl big_ord0 /= !mxE.
-  rewrite -/o1 -/o2 !addr0 !mulrDl !mulrDr.
-  rewrite 2!mulrN -!mulrA (mulrC (w 0 0)) (mulrC (w 0 o1)) (mulrC (w 0 o2)).
+  rewrite -/1 -/2%:R !addr0 !mulrDl !mulrDr.
+  rewrite 2!mulrN -!mulrA (mulrC (w 0 0)) (mulrC (w 0 1)) (mulrC (w 0 2%:R)).
   move : (_ * (_ * _)) => a.
   move : (_ * (_ * _)) => b.
   move : (_ * (_ * _)) => c.
