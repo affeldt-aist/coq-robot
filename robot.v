@@ -369,7 +369,7 @@ Definition homogeneous_trans A B (T : homogeneous_spec A B) (x : vec B) : vec A 
   Vec _ (\row_(i < 3) (homogeneous_mx T *m col_mx (let: Vec x' := x in x'^T) 1)^T 0 (inord i)).
 
 
-
+(*
 
 
 
@@ -409,3 +409,10 @@ Check forall i, (z_ax (basis (frames i))).
 x_vec (frames i.-1) _|_ plane (z_vec (frames i.-1)),(z_vec (frames i))
 
 length (links i) = distance from (z_vec (frames i.-1)) to (z_vec (frames i)) along (x_vec)
+
+
+
+
+
+ *)
+End chains.
