@@ -118,9 +118,20 @@ Proof. case: x => /= v. by rewrite /relative_vec -mulmxA mulmxV // mulmx1. Qed.
 Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
 Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
 
+
 (* find a better name *)
 Definition triple_product_mat (u v w : vector) :=
-  \matrix_(i < 3, j < 3) tnth [tuple u 0 j; v 0 j; w 0 j] i.
+  \matrix_(i < 3) [eta \0 with 0 |-> u, 1 |-> v, 2%:R |-> w] i.
+
+Lemma row'_triple_product_mat (i : 'I_3) (u v w : vector) :
+  row' i (triple_product_mat u v w) = [eta \0 with
+  0 |-> \matrix_(k < 2) [eta \0 with 0 |-> v, 1 |-> w] k,
+  1 |-> \matrix_(k < 2) [eta \0 with 0 |-> u, 1 |-> w] k,
+  2%:R |-> \matrix_(k < 2) [eta \0 with 0 |-> u, 1 |-> v] k] i.
+Proof.
+case: i => [[|[|[|?]]]] ?; apply/matrixP=> [] [[|[|[|?]]]] ? j;
+by rewrite !mxE /=.
+Qed.
 
 (* Definition mixed_product_mat n (u : 'I_n -> 'rV[R]_n) :=  *)
 (*   \matrix_(i < n, j < n) u i ord0 j. *)
@@ -143,8 +154,8 @@ rewrite /crossmul; apply/rowP => k; rewrite !mxE.
 set M := (X in - \det X).
 transitivity (\det (row_perm (tperm (1 : 'I__) 2%:R) M)); last first.
   by rewrite row_permE detM det_perm odd_tperm /= expr1 mulN1r.
-congr (\det _); apply/matrixP => i j; rewrite !mxE eqxx /=.
-by case: i => [[|[|[]]]] ? //=; rewrite permE.
+congr (\det _); apply/matrixP => i j; rewrite !mxE permE /=.
+by case: i => [[|[|[]]]] ?.
 Qed.
 
 Lemma lift0E m (i : 'I_m.+1) : fintype.lift ord0 i = i.+1%:R.
@@ -165,17 +176,14 @@ Lemma crossmul_triple (u v w : 'rV[R]_3) :
 Proof.
 pose M (k : 'I_3) : 'M_3 := triple_product_mat (delta_mx 0 k) v w.
 pose Mu12 := triple_product_mat (u 0 1 *: delta_mx 0 1 + u 0 2%:R *: delta_mx 0 2%:R) v w.
-rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u 0 0) 1) ?mul1r; last 3 first.
-- apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
+rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u 0 0) 1) ?mul1r
+        ?row'_triple_product_mat //; last first.
+  apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
   by case: j => [[|[|[]]]] ? //=; simp_ord; simpr.
-- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
-- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
 rewrite [\det Mu12](@determinant_multilinear _ _ _
-  (M 1) (M 2%:R) 0 (u 0 1) (u 0 2%:R)); last 3 first.
-- apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
+  (M 1) (M 2%:R) 0 (u 0 1) (u 0 2%:R)) ?row'_triple_product_mat //; last first.
+  apply/matrixP => i j; rewrite !mxE !eqxx.
   by case: j => [[|[|[]]]] ? //=; simp_ord; simpr.
-- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
-- by apply/matrixP => i j; rewrite !mxE; apply: tnth_nth.
 by rewrite dotmulE !big_ord_recl big_ord0 addr0 /= !mxE; simp_ord.
 Qed.
 
@@ -189,36 +197,47 @@ Qed.
 Lemma dotmulC (u v : vector) : u *d v = v *d u.
 Proof. by rewrite /dotmul -{1}[u]trmxK -trmx_mul mxE. Qed.
 
-Lemma normal_sym (u v : vector) : u _|_ v = v _|_ u.
+Lemma normal_sym m (u v : 'M[R]_(m,3)) : u _|_ v = v _|_ u.
 Proof.
 rewrite !(sameP sub_kermxP eqP) -{1}[u]trmxK -trmx_mul.
 by rewrite -{1}trmx0 (inj_eq (@trmx_inj _ _ _)).
 Qed.
 
-Lemma normalNv (u v : vector) : (- u) _|_ v = u _|_ v.
+Lemma normalNv m (u v : 'M[R]_(m,3)) : (- u) _|_ v = u _|_ v.
 Proof. by rewrite !(sameP sub_kermxP eqP) mulNmx oppr_eq0. Qed.
 
-Lemma normalvN (u v : vector) : u _|_ (- v) = u _|_ v.
+Lemma normalvN m (u v : 'M[R]_(m,3)) : u _|_ (- v) = u _|_ v.
 Proof. by rewrite [LHS]normal_sym normalNv normal_sym. Qed.
 
-
-Lemma common_normal_crossmul u v : (crossmul u v) _|_ u, v.
+Lemma common_normal_crossmul u v : (u *v v) _|_ u, v.
 Proof.
 rewrite normalv2E ![(_ *v _) _|_ _]normal_sym crossmul_normal.
 by rewrite crossmulC normalvN crossmul_normal.
 Qed.
 
 (* u /\ (v + w) = u /\ v + u /\ w *)
-Lemma crossmulDl : left_distributive crossmul +%R.
+Lemma crossmul_linear u : linear (crossmul u).
 Proof.
-move=> u v w; apply/rowP => k; rewrite 2!mxE.
-pose M u := triple_product_mat (delta_mx 0 k) u w.
-rewrite (@determinant_multilinear _ _ (triple_product_mat _ _ _)
-        (M u) (M v) 1 1 1); first by rewrite !mul1r 2!mxE.
-- by apply/rowP => j; rewrite !mxE /= !mul1r.
-(*- by apply/matrixP=> i j; rewrite !mxE /= [_ == 1]eq_sym (negPf (neq_lift _ _)).
-- by apply/matrixP=> i j; rewrite !mxE /= [_ == 1]eq_sym (negPf (neq_lift _ _)).
-Qed.*) Admitted.
+move=> a v w; apply/rowP => k; rewrite !mxE.
+pose M w := triple_product_mat (delta_mx 0 k) u w.
+rewrite (@determinant_multilinear _ _ (M _) (M v) (M w) 2%:R a 1);
+  rewrite ?row'_triple_product_mat ?mul1r ?scale1r ?mxE //=.
+by apply/rowP => j; rewrite !mxE.
+Qed.
+
+Canonical crossmul_is_additive u := Additive (crossmul_linear u).
+Canonical crossmul_is_linear u := AddLinear (crossmul_linear u).
+
+Definition crossmulr u := crossmul^~ u.
+
+Lemma crossmulr_linear u : linear (crossmulr u).
+Proof.
+move=> a v w; rewrite /crossmulr crossmulC linearD linearZ /=.
+by rewrite opprD -scalerN -!crossmulC.
+Qed.
+
+Canonical crossmulr_is_additive u := Additive (crossmulr_linear u).
+Canonical crossmulr_is_linear u := AddLinear (crossmulr_linear u).
 
 Lemma det_mx11 (A : 'M[R]_1) : \det A = A 0 0.
 Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
@@ -237,20 +256,76 @@ rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
 by rewrite !(lift0E, add0r) /= addrr_char2.
 Qed.
 
-Lemma crossmulE u v : (u *v v) = \row_j tnth [tuple
-  u 0 1 * v 0 2%:R - u 0 2%:R * v 0 1 ;
-  u 0 2%:R * v 0 0 - u 0 0 * v 0 2%:R ;
-  u 0 0 * v 0 1 - u 0 1 * v 0 0] j.
+Lemma crossmulE u v : (u *v v) = \row_j [eta \0 with
+  0 |-> u 0 1 * v 0 2%:R - u 0 2%:R * v 0 1,
+  1 |-> u 0 2%:R * v 0 0 - u 0 0 * v 0 2%:R,
+  2%:R |-> u 0 0 * v 0 1 - u 0 1 * v 0 0] j.
 Proof.
 apply/rowP => i; rewrite !mxE (expand_det_row _ ord0).
 rewrite !(mxE, big_ord_recl, big_ord0) !(mul0r, mul1r, addr0).
 rewrite /cofactor !det_mx22 !mxE /= mul1r mulN1r opprB -signr_odd mul1r.
-do !rewrite -[fintype.lift _ _]natr_Zp /=.
-by case: i => [[|[|[]]]] //= ?; rewrite ?(mul1r,mul0r,add0r,addr0).
+by simp_ord; case: i => [[|[|[]]]] //= ?; rewrite ?(mul1r,mul0r,add0r,addr0).
 Qed.
 
-Lemma double_crossmul (u v w : 'rV[R]_3) : u *v (v *v w) = (dotmul u w) *: v - (dotmul u v) *: w.
+(* Lemma lin_mulmx m p p' M N (f : {linear 'M[R]_(m,p) -> 'M_(m,p')}) : *)
+(*   f (M *m N) = M *m f N. *)
+(* Proof. *)
+(* rewrite [M]matrix_sum_delta !mulmx_suml linear_sum /=; apply: eq_bigr => i _. *)
+(* rewrite !mulmx_suml linear_sum /=; apply: eq_bigr => j _. *)
+(* rewrite -mul_scalar_mx -!mulmxA !mul_scalar_mx linearZ /=; congr (_ *: _). *)
+(* apply/matrixP => k l; rewrite !mxE. *)
+
+
+(* rewrite linear_sum. *)
+
+
+Lemma mulmxl_crossmulr M u v : M *m (u *v v) = (u *v (M *m v)).
 Proof.
+by rewrite -(mul_rV_lin1 [linear of crossmul u]) mulmxA mul_rV_lin1.
+Qed.
+
+Lemma mulmxl_crossmull M u v : M *m (u *v v) = ((M *m u) *v v).
+Proof. by rewrite crossmulC mulmxN mulmxl_crossmulr -crossmulC. Qed.
+
+Lemma mulmxr_crossmulr M u v : (u *v v) *m M = (u *v (v *m M)).
+Proof.
+rewrite -!/(crossmulr _ _).
+rewrite -!(mul_rV_lin1 [linear of crossmulr v]). /mulmxr. mul_rV_lin1.
+Qed.
+
+
+Lemma crossmul0v u : 0 *v u = 0.
+Proof.
+apply/rowP=> k; rewrite !mxE; apply/eqP/det0P.
+exists (delta_mx 0 1).
+  apply/negP=> /eqP /(congr1 (fun f : 'M__ => f 0 1)) /eqP.
+  by rewrite !mxE /= oner_eq0.
+by rewrite -rowE; apply/rowP=> j; rewrite !mxE.
+Qed.
+
+Lemma crossmulv0 u : u *v 0 = 0.
+Proof. by rewrite crossmulC crossmul0v oppr0. Qed.
+
+Lemma dotmul0v u : 0 *d u = 0.
+Proof. by rewrite [LHS]mxE big1 // => i; rewrite mxE mul0r. Qed.
+
+Lemma dotmulv0 u : u *d 0 = 0.
+Proof. by rewrite dotmulC dotmul0v. Qed.
+
+Lemma double_crossmul (u v w : 'rV[R]_3) :
+ u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
+Proof.
+have [->|u_neq0] := eqVneq u 0.
+  by rewrite crossmul0v !dotmul0v !scale0r subr0.
+have : exists M : 'M_3, u *m M = delta_mx 0 0.
+
+rewrite !crossmulE; apply/rowP => i.
+rewrite !dotmulE !(big_ord_recl, big_ord0, addr0) !mxE /=.
+simpr; rewrite oppr0 opprB addr0.
+by case: i => [[|[|[|?]]]] ? //=; simp_ord => //=; rewrite mulrC ?subrr.
+Qed.
+
+rewrite !mulrDl !mulrBr !mulrA ?opprB.
 apply/rowP => i.
 have : i \in [:: ord0 ; 1 ; 2%:R].
   have : i \in enum 'I_3 by rewrite mem_enum.
