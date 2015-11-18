@@ -8,7 +8,7 @@ Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp
 Require Import complex.
 From mathcomp.fingroup
-Require Import perm.
+Require Import fingroup perm.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -19,105 +19,14 @@ Import Num.Theory.
 
 Local Open Scope ring_scope.
 
-Section chains.
+Section crossmul.
 
 Variable R : rcfType.
-Definition ang := {c : R[i] | `| c | = 1}.
-Definition coordinate := 'rV[R]_3.
-Definition vector := 'rV[R]_3.
-Definition basisType := 'M[R]_3.
-Definition x_ax : basisType -> 'rV[R]_3 := row 0.
-Definition y_ax : basisType -> 'rV[R]_3 := row 1%R.
-Definition z_ax : basisType -> 'rV[R]_3 := row 2%:R.
-
-Record frame := mkFrame {
-  origin : coordinate ;
-  basis :> basisType ;
-  _ : unitmx basis }.
-
-Lemma frame_unit (f : frame) : basis f \in GRing.unit. Proof. by case: f. Qed.
-
-Hint Resolve frame_unit.
-
-Record joint := mkJoint {
-  offset : R ;
-  angle : ang }.
-
-Record link := mkLink {
-  length : R ;
-  twist : ang }.
-
-Variable n' : nat.
-Let n := n'.+1.
-Variables chain : {ffun 'I_n -> frame * link * joint}.
-Definition frames := fun i => (chain (insubd ord0 i)).1.1.
-Definition links := fun i => (chain (insubd ord0 i)).1.2.
-Definition joints := fun i => (chain (insubd ord0 i)).2.
-
-(* by definition, zi = axis of joint i *)
-
-Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
-Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
- (A at next level, at level 8,
- format "u  _|_  A , B ").
-
-Lemma row_mx_eq0 (M : zmodType) (m n1 n2 : nat) (A1 : 'M[M]_(m, n1)) (A2 : 'M_(m, n2)):
- (row_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
-Proof.
-apply/eqP/andP; last by case=> /eqP -> /eqP ->; rewrite row_mx0.
-by rewrite -row_mx0 => /eq_row_mx [-> ->].
-Qed.
+Let vector := 'rV[R]_3.
 
 Definition dotmul (u v : 'rV[R]_3) : R := (u *m v^T) 0 0.
 Local Notation "*d%R" := (@dotmul _).
 Local Notation "u *d w" := (dotmul u w) (at level 40).
-
-Lemma dotmulE (u v : 'rV[R]_3) : u *d v = \sum_k u 0 k * v 0 k.
-Proof. by rewrite [LHS]mxE; apply: eq_bigr=> i; rewrite mxE. Qed.
-
-Lemma normalvv (u v : 'rV[R]_3) : (u _|_ v) = (u *d v == 0).
-Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
-
-Lemma normalv2E m p (u : 'rV[R]_3) (A : 'M[R]_(m,3)) (B : 'M[R]_(p,3)) :
-  (u _|_ A, B) = (u _|_ A) && (u _|_ B).
-Proof. by rewrite !(sameP sub_kermxP eqP) tr_col_mx mul_mx_row row_mx_eq0. Qed.
-
-Definition common_normal_xz (i : 'I_n) :=
-  (z_ax (frames i.-1)) _|_ (z_ax (frames i)), (x_ax (frames i.-1)).
-
-(* coordinate in frame f *)
-Inductive coor (f : frame) : Type := Coor of 'rV[R]_3.
-
-Definition absolute_coor f (x : coor f) : 'rV[R]_3 :=
-  match x with Coor v => origin f + v *m basis f end.
-
-Definition relative_coor f (x : coordinate) : coor f :=
-  Coor _ ((x - origin f) *m (basis f)^-1).
-
-Lemma absolute_coorK f (x : coor f) : relative_coor f (absolute_coor x) = x.
-Proof.
-case: x => /= v.
-by rewrite /relative_coor addrC addKr -mulmxA mulmxV // mulmx1.
-Qed.
-
-Lemma relative_coorK f (x : coordinate) : absolute_coor (relative_coor f x) = x.
-Proof. by rewrite /= -mulmxA mulVmx // mulmx1 addrC addrNK. Qed.
-
-(* vector in frame f *)
-Inductive vec (f : frame) : Type := Vec of 'rV[R]_3.
-
-Definition absolute_vec f (x : vec f) : 'rV[R]_3 :=
-  match x with Vec v => v *m basis f end.
-
-Definition relative_vec f (x : vector) : vec f :=
-  Vec _ (x *m (basis f)^-1).
-
-Lemma absolute_vecK f (x : vec f) : relative_vec f (absolute_vec x) = x.
-Proof. case: x => /= v. by rewrite /relative_vec -mulmxA mulmxV // mulmx1. Qed.
-
-Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
-Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
-
 
 (* find a better name *)
 Definition triple_product_mat (u v w : vector) :=
@@ -171,6 +80,9 @@ Ltac simpr := rewrite ?(mulr0,mul0r,mul1r,mulr1,addr0,add0r).
 (* Lemma lift1E m (i : 'I_m.+2) : fintype.lift 1 i = i.+1%:R. *)
 (* Proof. apply/val_inj; rewrite Zp_nat /= !modn_small 1?ltnS //. Qed. *)
 
+Lemma dotmulE (u v : 'rV[R]_3) : u *d v = \sum_k u 0 k * v 0 k.
+Proof. by rewrite [LHS]mxE; apply: eq_bigr=> i; rewrite mxE. Qed.
+
 Lemma crossmul_triple (u v w : 'rV[R]_3) :
   u *d (v *v w) = \det (triple_product_mat u v w).
 Proof.
@@ -186,6 +98,25 @@ rewrite [\det Mu12](@determinant_multilinear _ _ _
   by case: j => [[|[|[]]]] ? //=; simp_ord; simpr.
 by rewrite dotmulE !big_ord_recl big_ord0 addr0 /= !mxE; simp_ord.
 Qed.
+
+Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
+Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
+ (A at next level, at level 8,
+ format "u  _|_  A , B ").
+
+Lemma normalvv (u v : 'rV[R]_3) : (u _|_ v) = (u *d v == 0).
+Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
+
+Lemma row_mx_eq0 (M : zmodType) (m n1 n2 : nat) (A1 : 'M[M]_(m, n1)) (A2 : 'M_(m, n2)):
+ (row_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
+Proof.
+apply/eqP/andP; last by case=> /eqP -> /eqP ->; rewrite row_mx0.
+by rewrite -row_mx0 => /eq_row_mx [-> ->].
+Qed.
+
+Lemma normalv2E m p (u : 'rV[R]_3) (A : 'M[R]_(m,3)) (B : 'M[R]_(p,3)) :
+  (u _|_ A, B) = (u _|_ A) && (u _|_ B).
+Proof. by rewrite !(sameP sub_kermxP eqP) tr_col_mx mul_mx_row row_mx_eq0. Qed.
 
 Lemma crossmul_normal (u v : 'rV[R]_3) : u _|_ (u *v v).
 Proof.
@@ -267,6 +198,88 @@ rewrite /cofactor !det_mx22 !mxE /= mul1r mulN1r opprB -signr_odd mul1r.
 by simp_ord; case: i => [[|[|[]]]] //= ?; rewrite ?(mul1r,mul0r,add0r,addr0).
 Qed.
 
+(* first tentative definition of the generalized kronecker symbol *) 
+(*Definition delta (i k : seq nat) : R :=
+  if (perm_eq i (in_tuple k) =P true) isn't ReflectT ik then 0
+  else let s := sval (sig_eqW (tuple_perm_eqP ik)) in (-1) ^+ s *+ uniq i.
+
+Lemma deltaC i k : delta i k = delta k i.
+Proof. 
+have [pik|pik] := boolP (perm_eq i k); last first.
+  rewrite /delta.
+  case: eqP => p; first by rewrite p in pik.
+  case: eqP => p0 //; by rewrite perm_eq_sym p0 in pik.
+move: (pik); rewrite -[ i]/(val (in_tuple i)) -[k]/(val (in_tuple k)).
+move: (in_tuple _) (in_tuple _); rewrite (perm_eq_size pik).
+move: (size k) => m {i k pik} i k. 
+rewrite /delta.
+rewrite !tvalK.
+case: _ / (esym (size_tuple k)); case: _ / (esym (size_tuple i)) => /=.
+  case: eqP => // p.
+  case: eqP => // [p' pik|]; last by rewrite {1}perm_eq_sym.
+case: sig_eqW => /= s k_eq.
+case: sig_eqW => /= s' i_eq.
+rewrite -odd_permV.
+rewrite (perm_eq_uniq p).
+have [i_uniq|] := boolP (uniq (val i)); last by rewrite !mulr0n.
+congr (_ ^+ _ *+ _).
+congr (odd_perm _).
+(* apply: (mulgI s); rewrite mulgV; symmetry. *)
+apply/permP => /= j.
+apply/val_inj/eqP=> /=.
+rewrite -(@nth_uniq _ 0%N (val k)) //=. 
+Abort.
+*)
+
+Definition perm_of_2seq (T : eqType) n (si : seq T) (so : n.-tuple T) : 'S_n :=
+  if (perm_eq si so =P true) isn't ReflectT ik then 1%g
+  else sval (sig_eqW (tuple_perm_eqP ik)).
+
+Lemma perm_of_2seqE n (T : eqType) (si so : n.-tuple T) (j : 'I_n) : 
+  perm_eq si so -> tnth so (perm_of_2seq si so j) = tnth si j.
+Proof.
+rewrite /perm_of_2seq; case: eqP => // H1 H2.
+case: sig_eqW => /= s; rewrite /tnth => -> /=.
+by rewrite (nth_map j) ?size_enum_ord // nth_ord_enum.
+Qed.
+
+Lemma perm_of_2seqV n (T : eqType) (x0 : T) (si so : n.-tuple T) : uniq si ->
+  (perm_of_2seq si so)^-1%g = perm_of_2seq so si.
+Proof.
+move=> uniq_si.
+apply/permP => /= j.
+apply/val_inj/eqP => /=.
+rewrite -(@nth_uniq _ x0 (val si)) //=; last 2 first.
+- by rewrite size_tuple.
+- by rewrite size_tuple.
+rewrite /perm_of_2seq; case: eqP => p; last first.
+  case: eqP => // p0; by [rewrite perm_eq_sym p0 in p | rewrite invg1].
+case: eqP => [p'|]; last by rewrite perm_eq_sym {1}p.
+case: sig_eqW => /= x Hx; case: sig_eqW => /= y Hy.
+rewrite {1}Hx (nth_map j); last by rewrite size_enum_ord.
+rewrite nth_ord_enum permE f_iinv /tnth Hy (nth_map j); last by rewrite size_enum_ord.
+rewrite nth_ord_enum /tnth; apply/eqP/set_nth_default;  by rewrite size_tuple.
+Qed.
+
+Definition delta (i k : seq nat) : R :=
+  if perm_eq i k then
+    let s := perm_of_2seq i (in_tuple k) in (-1) ^+ s *+ uniq i
+  else 0.
+
+Lemma deltaC i k : delta i k = delta k i.
+Proof. 
+have [pik|pik] := boolP (perm_eq i k); last first.
+  by rewrite /delta (negPf pik) perm_eq_sym (negPf pik).
+move: (pik); rewrite -[ i]/(val (in_tuple i)) -[k]/(val (in_tuple k)).
+move: (in_tuple _) (in_tuple _); rewrite (perm_eq_size pik).
+move: (size k) => m {i k pik} i k pik. 
+rewrite /delta pik perm_eq_sym pik -odd_permV !tvalK.
+case: _ / (esym (size_tuple k)); case: _ / (esym (size_tuple i)) => /=.
+case/boolP : (uniq k) => uk.
+  by rewrite (perm_of_2seqV O) // -(perm_eq_uniq pik) uk.
+by rewrite mulr0n -(perm_eq_uniq pik) (negPf uk) mulr0n.
+Qed.
+  
 (* Lemma lin_mulmx m p p' M N (f : {linear 'M[R]_(m,p) -> 'M_(m,p')}) : *)
 (*   f (M *m N) = M *m f N. *)
 (* Proof. *)
@@ -290,9 +303,13 @@ Proof. by rewrite crossmulC mulmxN mulmxl_crossmulr -crossmulC. Qed.
 Lemma mulmxr_crossmulr M u v : (u *v v) *m M = (u *v (v *m M)).
 Proof.
 rewrite -!/(crossmulr _ _).
-rewrite -!(mul_rV_lin1 [linear of crossmulr v]). /mulmxr. mul_rV_lin1.
-Qed.
+rewrite -!(mul_rV_lin1 [linear of crossmulr v]). 
+Abort.
 
+(*
+/mulmxr. mul_rV_lin1.
+Qed.
+*)
 
 Lemma crossmul0v u : 0 *v u = 0.
 Proof.
@@ -315,6 +332,7 @@ Proof. by rewrite dotmulC dotmul0v. Qed.
 Lemma double_crossmul (u v w : 'rV[R]_3) :
  u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
 Proof.
+(*
 have [->|u_neq0] := eqVneq u 0.
   by rewrite crossmul0v !dotmul0v !scale0r subr0.
 have : exists M : 'M_3, u *m M = delta_mx 0 0.
@@ -326,6 +344,7 @@ by case: i => [[|[|[|?]]]] ? //=; simp_ord => //=; rewrite mulrC ?subrr.
 Qed.
 
 rewrite !mulrDl !mulrBr !mulrA ?opprB.
+*)
 apply/rowP => i.
 have : i \in [:: ord0 ; 1 ; 2%:R].
   have : i \in enum 'I_3 by rewrite mem_enum.
@@ -421,6 +440,86 @@ Proof.
 (* consequence of double_crossmul *)
 Admitted.
 
+End crossmul.
+
+Section chains.
+
+Variable R : rcfType.
+Definition ang := {c : R[i] | `| c | = 1}.
+Definition coordinate := 'rV[R]_3.
+Definition vector := 'rV[R]_3.
+Definition basisType := 'M[R]_3.
+Definition x_ax : basisType -> 'rV[R]_3 := row 0.
+Definition y_ax : basisType -> 'rV[R]_3 := row 1%R.
+Definition z_ax : basisType -> 'rV[R]_3 := row 2%:R.
+
+Record frame := mkFrame {
+  origin : coordinate ;
+  basis :> basisType ;
+  _ : unitmx basis }.
+
+Lemma frame_unit (f : frame) : basis f \in GRing.unit. Proof. by case: f. Qed.
+
+Hint Resolve frame_unit.
+
+Record joint := mkJoint {
+  offset : R ;
+  angle : ang }.
+
+Record link := mkLink {
+  length : R ;
+  twist : ang }.
+
+Variable n' : nat.
+Let n := n'.+1.
+Variables chain : {ffun 'I_n -> frame * link * joint}.
+Definition frames := fun i => (chain (insubd ord0 i)).1.1.
+Definition links := fun i => (chain (insubd ord0 i)).1.2.
+Definition joints := fun i => (chain (insubd ord0 i)).2.
+
+(* by definition, zi = axis of joint i *)
+
+Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
+Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
+ (A at next level, at level 8,
+ format "u  _|_  A , B ").
+
+Definition common_normal_xz (i : 'I_n) :=
+  (z_ax (frames i.-1)) _|_ (z_ax (frames i)), (x_ax (frames i.-1)).
+
+(* coordinate in frame f *)
+Inductive coor (f : frame) : Type := Coor of 'rV[R]_3.
+
+Definition absolute_coor f (x : coor f) : 'rV[R]_3 :=
+  match x with Coor v => origin f + v *m basis f end.
+
+Definition relative_coor f (x : coordinate) : coor f :=
+  Coor _ ((x - origin f) *m (basis f)^-1).
+
+Lemma absolute_coorK f (x : coor f) : relative_coor f (absolute_coor x) = x.
+Proof.
+case: x => /= v.
+by rewrite /relative_coor addrC addKr -mulmxA mulmxV // mulmx1.
+Qed.
+
+Lemma relative_coorK f (x : coordinate) : absolute_coor (relative_coor f x) = x.
+Proof. by rewrite /= -mulmxA mulVmx // mulmx1 addrC addrNK. Qed.
+
+(* vector in frame f *)
+Inductive vec (f : frame) : Type := Vec of 'rV[R]_3.
+
+Definition absolute_vec f (x : vec f) : 'rV[R]_3 :=
+  match x with Vec v => v *m basis f end.
+
+Definition relative_vec f (x : vector) : vec f :=
+  Vec _ (x *m (basis f)^-1).
+
+Lemma absolute_vecK f (x : vec f) : relative_vec f (absolute_vec x) = x.
+Proof. case: x => /= v. by rewrite /relative_vec -mulmxA mulmxV // mulmx1. Qed.
+
+Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
+Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
+
 Record homogeneous_spec (A B : frame) : Type := {
   rotation : 'M[R]_3 ;
   position : vec A }.
@@ -478,4 +577,5 @@ length (links i) = distance from (z_vec (frames i.-1)) to (z_vec (frames i)) alo
 
 
  *)
+
 End chains.
