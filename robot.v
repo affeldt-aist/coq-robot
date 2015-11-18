@@ -259,12 +259,19 @@ case: sig_eqW => /= x Hx; case: sig_eqW => /= y Hy.
 rewrite {1}Hx (nth_map j); last by rewrite size_enum_ord.
 rewrite nth_ord_enum permE f_iinv /tnth Hy (nth_map j); last by rewrite size_enum_ord.
 rewrite nth_ord_enum /tnth; apply/eqP/set_nth_default;  by rewrite size_tuple.
-Qed.
+Qed. 
 
 Definition delta (i k : seq nat) : R :=
   if perm_eq i k then
     let s := perm_of_2seq i (in_tuple k) in (-1) ^+ s *+ uniq i
   else 0.
+
+Lemma delta_0 (i : seq nat) k : (~~ uniq i) || (~~ uniq k) -> delta i k = 0.
+Proof. 
+case/orP => [ui|uk]; rewrite /delta; case: ifP => // ik.
+  by rewrite (negbTE ui) mulr0n.
+case/boolP: (uniq i) => //; by rewrite (perm_eq_uniq ik) (negPf uk).
+Qed.
 
 Lemma deltaC i k : delta i k = delta k i.
 Proof. 
@@ -273,13 +280,103 @@ have [pik|pik] := boolP (perm_eq i k); last first.
 move: (pik); rewrite -[ i]/(val (in_tuple i)) -[k]/(val (in_tuple k)).
 move: (in_tuple _) (in_tuple _); rewrite (perm_eq_size pik).
 move: (size k) => m {i k pik} i k pik. 
-rewrite /delta pik perm_eq_sym pik -odd_permV !tvalK.
-case: _ / (esym (size_tuple k)); case: _ / (esym (size_tuple i)) => /=.
 case/boolP : (uniq k) => uk.
+  rewrite /delta pik perm_eq_sym pik -odd_permV !tvalK.
+  case: _ / (esym (size_tuple k)); case: _ / (esym (size_tuple i)) => /=.
   by rewrite (perm_of_2seqV O) // -(perm_eq_uniq pik) uk.
-by rewrite mulr0n -(perm_eq_uniq pik) (negPf uk) mulr0n.
+rewrite delta_0; by [rewrite delta_0 // uk orbC | rewrite uk].
 Qed.
-  
+
+Lemma deltaN1 (i : seq nat) k : uniq i -> odd_perm (perm_of_2seq i (in_tuple k)) -> 
+  delta i k = -1.
+Proof.
+move=> ui; rewrite /delta /perm_of_2seq.
+case: eqP => [p|]; last by rewrite odd_perm1.
+case: sig_eqW => /= x ih Hx; by rewrite p ui mulr1n Hx expr1.
+Qed.
+
+Lemma delta_1 (i : seq nat) k : uniq i -> perm_eq i k -> ~~ odd_perm (perm_of_2seq i (in_tuple k)) -> 
+  delta i k = 1.
+Proof.
+move=> ui ik.
+rewrite /delta /perm_of_2seq.
+case: eqP => [p|].
+  case: sig_eqW => /= x ih Hx.
+  by rewrite p ui mulr1n (negPf Hx) expr0.
+by rewrite ik.
+Qed.  
+
+Lemma perm_of_2seq_comp n {T: eqType} (x0 : T) (s1 s2 s3 : n.-tuple T) :
+  size s1 = n ->
+  uniq s1 -> uniq s2 -> uniq s3 ->
+  perm_of_2seq s1 s3 = (perm_of_2seq s2 s3 * perm_of_2seq s1 s2)%g.
+Proof.
+move=> s1n Hs1 Hs2 Hs3.
+rewrite /perm_of_2seq.
+case: eqP => [s1s3|].
+  case: sig_eqW => /= sigma Hsigma.
+  case: eqP => s2s3.
+    case: sig_eqW => /= rho Hrho.
+    case: eqP => [s1s2|]; last first.
+      admit.
+    case: sig_eqW => /= tau Htau.
+    apply/permP => /= i.
+    apply/val_inj/eqP=> /=.
+    rewrite -(@nth_uniq _ x0 s1) //=; last 2 first. 
+      admit.
+      admit.
+    rewrite {1}Htau.
+    rewrite (nth_map i); last by rewrite size_enum_ord.
+    rewrite (tnth_nth x0).
+    rewrite Hrho.
+    rewrite (nth_map i); last by rewrite size_enum_ord.
+    rewrite (tnth_nth x0).
+    rewrite Hsigma.
+    rewrite (nth_map i); last by rewrite size_enum_ord.
+    rewrite (tnth_nth x0).
+    rewrite permE.
+    admit.
+Admitted.
+
+Lemma delta_comp r s (i : r.-tuple nat) (j : s.-tuple nat) 
+  (h : (r + s).-tuple nat) : perm_eq h (iota 0 (r + s)) ->
+  delta (i ++ j) h = delta (iota 0 (r + s)) h * delta (i ++ j) (iota 0 (r + s)).
+Proof.
+move=> Hh.
+have hb : uniq h by rewrite (perm_eq_uniq Hh) iota_uniq.
+case/boolP : (uniq (i ++ j)) => ij; last first.
+  rewrite delta_0; last by rewrite ij.
+  rewrite [in X in _ = _ * X]delta_0; last by rewrite ij.
+  by rewrite mulr0.
+case/boolP : (perm_eq (i ++ j) h) => ijh; last first.
+  rewrite {1}/delta (negPf ijh) {2}/delta.
+  case: ifP => [abs|]; last by rewrite mulr0.
+  rewrite perm_eq_sym in Hh.
+  by rewrite (perm_eq_trans abs Hh) in ijh.
+case/boolP : (odd_perm (perm_of_2seq (i ++ j) (in_tuple h))) => ijh_parity.
+  rewrite deltaN1 //.
+  case/boolP : (odd_perm (perm_of_2seq h (in_tuple (iota 0 (r + s))))) => hparity.
+    rewrite deltaC deltaN1 // delta_1 //.
+    by rewrite mulNr mulr1.
+    by rewrite (perm_eq_trans ijh).
+    have Htmp : size h = size (iota 0 (r + s)) by admit.
+(*    rewrite (@perm_of_2seq_comp _ _ O _ (tcast Htmp (in_tuple h))) //.
+    rewrite odd_permM negb_add.
+    admit.
+    by rewrite (perm_eq_size ijh) (perm_eq_size Hh).
+    admit.
+    by rewrite iota_uniq.
+  rewrite deltaC delta_1 // mul1r deltaN1 //.
+  have Htmp : size h = size (iota 0 (r + s)) by admit.
+  rewrite (@perm_of_2seq_comp _ _ O _ (tcast Htmp (in_tuple h))) //.
+  rewrite odd_permM -negb_eqb.
+  admit.
+  by rewrite (perm_eq_size ijh) (perm_eq_size Hh).
+  admit.
+  by rewrite iota_uniq.
+rewrite delta_1 //.*)
+Abort.
+
 (* Lemma lin_mulmx m p p' M N (f : {linear 'M[R]_(m,p) -> 'M_(m,p')}) : *)
 (*   f (M *m N) = M *m f N. *)
 (* Proof. *)
@@ -290,7 +387,6 @@ Qed.
 
 
 (* rewrite linear_sum. *)
-
 
 Lemma mulmxl_crossmulr M u v : M *m (u *v v) = (u *v (M *m v)).
 Proof.
