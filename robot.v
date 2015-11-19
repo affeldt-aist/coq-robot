@@ -75,6 +75,9 @@ Local Notation "u *d w" := (dotmul u w) (at level 40).
 Lemma dotmulE (u v : 'rV[R]_3) : u *d v = \sum_k u 0 k * v 0 k.
 Proof. by rewrite [LHS]mxE; apply: eq_bigr=> i; rewrite mxE. Qed.
 
+Lemma dotmulC (u v : 'rV[R]_3) : u *d v = v *d u.
+Proof. by rewrite /dotmul -[_ *m _]trmxK trmx_mul !trmxK mxE. Qed.
+
 Lemma normalvv (u v : 'rV[R]_3) : (u _|_ v) = (u *d v == 0).
 Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
 
@@ -116,6 +119,24 @@ transitivity (\det (row_perm (tperm (1 : 'I__) 2%:R) M)); last first.
 congr (\det _); apply/matrixP => i j; rewrite !mxE permE /=.
 by case: i => [[|[|[]]]] ?.
 Qed.
+
+Lemma crossmul0v u : 0 *v u = 0.
+Proof.
+apply/rowP=> k; rewrite !mxE; apply/eqP/det0P.
+exists (delta_mx 0 1).
+  apply/negP=> /eqP /(congr1 (fun f : 'M__ => f 0 1)) /eqP.
+  by rewrite !mxE /= oner_eq0.
+by rewrite -rowE; apply/rowP=> j; rewrite !mxE.
+Qed.
+
+Lemma crossmulv0 u : u *v 0 = 0.
+Proof. by rewrite crossmulC crossmul0v oppr0. Qed.
+
+Lemma dotmul0v u : 0 *d u = 0.
+Proof. by rewrite [LHS]mxE big1 // => i; rewrite mxE mul0r. Qed.
+
+Lemma dotmulv0 u : u *d 0 = 0.
+Proof. by rewrite dotmulC dotmul0v. Qed.
 
 Lemma lift0E m (i : 'I_m.+1) : fintype.lift ord0 i = i.+1%:R.
 Proof. by apply/val_inj; rewrite Zp_nat /= modn_small // ltnS. Qed.
@@ -241,14 +262,18 @@ rewrite -(@nth_uniq _ 0%N (val k)) //=.
 Abort.
 *)
 
-Definition perm_of_2seq (T : eqType) n (si : seq T) (so : n.-tuple T) : 'S_n :=
+Fact perm_of_2seq_key : unit. Proof. exact: tt. Qed.
+Definition perm_of_2seq :=
+  locked_with perm_of_2seq_key
+  (fun (T : eqType) n (si so : n.-tuple T) =>
   if (perm_eq si so =P true) isn't ReflectT ik then 1%g
-  else sval (sig_eqW (tuple_perm_eqP ik)).
+  else sval (sig_eqW (tuple_perm_eqP ik))).
+Canonical perm_of_2seq_unlockable := [unlockable fun perm_of_2seq].
 
 Lemma perm_of_2seqE n (T : eqType) (si so : n.-tuple T) (j : 'I_n) :
   perm_eq si so -> tnth so (perm_of_2seq si so j) = tnth si j.
 Proof.
-rewrite /perm_of_2seq; case: eqP => // H1 H2.
+rewrite [perm_of_2seq]unlock; case: eqP => // H1 H2.
 case: sig_eqW => /= s; rewrite /tnth => -> /=.
 by rewrite (nth_map j) ?size_enum_ord // nth_ord_enum.
 Qed.
@@ -268,16 +293,16 @@ Qed.
 (* by apply: set_nth_default; rewrite size_tuple. *)
 (* Qed. *)
 
-Lemma perm_of_2seqV n (T : eqType) (x0 : T) (si so : n.-tuple T) : uniq si ->
+Lemma perm_of_2seqV n (T : eqType) (si so : n.-tuple T) : uniq si ->
   (perm_of_2seq si so)^-1%g = perm_of_2seq so si.
 Proof.
 move=> uniq_si.
 apply/permP => /= j.
 apply/val_inj/eqP => /=.
-rewrite -(@nth_uniq _ x0 (val si)) //=; last 2 first.
+rewrite -(@nth_uniq _ (tnth_default si j) (val si)) //=; last 2 first.
 - by rewrite size_tuple.
 - by rewrite size_tuple.
-rewrite /perm_of_2seq; case: eqP => p; last first.
+rewrite [perm_of_2seq]unlock; case: eqP => p; last first.
   case: eqP => // p0; by [rewrite perm_eq_sym p0 in p | rewrite invg1].
 case: eqP => [p'|]; last by rewrite perm_eq_sym {1}p.
 case: sig_eqW => /= x Hx; case: sig_eqW => /= y Hy.
@@ -287,7 +312,27 @@ rewrite nth_ord_enum /tnth; apply/eqP/set_nth_default;  by rewrite size_tuple.
 Qed.
 
 Definition delta (i k : seq nat) : R :=
-  if (perm_eq i k) && (uniq i) then (-1) ^+ perm_of_2seq i (in_tuple k) else 0.
+  if (perm_eq i k) && (uniq i) then
+  (-1) ^+ perm_of_2seq (insubd (in_tuple k) i) (in_tuple k) else 0.
+
+Lemma deltaE n (i k : seq nat) (si : size i = n) (sk : size k = n) : 
+   let T l (P : size l = n)  := Tuple (appP eqP idP P) in
+   delta i k = if (perm_eq i k) && (uniq i)
+               then (-1) ^+ perm_of_2seq (T _ si) (T _ sk) else 0.
+Proof.
+move=> T; rewrite /delta; have [/andP [pik i_uniq]|//] := ifP.
+set i' := insubd _ _; set k' := in_tuple _.
+have [] : (i' = T _ si :> seq _ /\ k' = T _ sk :> seq _).
+  by rewrite /= val_insubd /= (perm_eq_size pik) eqxx.
+move: i' k' (T i si) (T k sk) => /=.
+by case: _ / sk => ??????; congr (_ ^+ perm_of_2seq _ _); apply: val_inj.
+Qed.
+
+(* Definition deltaE n (i k : seq nat) (si : size i == n) (sk : size k == n) := *)
+(*   deltaE (Tuple si) (Tuple sk). *)
+
+(* Lemma delta_cast n (i k : seq nat) (ni : size i = n) (nk : size k = n) : *)
+(*   delta i k = delta (Tuple (appP eqP idP ni)) (Tuple (appP eqP idP nk)). *)
 
 Lemma delta_0 (i : seq nat) k : (~~ uniq i) || (~~ uniq k) -> delta i k = 0.
 Proof.
@@ -319,120 +364,64 @@ Qed.
 (* Lemma perm_of_2seq_tcast (T : eqType) n m i (k : m.-tuple T) (eq_mn : m = n): *)
 (*   perm_of_2seq i (tcast eq_mn k) = scast eq_mn (perm_of_2seq i k). *)
 
+Lemma perm_of_2seq_ii n (i : n.-tuple nat) : perm_of_2seq i i = 1%g.
+Proof. Admitted.
+
+Lemma deltaii (i : seq nat) : uniq i -> delta i i = 1.
+Proof.
+move=> i_uniq; rewrite !(@deltaE (size i)) .
+by rewrite perm_eq_refl i_uniq /= perm_of_2seq_ii odd_perm1.
+Qed.
+
 Lemma deltaC i k : delta i k = delta k i.
 Proof.
 have [pik|pik] := boolP (perm_eq i k); last first.
   by rewrite /delta (negPf pik) perm_eq_sym (negPf pik).
-move: (pik); rewrite -[ i]/(val (in_tuple i)) -[k]/(val (in_tuple k)).
-move: (in_tuple _) (in_tuple _); rewrite (perm_eq_size pik).
-move: (size k) => m {i k pik} i k pik.
 have [uk|Nuk] := boolP (uniq k); last by rewrite !delta_0 // Nuk ?orbT.
-rewrite /delta pik perm_eq_sym pik -odd_permV !tvalK.
-case: _ / (esym (size_tuple k)); case: _ / (esym (size_tuple i)) => /=.
-by rewrite (perm_of_2seqV O) // -(perm_eq_uniq pik) uk.
+have si := (perm_eq_size pik); rewrite !(@deltaE (size k)) //.
+rewrite pik /= perm_eq_sym pik (perm_eq_uniq pik) uk /=.
+by rewrite -perm_of_2seqV // odd_permV.
 Qed.
 
-Lemma deltaN1 (i : seq nat) k : uniq i ->
-  perm_of_2seq i (in_tuple k) -> delta i k = -1.
+(* Lemma deltaN1 (i : seq nat) k : uniq i -> *)
+(*   perm_of_2seq i (in_tuple k) -> delta i k = -1. *)
+(* Proof. *)
+(* move=> ui; rewrite /delta /perm_of_2seq ui. *)
+(* case: eqP => [p|]; last by rewrite odd_perm1. *)
+(* case: sig_eqW => /= x ih Hx; by rewrite p Hx expr1. *)
+(* Qed. *)
+
+(* Lemma delta_1 (i : seq nat) k : uniq i -> perm_eq i k ->  *)
+(*  ~~ perm_of_2seq i (in_tuple k) -> delta i k = 1. *)
+(* Proof. *)
+(* move=> ui ik. *)
+(* rewrite /delta /perm_of_2seq ui. *)
+(* case: eqP => [p|]. *)
+(*   case: sig_eqW => /= x ih Hx. *)
+(*   by rewrite p (negPf Hx) expr0. *)
+(* by rewrite ik. *)
+(* Qed. *)
+
+Lemma perm_of_2seq_comp n {T: eqType} (s1 s2 s3 : n.-tuple T) :
+  uniq s3 -> perm_eq s1 s2 -> perm_eq s2 s3 ->
+  (perm_of_2seq s1 s2 * perm_of_2seq s2 s3)%g = perm_of_2seq s1 s3.
 Proof.
-move=> ui; rewrite /delta /perm_of_2seq ui.
-case: eqP => [p|]; last by rewrite odd_perm1.
-case: sig_eqW => /= x ih Hx; by rewrite p Hx expr1.
+move=> us3 s12 s23; have s13 := perm_eq_trans s12 s23.
+apply/permP => /= i; rewrite permE /=; apply/val_inj/eqP => /=.
+rewrite -(@nth_uniq _ (tnth_default s1 i) s3) ?size_tuple // -!tnth_nth.
+by rewrite !perm_of_2seqE.
 Qed.
 
-Lemma delta_1 (i : seq nat) k : uniq i -> perm_eq i k -> 
- ~~ perm_of_2seq i (in_tuple k) -> delta i k = 1.
-Proof.
-move=> ui ik.
-rewrite /delta /perm_of_2seq ui.
-case: eqP => [p|].
-  case: sig_eqW => /= x ih Hx.
-  by rewrite p (negPf Hx) expr0.
-by rewrite ik.
-Qed.
-
-Lemma perm_of_2seq_comp n {T: eqType} (x0 : T) (s1 s2 s3 : n.-tuple T) :
-  size s1 = n ->
-  uniq s1 -> uniq s2 -> uniq s3 ->
-  perm_of_2seq s1 s3 = (perm_of_2seq s2 s3 * perm_of_2seq s1 s2)%g.
-Proof.
-move=> s1n Hs1 Hs2 Hs3.
-rewrite /perm_of_2seq.
-case: eqP => [s1s3|].
-  case: sig_eqW => /= sigma Hsigma.
-  case: eqP => s2s3.
-    case: sig_eqW => /= rho Hrho.
-    case: eqP => [s1s2|]; last first.
-      admit.
-    case: sig_eqW => /= tau Htau.
-    apply/permP => /= i.
-    apply/val_inj/eqP=> /=.
-    rewrite -(@nth_uniq _ x0 s1) //=; last 2 first.
-      admit.
-      admit.
-    rewrite {1}Htau.
-    rewrite (nth_map i); last by rewrite size_enum_ord.
-    rewrite (tnth_nth x0).
-    rewrite Hrho.
-    rewrite (nth_map i); last by rewrite size_enum_ord.
-    rewrite (tnth_nth x0).
-    rewrite Hsigma.
-    rewrite (nth_map i); last by rewrite size_enum_ord.
-    rewrite (tnth_nth x0).
-    rewrite permE.
-    admit.
-Admitted.
-
-
-
-Lemma delta_comp n (i j k : n.-tuple nat) :
-  perm_eq i j -> perm_eq j k ->
+Lemma delta_comp (i j k : seq nat) :
+  uniq k -> perm_eq i j -> perm_eq j k ->
   delta i k = delta i j * delta j k.
 Proof.
-move=> Hh.
-rewrite /delta.
-have hb : uniq h by rewrite (perm_eq_uniq Hh) iota_uniq.
-case/boolP : (uniq (i ++ j)) => ij; last first.
-  rewrite delta_0; last by rewrite ij.
-  rewrite [in X in _ = _ * X]delta_0; last by rewrite ij.
-  by rewrite mulr0.
-case/boolP : (perm_eq (i ++ j) h) => ijh; last first.
-  rewrite {1}/delta (negPf ijh) {2}/delta.
-  case: ifP => [abs|]; last by rewrite mulr0.
-  rewrite perm_eq_sym in Hh.
-  by rewrite (perm_eq_trans abs Hh) in ijh.
-case/boolP : (odd_perm (perm_of_2seq (i ++ j) (in_tuple h))) => ijh_parity.
-  rewrite deltaN1 //.
-  case/boolP : (odd_perm (perm_of_2seq h (in_tuple (iota 0 (r + s))))) => hparity.
-    rewrite deltaC deltaN1 // delta_1 //.
-    by rewrite mulNr mulr1.
-    by rewrite (perm_eq_trans ijh).
-    have Htmp : size h = size (iota 0 (r + s)) by admit.
-(*    rewrite (@perm_of_2seq_comp _ _ O _ (tcast Htmp (in_tuple h))) //.
-    rewrite odd_permM negb_add.
-    admit.
-    by rewrite (perm_eq_size ijh) (perm_eq_size Hh).
-    admit.
-    by rewrite iota_uniq.
-  rewrite deltaC delta_1 // mul1r deltaN1 //.
-  have Htmp : size h = size (iota 0 (r + s)) by admit.
-  rewrite (@perm_of_2seq_comp _ _ O _ (tcast Htmp (in_tuple h))) //.
-  rewrite odd_permM -negb_eqb.
-  admit.
-  by rewrite (perm_eq_size ijh) (perm_eq_size Hh).
-  admit.
-  by rewrite iota_uniq.
-rewrite delta_1 //.*)
-Abort.
-
-(* Lemma lin_mulmx m p p' M N (f : {linear 'M[R]_(m,p) -> 'M_(m,p')}) : *)
-(*   f (M *m N) = M *m f N. *)
-(* Proof. *)
-(* rewrite [M]matrix_sum_delta !mulmx_suml linear_sum /=; apply: eq_bigr => i _. *)
-(* rewrite !mulmx_suml linear_sum /=; apply: eq_bigr => j _. *)
-(* rewrite -mul_scalar_mx -!mulmxA !mul_scalar_mx linearZ /=; congr (_ *: _). *)
-(* apply/matrixP => k l; rewrite !mxE. *)
-
+move=> uk pij pjk; have pik := perm_eq_trans pij pjk.
+have [sj si] := (perm_eq_size pjk, perm_eq_size pik).
+rewrite !(@deltaE (size k)) pik pij pjk /=.
+rewrite (perm_eq_uniq pij) (perm_eq_uniq pjk) uk.
+by rewrite -signr_addb -odd_permM perm_of_2seq_comp.
+Qed.
 
 (* rewrite linear_sum. *)
 
@@ -444,52 +433,53 @@ Qed.
 Lemma mulmxl_crossmull M u v : M *m (u *v v) = ((M *m u) *v v).
 Proof. by rewrite crossmulC mulmxN mulmxl_crossmulr -crossmulC. Qed.
 
-Lemma mulmxr_crossmulr M u v : (u *v v) *m M = (u *v (v *m M)).
-Proof.
-rewrite -[M]trmxK [M^T]matrix_sum_delta.
-rewrite !linear_sum /=; apply: eq_bigr=> i _.
-rewrite !linear_sum /=; apply: eq_bigr=> j _.
-rewrite !mxE !linearZ /= trmx_delta.
-rewr
-rewrite -[in RHS]/(crossmulr _ _).
-rewrite linear_sum /= /crossmu.
-rewrite
+(* Lemma mulmxr_crossmulr o u v : o \in so -> *)
+(*   (u *v v) *m o = ((u *m o) *v (v *m o)). *)
+(* Proof. *)
+(* rewrite -[M]trmxK [M^T]matrix_sum_delta. *)
+(* rewrite !linear_sum /=; apply: eq_bigr=> i _. *)
+(* rewrite !linear_sum /=; apply: eq_bigr=> j _. *)
+(* rewrite !mxE !linearZ /= trmx_delta. *)
+(* rewr *)
+(* rewrite -[in RHS]/(crossmulr _ _). *)
+(* rewrite linear_sum /= /crossmu. *)
+(* rewrite *)
 
-apply/rowP => k; rewrite !mxE.
-rewrite -![_ *v _](mul_rV_lin1 [linear of crossmulr _]).
-rewrite -!mulmxA.
-rewrite mul_rV_lin.
-rewrite -!(mul_rV_lin1 [linear of crossmulr (v * M)]).
+(* apply/rowP => k; rewrite !mxE. *)
+(* rewrite -![_ *v _](mul_rV_lin1 [linear of crossmulr _]). *)
+(* rewrite -!mulmxA. *)
+(* rewrite mul_rV_lin. *)
+(* rewrite -!(mul_rV_lin1 [linear of crossmulr (v * M)]). *)
 
-rewrite -/(mulmxr _ _) -!(mul_rV_lin1 [linear of mulmxr M]).
-rewrite -!(mul_rV_lin1 [linear of crossmulr v]).
+(* rewrite -/(mulmxr _ _) -!(mul_rV_lin1 [linear of mulmxr M]). *)
+(* rewrite -!(mul_rV_lin1 [linear of crossmulr v]). *)
 
-rewrite -!/(crossmulr _ _).
-rewrite -!(mul_rV_lin1 [linear of crossmulr v]).
-Abort.
+(* rewrite -!/(crossmulr _ _). *)
+(* rewrite -!(mul_rV_lin1 [linear of crossmulr v]). *)
+(* Abort. *)
 
 (*
 /mulmxr. mul_rV_lin1.
 Qed.
 *)
 
-Lemma crossmul0v u : 0 *v u = 0.
+Definition orthogonal := [qualify M : 'M[R]_3 | M * M^T == 1].
+(* cf Qint in rat.v *)
+Fact O_key : pred_key orthogonal. Proof. by []. Qed.
+Canonical O_keyed := KeyedQualifier O_key.
+
+Lemma orthogonal1 : 1 \is orthogonal.
+Admitted.
+
+Lemma O_divr_closed : divr_closed orthogonal.
 Proof.
-apply/rowP=> k; rewrite !mxE; apply/eqP/det0P.
-exists (delta_mx 0 1).
-  apply/negP=> /eqP /(congr1 (fun f : 'M__ => f 0 1)) /eqP.
-  by rewrite !mxE /= oner_eq0.
-by rewrite -rowE; apply/rowP=> j; rewrite !mxE.
-Qed.
+Admitted.
 
-Lemma crossmulv0 u : u *v 0 = 0.
-Proof. by rewrite crossmulC crossmul0v oppr0. Qed.
+Canonical O_is_mulr_closed := MulrPred O_divr_closed.
+Canonical O_is_divr_closed := DivrPred O_divr_closed.
 
-Lemma dotmul0v u : 0 *d u = 0.
-Proof. by rewrite [LHS]mxE big1 // => i; rewrite mxE mul0r. Qed.
+Definition SO : pred 'M[R]_3 := [pred M : 'M_3 | (M \in O) && (\det M == 1)].
 
-Lemma dotmulv0 u : u *d 0 = 0.
-Proof. by rewrite dotmulC dotmul0v. Qed.
 
 Lemma double_crossmul (u v w : 'rV[R]_3) :
  u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
