@@ -471,15 +471,26 @@ Canonical O_keyed := KeyedQualifier O_key.
 Lemma orthogonal1 : 1 \is orthogonal.
 Admitted.
 
-Lemma O_divr_closed : divr_closed orthogonal.
+Lemma orthogonal_divr_closed : divr_closed orthogonal.
 Proof.
 Admitted.
 
-Canonical O_is_mulr_closed := MulrPred O_divr_closed.
-Canonical O_is_divr_closed := DivrPred O_divr_closed.
+Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
+Canonical orthogonal_is_divr_closed := DivrPred orthogonal_divr_closed.
 
-Definition SO : pred 'M[R]_3 := [pred M : 'M_3 | (M \in O) && (\det M == 1)].
+Definition rotation := [qualify a M : 'M[R]_3 
+                       | (M \is orthogonal) && (\det M == 1)].
 
+Lemma rotation1 : 1 \is a rotation.
+Proof.
+Admitted.
+
+Lemma rotation_divr_closed : divr_closed orthogonal.
+Proof.
+Admitted.
+
+Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
+Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
 
 Lemma double_crossmul (u v w : 'rV[R]_3) :
  u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
