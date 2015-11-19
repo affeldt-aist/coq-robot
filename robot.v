@@ -492,6 +492,11 @@ Admitted.
 Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
 Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
 
+Lemma mulmxr_crossmulr r u v : r \is a rotation ->
+  (u *v v) *m r = ((u *m r) *v (v *m r)).
+Proof.
+Admitted.
+
 Lemma double_crossmul (u v w : 'rV[R]_3) :
  u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
 Proof.
