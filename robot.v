@@ -38,6 +38,80 @@ Qed.
 
 End extra.
 
+
+Section orthogonal.
+
+Variables (n : nat) (R : rcfType).
+
+Definition orthogonal := [qualify M : 'M[R]_n.+1 | M * M^T == 1].
+(* cf Qint in rat.v *)
+Fact O_key : pred_key orthogonal. Proof. by []. Qed.
+Canonical O_keyed := KeyedQualifier O_key.
+
+Local Notation "''O_' n [ R ]" := orthogonal
+  (at level 8, n at level 2, format "''O_' n [ R ]").
+
+Lemma orthogonal_def M : (M \is 'O_n[R]) = (M * M^T == 1). Proof. by []. Qed.
+
+Lemma orthogonal1 : 1 \is 'O_n[R].
+Proof. by rewrite orthogonal_def trmx1 mulr1. Qed.
+
+Lemma orthogonal_inv M : M \is 'O_n[R] -> M^-1 = M^T.
+Proof.
+rewrite orthogonal_def => HM; move/eqP/(congr1 (mulmx M^-1)) : (HM).
+rewrite mulmxA mulVmx ?(mulmx1,mul1mx) //; by case/eqP/mulmx1_unit : HM.
+Qed.
+
+Lemma orthogonal_alt M : M \is 'O_n[R] -> M^T * M = 1.
+Proof.
+rewrite orthogonal_def => HM; rewrite -orthogonal_inv // mulVr //.
+by case/eqP/mulmx1_unit : HM.
+Qed.
+
+Lemma orthogonal_divr_closed : divr_closed 'O_n[R].
+Proof.
+split => [| P Q HP HQ]; first exact: orthogonal1.
+by rewrite orthogonal_def orthogonal_inv // trmx_mul trmxK mulrA -(mulrA P)
+  (orthogonal_alt HQ) mulr1.
+Qed.
+
+Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
+Canonical orthogonal_is_divr_closed := DivrPred orthogonal_divr_closed.
+
+Definition rotation := [qualify M : 'M[R]_n.+1 
+                       | (M \is 'O_n[R] ) && (\det M == 1)].
+
+Local Notation "''SO_' n [ R ]" := rotation
+  (at level 8, n at level 2, format "''SO_' n [ R ]").
+
+Lemma rotation_def M : (M \is 'SO_n[R]) = (M \is 'O_n[R]) && (\det M == 1). Proof. by []. Qed.
+
+Lemma rotation1 : 1 \is 'SO_n[R].
+Proof. apply/andP; by rewrite orthogonal1 det1. Qed.
+
+Lemma rotation_divr_closed : divr_closed 'SO_n[R].
+Proof.
+split => [| P Q /andP[P1 P2] /andP[Q1 Q2]]; first exact: rotation1.
+rewrite rotation_def det_mulmx det_inv (eqP P2) (eqP Q2) invr1 mulr1 eqxx andbT.
+by apply orthogonal_divr_closed.
+Qed.
+
+Lemma rotation_invr_closed : invr_closed 'SO_n[R].
+Proof.
+move=> P /andP[P1 P2].
+by rewrite rotation_def orthogonal_inv // orthogonal_def trmxK orthogonal_alt // eqxx /= det_tr.
+Qed.
+
+(*
+Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
+Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
+*)
+
+End orthogonal.
+
+Notation "''O_' n [ R ]" := (@orthogonal n.-1 R) (at level 8, n at level 2, format "''O_' n [ R ]").
+Notation "''SO_' n [ R ]" := (@rotation n.-1 R) (at level 8, n at level 2, format "''SO_' n [ R ]").
+
 Section crossmul.
 
 Variable R : rcfType.
@@ -311,20 +385,20 @@ rewrite nth_ord_enum permE f_iinv /tnth Hy (nth_map j); last by rewrite size_enu
 rewrite nth_ord_enum /tnth; apply/eqP/set_nth_default;  by rewrite size_tuple.
 Qed.
 
-Definition delta (i k : seq nat) : R :=
+Definition delta {T : eqType} (i k : seq T) : R :=
   if (perm_eq i k) && (uniq i) then
   (-1) ^+ perm_of_2seq (insubd (in_tuple k) i) (in_tuple k) else 0.
 
-Lemma deltaE n (i k : seq nat) (si : size i = n) (sk : size k = n) : 
-   let T l (P : size l = n)  := Tuple (appP eqP idP P) in
-   delta i k = if (perm_eq i k) && (uniq i)
-               then (-1) ^+ perm_of_2seq (T _ si) (T _ sk) else 0.
+Lemma deltaE n {T : eqType} (i k : seq T) (si : size i = n) (sk : size k = n) : 
+  let T l (P : size l = n)  := Tuple (appP eqP idP P) in
+  delta i k = if (perm_eq i k) && (uniq i)
+              then (-1) ^+ perm_of_2seq (T _ si) (T _ sk) else 0.
 Proof.
-move=> T; rewrite /delta; have [/andP [pik i_uniq]|//] := ifP.
+move=> mkT; rewrite /delta; have [/andP [pik i_uniq]|//] := ifP.
 set i' := insubd _ _; set k' := in_tuple _.
-have [] : (i' = T _ si :> seq _ /\ k' = T _ sk :> seq _).
+have [] : (i' = mkT _ si :> seq _ /\ k' = mkT _ sk :> seq _).
   by rewrite /= val_insubd /= (perm_eq_size pik) eqxx.
-move: i' k' (T i si) (T k sk) => /=.
+move: i' k' (mkT i si) (mkT k sk) => /=.
 by case: _ / sk => ??????; congr (_ ^+ perm_of_2seq _ _); apply: val_inj.
 Qed.
 
@@ -334,7 +408,7 @@ Qed.
 (* Lemma delta_cast n (i k : seq nat) (ni : size i = n) (nk : size k = n) : *)
 (*   delta i k = delta (Tuple (appP eqP idP ni)) (Tuple (appP eqP idP nk)). *)
 
-Lemma delta_0 (i : seq nat) k : (~~ uniq i) || (~~ uniq k) -> delta i k = 0.
+Lemma delta_0 {T : eqType} (i : seq T) k : (~~ uniq i) || (~~ uniq k) -> delta i k = 0.
 Proof.
 case/orP => [Nui|Nuk]; rewrite /delta; case: ifP => // /andP[pik ui].
   by rewrite (negbTE Nui) in ui.
@@ -364,16 +438,21 @@ Qed.
 (* Lemma perm_of_2seq_tcast (T : eqType) n m i (k : m.-tuple T) (eq_mn : m = n): *)
 (*   perm_of_2seq i (tcast eq_mn k) = scast eq_mn (perm_of_2seq i k). *)
 
-Lemma perm_of_2seq_ii n (i : n.-tuple nat) : perm_of_2seq i i = 1%g.
-Proof. Admitted.
-
-Lemma deltaii (i : seq nat) : uniq i -> delta i i = 1.
-Proof.
-move=> i_uniq; rewrite !(@deltaE (size i)) .
-by rewrite perm_eq_refl i_uniq /= perm_of_2seq_ii odd_perm1.
+Lemma perm_of_2seq_ii {T : eqType} n (i : n.-tuple T) : uniq i -> 
+  perm_of_2seq i i = 1%g.
+Proof. 
+move=> ?; apply/permP => /= j; apply/val_inj/eqP => /=.
+by rewrite permE -(@nth_uniq _ (tnth_default i j) i) ?size_tuple // -tnth_nth
+   perm_of_2seqE.
 Qed.
 
-Lemma deltaC i k : delta i k = delta k i.
+Lemma deltaii {T : eqType} (i : seq T) : uniq i -> delta i i = 1.
+Proof.
+move=> i_uniq; rewrite !(@deltaE (size i)) .
+by rewrite perm_eq_refl i_uniq /= perm_of_2seq_ii // odd_perm1.
+Qed.
+
+Lemma deltaC {T : eqType} (i k : seq T) : delta i k = delta k i.
 Proof.
 have [pik|pik] := boolP (perm_eq i k); last first.
   by rewrite /delta (negPf pik) perm_eq_sym (negPf pik).
@@ -412,7 +491,7 @@ rewrite -(@nth_uniq _ (tnth_default s1 i) s3) ?size_tuple // -!tnth_nth.
 by rewrite !perm_of_2seqE.
 Qed.
 
-Lemma delta_comp (i j k : seq nat) :
+Lemma delta_comp {T : eqType} (i j k : seq T) :
   uniq k -> perm_eq i j -> perm_eq j k ->
   delta i k = delta i j * delta j k.
 Proof.
@@ -463,36 +542,7 @@ Proof. by rewrite crossmulC mulmxN mulmxl_crossmulr -crossmulC. Qed.
 Qed.
 *)
 
-Definition orthogonal := [qualify M : 'M[R]_3 | M * M^T == 1].
-(* cf Qint in rat.v *)
-Fact O_key : pred_key orthogonal. Proof. by []. Qed.
-Canonical O_keyed := KeyedQualifier O_key.
-
-Lemma orthogonal1 : 1 \is orthogonal.
-Admitted.
-
-Lemma orthogonal_divr_closed : divr_closed orthogonal.
-Proof.
-Admitted.
-
-Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
-Canonical orthogonal_is_divr_closed := DivrPred orthogonal_divr_closed.
-
-Definition rotation := [qualify a M : 'M[R]_3 
-                       | (M \is orthogonal) && (\det M == 1)].
-
-Lemma rotation1 : 1 \is a rotation.
-Proof.
-Admitted.
-
-Lemma rotation_divr_closed : divr_closed orthogonal.
-Proof.
-Admitted.
-
-Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
-Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
-
-Lemma mulmxr_crossmulr r u v : r \is a rotation ->
+Lemma mulmxr_crossmulr r u v : r \is 'SO_3[R] ->
   (u *v v) *m r = ((u *m r) *v (v *m r)).
 Proof.
 Admitted.
@@ -689,11 +739,12 @@ Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
 Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
 
 Record homogeneous_spec (A B : frame) : Type := {
-  rotation : 'M[R]_3 ;
+  rot : 'M[R]_3 ;
+  _ : rot \in 'SO_3[R] ;
   position : vec A }.
 
 Definition homogeneous_mx A B (T : homogeneous_spec A B) : 'M[R]_4 :=
-  row_mx (col_mx (rotation T) 0) (col_mx (let: Vec x := position T in x^T) 1).
+  row_mx (col_mx (rot T) 0) (col_mx (let: Vec x := position T in x^T) 1).
 
 Definition homogeneous_trans A B (T : homogeneous_spec A B) (x : vec B) : vec A :=
   Vec _ (\row_(i < 3) (homogeneous_mx T *m col_mx (let: Vec x' := x in x'^T) 1)^T 0 (inord i)).
