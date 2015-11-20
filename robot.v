@@ -39,17 +39,32 @@ Qed.
 End extra.
 
 
-Section orthogonal.
+Section orthogonal_def.
 
 Variables (n : nat) (R : rcfType).
 
-Definition orthogonal := [qualify M : 'M[R]_n.+1 | M * M^T == 1].
+Definition orthogonal := [qualify M : 'M[R]_n | M *m M^T == 1%:M].
 (* cf Qint in rat.v *)
-Fact O_key : pred_key orthogonal. Proof. by []. Qed.
-Canonical O_keyed := KeyedQualifier O_key.
+Fact orthogonal_key : pred_key orthogonal. Proof. by []. Qed.
+Canonical orthogonal_keyed := KeyedQualifier orthogonal_key.
 
-Local Notation "''O_' n [ R ]" := orthogonal
+Definition rotation := [qualify M : 'M[R]_n 
+                       | (M \is orthogonal) && (\det M == 1)].
+Fact rotation_key : pred_key rotation. Proof. by []. Qed.
+Canonical rotation_keyed := KeyedQualifier rotation_key.
+
+End orthogonal_def.
+
+Local Notation "''O_' n [ R ]" := (orthogonal n R)
   (at level 8, n at level 2, format "''O_' n [ R ]").
+
+Local Notation "''SO_' n [ R ]" := (rotation n R)
+  (at level 8, n at level 2, format "''SO_' n [ R ]").
+
+Section orthogonal.
+
+Variables (n' : nat) (R : rcfType).
+Let n := n'.+1.
 
 Lemma orthogonal_def M : (M \is 'O_n[R]) = (M * M^T == 1). Proof. by []. Qed.
 
@@ -68,21 +83,20 @@ rewrite orthogonal_def => HM; rewrite -orthogonal_inv // mulVr //.
 by case/eqP/mulmx1_unit : HM.
 Qed.
 
+Lemma orthogonal_oppr_closed : oppr_closed 'O_n[R].
+Proof. by move=> x; rewrite !orthogonal_def linearN /= mulNr mulrN opprK. Qed.
+Canonical orthogonal_is_oppr_closed := OpprPred orthogonal_oppr_closed.
+
 Lemma orthogonal_divr_closed : divr_closed 'O_n[R].
 Proof.
 split => [| P Q HP HQ]; first exact: orthogonal1.
 by rewrite orthogonal_def orthogonal_inv // trmx_mul trmxK mulrA -(mulrA P)
   (orthogonal_alt HQ) mulr1.
 Qed.
-
 Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
 Canonical orthogonal_is_divr_closed := DivrPred orthogonal_divr_closed.
-
-Definition rotation := [qualify M : 'M[R]_n.+1 
-                       | (M \is 'O_n[R] ) && (\det M == 1)].
-
-Local Notation "''SO_' n [ R ]" := rotation
-  (at level 8, n at level 2, format "''SO_' n [ R ]").
+Canonical orthogonal_is_smulr_closed := SmulrPred orthogonal_divr_closed.
+Canonical orthogonal_is_sdivr_closed := SdivrPred orthogonal_divr_closed.
 
 Lemma rotation_def M : (M \is 'SO_n[R]) = (M \is 'O_n[R]) && (\det M == 1). Proof. by []. Qed.
 
@@ -102,15 +116,10 @@ move=> P /andP[P1 P2].
 by rewrite rotation_def orthogonal_inv // orthogonal_def trmxK orthogonal_alt // eqxx /= det_tr.
 Qed.
 
-(*
-Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
 Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
-*)
+Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
 
 End orthogonal.
-
-Notation "''O_' n [ R ]" := (@orthogonal n.-1 R) (at level 8, n at level 2, format "''O_' n [ R ]").
-Notation "''SO_' n [ R ]" := (@rotation n.-1 R) (at level 8, n at level 2, format "''SO_' n [ R ]").
 
 Section crossmul.
 
