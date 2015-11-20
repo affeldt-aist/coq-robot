@@ -38,18 +38,15 @@ Qed.
 
 End extra.
 
-
 Section orthogonal_def.
 
 Variables (n : nat) (R : rcfType).
 
 Definition orthogonal := [qualify M : 'M[R]_n | M *m M^T == 1%:M].
-(* cf Qint in rat.v *)
 Fact orthogonal_key : pred_key orthogonal. Proof. by []. Qed.
 Canonical orthogonal_keyed := KeyedQualifier orthogonal_key.
 
-Definition rotation := [qualify M : 'M[R]_n 
-                       | (M \is orthogonal) && (\det M == 1)].
+Definition rotation := [qualify M : 'M[R]_n | (M \is orthogonal) && (\det M == 1)].
 Fact rotation_key : pred_key rotation. Proof. by []. Qed.
 Canonical rotation_keyed := KeyedQualifier rotation_key.
 
@@ -74,13 +71,28 @@ Proof. by rewrite orthogonal_def trmx1 mulr1. Qed.
 Lemma orthogonal_inv M : M \is 'O_n[R] -> M^-1 = M^T.
 Proof.
 rewrite orthogonal_def => HM; move/eqP/(congr1 (mulmx M^-1)) : (HM).
-rewrite mulmxA mulVmx ?(mulmx1,mul1mx) //; by case/eqP/mulmx1_unit : HM.
+rewrite mulmxA mulVmx; last by case/eqP/mulmx1_unit : HM.
+by rewrite ?(mulmx1,mul1mx) => ->.
 Qed.
 
-Lemma orthogonal_alt M : M \is 'O_n[R] -> M^T * M = 1.
+Lemma orthogonal_alt M : (M \is 'O_n[R]) = (M^T * M == 1).
 Proof.
-rewrite orthogonal_def => HM; rewrite -orthogonal_inv // mulVr //.
-by case/eqP/mulmx1_unit : HM.
+apply/idP/idP; rewrite orthogonal_def => HM.
+  rewrite -(orthogonal_inv HM) // mulVr //; by case/eqP/mulmx1_unit : HM.
+case/eqP/mulmx1_unit : (HM) => _ /mulmxK /can_inj H.
+apply/eqP/H; by rewrite -mulmxA mulmxE (eqP HM) mulr1 mul1r.
+Qed.
+
+Lemma orthogonal_col_base M : (M \is 'O_n[R]) =
+  [forall j, forall k, \sum_i M i j * M i k == (j == k)%:R].
+Proof.
+apply/idP/idP; rewrite orthogonal_alt.
+  move=> HM; apply/forallP => /= j; apply/forallP => /= k.
+  move: HM => /eqP/(congr1 (fun x : 'M__=> x j k)).
+  rewrite !mxE => <-; apply/eqP/eq_bigr => ? _; by rewrite mxE.
+move/forallP => H; apply/eqP/matrixP => a b; rewrite !mxE.
+move: (H a) => /forallP /(_ b) /eqP <-.
+apply/eq_bigr=> // ? _; by rewrite !mxE.
 Qed.
 
 Lemma orthogonal_oppr_closed : oppr_closed 'O_n[R].
@@ -90,8 +102,8 @@ Canonical orthogonal_is_oppr_closed := OpprPred orthogonal_oppr_closed.
 Lemma orthogonal_divr_closed : divr_closed 'O_n[R].
 Proof.
 split => [| P Q HP HQ]; first exact: orthogonal1.
-by rewrite orthogonal_def orthogonal_inv // trmx_mul trmxK mulrA -(mulrA P)
-  (orthogonal_alt HQ) mulr1.
+rewrite orthogonal_def orthogonal_inv // trmx_mul trmxK mulrA -(mulrA P).
+move/esym: (orthogonal_alt Q); rewrite HQ /= => /eqP ->; by rewrite mulr1.
 Qed.
 Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
 Canonical orthogonal_is_divr_closed := DivrPred orthogonal_divr_closed.
@@ -113,7 +125,8 @@ Qed.
 Lemma rotation_invr_closed : invr_closed 'SO_n[R].
 Proof.
 move=> P /andP[P1 P2].
-by rewrite rotation_def orthogonal_inv // orthogonal_def trmxK orthogonal_alt // eqxx /= det_tr.
+rewrite rotation_def orthogonal_inv // orthogonal_def trmxK.
+move/esym: (orthogonal_alt P); rewrite P1 => /eqP ->; by rewrite eqxx /= det_tr.
 Qed.
 
 Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
@@ -510,6 +523,49 @@ rewrite !(@deltaE (size k)) pik pij pjk /=.
 rewrite (perm_eq_uniq pij) (perm_eq_uniq pjk) uk.
 by rewrite -signr_addb -odd_permM perm_of_2seq_comp.
 Qed.
+
+Lemma perm_of_2seq_perm n {T: eqType} (s1 s2 : n.-tuple T) (s : 'S_n) : 
+  uniq s2 -> perm_eq s1 s2 ->
+  perm_of_2seq s1 s2 = (s^-1 * perm_of_2seq [tuple (tnth s1 (s x)) | x < n] s2)%g.
+Proof.
+move=> us2 s1s2.
+apply/permP => /= j.
+rewrite [perm_of_2seq]unlock.
+case: eqP => // p.
+case: eqP => // p0; last by admit.
+case: sig_eqW => /= x Hx.
+Admitted.
+
+Lemma delta_perm n {T : eqType} (i k : seq T) (x0 : T) (s : 'S_n) : size k = n -> 
+  uniq k -> perm_eq i k ->
+  delta i k = (- 1) ^+ s * delta [tuple (nth x0 i (s x)) | x < n] k.
+Proof.
+move=> kn uk pik.
+have sin : size i = n by rewrite (perm_eq_size pik).
+have ? : size [tuple nth x0 i (s x)  | x < n] = n by rewrite size_tuple.
+have ui : uniq i by rewrite (perm_eq_uniq pik).
+rewrite !(@deltaE n) // pik ui /=. 
+case: ifP; last by admit.
+case/andP => H1 H2.
+rewrite -signr_addb.
+congr (_ ^+ _).
+rewrite (perm_of_2seq_perm s) //.
+rewrite -odd_permV.
+Abort.
+
+Lemma delta_catC {T : eqType} (i j k : seq T) :
+  uniq k -> perm_eq (i ++ j) k ->
+  delta (i ++ j) k = (- 1) ^+ (size i * size j) * delta (j ++ i) k.
+Proof.
+Abort.
+
+Definition form n k := 'M[R]_(k, n) -> R.
+
+Definition oprod n r s (a : form n r) (b : form n s) : form n (r + s) := 
+  fun v => \sum_(sigma : 'S_(r + s))
+            (- 1) ^ sigma *
+                    a (\matrix_(i < r, j < n) v (sigma (unsplit (inl i))) j) * 
+                    b (\matrix_(i < s, j < n) v (sigma (unsplit (inr i))) j).
 
 (* rewrite linear_sum. *)
 
