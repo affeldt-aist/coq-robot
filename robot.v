@@ -804,6 +804,12 @@ Proof. Admitted.
 Fact norm_e1_subproof : norm (delta_mx 0 0) == 1.
 Proof. by rewrite norm_delta_mx. Qed.
 
+Lemma dotmulvv x : x *d x = norm x ^ 2.
+Proof.
+rewrite /norm [_ ^ _]sqr_sqrtr // dotmulE sumr_ge0 //.
+by move=> i _; rewrite sqr_ge0.
+Qed.
+
 Definition angle_axis_of (a : angle) (v : vector) :=
   insubd (@AngleAxis (a,_) norm_e1_subproof) (a, (norm v)^-1 *: v).
 
@@ -824,9 +830,6 @@ Definition angle_axis_of_rotation (M : 'M[R]_3) :=
     0 |-> M 2%:R 1 - M 1 2%:R, 1 |-> M 0 2%:R - M 2%:R 0, 2%:R |-> M 1 0 - M 0 1] i in
   angle_axis_of phi w.
 
-Definition rodrigues (u : vector) r := let: AngleAxis phi w := r in
-  cos phi *: u + (1 - cos phi) * (u *d w) *: w + sin phi *: (w *v u).
-
 Definition skew_mx (w : vector) : 'M[R]_3 := \matrix_i (w *v delta_mx 0 i).
 
 Lemma skew_mxE (u w : vector) : u *m (skew_mx w) = w *v u.
@@ -835,19 +838,27 @@ rewrite [u]row_sum_delta -/(mulmxr _ _) !linear_sum; apply: eq_bigr=> i _.
 by rewrite !linearZ /= -rowE rowK.
 Qed.
 
-Coercion rodrigues_mx r : 'M_3 := let: AngleAxis phi w := r in
+Coercion rodrigues_mx r : 'M_3 :=
+  let (phi, w) := (aangle r, aaxis r) in
   1 + sin phi *: skew_mx w + (1 - cos phi) *: (skew_mx w) ^ 2.
+
+Definition rodrigues (u : vector) r := 
+  let (phi, w) := (aangle r, aaxis r) in
+  cos phi *: u + (1 - cos phi) * (u *d w) *: w + sin phi *: (w *v u).
 
 Lemma rodriguesP u r : rodrigues u r = u *m r.
 Proof.
-case: r => r w; rewrite /rodrigues /rodrigues_mx addrAC.
-rewrite !mulmxDr mulmx1 -!scalemxAr mulmxA !skew_mxE.
-rewrite double_crossmul.
-
-
+rewrite /rodrigues /rodrigues_mx; set phi := aangle _; set w := aaxis _.
+rewrite addrAC !mulmxDr mulmx1 -!scalemxAr mulmxA !skew_mxE.
+rewrite double_crossmul dotmulvv norm_axis [_ ^ _]expr1n scale1r.
+rewrite scalerBr -opprB opprD opprK -scaleNr opprB addrACA addrA.
+rewrite -[u as X in X + _]scale1r -scalerDl addrCA subrr addr0.
+by rewrite dotmulC scalerA.
+Qed.
 
 Lemma rodriguesE M u (HM : M \in 'SO_3[R]) :
-  rodrigues u (angle_axis_of_rotation M) = homogeneous_ap u (HomogeneousTrans 0 HM).
+  rodrigues u (angle_axis_of_rotation M) =
+  homogeneous_ap u (HomogeneousTrans 0 HM).
 Proof.
 Abort.
 
