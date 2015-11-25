@@ -607,7 +607,7 @@ Proof. by rewrite normr1 divr1 normr1. Qed.
 
 Canonical angle_subType := [subType for expi].
 
-Lemma norm_expi a : `|expi a| = 1.
+Lemma normr_expi a : `|expi a| = 1.
 Proof. by case: a => x /= /eqP. Qed.
 
 Lemma expi_eq0 a : (expi a == 0) = false.
@@ -619,7 +619,7 @@ Definition arg (x : R[i]) : angle :=
 Lemma expiK : cancel expi arg.
 Proof.
 move=> a; apply/val_inj=> /=.
-by rewrite insubdK ?norm_expi ?divr1 // -topredE /= norm_expi.
+by rewrite insubdK ?normr_expi ?divr1 // -topredE /= normr_expi.
 Qed.
 
 Lemma expi_arg x : x != 0 -> expi (arg x) = x / `|x|.
@@ -628,8 +628,11 @@ move=> Nx_neq0; rewrite insubdK //.
 by rewrite -topredE /= normrM normfV normr_id divff // normr_eq0.
 Qed.
 
-Lemma mul_norm_arg x : x != 0 -> x = `|x| * expi (arg x).
-Proof. by move=> x_neq0; rewrite expi_arg // mulrC mulfVK // normr_eq0. Qed.
+Lemma mul_norm_arg x : x = `|x| * expi (arg x).
+Proof. 
+have [x0|x_neq0] := boolP (x == 0); first by rewrite (eqP x0) normr0 mul0r.
+by rewrite expi_arg // mulrC mulfVK // normr_eq0. 
+Qed.
 
 Lemma argK x : `|x| = 1 -> expi (arg x) = x.
 Proof. by move=> Nx1; rewrite expi_arg ?Nx1 ?divr1 // -normr_gt0 Nx1. Qed.
@@ -639,7 +642,7 @@ Definition opp_angle a := arg (expi a)^-1.
 
 Lemma add_angleA : associative add_angle.
 Proof.
-by move=> ???; rewrite /add_angle argK ?mulrA ?argK // ?normrM 2!norm_expi mulr1.
+by move=> ???; rewrite /add_angle argK ?mulrA ?argK // ?normrM 2!normr_expi mulr1.
 Qed.
 
 Lemma add_angleC : commutative add_angle.
@@ -649,15 +652,12 @@ Lemma add_0angle x : add_angle (arg 1) x = x.
 Proof. by rewrite /add_angle argK ?normr1 ?mul1r ?expiK. Qed.
 
 Lemma expi_is_unit x : expi x \is a GRing.unit. 
-Proof.
-apply/unitrP; exists (expi x)^*; split; apply/eqP; 
-  by rewrite ?(mulrC _^*) -sqr_normc norm_expi expr1n.
-Qed.
+Proof. by rewrite unitfE -normr_eq0 normr_expi oner_eq0. Qed.
 
 Lemma add_Nangle x : add_angle (opp_angle x) x = (arg 1).
 Proof. 
 rewrite /add_angle /opp_angle argK; first by rewrite mulVr // expi_is_unit.
-by rewrite normrV ?expi_is_unit // norm_expi invr1.
+by rewrite normrV ?expi_is_unit // normr_expi invr1.
 Qed.
 
 Definition angle_eqMixin := [eqMixin of angle by <:].
@@ -674,8 +674,7 @@ Definition tan a := sin a / cos a.
 Lemma cos2Dsin2 a : (cos a)^2 + (sin a)^2 = 1.
 Proof.
 move: (add_Re2_Im2 (expi a)).
-rewrite norm_expi expr1n => /(congr1 (fun x => Re x)) => /= <-.
-by case: a.
+by rewrite normr_expi expr1n => /(congr1 (fun x => Re x)) => /= <-.
 Qed.
 
 (*
@@ -685,8 +684,9 @@ cos(t) = ( exp(it) + exp(-it) )/2
 
 Lemma sinD a b : sin (a + b) = sin a * cos b + cos a * sin b.
 Proof.
-
+rewrite {1}/sin.
 Admitted.
+
 Lemma cosD a b : cos (a + b) = cos a * cos b - sin a * sin b.
 Admitted.
 
@@ -739,7 +739,6 @@ Definition homogeneous := 'rV[R]_4.
 Definition vector_homo (x : vector) := (row_mx x 0 : homogeneous).
 Definition coord_homo (x : coordinate) := (row_mx x 1 : homogeneous).
 
-
 Record homogeneous_trans : Type := HomogeneousTrans {
   translation : vector;
   rot : 'M[R]_3 ;
@@ -755,12 +754,33 @@ Definition homogeneous_ap  (x : vector) (T : homogeneous_trans) : vector :=
 Lemma displacementP m (from to : (coordinate ^ m)%type) :
   exists T : homogeneous_trans, forall i, to i = homogeneous_ap (from i) T.
 Abort.
-                                            
+
 End homogeneous.
 
+Section Rodrigues.
+
+Record angle_axis := AngleAxis {
+  rotation_angle : angle ;
+  axis : vector }.
+
+(* see table 1.2 of handbook of robotics *)
+Definition angle_axis_of_rotation (M : 'M[R]_3) :=
+  let phi := acos ((M 0 0 + M 1 1 + M 2%:R 2%:R - 1) / 2%:R) in
+  let w := 1 / (2%:R * sin phi) *: \row_i [eta \0 with 
+    0 |-> M 2%:R 1 - M 1 2%:R, 1 |-> M 0 2%:R - M 2%:R 0, 2%:R |-> M 1 0 - M 0 1] i in
+  AngleAxis phi w.
+
+Definition rodrigues (u : vector) r := let: AngleAxis phi w := r in
+  cos phi *: u + (1 - cos phi) * (u *d w) *: w + sin phi *: (w *v u).
+
+Lemma rodriguesE M u (HM : M \in 'SO_3[R]) :
+  rodrigues u (angle_axis_of_rotation M) = homogeneous_ap u (HomogeneousTrans 0 HM).
+Proof.
+Abort.
+
+End Rodrigues.
+
 (*
-
-
 
   option ('rV[R]_3 (* point *) * 'rV[R]_3 (* vec *) ).
 Admitted.
