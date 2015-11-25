@@ -690,7 +690,7 @@ Admitted.
 Lemma cosD a b : cos (a + b) = cos a * cos b - sin a * sin b.
 Admitted.
 
-Definition atan (x : R) : angle := arg(x +i* 1) *~ sgz (x).
+Definition atan (x : R) : angle := arg (x +i* 1) *~ sgz (x).
 Definition asin (x : R) : angle := arg (Num.sqrt (1 - x^2) +i* x).
 Definition acos (x : R) : angle := arg (x +i* Num.sqrt (1 - x^2)).
 
@@ -717,6 +717,13 @@ Proof. Admitted.
 
 Lemma sinK : cancel asin sin.  
 Proof. Admitted.
+
+Lemma sin_acos x : `|x| <= 1 -> sin (acos x) = Num.sqrt (1 - x ^ 2).
+Proof.
+move=> Nx_le1; rewrite /sin /acos argK //; simpc; rewrite sqr_sqrtr.
+  by rewrite addrC addrNK sqrtr1 //.
+by rewrite subr_ge0 -[_ ^ _]real_normK ?num_real // exprn_ile1.
+Qed.
 
 Definition vec_angle (v w : vector) : angle := arg (v *d w +i* norm (v *v w)).
 
@@ -763,18 +770,81 @@ End homogeneous.
 Section Rodrigues.
 
 Record angle_axis := AngleAxis {
-  rotation_angle : angle ;
-  axis : vector }.
+  angle_axis_val : angle * vector ;
+  _ : norm (angle_axis_val.2) == 1
+ }.
+
+Canonical angle_axis_subType := [subType for angle_axis_val].
+
+Definition aangle (a : angle_axis) := (val a).1.
+Definition aaxis (a : angle_axis) := (val a).2.
+
+Lemma norm_axis a : norm (aaxis a) = 1.
+Proof. by case: a => *; apply/eqP. Qed.
+
+Lemma norm_delta_mx i : norm (delta_mx 0 i) = 1.
+Proof.
+rewrite /norm dotmulE (bigD1 i) ?mxE //= ?eqxx mul1r big1 ?addr0 ?sqrtr1 //.
+by move=> j /negPf eq_ij; rewrite mxE eqxx eq_ij mulr0.
+Qed.
+
+Lemma norm_ge0 x : norm x >= 0.
+Proof. Admitted.
+Hint Resolve norm_ge0.
+
+Lemma normr_norm x : `|norm x| = norm x.
+Proof. by rewrite ger0_norm. Qed.
+
+Lemma norm_eq0 x : (norm x == 0) = (x == 0).
+Proof. rewrite sqrtr_eq0 dotmulE. Admitted.
+
+Lemma normZ a x : norm (a *: x) = `|a| * norm x.
+Proof. Admitted.
+
+Fact norm_e1_subproof : norm (delta_mx 0 0) == 1.
+Proof. by rewrite norm_delta_mx. Qed.
+
+Definition angle_axis_of (a : angle) (v : vector) :=
+  insubd (@AngleAxis (a,_) norm_e1_subproof) (a, (norm v)^-1 *: v).
+
+Lemma aaxis_of (a : angle) (v : vector) : v != 0 ->
+  aaxis (angle_axis_of a v) = (norm v)^-1 *: v.
+Proof.
+move=> v_neq0 /=; rewrite /angle_axis_of /aaxis val_insubd /=.
+by rewrite normZ normfV normr_norm mulVf ?norm_eq0 // eqxx.
+Qed.
+
+Lemma aangle_of (a : angle) (v : vector) : aangle (angle_axis_of a v) = a.
+Proof. by rewrite /angle_axis_of /aangle val_insubd /= fun_if if_same. Qed.
 
 (* see table 1.2 of handbook of robotics *)
 Definition angle_axis_of_rotation (M : 'M[R]_3) :=
-  let phi := acos ((M 0 0 + M 1 1 + M 2%:R 2%:R - 1) / 2%:R) in
+  let phi := acos ((mxtrace M - 1) / 2%:R) in
   let w := 1 / (2%:R * sin phi) *: \row_i [eta \0 with 
     0 |-> M 2%:R 1 - M 1 2%:R, 1 |-> M 0 2%:R - M 2%:R 0, 2%:R |-> M 1 0 - M 0 1] i in
-  AngleAxis phi w.
+  angle_axis_of phi w.
 
 Definition rodrigues (u : vector) r := let: AngleAxis phi w := r in
   cos phi *: u + (1 - cos phi) * (u *d w) *: w + sin phi *: (w *v u).
+
+Definition skew_mx (w : vector) : 'M[R]_3 := \matrix_i (w *v delta_mx 0 i).
+
+Lemma skew_mxE (u w : vector) : u *m (skew_mx w) = w *v u.
+Proof.
+rewrite [u]row_sum_delta -/(mulmxr _ _) !linear_sum; apply: eq_bigr=> i _.
+by rewrite !linearZ /= -rowE rowK.
+Qed.
+
+Coercion rodrigues_mx r : 'M_3 := let: AngleAxis phi w := r in
+  1 + sin phi *: skew_mx w + (1 - cos phi) *: (skew_mx w) ^ 2.
+
+Lemma rodriguesP u r : rodrigues u r = u *m r.
+Proof.
+case: r => r w; rewrite /rodrigues /rodrigues_mx addrAC.
+rewrite !mulmxDr mulmx1 -!scalemxAr mulmxA !skew_mxE.
+rewrite double_crossmul.
+
+
 
 Lemma rodriguesE M u (HM : M \in 'SO_3[R]) :
   rodrigues u (angle_axis_of_rotation M) = homogeneous_ap u (HomogeneousTrans 0 HM).
