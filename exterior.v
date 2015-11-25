@@ -283,8 +283,6 @@ Qed.
 
 Variable (R : fieldType) (n : nat).
 
-Print Canonical Projections.
-
 Let dim := #|{set 'I_n}|.
 Definition exterior := 'rV[R]_dim.
 Canonical exterior_eqType := [eqType of exterior].

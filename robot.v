@@ -730,9 +730,10 @@ Record object (A : frame) := {
   body : (coor A ^ object_size)%type }.
 *)
 
-Definition displacement n (from to : (coordinate ^ n)%type) :=
-  (exists d, forall i, norm (from i - to i) = d) /\
-  (exists alpha, forall i j k, vec_angle (from j - from i) (from k - from i) = alpha).
+Definition displacement n (from to : coordinate ^ n) :=
+  (forall i j, norm (from i - from j) = norm (to i - to j)) /\
+  (forall i j k, vec_angle (from j - from i) (from k - from i) =
+                 vec_angle (to j - to i) (to k - to i)).
 
 Definition homogeneous := 'rV[R]_4.
 
@@ -748,11 +749,13 @@ Record homogeneous_trans : Type := HomogeneousTrans {
 Coercion homogeneous_mx (T : homogeneous_trans) : 'M[R]_4 :=
   row_mx (col_mx (rot T) 0) (col_mx (translation T)^T 1).
 
-Definition homogeneous_ap  (x : vector) (T : homogeneous_trans) : vector :=
-  \row_(i < 3) (homogeneous_mx T *m col_mx  x^T 1)^T 0 (inord i).
+Definition homogeneous_ap  (x : coordinate) (T : homogeneous_trans) : coordinate :=
+  \row_(i < 3) (homogeneous_mx T *m col_mx  x^T 1 (* 0 for vectors? *) )^T 0 (inord i).
 
-Lemma displacementP m (from to : (coordinate ^ m)%type) :
-  exists T : homogeneous_trans, forall i, to i = homogeneous_ap (from i) T.
+Lemma displacementP m (from to : coordinate ^ m) :
+  displacement from to <->
+  exists T : homogeneous_trans, 
+    forall i, to i = homogeneous_ap (from i) T.
 Abort.
 
 End homogeneous.
