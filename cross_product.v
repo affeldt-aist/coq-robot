@@ -423,3 +423,6 @@ congr (\det _); apply/matrixP => a b; rewrite !mxE !ffunE /=.
 rewrite -![tperm _ _ a == _](inj_eq (@perm_inj _ (tperm (1 : 'I__) 2%:R))).
 by rewrite !tpermK !permE; move: a; do !case=> //.
 Qed.
+ *)
+
+End Crossproduct.

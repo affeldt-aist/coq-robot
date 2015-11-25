@@ -36,6 +36,9 @@ Proof.
 by rewrite -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx0 tr_col_mx row_mx_eq0.
 Qed.
 
+Lemma rew_condAr (a b c : bool) : a = b && c -> (b -> c = a).
+Proof. by case: b. Qed.
+
 End extra.
 
 Section orthogonal_def.
@@ -63,70 +66,96 @@ Section orthogonal.
 Variables (n' : nat) (R : rcfType).
 Let n := n'.+1.
 
-Lemma orthogonal_def M : (M \is 'O_n[R]) = (M * M^T == 1). Proof. by []. Qed.
+Lemma orthogonalE M : (M \is 'O_n[R]) = (M * M^T == 1). Proof. by []. Qed.
 
 Lemma orthogonal1 : 1 \is 'O_n[R].
-Proof. by rewrite orthogonal_def trmx1 mulr1. Qed.
+Proof. by rewrite orthogonalE trmx1 mulr1. Qed.
+
+Lemma orthogonalEinv M : (M \is 'O_n[R]) = (M \is a GRing.unit) && (M^-1 == M^T).
+Proof.
+rewrite orthogonalE; have [Mu | notMu] /= := boolP (M \in unitmx); last first.
+  by apply: contraNF notMu => /eqP /mulmx1_unit [].
+by rewrite -(inj_eq (@mulrI _ M^-1 _)) ?unitrV // mulr1 mulKr.
+Qed.
+
+Lemma orthogonal_unit M : (M \is 'O_n[R]) -> (M \is a GRing.unit).
+Proof. by rewrite orthogonalEinv => /andP []. Qed.
+
+Lemma orthogonalV M : (M^T \is 'O_n[R]) = (M \is 'O_n[R]).
+Proof.
+by rewrite !orthogonalEinv unitmx_tr -trmxV (inj_eq (@trmx_inj _ _ _)).
+Qed.
 
 Lemma orthogonal_inv M : M \is 'O_n[R] -> M^-1 = M^T.
+Proof. by rewrite orthogonalEinv => /andP [_ /eqP]. Qed.
+
+Lemma orthogonalEC M : (M \is 'O_n[R]) = (M^T * M == 1).
+Proof. by rewrite -orthogonalV orthogonalE trmxK. Qed.
+
+Lemma orthogonal_det M : M \is 'O_n[R] -> `|\det M| = 1.
 Proof.
-rewrite orthogonal_def => HM; move/eqP/(congr1 (mulmx M^-1)) : (HM).
-rewrite mulmxA mulVmx; last by case/eqP/mulmx1_unit : HM.
-by rewrite ?(mulmx1,mul1mx) => ->.
+move=> /eqP /(congr1 determinant); rewrite detM det_tr det1 => /eqP.
+by rewrite sqr_norm_eq1 => /eqP.
 Qed.
 
-Lemma orthogonal_alt M : (M \is 'O_n[R]) = (M^T * M == 1).
-Proof.
-apply/idP/idP; rewrite orthogonal_def => HM.
-  rewrite -(orthogonal_inv HM) // mulVr //; by case/eqP/mulmx1_unit : HM.
-case/eqP/mulmx1_unit : (HM) => _ /mulmxK /can_inj H.
-apply/eqP/H; by rewrite -mulmxA mulmxE (eqP HM) mulr1 mul1r.
-Qed.
+(* Lemma orthogonal_col_base M : *)
+(*   (M \is 'O_n[R]) = *)
+(*   [forall j, forall k, \sum_i M i j * M i k == (j == k)%:R]. *)
+(* Proof. *)
+(* apply/idP/'forall_'forall_eqP. *)
 
-Lemma orthogonal_col_base M : (M \is 'O_n[R]) =
-  [forall j, forall k, \sum_i M i j * M i k == (j == k)%:R].
-Proof.
-apply/idP/idP; rewrite orthogonal_alt.
-  move=> HM; apply/forallP => /= j; apply/forallP => /= k.
-  move: HM => /eqP/(congr1 (fun x : 'M__=> x j k)).
-  rewrite !mxE => <-; apply/eqP/eq_bigr => ? _; by rewrite mxE.
-move/forallP => H; apply/eqP/matrixP => a b; rewrite !mxE.
-move: (H a) => /forallP /(_ b) /eqP <-.
-apply/eq_bigr=> // ? _; by rewrite !mxE.
-Qed.
+(* apply/idP/idP; rewrite orthogonal_alt. *)
+(*   move=> HM; apply/forallP => /= j; apply/forallP => /= k. *)
+(*   move: HM => /eqP/(congr1 (fun x : 'M__=> x j k)). *)
+(*   rewrite !mxE => <-; apply/eqP/eq_bigr => ? _; by rewrite mxE. *)
+(* move/forallP => H; apply/eqP/matrixP => a b; rewrite !mxE. *)
+(* move: (H a) => /forallP /(_ b) /eqP <-. *)
+(* apply/eq_bigr=> // ? _; by rewrite !mxE. *)
+(* Qed. *)
+
+(* Lemma orthogonal_col_base M : (M \is 'O_n[R]) = *)
+(*   [forall j, forall k, \sum_i M i j * M i k == (j == k)%:R]. *)
+(* Proof. *)
+(* apply/idP/idP; rewrite orthogonal_alt. *)
+(*   move=> HM; apply/forallP => /= j; apply/forallP => /= k. *)
+(*   move: HM => /eqP/(congr1 (fun x : 'M__=> x j k)). *)
+(*   rewrite !mxE => <-; apply/eqP/eq_bigr => ? _; by rewrite mxE. *)
+(* move/forallP => H; apply/eqP/matrixP => a b; rewrite !mxE. *)
+(* move: (H a) => /forallP /(_ b) /eqP <-. *)
+(* apply/eq_bigr=> // ? _; by rewrite !mxE. *)
+(* Qed. *)
 
 Lemma orthogonal_oppr_closed : oppr_closed 'O_n[R].
-Proof. by move=> x; rewrite !orthogonal_def linearN /= mulNr mulrN opprK. Qed.
+Proof. by move=> x; rewrite !orthogonalE linearN /= mulNr mulrN opprK. Qed.
 Canonical orthogonal_is_oppr_closed := OpprPred orthogonal_oppr_closed.
 
 Lemma orthogonal_divr_closed : divr_closed 'O_n[R].
 Proof.
 split => [| P Q HP HQ]; first exact: orthogonal1.
-rewrite orthogonal_def orthogonal_inv // trmx_mul trmxK mulrA -(mulrA P).
-move/esym: (orthogonal_alt Q); rewrite HQ /= => /eqP ->; by rewrite mulr1.
+rewrite orthogonalE orthogonal_inv // trmx_mul trmxK -mulrA.
+by rewrite -orthogonal_inv // mulKr // orthogonal_unit.
 Qed.
 Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
 Canonical orthogonal_is_divr_closed := DivrPred orthogonal_divr_closed.
 Canonical orthogonal_is_smulr_closed := SmulrPred orthogonal_divr_closed.
 Canonical orthogonal_is_sdivr_closed := SdivrPred orthogonal_divr_closed.
 
-Lemma rotation_def M : (M \is 'SO_n[R]) = (M \is 'O_n[R]) && (\det M == 1). Proof. by []. Qed.
+Lemma rotationE M : (M \is 'SO_n[R]) = (M \is 'O_n[R]) && (\det M == 1). Proof. by []. Qed.
 
 Lemma rotation1 : 1 \is 'SO_n[R].
 Proof. apply/andP; by rewrite orthogonal1 det1. Qed.
 
+Lemma rotation_det M : M \is 'SO_n[R] -> \det M = 1.
+Proof. by move=> /andP[_ /eqP]. Qed.
+
+Lemma rotation_sub : {subset 'SO_n[R] <= 'O_n[R]}.
+Proof. by move=> M /andP []. Qed.
+
 Lemma rotation_divr_closed : divr_closed 'SO_n[R].
 Proof.
-split => [| P Q /andP[P1 P2] /andP[Q1 Q2]]; first exact: rotation1.
-rewrite rotation_def det_mulmx det_inv (eqP P2) (eqP Q2) invr1 mulr1 eqxx andbT.
-by apply orthogonal_divr_closed.
-Qed.
-
-Lemma rotation_invr_closed : invr_closed 'SO_n[R].
-Proof.
-move=> P /andP[P1 P2].
-rewrite rotation_def orthogonal_inv // orthogonal_def trmxK.
-move/esym: (orthogonal_alt P); rewrite P1 => /eqP ->; by rewrite eqxx /= det_tr.
+split => [|P Q Prot Qrot]; first exact: rotation1.
+rewrite rotationE rpred_div ?rotation_sub //=.
+by rewrite det_mulmx det_inv !rotation_det // divr1.
 Qed.
 
 Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
@@ -325,248 +354,6 @@ rewrite /cofactor !det_mx22 !mxE /= mul1r mulN1r opprB -signr_odd mul1r.
 by simp_ord; case: i => [[|[|[]]]] //= ?; rewrite ?(mul1r,mul0r,add0r,addr0).
 Qed.
 
-(* first tentative definition of the generalized kronecker symbol *)
-(*Definition delta (i k : seq nat) : R :=
-  if (perm_eq i (in_tuple k) =P true) isn't ReflectT ik then 0
-  else let s := sval (sig_eqW (tuple_perm_eqP ik)) in (-1) ^+ s *+ uniq i.
-
-Lemma deltaC i k : delta i k = delta k i.
-Proof.
-have [pik|pik] := boolP (perm_eq i k); last first.
-  rewrite /delta.
-  case: eqP => p; first by rewrite p in pik.
-  case: eqP => p0 //; by rewrite perm_eq_sym p0 in pik.
-move: (pik); rewrite -[ i]/(val (in_tuple i)) -[k]/(val (in_tuple k)).
-move: (in_tuple _) (in_tuple _); rewrite (perm_eq_size pik).
-move: (size k) => m {i k pik} i k.
-rewrite /delta.
-rewrite !tvalK.
-case: _ / (esym (size_tuple k)); case: _ / (esym (size_tuple i)) => /=.
-  case: eqP => // p.
-  case: eqP => // [p' pik|]; last by rewrite {1}perm_eq_sym.
-case: sig_eqW => /= s k_eq.
-case: sig_eqW => /= s' i_eq.
-rewrite -odd_permV.
-rewrite (perm_eq_uniq p).
-have [i_uniq|] := boolP (uniq (val i)); last by rewrite !mulr0n.
-congr (_ ^+ _ *+ _).
-congr (odd_perm _).
-(* apply: (mulgI s); rewrite mulgV; symmetry. *)
-apply/permP => /= j.
-apply/val_inj/eqP=> /=.
-rewrite -(@nth_uniq _ 0%N (val k)) //=.
-Abort.
-*)
-
-Fact perm_of_2seq_key : unit. Proof. exact: tt. Qed.
-Definition perm_of_2seq :=
-  locked_with perm_of_2seq_key
-  (fun (T : eqType) n (si so : n.-tuple T) =>
-  if (perm_eq si so =P true) isn't ReflectT ik then 1%g
-  else sval (sig_eqW (tuple_perm_eqP ik))).
-Canonical perm_of_2seq_unlockable := [unlockable fun perm_of_2seq].
-
-Lemma perm_of_2seqE n (T : eqType) (si so : n.-tuple T) (j : 'I_n) :
-  perm_eq si so -> tnth so (perm_of_2seq si so j) = tnth si j.
-Proof.
-rewrite [perm_of_2seq]unlock; case: eqP => // H1 H2.
-case: sig_eqW => /= s; rewrite /tnth => -> /=.
-by rewrite (nth_map j) ?size_enum_ord // nth_ord_enum.
-Qed.
-
-(* Definition perm_of_2seq (T : eqType) n (si : seq T) (so : seq T) : 'S_n := *)
-(*   if (size so == n) =P true isn't ReflectT so_n then 1%g *)
-(*   else if (perm_eq si (Tuple so_n) =P true) isn't ReflectT ik then 1%g *)
-(*   else sval (sig_eqW (tuple_perm_eqP ik)). *)
-
-(* Lemma perm_of_2seqE n (T : eqType) (si so : n.-tuple T) (j : 'I_n) : *)
-(*   perm_eq si so -> tnth so (perm_of_2seq n si so j) = tnth si j. *)
-(* Proof. *)
-(* rewrite /perm_of_2seq; case: eqP => // so_n p_si_so; last first. *)
-(*   by rewrite size_tuple eqxx in so_n. *)
-(* case: eqP => // ?; case: sig_eqW => /= s; rewrite /tnth => -> /=. *)
-(* rewrite (nth_map j) ?size_enum_ord // nth_ord_enum /=. *)
-(* by apply: set_nth_default; rewrite size_tuple. *)
-(* Qed. *)
-
-Lemma perm_of_2seqV n (T : eqType) (si so : n.-tuple T) : uniq si ->
-  (perm_of_2seq si so)^-1%g = perm_of_2seq so si.
-Proof.
-move=> uniq_si.
-apply/permP => /= j.
-apply/val_inj/eqP => /=.
-rewrite -(@nth_uniq _ (tnth_default si j) (val si)) //=; last 2 first.
-- by rewrite size_tuple.
-- by rewrite size_tuple.
-rewrite [perm_of_2seq]unlock; case: eqP => p; last first.
-  case: eqP => // p0; by [rewrite perm_eq_sym p0 in p | rewrite invg1].
-case: eqP => [p'|]; last by rewrite perm_eq_sym {1}p.
-case: sig_eqW => /= x Hx; case: sig_eqW => /= y Hy.
-rewrite {1}Hx (nth_map j); last by rewrite size_enum_ord.
-rewrite nth_ord_enum permE f_iinv /tnth Hy (nth_map j); last by rewrite size_enum_ord.
-rewrite nth_ord_enum /tnth; apply/eqP/set_nth_default;  by rewrite size_tuple.
-Qed.
-
-Definition delta {T : eqType} (i k : seq T) : R :=
-  if (perm_eq i k) && (uniq i) then
-  (-1) ^+ perm_of_2seq (insubd (in_tuple k) i) (in_tuple k) else 0.
-
-Lemma deltaE n {T : eqType} (i k : seq T) (si : size i = n) (sk : size k = n) : 
-  let T l (P : size l = n)  := Tuple (appP eqP idP P) in
-  delta i k = if (perm_eq i k) && (uniq i)
-              then (-1) ^+ perm_of_2seq (T _ si) (T _ sk) else 0.
-Proof.
-move=> mkT; rewrite /delta; have [/andP [pik i_uniq]|//] := ifP.
-set i' := insubd _ _; set k' := in_tuple _.
-have [] : (i' = mkT _ si :> seq _ /\ k' = mkT _ sk :> seq _).
-  by rewrite /= val_insubd /= (perm_eq_size pik) eqxx.
-move: i' k' (mkT i si) (mkT k sk) => /=.
-by case: _ / sk => ??????; congr (_ ^+ perm_of_2seq _ _); apply: val_inj.
-Qed.
-
-(* Definition deltaE n (i k : seq nat) (si : size i == n) (sk : size k == n) := *)
-(*   deltaE (Tuple si) (Tuple sk). *)
-
-(* Lemma delta_cast n (i k : seq nat) (ni : size i = n) (nk : size k = n) : *)
-(*   delta i k = delta (Tuple (appP eqP idP ni)) (Tuple (appP eqP idP nk)). *)
-
-Lemma delta_0 {T : eqType} (i : seq T) k : (~~ uniq i) || (~~ uniq k) -> delta i k = 0.
-Proof.
-case/orP => [Nui|Nuk]; rewrite /delta; case: ifP => // /andP[pik ui].
-  by rewrite (negbTE Nui) in ui.
-by rewrite -(perm_eq_uniq pik) ui in Nuk.
-Qed.
-
-(* Definition scast {m n : nat} (eq_mn : m = n) (s : 'S_m) : 'S_n := *)
-(*   ecast n ('S_n) eq_mn s. *)
-
-(* Lemma tcastE (m n : nat) (eq_mn : m = n) (t : 'S_m) (i : 'I_n), *)
-(*    tnth (tcast eq_mn t) i = tnth t (cast_ord (esym eq_mn) i) *)
-(* tcast_id *)
-(*    forall (T : Type) (n : nat) (eq_nn : n = n) (t : n.-tuple T), *)
-(*    tcast eq_nn t = t *)
-(* tcastK *)
-(*    forall (T : Type) (m n : nat) (eq_mn : m = n), *)
-(*    cancel (tcast eq_mn) (tcast (esym eq_mn)) *)
-(* tcastKV *)
-(*    forall (T : Type) (m n : nat) (eq_mn : m = n), *)
-(*    cancel (tcast (esym eq_mn)) (tcast eq_mn) *)
-(* tcast_trans *)
-(*    forall (T : Type) (m n p : nat) (eq_mn : m = n)  *)
-(*      (eq_np : n = p) (t : m.-tuple T), *)
-(*    tcast (etrans eq_mn eq_np) t = tcast eq_np (tcast eq_mn t) *)
-(* L *)
-
-(* Lemma perm_of_2seq_tcast (T : eqType) n m i (k : m.-tuple T) (eq_mn : m = n): *)
-(*   perm_of_2seq i (tcast eq_mn k) = scast eq_mn (perm_of_2seq i k). *)
-
-Lemma perm_of_2seq_ii {T : eqType} n (i : n.-tuple T) : uniq i -> 
-  perm_of_2seq i i = 1%g.
-Proof. 
-move=> ?; apply/permP => /= j; apply/val_inj/eqP => /=.
-by rewrite permE -(@nth_uniq _ (tnth_default i j) i) ?size_tuple // -tnth_nth
-   perm_of_2seqE.
-Qed.
-
-Lemma deltaii {T : eqType} (i : seq T) : uniq i -> delta i i = 1.
-Proof.
-move=> i_uniq; rewrite !(@deltaE (size i)) .
-by rewrite perm_eq_refl i_uniq /= perm_of_2seq_ii // odd_perm1.
-Qed.
-
-Lemma deltaC {T : eqType} (i k : seq T) : delta i k = delta k i.
-Proof.
-have [pik|pik] := boolP (perm_eq i k); last first.
-  by rewrite /delta (negPf pik) perm_eq_sym (negPf pik).
-have [uk|Nuk] := boolP (uniq k); last by rewrite !delta_0 // Nuk ?orbT.
-have si := (perm_eq_size pik); rewrite !(@deltaE (size k)) //.
-rewrite pik /= perm_eq_sym pik (perm_eq_uniq pik) uk /=.
-by rewrite -perm_of_2seqV // odd_permV.
-Qed.
-
-(* Lemma deltaN1 (i : seq nat) k : uniq i -> *)
-(*   perm_of_2seq i (in_tuple k) -> delta i k = -1. *)
-(* Proof. *)
-(* move=> ui; rewrite /delta /perm_of_2seq ui. *)
-(* case: eqP => [p|]; last by rewrite odd_perm1. *)
-(* case: sig_eqW => /= x ih Hx; by rewrite p Hx expr1. *)
-(* Qed. *)
-
-(* Lemma delta_1 (i : seq nat) k : uniq i -> perm_eq i k ->  *)
-(*  ~~ perm_of_2seq i (in_tuple k) -> delta i k = 1. *)
-(* Proof. *)
-(* move=> ui ik. *)
-(* rewrite /delta /perm_of_2seq ui. *)
-(* case: eqP => [p|]. *)
-(*   case: sig_eqW => /= x ih Hx. *)
-(*   by rewrite p (negPf Hx) expr0. *)
-(* by rewrite ik. *)
-(* Qed. *)
-
-Lemma perm_of_2seq_comp n {T: eqType} (s1 s2 s3 : n.-tuple T) :
-  uniq s3 -> perm_eq s1 s2 -> perm_eq s2 s3 ->
-  (perm_of_2seq s1 s2 * perm_of_2seq s2 s3)%g = perm_of_2seq s1 s3.
-Proof.
-move=> us3 s12 s23; have s13 := perm_eq_trans s12 s23.
-apply/permP => /= i; rewrite permE /=; apply/val_inj/eqP => /=.
-rewrite -(@nth_uniq _ (tnth_default s1 i) s3) ?size_tuple // -!tnth_nth.
-by rewrite !perm_of_2seqE.
-Qed.
-
-Lemma delta_comp {T : eqType} (i j k : seq T) :
-  uniq k -> perm_eq i j -> perm_eq j k ->
-  delta i k = delta i j * delta j k.
-Proof.
-move=> uk pij pjk; have pik := perm_eq_trans pij pjk.
-have [sj si] := (perm_eq_size pjk, perm_eq_size pik).
-rewrite !(@deltaE (size k)) pik pij pjk /=.
-rewrite (perm_eq_uniq pij) (perm_eq_uniq pjk) uk.
-by rewrite -signr_addb -odd_permM perm_of_2seq_comp.
-Qed.
-
-Lemma perm_of_2seq_perm n {T: eqType} (s1 s2 : n.-tuple T) (s : 'S_n) : 
-  uniq s2 -> perm_eq s1 s2 ->
-  perm_of_2seq s1 s2 = (s^-1 * perm_of_2seq [tuple (tnth s1 (s x)) | x < n] s2)%g.
-Proof.
-move=> us2 s1s2.
-apply/permP => /= j.
-rewrite [perm_of_2seq]unlock.
-case: eqP => // p.
-case: eqP => // p0; last by admit.
-case: sig_eqW => /= x Hx.
-Admitted.
-
-Lemma delta_perm n {T : eqType} (i k : seq T) (x0 : T) (s : 'S_n) : size k = n -> 
-  uniq k -> perm_eq i k ->
-  delta i k = (- 1) ^+ s * delta [tuple (nth x0 i (s x)) | x < n] k.
-Proof.
-move=> kn uk pik.
-have sin : size i = n by rewrite (perm_eq_size pik).
-have ? : size [tuple nth x0 i (s x)  | x < n] = n by rewrite size_tuple.
-have ui : uniq i by rewrite (perm_eq_uniq pik).
-rewrite !(@deltaE n) // pik ui /=. 
-case: ifP; last by admit.
-case/andP => H1 H2.
-rewrite -signr_addb.
-congr (_ ^+ _).
-rewrite (perm_of_2seq_perm s) //.
-rewrite -odd_permV.
-Abort.
-
-Lemma delta_catC {T : eqType} (i j k : seq T) :
-  uniq k -> perm_eq (i ++ j) k ->
-  delta (i ++ j) k = (- 1) ^+ (size i * size j) * delta (j ++ i) k.
-Proof.
-Abort.
-
-Definition form n k := 'M[R]_(k, n) -> R.
-
-Definition oprod n r s (a : form n r) (b : form n s) : form n (r + s) := 
-  fun v => \sum_(sigma : 'S_(r + s))
-            (- 1) ^ sigma *
-                    a (\matrix_(i < r, j < n) v (sigma (unsplit (inl i))) j) * 
-                    b (\matrix_(i < s, j < n) v (sigma (unsplit (inr i))) j).
-
 (* rewrite linear_sum. *)
 
 Lemma mulmxl_crossmulr M u v : M *m (u *v v) = (u *v (M *m v)).
@@ -725,10 +512,18 @@ Admitted.
 
 End crossmul.
 
+Notation "*d%R" := (@dotmul _) : ring_scope.
+Notation "u *d w" := (dotmul u w) (at level 40) : ring_scope.
+Notation "*v%R" := (@crossmul _) : ring_scope.
+Notation "u *v w" := (crossmul u w) (at level 40) : ring_scope.
+
 Section chains.
 
 Variable R : rcfType.
-Definition ang := {c : R[i] | `| c | = 1}.
+Record angle := Angle {
+  expi : R[i]; 
+  _ : `| expi | == 1
+}.
 Definition coordinate := 'rV[R]_3.
 Definition vector := 'rV[R]_3.
 Definition basisType := 'M[R]_3.
@@ -747,11 +542,11 @@ Hint Resolve frame_unit.
 
 Record joint := mkJoint {
   offset : R ;
-  angle : ang }.
+  joint_angle : angle }.
 
 Record link := mkLink {
   length : R ;
-  twist : ang }.
+  twist : angle }.
 
 Variable n' : nat.
 Let n := n'.+1.
@@ -803,17 +598,165 @@ Proof. case: x => /= v. by rewrite /relative_vec -mulmxA mulmxV // mulmx1. Qed.
 Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
 Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
 
-Record homogeneous_spec (A B : frame) : Type := {
+Definition norm (a : coordinate) := Num.sqrt (a *d a).
+
+Section angle.
+
+Fact angle0_subproof : `| 1 / `| 1 | | == 1 :> R[i].
+Proof. by rewrite normr1 divr1 normr1. Qed.
+
+Canonical angle_subType := [subType for expi].
+
+Lemma norm_expi a : `|expi a| = 1.
+Proof. by case: a => x /= /eqP. Qed.
+
+Lemma expi_eq0 a : (expi a == 0) = false.
+Proof. case: a => /= a /eqP Ha; apply/negbTE; by rewrite -normr_gt0 Ha. Qed.
+
+Definition arg (x : R[i]) : angle :=
+  insubd (Angle angle0_subproof) (x / `| x |). 
+
+Lemma expiK : cancel expi arg.
+Proof.
+move=> a; apply/val_inj=> /=.
+by rewrite insubdK ?norm_expi ?divr1 // -topredE /= norm_expi.
+Qed.
+
+Lemma expi_arg x : x != 0 -> expi (arg x) = x / `|x|.
+Proof.
+move=> Nx_neq0; rewrite insubdK //.
+by rewrite -topredE /= normrM normfV normr_id divff // normr_eq0.
+Qed.
+
+Lemma mul_norm_arg x : x != 0 -> x = `|x| * expi (arg x).
+Proof. by move=> x_neq0; rewrite expi_arg // mulrC mulfVK // normr_eq0. Qed.
+
+Lemma argK x : `|x| = 1 -> expi (arg x) = x.
+Proof. by move=> Nx1; rewrite expi_arg ?Nx1 ?divr1 // -normr_gt0 Nx1. Qed.
+
+Definition add_angle a b := arg (expi a * expi b).
+Definition opp_angle a := arg (expi a)^-1.
+
+Lemma add_angleA : associative add_angle.
+Proof.
+by move=> ???; rewrite /add_angle argK ?mulrA ?argK // ?normrM 2!norm_expi mulr1.
+Qed.
+
+Lemma add_angleC : commutative add_angle.
+Proof. move=> a b; by rewrite /add_angle mulrC. Qed.
+
+Lemma add_0angle x : add_angle (arg 1) x = x.
+Proof. by rewrite /add_angle argK ?normr1 ?mul1r ?expiK. Qed.
+
+Lemma expi_is_unit x : expi x \is a GRing.unit. 
+Proof.
+apply/unitrP; exists (expi x)^*; split; apply/eqP; 
+  by rewrite ?(mulrC _^*) -sqr_normc norm_expi expr1n.
+Qed.
+
+Lemma add_Nangle x : add_angle (opp_angle x) x = (arg 1).
+Proof. 
+rewrite /add_angle /opp_angle argK; first by rewrite mulVr // expi_is_unit.
+by rewrite normrV ?expi_is_unit // norm_expi invr1.
+Qed.
+
+Definition angle_eqMixin := [eqMixin of angle by <:].
+Canonical angle_eqType := EqType angle angle_eqMixin.
+Definition angle_choiceMixin := [choiceMixin of angle by <:].
+Canonical angle_choiceType := ChoiceType angle angle_choiceMixin.
+Definition angle_ZmodMixin := ZmodMixin add_angleA add_angleC add_0angle add_Nangle.
+Canonical angle_ZmodType := ZmodType angle angle_ZmodMixin.
+
+Definition cos a := Re (expi a).
+Definition sin a := Im (expi a).
+Definition tan a := sin a / cos a.
+
+Lemma cos2Dsin2 a : (cos a)^2 + (sin a)^2 = 1.
+Proof.
+move: (add_Re2_Im2 (expi a)).
+rewrite norm_expi expr1n => /(congr1 (fun x => Re x)) => /= <-.
+by case: a.
+Qed.
+
+(*
+sin(t) = ( exp(it) - exp(-it) )/2i
+cos(t) = ( exp(it) + exp(-it) )/2
+*)
+
+Lemma sinD a b : sin (a + b) = sin a * cos b + cos a * sin b.
+Proof.
+
+Admitted.
+Lemma cosD a b : cos (a + b) = cos a * cos b - sin a * sin b.
+Admitted.
+
+Definition atan (x : R) : angle := arg(x +i* 1) *~ sgz (x).
+Definition asin (x : R) : angle := arg (Num.sqrt (1 - x^2) +i* x).
+Definition acos (x : R) : angle := arg (x +i* Num.sqrt (1 - x^2)).
+
+Definition pi := arg (-1).
+
+Lemma expipi : expi pi = -1. Proof. by rewrite argK ?normrN1. Qed.
+
+Lemma pi2 : pi *+ 2 = 0.
+Proof. Admitted.
+
+(* The following lemmas are true in specific domains only, such as
+]-pi/2, pi/2[ = [pred a | cos a > 0] 
+]0, pi[ = [pred a | sin a > 0] 
+[-pi/2, pi/2[ = [pred a | cos a > 0] 
+[0, pi] = [pred a | sin a >= 0] 
+[0, pi[ = [pred a | sin a >= 0 && a != pi] 
+*)
+
+Lemma cosK : cancel acos cos.
+Proof. Admitted.
+
+Lemma acosK : cancel cos acos.
+Proof. Admitted.
+
+Lemma sinK : cancel asin sin.  
+Proof. Admitted.
+
+Definition vec_angle (v w : vector) : angle := arg (v *d w +i* norm (v *v w)).
+
+End angle.
+
+Section homogeneous.
+
+(*
+Record object (A : frame) := {
+  object_size : nat ;
+  body : (coor A ^ object_size)%type }.
+*)
+
+Definition displacement n (from to : (coordinate ^ n)%type) :=
+  (exists d, forall i, norm (from i - to i) = d) /\
+  (exists alpha, forall i j k, vec_angle (from j - from i) (from k - from i) = alpha).
+
+Definition homogeneous := 'rV[R]_4.
+
+Definition vector_homo (x : vector) := (row_mx x 0 : homogeneous).
+Definition coord_homo (x : coordinate) := (row_mx x 1 : homogeneous).
+
+
+Record homogeneous_trans : Type := HomogeneousTrans {
+  translation : vector;
   rot : 'M[R]_3 ;
-  _ : rot \in 'SO_3[R] ;
-  position : vec A }.
+  _ : rot \in 'SO_3[R]
+ }.
 
-Definition homogeneous_mx A B (T : homogeneous_spec A B) : 'M[R]_4 :=
-  row_mx (col_mx (rot T) 0) (col_mx (let: Vec x := position T in x^T) 1).
+Coercion homogeneous_mx (T : homogeneous_trans) : 'M[R]_4 :=
+  row_mx (col_mx (rot T) 0) (col_mx (translation T)^T 1).
 
-Definition homogeneous_trans A B (T : homogeneous_spec A B) (x : vec B) : vec A :=
-  Vec _ (\row_(i < 3) (homogeneous_mx T *m col_mx (let: Vec x' := x in x'^T) 1)^T 0 (inord i)).
+Definition homogeneous_ap  (x : vector) (T : homogeneous_trans) : vector :=
+  \row_(i < 3) (homogeneous_mx T *m col_mx  x^T 1)^T 0 (inord i).
 
+Lemma displacementP m (from to : (coordinate ^ m)%type) :
+  exists T : homogeneous_trans, forall i, to i = homogeneous_ap (from i) T.
+Abort.
+                                            
+End homogeneous.
 
 (*
 
@@ -863,3 +806,4 @@ length (links i) = distance from (z_vec (frames i.-1)) to (z_vec (frames i)) alo
  *)
 
 End chains.
+

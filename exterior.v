@@ -8,6 +8,8 @@ Require Import matrix mxalgebra tuple mxpoly zmodp binomial.
 From mathcomp
 Require Import perm finset path fingroup.
 
+Require Import Robot.aux.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -20,6 +22,41 @@ Section delta.
 
 Import GroupScope.
 
+Context {T : eqType}.
+
+(* first tentative definition of the generalized kronecker symbol *)
+(*Definition delta (i k : seq nat) : R :=
+  if (perm_eq i (in_tuple k) =P true) isn't ReflectT ik then 0
+  else let s := sval (sig_eqW (tuple_perm_eqP ik)) in (-1) ^+ s *+ uniq i.
+
+Lemma deltaC i k : delta i k = delta k i.
+Proof.
+have [pik|pik] := boolP (perm_eq i k); last first.
+  rewrite /delta.
+  case: eqP => p; first by rewrite p in pik.
+  case: eqP => p0 //; by rewrite perm_eq_sym p0 in pik.
+move: (pik); rewrite -[ i]/(val (in_tuple i)) -[k]/(val (in_tuple k)).
+move: (in_tuple _) (in_tuple _); rewrite (perm_eq_size pik).
+move: (size k) => m {i k pik} i k.
+rewrite /delta.
+rewrite !tvalK.
+case: _ / (esym (size_tuple k)); case: _ / (esym (size_tuple i)) => /=.
+  case: eqP => // p.
+  case: eqP => // [p' pik|]; last by rewrite {1}perm_eq_sym.
+case: sig_eqW => /= s k_eq.
+case: sig_eqW => /= s' i_eq.
+rewrite -odd_permV.
+rewrite (perm_eq_uniq p).
+have [i_uniq|] := boolP (uniq (val i)); last by rewrite !mulr0n.
+congr (_ ^+ _ *+ _).
+congr (odd_perm _).
+(* apply: (mulgI s); rewrite mulgV; symmetry. *)
+apply/permP => /= j.
+apply/val_inj/eqP=> /=.
+rewrite -(@nth_uniq _ 0%N (val k)) //=.
+Abort.
+*)
+
 Fact perm_of_2seq_key : unit. Proof. exact: tt. Qed.
 Definition perm_of_2seq :=
   locked_with perm_of_2seq_key
@@ -28,7 +65,7 @@ Definition perm_of_2seq :=
   else sval (sig_eqW (tuple_perm_eqP ik))).
 Canonical perm_of_2seq_unlockable := [unlockable fun perm_of_2seq].
 
-Lemma perm_of_2seqE n (T : eqType) (si so : n.-tuple T) (j : 'I_n) :
+Lemma perm_of_2seqE n (si so : n.-tuple T) (j : 'I_n) :
   perm_eq si so -> tnth so (perm_of_2seq si so j) = tnth si j.
 Proof.
 rewrite [perm_of_2seq]unlock; case: eqP => // H1 H2.
@@ -51,7 +88,7 @@ Qed.
 (* by apply: set_nth_default; rewrite size_tuple. *)
 (* Qed. *)
 
-Lemma perm_of_2seqV n (T : eqType) (si so : n.-tuple T) : uniq si ->
+Lemma perm_of_2seqV n (si so : n.-tuple T) : uniq si ->
   (perm_of_2seq si so)^-1%g = perm_of_2seq so si.
 Proof.
 move=> uniq_si.
@@ -72,20 +109,20 @@ Qed.
 Variable R : ringType.
 Local Open Scope ring_scope.
 
-Definition delta (i k : seq nat) : R :=
+Definition delta (i k : seq T) : R :=
   if (perm_eq i k) && (uniq i) then
   (-1) ^+ perm_of_2seq (insubd (in_tuple k) i) (in_tuple k) else 0.
 
-Lemma deltaE n (i k : seq nat) (si : size i = n) (sk : size k = n) : 
-   let T l (P : size l = n)  := Tuple (appP eqP idP P) in
-   delta i k = if (perm_eq i k) && (uniq i)
-               then (-1) ^+ perm_of_2seq (T _ si) (T _ sk) else 0.
+Lemma deltaE n (i k : seq T) (si : size i = n) (sk : size k = n) : 
+  let T l (P : size l = n)  := Tuple (appP eqP idP P) in
+  delta i k = if (perm_eq i k) && (uniq i)
+              then (-1) ^+ perm_of_2seq (T _ si) (T _ sk) else 0.
 Proof.
-move=> T; rewrite /delta; have [/andP [pik i_uniq]|//] := ifP.
+move=> mkT; rewrite /delta; have [/andP [pik i_uniq]|//] := ifP.
 set i' := insubd _ _; set k' := in_tuple _.
-have [] : (i' = T _ si :> seq _ /\ k' = T _ sk :> seq _).
+have [] : (i' = mkT _ si :> seq _ /\ k' = mkT _ sk :> seq _).
   by rewrite /= val_insubd /= (perm_eq_size pik) eqxx.
-move: i' k' (T i si) (T k sk) => /=.
+move: i' k' (mkT i si) (mkT k sk) => /=.
 by case: _ / sk => ??????; congr (_ ^+ perm_of_2seq _ _); apply: val_inj.
 Qed.
 
@@ -95,7 +132,7 @@ Qed.
 (* Lemma delta_cast n (i k : seq nat) (ni : size i = n) (nk : size k = n) : *)
 (*   delta i k = delta (Tuple (appP eqP idP ni)) (Tuple (appP eqP idP nk)). *)
 
-Lemma delta_0 (i : seq nat) k : (~~ uniq i) || (~~ uniq k) -> delta i k = 0.
+Lemma delta_0 (i : seq T) k : (~~ uniq i) || (~~ uniq k) -> delta i k = 0.
 Proof.
 case/orP => [Nui|Nuk]; rewrite /delta; case: ifP => // /andP[pik ui].
   by rewrite (negbTE Nui) in ui.
@@ -125,16 +162,21 @@ Qed.
 (* Lemma perm_of_2seq_tcast (T : eqType) n m i (k : m.-tuple T) (eq_mn : m = n): *)
 (*   perm_of_2seq i (tcast eq_mn k) = scast eq_mn (perm_of_2seq i k). *)
 
-Lemma perm_of_2seq_ii n (i : n.-tuple nat) : perm_of_2seq i i = 1%g.
-Proof. Admitted.
-
-Lemma deltaii (i : seq nat) : uniq i -> delta i i = 1.
-Proof.
-move=> i_uniq; rewrite !(@deltaE (size i)) .
-by rewrite perm_eq_refl i_uniq /= perm_of_2seq_ii odd_perm1.
+Lemma perm_of_2seq_ii n (i : n.-tuple T) : uniq i -> 
+  perm_of_2seq i i = 1%g.
+Proof. 
+move=> ?; apply/permP => /= j; apply/val_inj/eqP => /=.
+by rewrite permE -(@nth_uniq _ (tnth_default i j) i) ?size_tuple // -tnth_nth
+   perm_of_2seqE.
 Qed.
 
-Lemma deltaC i k : delta i k = delta k i.
+Lemma deltaii (i : seq T) : uniq i -> delta i i = 1.
+Proof.
+move=> i_uniq; rewrite !(@deltaE (size i)) .
+by rewrite perm_eq_refl i_uniq /= perm_of_2seq_ii // odd_perm1.
+Qed.
+
+Lemma deltaC (i k : seq T) : delta i k = delta k i.
 Proof.
 have [pik|pik] := boolP (perm_eq i k); last first.
   by rewrite /delta (negPf pik) perm_eq_sym (negPf pik).
@@ -163,7 +205,7 @@ Qed.
 (* by rewrite ik. *)
 (* Qed. *)
 
-Lemma perm_of_2seq_comp n {T: eqType} (s1 s2 s3 : n.-tuple T) :
+Lemma perm_of_2seq_comp n (s1 s2 s3 : n.-tuple T) :
   uniq s3 -> perm_eq s1 s2 -> perm_eq s2 s3 ->
   (perm_of_2seq s1 s2 * perm_of_2seq s2 s3)%g = perm_of_2seq s1 s3.
 Proof.
@@ -173,7 +215,7 @@ rewrite -(@nth_uniq _ (tnth_default s1 i) s3) ?size_tuple // -!tnth_nth.
 by rewrite !perm_of_2seqE.
 Qed.
 
-Lemma delta_comp (i j k : seq nat) :
+Lemma delta_comp (i j k : seq T) :
   uniq k -> perm_eq i j -> perm_eq j k ->
   delta i k = delta i j * delta j k.
 Proof.
@@ -184,9 +226,44 @@ rewrite (perm_eq_uniq pij) (perm_eq_uniq pjk) uk.
 by rewrite -signr_addb -odd_permM perm_of_2seq_comp.
 Qed.
 
+Lemma perm_of_2seq_perm n (s1 s2 : n.-tuple T) (s : 'S_n) : 
+  uniq s2 -> perm_eq s1 s2 ->
+  perm_of_2seq s1 s2 = (s^-1 * perm_of_2seq [tuple (tnth s1 (s x)) | x < n] s2)%g.
+Proof.
+move=> us2 s1s2.
+apply/permP => /= j.
+rewrite [perm_of_2seq]unlock.
+case: eqP => // p.
+case: eqP => // p0; last by admit.
+case: sig_eqW => /= x Hx.
+Admitted.
+
+Lemma delta_perm n (i k : seq T) (x0 : T) (s : 'S_n) : size k = n -> 
+  uniq k -> perm_eq i k ->
+  delta i k = (- 1) ^+ s * delta [tuple (nth x0 i (s x)) | x < n] k.
+Proof.
+move=> kn uk pik.
+have sin : size i = n by rewrite (perm_eq_size pik).
+have ? : size [tuple nth x0 i (s x)  | x < n] = n by rewrite size_tuple.
+have ui : uniq i by rewrite (perm_eq_uniq pik).
+rewrite !(@deltaE n) // pik ui /=. 
+case: ifP; last by admit.
+case/andP => H1 H2.
+rewrite -signr_addb.
+congr (_ ^+ _).
+rewrite (perm_of_2seq_perm s) //.
+rewrite -odd_permV.
+Abort.
+
+Lemma delta_catC (i j k : seq T) :
+  uniq k -> perm_eq (i ++ j) k ->
+  delta (i ++ j) k = (- 1) ^+ (size i * size j) * delta (j ++ i) k.
+Proof.
+Abort.
+
 End delta.
 
-Section Normal.
+Section Exterior.
 
 Lemma submx_add_cap (F : fieldType) (m1 m2 m3 n : nat)
    (A : 'M[F]_(m1, n)) (B : 'M_(m2, n)) (C : 'M_(m3, n)) :
@@ -214,13 +291,15 @@ Canonical exterior_eqType := [eqType of exterior].
 Canonical exterior_choiceType := [choiceType of exterior].
 Canonical exterior_zmodType := [zmodType of exterior].
 
+Definition exterior_enum (s : {set 'I_n}) : seq 'I_n :=
+  sort (fun i j : 'I_n => i <= j) (enum s).
+
 Definition sign (A B : {set 'I_n}) : R :=
-  let s (A : {set 'I_n}) := [seq val x | x <- enum A] in
-  let deltas s := delta R s (sort leq s) in
-  deltas (s A) * deltas (s B) * deltas (s (A :|: B)).
+  delta R (exterior_enum A ++ exterior_enum B) (exterior_enum (A :|: B)).
 
 Lemma signND (A B : {set 'I_n}) : ~~ [disjoint A & B] -> sign A B = 0.
-Proof. Admitted.
+Proof.
+Admitted.
 
 Definition blade A : exterior := (delta_mx 0 (enum_rank A)).
 
@@ -271,8 +350,9 @@ apply/eqP/eq_bigr => i _; rewrite (eq_bigr (fun=> 1%N)); last first.
 by rewrite sum1dep_card /= card_draws card_ord !exp1n !muln1.
 Qed.
 
-Lemma mul_extnV (u v : exterior) r s : (u <= extn r)%MS -> (v <= extn s)%MS ->
-  (u *w v)  = 0.
+(* Lemma mul_extnV (u v : exterior) r s : (u <= extn r)%MS -> (v <= extn s)%MS -> *)
+(*   (u *w v)  = 0. *)
+
 
 Lemma mul_extE (u v : exterior) (A : {set 'I_n}) :
   (u *w v) 0 (enum_rank A) = 
@@ -326,24 +406,57 @@ Definition form_of r (u : exterior) : 'M_(r,n) -> R := fun v : 'M_(r,n) =>
   \sum_(s : {set 'I_n} | #|s| == r)
      u 0 (enum_rank s) * (\prod_i to_ext (row i v))%ext 0 (enum_rank s).
 
-Definition canon_enum (s : {set 'I_n}) : seq 'I_n :=
-  sort (fun i j : 'I_n => i <= j) (enum s).
+Definition mul_form r s (a : form r) (b : form s) : form (r + s) := 
+  fun v => \sum_(sigma : 'S_(r + s))
+            (- 1) ^ sigma *
+                    a (\matrix_(i < r, j < n) v (sigma (unsplit (inl i))) j) * 
+                    b (\matrix_(i < s, j < n) v (sigma (unsplit (inr i))) j).
 
-(* Hypothesis ff : False. *)
+(*Definition exterior_enum (s : {set 'I_n}) : seq 'I_n :=
+  sort (fun i j : 'I_n => i <= j) (enum s).*)
 
-(* Definition size_canon_enum (s : {set 'I_n}) : size (canon_enum s) == n. *)
-(* Proof. by have := ff. Qed. *)
+(* Definition size_exterior_enum r (s : {set 'I_n}) : #|s| = r -> size (exterior_enum s) == r. *)
+(* Proof. Admitted. *)
 
-(* Definition canon_tuple (s : {set 'I_n}) := Tuple (size_canon_enum s). *)
+(* Definition canon_tuple (s : {set 'I_n}) := Tuple (size_exterior_enum s). *)
 
-Definition ext_of_form r (i0 : 'I_n) (f : 'M[R]_(r,n) -> R) : exterior :=
+Variable (default_i : 'I_n).
+
+Definition ext_of_form r (f : 'M[R]_(r,n) -> R) : exterior :=
   \sum_(s : {set 'I_n} | #|s| == r)
-   f (\matrix_(i < r) delta_mx 0 (nth i0 (canon_enum s) i)) *: blade s.
-
-(* Lemma ext_of_formK r (i0 : 'I_n) (f : 'M[R]_(r,n) -> R) : *)
-(*   form_of (ext_of_form i0 f) =1 f. *)
-(* Proof. *)
-(* move=> v. *)
-(* rewrite /form_of /ext_of_form /=. *)
+   f (\matrix_(i < r) delta_mx 0 (nth default_i (exterior_enum s) i)) *: blade s.
 
 (* Lemma mul_extDr :  (u v : exterior) (A : {set 'I_n}) : *)
+
+Definition multilinear r (f : form r) := 
+   forall (A B C : 'M_(r,n)) (i0 : 'I_r) (b c : R),
+   row i0 A = b *: row i0 B + c *: row i0 C ->
+   row' i0 B = row' i0 A ->
+   row' i0 C = row' i0 A -> f A = b * f B + c * f C.
+
+Definition alternate r (f : form r) := 
+  forall (A : 'M_(r, n)) (i1 i2 : 'I_r), i1 != i2 -> A i1 =1 A i2 -> f A = 0.
+
+Definition multilinear_alternate r (f : form r) :=
+  multilinear f /\ alternate f.
+
+Lemma ext_of_formK r (f : 'M[R]_(r,n) -> R) : multilinear_alternate f -> 
+  form_of (ext_of_form f) =1 f.
+Proof.
+move=> f_ma v.
+rewrite /form_of /ext_of_form /=.
+Abort.
+
+Lemma form_of_multilinear_alternate r (x : exterior) :
+  multilinear_alternate (form_of x : form r).
+Proof.
+(* easy *)
+Abort.
+
+Lemma mul_ext_form r s (f : form r) (g : form s) :
+  multilinear_alternate f -> multilinear_alternate g -> 
+  ext_of_form (mul_form f g) = (ext_of_form f) *w (ext_of_form g).
+Proof.
+Abort.
+
+End Exterior.
