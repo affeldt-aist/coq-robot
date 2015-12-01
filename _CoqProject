@@ -3,5 +3,4 @@ aux.v
 exterior.v
 cross_product.v
 
--R /home/affeldt/math-comp/mathcomp/ mathcomp
 -R . Robot

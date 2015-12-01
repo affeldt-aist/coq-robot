@@ -398,13 +398,16 @@ Definition to_ext (x : 'rV_n) : exterior :=
 
 (* Lemma to_ext1 (u : 'rV_n) : (to_ext u <= extn 1%N)%MS. *)
 
-Definition form r := 'M[R]_(r,n) -> R.
+Definition form_of r := 'M[R]_(r,n) -> R.
 
-Definition form_of r (u : exterior) : 'M_(r,n) -> R := fun v : 'M_(r,n) =>
+Notation "r .-form" := (form_of r)
+  (at level 2, format "r .-form") : type_scope.
+
+Definition form_of_ext r (u : exterior) : r.-form := fun v =>
   \sum_(s : {set 'I_n} | #|s| == r)
      u 0 (enum_rank s) * (\prod_i to_ext (row i v))%ext 0 (enum_rank s).
 
-Definition mul_form r s (a : form r) (b : form s) : form (r + s) := 
+Definition mul_form r s (a : r.-form) (b : s.-form) : (r + s).-form := 
   fun v => \sum_(sigma : 'S_(r + s))
             (- 1) ^ sigma *
                     a (\matrix_(i < r, j < n) v (sigma (unsplit (inl i))) j) * 
@@ -418,43 +421,55 @@ Definition mul_form r s (a : form r) (b : form s) : form (r + s) :=
 
 (* Definition canon_tuple (s : {set 'I_n}) := Tuple (size_exterior_enum s). *)
 
-Variable (default_i : 'I_n).
-
-Definition ext_of_form r (f : 'M[R]_(r,n) -> R) : exterior :=
+Definition ext_of_form r (f : r.-form) : exterior :=
   \sum_(s : {set 'I_n} | #|s| == r)
-   f (\matrix_(i < r) delta_mx 0 (nth default_i (exterior_enum s) i)) *: blade s.
+   f (\matrix_(i < r) nth 0 [seq delta_mx 0 i | i <- exterior_enum s] i) *: blade s.
 
 (* Lemma mul_extDr :  (u v : exterior) (A : {set 'I_n}) : *)
 
-Definition multilinear r (f : form r) := 
+Definition multilinear r (f : r.-form) := 
    forall (A B C : 'M_(r,n)) (i0 : 'I_r) (b c : R),
    row i0 A = b *: row i0 B + c *: row i0 C ->
    row' i0 B = row' i0 A ->
    row' i0 C = row' i0 A -> f A = b * f B + c * f C.
 
-Definition alternate r (f : form r) := 
+Definition alternate r (f : r.-form) := 
   forall (A : 'M_(r, n)) (i1 i2 : 'I_r), i1 != i2 -> A i1 =1 A i2 -> f A = 0.
 
-Definition multilinear_alternate r (f : form r) :=
+Definition multilinear_alternate r (f : r.-form) :=
   multilinear f /\ alternate f.
 
-Lemma ext_of_formK r (f : 'M[R]_(r,n) -> R) : multilinear_alternate f -> 
-  form_of (ext_of_form f) =1 f.
+Lemma ext_of_formK r (f : r.-form) : multilinear_alternate f -> 
+  form_of_ext (ext_of_form f) =1 f.
 Proof.
 move=> f_ma v.
-rewrite /form_of /ext_of_form /=.
+rewrite /form_of_ext /ext_of_form /=.
 Abort.
 
 Lemma form_of_multilinear_alternate r (x : exterior) :
-  multilinear_alternate (form_of x : form r).
+  multilinear_alternate (form_of_ext x : r.-form).
 Proof.
 (* easy *)
 Abort.
 
-Lemma mul_ext_form r s (f : form r) (g : form s) :
+Lemma mul_ext_form r s (f : r.-form) (g : s.-form) :
   multilinear_alternate f -> multilinear_alternate g -> 
   ext_of_form (mul_form f g) = (ext_of_form f) *w (ext_of_form g).
 Proof.
 Abort.
+
+(* Definition split_form r (I : {set 'I_r}) (f : r.-form) *)
+(*            (v : 'M_(r - #|I|,n)) : #|I|.-form := fun u => *)
+(*   f (\matrix_k if k \in I then row k u else row k v). *)
+  
+
+
+(*   (if r isn't r'.+1 return 'I_r -> r.-form -> 'M_(r.-1,n) -> R *)
+(*    then fun _ _ _ => 0 else fun k0 f v =>  *)
+(*    f (\matrix_k if unlift k0 k is Some k' then row k' v else u)) *)
+(*   k0 f v. *)
+
+
+  
 
 End Exterior.

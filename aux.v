@@ -33,27 +33,21 @@ Proof.
 by rewrite -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx0 tr_col_mx row_mx_eq0.
 Qed.
 
-Lemma mxdirect_delta (F : fieldType) (T : finType)
-  (n : nat) (P : pred T) (f : T -> 'I_n) :
+(* courtesy of GG *)
+Lemma mxdirect_delta (F : fieldType) (T : finType) (n : nat) (P : pred T) f :
   {in P & , injective f} ->
   mxdirect (\sum_(i | P i) <<delta_mx 0 (f i) : 'rV[F]_n>>)%MS.
 Proof.
-move=> f_inj; apply/mxdirectP => /=.
-transitivity (\rank (\sum_(j | P j) (delta_mx (f j) (f j) : 'M[F]_n))).
-  apply: eqmx_rank; apply/genmxP; rewrite !genmx_sums.
-  apply/eq_bigr => i Pi; rewrite genmx_id.
-  apply/genmxP/andP; split; apply/submxP.
-    by exists (delta_mx 0 (f i)); rewrite mul_delta_mx.
-  by exists (delta_mx (f i) 0); rewrite mul_delta_mx.
-rewrite (mxdirectP _) /=.
-  by apply: eq_bigr => i _; rewrite /= mxrank_gen !mxrank_delta.
-apply/mxdirect_sumsP => /= s Ps.
-apply/eqP; rewrite -submx0; apply/rV_subP => u.
-rewrite sub_capmx => /andP [/submxP [x ->]].
-move=> /(submxMr (delta_mx (f s) (f s))).
-rewrite sumsmxMr_gen big1; first by rewrite -mulmxA mul_delta_mx.
-move=> i /andP [Pi neq_is]; rewrite mul_delta_mx_0 ?genmx0 //.
-by apply: contraNneq neq_is => /f_inj ->.
+pose fP := image f P => Uf; have UfP: uniq fP by apply/dinjectiveP.
+suffices /mxdirectP: mxdirect (\sum_i <<delta_mx 0 i : 'rV[F]_n>>).
+  rewrite /= !(bigID [mem fP] predT) -!big_uniq //= !big_map !big_filter.
+  by move/mxdirectP; rewrite mxdirect_addsE => /andP[].
+apply/mxdirectP=> /=; transitivity (mxrank (1%:M : 'M[F]_n)).
+  apply/eqmx_rank; rewrite submx1 mx1_sum_delta summx_sub_sums // => i _.
+  by rewrite -(mul_delta_mx (0 : 'I_1)) genmxE submxMl.
+rewrite mxrank1 -[LHS]card_ord -sum1_card.
+by apply/eq_bigr=> i _; rewrite /= mxrank_gen mxrank_delta.
 Qed.
+
 
 End extra.
