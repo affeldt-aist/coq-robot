@@ -878,17 +878,32 @@ by move=> j /negPf eq_ij; rewrite mxE eqxx eq_ij mulr0.
 Qed.
 
 Lemma norm_ge0 x : norm x >= 0.
-Proof. Admitted.
+Proof. by apply sqrtr_ge0. Qed.
 Hint Resolve norm_ge0.
 
 Lemma normr_norm x : `|norm x| = norm x.
 Proof. by rewrite ger0_norm. Qed.
 
+Lemma le0dotmul (x : coordinate) : 0 <= x *d x.
+Proof. rewrite dotmulE sumr_ge0 // => i _; by rewrite -expr2 sqr_ge0. Qed.
+
+Lemma dotmulvv0 (x : coordinate) : (x *d x == 0) = (x == 0).
+Proof.
+apply/idP/idP; last by move/eqP ->; rewrite dotmul0v.
+rewrite dotmulE psumr_eq0; last by move=> i _; rewrite -expr2 sqr_ge0.
+move/allP => H; apply/eqP/rowP => i.
+apply/eqP; by rewrite mxE -sqrf_eq0 expr2 -(implyTb ( _ == _)) H.
+Qed.
+
 Lemma norm_eq0 x : (norm x == 0) = (x == 0).
-Proof. rewrite sqrtr_eq0 dotmulE. Admitted.
+Proof. by rewrite -sqrtr0 eqr_sqrt // ?dotmulvv0 // le0dotmul. Qed.
 
 Lemma normZ a x : norm (a *: x) = `|a| * norm x.
-Proof. Admitted.
+Proof.
+rewrite /norm scale_dotmul dotmulC scale_dotmul mulrA sqrtrM -expr2.
+by rewrite sqrtr_sqr.
+by rewrite sqr_ge0.
+Qed.
 
 Fact norm_e1_subproof : norm (delta_mx 0 0) == 1.
 Proof. by rewrite norm_delta_mx. Qed.
