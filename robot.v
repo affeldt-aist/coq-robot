@@ -771,13 +771,20 @@ sin(t) = ( exp(it) - exp(-it) )/2i
 cos(t) = ( exp(it) + exp(-it) )/2
 *)
 
-Lemma sinD a b : sin (a + b) = sin a * cos b + cos a * sin b.
+Lemma expiD a b : expi (a + b) = expi a * expi b.
 Proof.
-rewrite {1}/sin.
-Admitted.
+move: a b => [a a1] [b b1] /=.
+by rewrite /add_angle /= argK // normrM  (eqP a1) (eqP b1) mulr1.
+Qed.
+
+Lemma expi_cos_sin a : expi a = cos a +i* sin a.
+Proof. by case: a => -[a0 a1] Ha; rewrite /cos /sin. Qed.
+
+Lemma sinD a b : sin (a + b) = sin a * cos b + cos a * sin b.
+Proof. by rewrite {1}/sin expiD 2!expi_cos_sin /= addrC. Qed.
 
 Lemma cosD a b : cos (a + b) = cos a * cos b - sin a * sin b.
-Admitted.
+Proof. by rewrite {1}/cos expiD 2!expi_cos_sin /= addrC. Qed.
 
 Definition atan (x : R) : angle := arg (x +i* 1) *~ sgz (x).
 Definition asin (x : R) : angle := arg (Num.sqrt (1 - x^2) +i* x).
