@@ -394,10 +394,95 @@ Proof. by rewrite crossmulC mulmxN mulmxl_crossmulr -crossmulC. Qed.
 Qed.
 *)
 
-Lemma mulmxr_crossmulr r u v : r \is 'SO_3[R] ->
-  (u *v v) *m r = ((u *m r) *v (v *m r)).
+Lemma dotmul_delta_mx a i : a *d delta_mx 0 i = a 0 i.
 Proof.
-Admitted.
+rewrite dotmulE (bigD1 i) //= mxE !eqxx /= mulr1 (eq_bigr (fun=> 0)).
+rewrite big_const; elim: #| _ | => /= [|*]; by rewrite ?(addr0,add0r).
+by move=> j ji; rewrite !mxE eqxx (negbTE ji) /= mulr0.
+Qed.
+
+Lemma dotmul_eq a b : (forall x, a *d x = b *d x) -> a = b.
+Proof.
+move=> ab.
+rewrite (row_sum_delta a) (row_sum_delta b); apply eq_bigr => i _.
+move: (ab (delta_mx 0 i)); by rewrite 2!dotmul_delta_mx => ->.
+Qed.
+
+Lemma dotmul_trmx a M x : a *d (x *m M) = (a *m M^T) *d x.
+Proof. by rewrite /dotmul trmx_mul mulmxA. Qed.
+
+Lemma triple_prod_mat_perm_12 a b c :
+  xrow 1 2%:R (triple_product_mat a b c) = triple_product_mat a c b.
+Proof.
+apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
+Qed.
+
+Lemma triple_prod_mat_perm_01 a b c :
+  xrow 0 1 (triple_product_mat a b c) = triple_product_mat b a c.
+Proof.
+apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
+Qed.
+
+Lemma scalar_triple_prod_circ_shift a b c : a *d (b *v c) = c *d (a *v b).
+Proof. 
+rewrite crossmul_triple.
+rewrite -triple_prod_mat_perm_12 xrowE det_mulmx det_perm /= odd_tperm /=.
+rewrite -triple_prod_mat_perm_01 xrowE det_mulmx det_perm /= odd_tperm /=.
+by rewrite expr1 mulrA mulrNN 2!mul1r -crossmul_triple.
+Qed.
+
+Lemma dotmul_crossmul u v x : u *d (v *v x) = (u *v v) *d x.
+Proof. by rewrite scalar_triple_prod_circ_shift dotmulC. Qed.
+
+Lemma crossmul_dotmul u v (x : vector) : 
+  \det (triple_product_mat u v x) = (u *v v) *d x.
+Proof. by rewrite -crossmul_triple dotmul_crossmul. Qed.
+
+Lemma scale_dotmul k a b : (k *: a) *d b = k * (a *d b).
+Proof. by rewrite /dotmul -scalemxAl !mxE. Qed.
+
+Lemma mulmx_triple_prod_mat M a b c : 
+  triple_product_mat a b c *m M = triple_product_mat (a *m M) (b *m M) (c *m M).
+Proof.
+apply/matrixP => i j.
+move: i => -[[|[|[] // ]] ?]; rewrite !mxE; apply eq_bigr => /= ? _; by rewrite mxE.
+Qed.
+
+Lemma det_crossmul_dotmul M a b (x : vector) : 
+  ((\det M) *: (a *v b)) *d x = (((a *m M) *v (b *m M)) *m M^T) *d x.
+Proof.
+transitivity (\det M * \det (triple_product_mat a b x)).
+  by rewrite scale_dotmul -crossmul_triple dotmul_crossmul.
+transitivity (\det (triple_product_mat (a *m M) (b *m M) (x *m M))).
+  by rewrite mulrC -det_mulmx mulmx_triple_prod_mat.
+transitivity (((a *m M) *v (b *m M)) *d (x *m M)).
+  by rewrite crossmul_dotmul.
+by rewrite dotmul_trmx.
+Qed.
+
+Lemma mulmx_crossmul' M (a b : vector) :
+  \det M *: (a *v b) = ((a *m M) *v (b *m M)) *m M^T.
+Proof. apply dotmul_eq => x; exact: det_crossmul_dotmul. Qed.
+
+Lemma mulmx_crossmul M (a b : vector) : M \is a GRing.unit ->
+  (a *v b) *m (\det M *: M^-1^T) = (a *m M) *v (b *m M).
+Proof.
+move=> invM.
+move: (mulmx_crossmul' M a b) => /(congr1 (fun x => x *m M^T^-1)).
+rewrite -mulmxA mulmxV ?unitmx_tr // mulmx1 => <-.  
+by rewrite -scalemxAr trmx_inv scalemxAl.
+Qed.
+
+(* "From the geometrical definition, the cross product is invariant under 
+   proper rotations about the axis defined by a × b"
+   https://en.wikipedia.org/wiki/Cross_product *)
+Lemma mulmxr_crossmulr r u v : r \is 'SO_3[R] ->
+  (u *v v) *m r = (u *m r) *v (v *m r).
+Proof. 
+rewrite rotationE => /andP[].
+rewrite orthogonalEinv => /andP[r_unit r_inv_tr r_det].
+by rewrite -mulmx_crossmul // (eqP r_det) scale1r (eqP r_inv_tr) trmxK.
+Qed.
 
 Lemma double_crossmul (u v w : 'rV[R]_3) :
  u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
@@ -508,7 +593,11 @@ Qed.
 Lemma jacobi u v w : u *v (v *v w) + v *v (w *v u) + w *v (u *v v) = 0.
 Proof.
 (* consequence of double_crossmul *)
-Admitted.
+rewrite 3!double_crossmul.
+rewrite !addrA -(addrA (_ *: v)) (dotmulC u v) -(addrC (_ *: w)) subrr addr0.
+rewrite -!addrA addrC -!addrA (dotmulC w u) -(addrC (_ *: v)) subrr addr0.
+by rewrite addrC dotmulC subrr.
+Qed.
 
 End crossmul.
 
