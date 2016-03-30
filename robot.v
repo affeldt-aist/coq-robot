@@ -39,6 +39,9 @@ Qed.
 Lemma rew_condAr (a b c : bool) : a = b && c -> (b -> c = a).
 Proof. by case: b. Qed.
 
+Lemma trmxD (R : comRingType) m n (A B : 'M[R]_(m, n)) : (A + B)^T = A^T + B^T.
+Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
+
 End extra.
 
 Section orthogonal_def.
@@ -880,13 +883,47 @@ Record homogeneous_trans : Type := HomogeneousTrans {
 Coercion homogeneous_mx (T : homogeneous_trans) : 'M[R]_4 :=
   row_mx (col_mx (rot T) 0) (col_mx (translation T)^T 1).
 
+Definition homogeneous_ap_vector (x : vector) (T : homogeneous_trans) : homogeneous :=
+  (T *m (vector_homo x)^T)^T.
+
+Lemma homogeneous_ap_vectorE a T : 
+  homogeneous_ap_vector a T = a *m row_mx (rot T)^T 0.
+Proof.
+rewrite /homogeneous_ap_vector /homogeneous_mx /vector_homo.
+rewrite (tr_row_mx a) (mul_row_col (col_mx (rot T) 0)) trmxD trmx_mul.
+by rewrite (tr_col_mx (rot T)) trmx_mul !trmx0 !trmxK mul0mx addr0.
+Qed.
+
+Lemma linear_homogeneous_ap_vector T : linear (homogeneous_ap_vector^~ T).
+Proof. move=> ? ? ?; by rewrite 3!homogeneous_ap_vectorE mulmxDl -scalemxAl. Qed.
+
+Definition homogeneous_ap_coord (x : coordinate) (T : homogeneous_trans) : homogeneous :=
+  (T *m (coord_homo x)^T)^T.
+
 Definition homogeneous_ap  (x : coordinate) (T : homogeneous_trans) : coordinate :=
   \row_(i < 3) (homogeneous_mx T *m col_mx  x^T 1 (* 0 for vectors? *) )^T 0 (inord i).
+
+Lemma homogeneous_apE x T : homogeneous_ap x T = 
+  lsubmx (castmx (erefl, esym (addn1 3)) (homogeneous_ap_coord x T)).
+Proof.
+rewrite /homogeneous_ap.
+apply/rowP => i; rewrite !mxE.
+rewrite castmxE /= esymK cast_ord_id /homogeneous_ap_coord !mxE.
+apply eq_bigr => /= j _; congr (T _ j * _).
+apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
+by rewrite /coord_homo (tr_row_mx x) trmx1.
+Qed.
 
 Lemma displacementP m (from to : coordinate ^ m) :
   displacement from to <->
   exists T : homogeneous_trans, 
     forall i, to i = homogeneous_ap (from i) T.
+Proof.
+split; last first.
+  case=> T /= HT.
+  split.
+    move=> /= m0 m1.
+    rewrite 2!HT.
 Abort.
 
 End homogeneous.
