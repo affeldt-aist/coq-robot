@@ -794,8 +794,17 @@ Definition pi := arg (-1).
 
 Lemma expipi : expi pi = -1. Proof. by rewrite argK ?normrN1. Qed.
 
+Lemma arg1 : arg 1 = 0.
+Proof. apply val_inj => /=; by rewrite argK // normr1. Qed.
+
+Lemma expi2pi : expi (pi + pi) = 1.
+Proof. by rewrite /pi expiD argK // ?normrN1 // mulrNN mulr1. Qed.
+
+Lemma expi_inj : injective expi.
+Proof. move=> [a a1] [b b1] /= ab; by apply/val_inj. Qed.
+
 Lemma pi2 : pi *+ 2 = 0.
-Proof. Admitted.
+Proof. apply expi_inj => //; by rewrite expi2pi -arg1 argK // normr1. Qed.
 
 (* The following lemmas are true in specific domains only, such as
 ]-pi/2, pi/2[ = [pred a | cos a > 0] 
@@ -805,14 +814,33 @@ Proof. Admitted.
 [0, pi[ = [pred a | sin a >= 0 && a != pi] 
 *)
 
-Lemma cosK : cancel acos cos.
-Proof. Admitted.
+Definition Opi_closed := [pred a | 0 <= sin a].
 
-Lemma acosK : cancel cos acos.
-Proof. Admitted.
+(*cancel acos cos*)
+Lemma acosK (r : R) : -1 <= r <= 1 -> cos (acos r) = r.
+Proof. 
+move=> rdom.
+rewrite /acos /cos argK // normc_def /= sqr_sqrtr; last first.
+  by rewrite subr_ge0 -ler_sqrt // ?ltr01 // sqrtr1 -exprnP sqrtr_sqr ler_norml.
+by rewrite addrC subrK sqrtr1.
+Qed.
 
-Lemma sinK : cancel asin sin.  
-Proof. Admitted.
+(*cancel cos acos*)
+Lemma cosK a : a \in Opi_closed -> acos (cos a) = a.
+Proof.
+rewrite inE => adom.
+rewrite /acos /cos /= expi_cos_sin /= -(cos2Dsin2 a) addrAC subrr add0r.
+by rewrite -exprnP sqrtr_sqr /= ger0_norm // -expi_cos_sin expiK.
+Qed.
+
+(*cancel asin sin*)
+Lemma asinK r : -1 <= r <= 1 -> sin (asin r) = r.
+Proof.
+move=> rdom.
+rewrite /sin /asin argK // normc_def /= sqr_sqrtr; last first.
+  by rewrite subr_ge0 -ler_sqrt // ?ltr01 // sqrtr1 -exprnP sqrtr_sqr ler_norml.
+by rewrite subrK sqrtr1.
+Qed.
 
 Lemma sin_acos x : `|x| <= 1 -> sin (acos x) = Num.sqrt (1 - x ^ 2).
 Proof.
