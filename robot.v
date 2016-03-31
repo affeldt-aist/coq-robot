@@ -609,90 +609,13 @@ Notation "u *d w" := (dotmul u w) (at level 40) : ring_scope.
 Notation "*v%R" := (@crossmul _) : ring_scope.
 Notation "u *v w" := (crossmul u w) (at level 40) : ring_scope.
 
-Section chains.
+Section angle.
 
 Variable R : rcfType.
 Record angle := Angle {
   expi : R[i]; 
   _ : `| expi | == 1
 }.
-Definition coordinate := 'rV[R]_3.
-Definition vector := 'rV[R]_3.
-Definition basisType := 'M[R]_3.
-Definition x_ax : basisType -> 'rV[R]_3 := row 0.
-Definition y_ax : basisType -> 'rV[R]_3 := row 1%R.
-Definition z_ax : basisType -> 'rV[R]_3 := row 2%:R.
-
-Record frame := mkFrame {
-  origin : coordinate ;
-  basis :> basisType ;
-  _ : unitmx basis }.
-
-Lemma frame_unit (f : frame) : basis f \in GRing.unit. Proof. by case: f. Qed.
-
-Hint Resolve frame_unit.
-
-Record joint := mkJoint {
-  offset : R ;
-  joint_angle : angle }.
-
-Record link := mkLink {
-  length : R ;
-  twist : angle }.
-
-Variable n' : nat.
-Let n := n'.+1.
-Variables chain : {ffun 'I_n -> frame * link * joint}.
-Definition frames := fun i => (chain (insubd ord0 i)).1.1.
-Definition links := fun i => (chain (insubd ord0 i)).1.2.
-Definition joints := fun i => (chain (insubd ord0 i)).2.
-
-(* by definition, zi = axis of joint i *)
-
-Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
-Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
- (A at next level, at level 8,
- format "u  _|_  A , B ").
-
-Definition common_normal_xz (i : 'I_n) :=
-  (z_ax (frames i.-1)) _|_ (z_ax (frames i)), (x_ax (frames i.-1)).
-
-(* coordinate in frame f *)
-Inductive coor (f : frame) : Type := Coor of 'rV[R]_3.
-
-Definition absolute_coor f (x : coor f) : 'rV[R]_3 :=
-  match x with Coor v => origin f + v *m basis f end.
-
-Definition relative_coor f (x : coordinate) : coor f :=
-  Coor _ ((x - origin f) *m (basis f)^-1).
-
-Lemma absolute_coorK f (x : coor f) : relative_coor f (absolute_coor x) = x.
-Proof.
-case: x => /= v.
-by rewrite /relative_coor addrC addKr -mulmxA mulmxV // mulmx1.
-Qed.
-
-Lemma relative_coorK f (x : coordinate) : absolute_coor (relative_coor f x) = x.
-Proof. by rewrite /= -mulmxA mulVmx // mulmx1 addrC addrNK. Qed.
-
-(* vector in frame f *)
-Inductive vec (f : frame) : Type := Vec of 'rV[R]_3.
-
-Definition absolute_vec f (x : vec f) : 'rV[R]_3 :=
-  match x with Vec v => v *m basis f end.
-
-Definition relative_vec f (x : vector) : vec f :=
-  Vec _ (x *m (basis f)^-1).
-
-Lemma absolute_vecK f (x : vec f) : relative_vec f (absolute_vec x) = x.
-Proof. case: x => /= v. by rewrite /relative_vec -mulmxA mulmxV // mulmx1. Qed.
-
-Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
-Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
-
-Definition norm (a : coordinate) := Num.sqrt (a *d a).
-
-Section angle.
 
 Fact angle0_subproof : `| 1 / `| 1 | | == 1 :> R[i].
 Proof. by rewrite normr1 divr1 normr1. Qed.
@@ -852,11 +775,177 @@ move=> Nx_le1; rewrite /sin /acos argK //; simpc; rewrite sqr_sqrtr.
 by rewrite subr_ge0 -[_ ^ _]real_normK ?num_real // exprn_ile1.
 Qed.
 
-Definition vec_angle (v w : vector) : angle := arg (v *d w +i* norm (v *v w)).
-
 End angle.
 
+Section chains.
+
+Variable R : rcfType.
+Definition coordinate := 'rV[R]_3.
+Definition vector := 'rV[R]_3.
+Definition basisType := 'M[R]_3.
+Definition x_ax : basisType -> 'rV[R]_3 := row 0.
+Definition y_ax : basisType -> 'rV[R]_3 := row 1%R.
+Definition z_ax : basisType -> 'rV[R]_3 := row 2%:R.
+
+Record frame := mkFrame {
+  origin : coordinate ;
+  basis :> basisType ;
+  _ : unitmx basis }.
+
+Lemma frame_unit (f : frame) : basis f \in GRing.unit. Proof. by case: f. Qed.
+
+Hint Resolve frame_unit.
+
+Record joint := mkJoint {
+  offset : R ;
+  joint_angle : angle R }.
+
+Record link := mkLink {
+  length : R ;
+  twist : angle R }.
+
+Variable n' : nat.
+Let n := n'.+1.
+Variables chain : {ffun 'I_n -> frame * link * joint}.
+Definition frames := fun i => (chain (insubd ord0 i)).1.1.
+Definition links := fun i => (chain (insubd ord0 i)).1.2.
+Definition joints := fun i => (chain (insubd ord0 i)).2.
+
+(* by definition, zi = axis of joint i *)
+
+Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
+Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
+ (A at next level, at level 8,
+ format "u  _|_  A , B ").
+
+Definition common_normal_xz (i : 'I_n) :=
+  (z_ax (frames i.-1)) _|_ (z_ax (frames i)), (x_ax (frames i.-1)).
+
+(* coordinate in frame f *)
+Inductive coor (f : frame) : Type := Coor of 'rV[R]_3.
+
+Definition absolute_coor f (x : coor f) : 'rV[R]_3 :=
+  match x with Coor v => origin f + v *m basis f end.
+
+Definition relative_coor f (x : coordinate) : coor f :=
+  Coor _ ((x - origin f) *m (basis f)^-1).
+
+Lemma absolute_coorK f (x : coor f) : relative_coor f (absolute_coor x) = x.
+Proof.
+case: x => /= v.
+by rewrite /relative_coor addrC addKr -mulmxA mulmxV // mulmx1.
+Qed.
+
+Lemma relative_coorK f (x : coordinate) : absolute_coor (relative_coor f x) = x.
+Proof. by rewrite /= -mulmxA mulVmx // mulmx1 addrC addrNK. Qed.
+
+(* vector in frame f *)
+Inductive vec (f : frame) : Type := Vec of 'rV[R]_3.
+
+Definition absolute_vec f (x : vec f) : 'rV[R]_3 :=
+  match x with Vec v => v *m basis f end.
+
+Definition relative_vec f (x : vector) : vec f :=
+  Vec _ (x *m (basis f)^-1).
+
+Lemma absolute_vecK f (x : vec f) : relative_vec f (absolute_vec x) = x.
+Proof. case: x => /= v. by rewrite /relative_vec -mulmxA mulmxV // mulmx1. Qed.
+
+Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
+Proof. by rewrite /= -mulmxA mulVmx // mulmx1. Qed.
+
+Definition norm (a : coordinate) := Num.sqrt (a *d a).
+
+Lemma orth_preserves_norm a M : M \is 'O_3[R] -> norm (a *m M) = norm a.
+Proof.
+move=> HM.
+rewrite /norm dotmul_trmx -mulmxA (_ : M *m _ = 1) ?mulmx1 //.
+by move: HM; rewrite orthogonalE => /eqP.
+Qed.
+
 Section homogeneous.
+
+Definition ht := 'rV[R]_4.
+
+Definition hvect (x : vector) : ht := row_mx x 0. 
+
+Definition hcoor (x : coordinate) : ht := row_mx x 1.
+
+Definition coord_of_ht (x : ht) : coordinate := 
+  lsubmx (castmx (erefl, esym (addn1 3)) x).
+
+Lemma coord_of_htB a b : coord_of_ht (a - b) = coord_of_ht a - coord_of_ht b.
+Proof. apply/rowP => i; by rewrite !mxE !castmxE /= esymK !cast_ord_id !mxE. Qed.
+
+Lemma coord_of_htE (x : ht) : coord_of_ht x = \row_(i < 3) x 0 (inord i).
+Proof.
+apply/rowP => i; rewrite !mxE castmxE /= esymK !cast_ord_id; congr (x 0 _).
+apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
+Qed.
+
+Record htrans : Type := HomogeneousTrans {
+  translation : vector;
+  rot : 'M[R]_3 ;
+  _ : rot \in 'SO_3[R]
+ }.
+
+Definition rot_of_htrans (T : htrans) : 'M[R]_4 :=
+  row_mx (col_mx (rot T) 0) (col_mx 0 1).
+
+Definition trans_of_htrans (T : htrans) : 'M[R]_4 :=
+  row_mx (col_mx 1 0) (col_mx (translation T)^T 1).
+
+Coercion hmx (T : htrans) : 'M[R]_4 :=
+  row_mx (col_mx (rot T) 0) (col_mx (translation T)^T 1).
+
+Lemma hmxE (T : htrans) : T = trans_of_htrans T *m rot_of_htrans T :> 'M_4.
+Proof.
+rewrite /hmx /trans_of_htrans /rot_of_htrans.
+rewrite (mul_mx_row (row_mx (col_mx 1 0) (col_mx (translation T)^T 1)) (col_mx (rot T) 0)).
+rewrite mul_row_col mulmx0 addr0 mul_row_col mulmx0 add0r mulmx1.
+by rewrite mul_col_mx mul1mx mul0mx.
+Qed.
+
+Definition htrans_of_vector (x : vector) (T : htrans) : ht :=
+  (T *m (hvect x)^T)^T.
+
+Lemma htrans_of_vectorE a T : htrans_of_vector a T = a *m row_mx (rot T)^T 0.
+Proof.
+rewrite /htrans_of_vector /hmx /hvect.
+rewrite (tr_row_mx a) (mul_row_col (col_mx (rot T) 0)) trmxD trmx_mul.
+by rewrite (tr_col_mx (rot T)) trmx_mul !trmx0 !trmxK mul0mx addr0.
+Qed.
+
+Lemma linear_htrans_of_vector T : linear (htrans_of_vector^~ T).
+Proof. move=> ? ? ?; by rewrite 3!htrans_of_vectorE mulmxDl -scalemxAl. Qed.
+
+Definition htrans_of_coordinate (x : coordinate) (T : htrans) : ht :=
+  (T *m (hcoor x)^T)^T.
+
+Lemma htrans_of_coordinateB a b T :
+  htrans_of_coordinate a T - htrans_of_coordinate b T = htrans_of_vector (a - b) T.
+Proof.
+rewrite {1}/htrans_of_coordinate {1}/hmx {1}/hcoor.
+rewrite (tr_row_mx a) trmx1 (mul_row_col (col_mx (rot T) 0)) trmxD.
+rewrite mulmx1 trmx_mul trmxK (tr_col_mx (rot T)) trmx0.
+rewrite (tr_col_mx (translation T)^T) trmxK trmx1.
+rewrite {1}/htrans_of_coordinate {1}/hmx {1}/hcoor.
+rewrite trmx_mul trmxK.
+rewrite (tr_row_mx (col_mx (rot T) 0)) (tr_col_mx (translation T)^T) trmxK trmx1.
+rewrite (tr_col_mx (rot T)) trmx0 (mul_row_col b) mul1mx.
+rewrite addrAC opprD -!addrA [in X in _ + (_ + X) = _]addrC subrr addr0.
+rewrite /htrans_of_vector /hmx /hvect.
+rewrite (tr_row_mx (a - b)) trmx0 trmx_mul.
+rewrite (tr_col_mx (a - b)^T) trmx0.
+rewrite (tr_row_mx (col_mx (rot T) 0)) trmxK.
+rewrite (mul_row_col (a - b)) mul0mx addr0.
+rewrite (tr_col_mx (rot T)) trmx0.
+by rewrite mulmxBl.
+Qed.
+
+End homogeneous.
+
+Section chasles.
 
 (*
 Record object (A : frame) := {
@@ -864,74 +953,57 @@ Record object (A : frame) := {
   body : (coor A ^ object_size)%type }.
 *)
 
+Definition homogeneous_ap (x : coordinate) (T : htrans) : coordinate :=
+  (*\row_(i < 3) (homogeneous_mx T *m col_mx  x^T 1 (* 0 for vectors? *) )^T 0 (inord i).*)
+  coord_of_ht (htrans_of_coordinate x T).
+
+Lemma homogeneous_apE x T : homogeneous_ap x T = 
+  lsubmx (castmx (erefl, esym (addn1 3)) (htrans_of_coordinate x T)).
+Proof.
+rewrite /homogeneous_ap.
+apply/rowP => i; rewrite !mxE.
+by rewrite castmxE /= esymK cast_ord_id /htrans_of_coordinate !mxE.
+Qed.
+
+Lemma htrans_of_vector_preserves_norm a T :
+  norm (coord_of_ht (htrans_of_vector a T)) = norm a.
+Proof.
+rewrite htrans_of_vectorE.
+rewrite /coord_of_ht.
+rewrite mul_mx_row mulmx0.
+rewrite (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
+rewrite (cast_row_mx _ (a *m (rot T)^T)).
+rewrite row_mxKl.
+rewrite castmx_id.
+rewrite orth_preserves_norm // orthogonalV rotation_sub //; by case: T.
+Qed.
+
+Definition vec_angle (v w : vector) : angle R := arg (v *d w +i* norm (v *v w)).
+
 Definition displacement n (from to : coordinate ^ n) :=
   (forall i j, norm (from i - from j) = norm (to i - to j)) /\
   (forall i j k, vec_angle (from j - from i) (from k - from i) =
                  vec_angle (to j - to i) (to k - to i)).
 
-Definition homogeneous := 'rV[R]_4.
-
-Definition vector_homo (x : vector) := (row_mx x 0 : homogeneous).
-Definition coord_homo (x : coordinate) := (row_mx x 1 : homogeneous).
-
-Record homogeneous_trans : Type := HomogeneousTrans {
-  translation : vector;
-  rot : 'M[R]_3 ;
-  _ : rot \in 'SO_3[R]
- }.
-
-Coercion homogeneous_mx (T : homogeneous_trans) : 'M[R]_4 :=
-  row_mx (col_mx (rot T) 0) (col_mx (translation T)^T 1).
-
-Definition homogeneous_ap_vector (x : vector) (T : homogeneous_trans) : homogeneous :=
-  (T *m (vector_homo x)^T)^T.
-
-Lemma homogeneous_ap_vectorE a T : 
-  homogeneous_ap_vector a T = a *m row_mx (rot T)^T 0.
-Proof.
-rewrite /homogeneous_ap_vector /homogeneous_mx /vector_homo.
-rewrite (tr_row_mx a) (mul_row_col (col_mx (rot T) 0)) trmxD trmx_mul.
-by rewrite (tr_col_mx (rot T)) trmx_mul !trmx0 !trmxK mul0mx addr0.
-Qed.
-
-Lemma linear_homogeneous_ap_vector T : linear (homogeneous_ap_vector^~ T).
-Proof. move=> ? ? ?; by rewrite 3!homogeneous_ap_vectorE mulmxDl -scalemxAl. Qed.
-
-Definition homogeneous_ap_coord (x : coordinate) (T : homogeneous_trans) : homogeneous :=
-  (T *m (coord_homo x)^T)^T.
-
-Definition homogeneous_ap  (x : coordinate) (T : homogeneous_trans) : coordinate :=
-  \row_(i < 3) (homogeneous_mx T *m col_mx  x^T 1 (* 0 for vectors? *) )^T 0 (inord i).
-
-Lemma homogeneous_apE x T : homogeneous_ap x T = 
-  lsubmx (castmx (erefl, esym (addn1 3)) (homogeneous_ap_coord x T)).
-Proof.
-rewrite /homogeneous_ap.
-apply/rowP => i; rewrite !mxE.
-rewrite castmxE /= esymK cast_ord_id /homogeneous_ap_coord !mxE.
-apply eq_bigr => /= j _; congr (T _ j * _).
-apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
-by rewrite /coord_homo (tr_row_mx x) trmx1.
-Qed.
-
 Lemma displacementP m (from to : coordinate ^ m) :
   displacement from to <->
-  exists T : homogeneous_trans, 
+  exists T : htrans, 
     forall i, to i = homogeneous_ap (from i) T.
 Proof.
-split; last first.
-  case=> T /= HT.
-  split.
-    move=> /= m0 m1.
-    rewrite 2!HT.
+split => [|[T /= HT]]; last first.
+- split => [/= m0 m1|].
+  + rewrite 2!HT -(htrans_of_vector_preserves_norm (from m0 - from m1) T).
+    by rewrite -htrans_of_coordinateB coord_of_htB.
+  admit.
+- admit.
 Abort.
 
-End homogeneous.
+End chasles.
 
 Section Rodrigues.
 
 Record angle_axis := AngleAxis {
-  angle_axis_val : angle * vector ;
+  angle_axis_val : angle R * vector ;
   _ : norm (angle_axis_val.2) == 1
  }.
 
@@ -986,17 +1058,17 @@ rewrite /norm [_ ^ _]sqr_sqrtr // dotmulE sumr_ge0 //.
 by move=> i _; rewrite sqr_ge0.
 Qed.
 
-Definition angle_axis_of (a : angle) (v : vector) :=
+Definition angle_axis_of (a : angle R) (v : vector) :=
   insubd (@AngleAxis (a,_) norm_e1_subproof) (a, (norm v)^-1 *: v).
 
-Lemma aaxis_of (a : angle) (v : vector) : v != 0 ->
+Lemma aaxis_of (a : angle R) (v : vector) : v != 0 ->
   aaxis (angle_axis_of a v) = (norm v)^-1 *: v.
 Proof.
 move=> v_neq0 /=; rewrite /angle_axis_of /aaxis val_insubd /=.
 by rewrite normZ normfV normr_norm mulVf ?norm_eq0 // eqxx.
 Qed.
 
-Lemma aangle_of (a : angle) (v : vector) : aangle (angle_axis_of a v) = a.
+Lemma aangle_of (a : angle R) (v : vector) : aangle (angle_axis_of a v) = a.
 Proof. by rewrite /angle_axis_of /aangle val_insubd /= fun_if if_same. Qed.
 
 (* see table 1.2 of handbook of robotics *)
@@ -1084,6 +1156,7 @@ length (links i) = distance from (z_vec (frames i.-1)) to (z_vec (frames i)) alo
 
 
  *)
+
 
 End chains.
 
