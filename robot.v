@@ -95,11 +95,20 @@ Proof. by rewrite [LHS]mxE big1 // => i; rewrite mxE mul0r. Qed.
 Lemma dotmulv0 v : v *d 0 = 0.
 Proof. by rewrite dotmulC dotmul0v. Qed.
 
+Lemma dotmulDr a b c : a *d (b + c) = a *d b + a *d c.
+Proof. by rewrite {1}/dotmul trmxD mulmxDr mxE. Qed.
+
+Lemma dotmulDl a b c : (b + c) *d a = b *d a + c *d a.
+Proof. by rewrite dotmulC dotmulDr dotmulC (dotmulC c). Qed.
+
 Lemma dotmulD u v : (u + v) *d (u + v) = u *d u + (u *d v) *+ 2 + v *d v.
-Proof.
-rewrite {1}/dotmul trmxD mulmxDl 2!mulmxDr -!addrA mxE ; congr (_ + _).
-rewrite 2!addrA mxE; congr (_ + _); by rewrite mxE {2}dotmulC.
-Qed.
+Proof. rewrite dotmulDr 2!dotmulDl -!addrA; congr (_ + _); by rewrite dotmulC. Qed.
+
+Lemma dotmulN u v : u *d -v = - (u *d v).
+Proof. by rewrite /dotmul linearN /= mulmxN mxE. Qed.
+
+Lemma dotmulZ u k v : u *d (k *: v) = k * (u *d v).
+Proof. by rewrite /dotmul linearZ /= -scalemxAr mxE. Qed.
 
 Lemma le0dotmul u : 0 <= u *d u.
 Proof. rewrite dotmulE sumr_ge0 // => i _; by rewrite -expr2 sqr_ge0. Qed.
@@ -128,9 +137,6 @@ Qed.
 
 Lemma dotmul_trmx u M v : u *d (v *m M) = (u *m M^T) *d v.
 Proof. by rewrite /dotmul trmx_mul mulmxA. Qed.
-
-Lemma scale_dotmul (k : R) u v : (k *: u) *d v = k * (u *d v).
-Proof. by rewrite /dotmul -scalemxAl !mxE. Qed.
 
 End dot_product.
 
@@ -542,7 +548,7 @@ Lemma det_crossmul_dotmul M a b (x : vector) :
   ((\det M) *: (a *v b)) *d x = (((a *m M) *v (b *m M)) *m M^T) *d x.
 Proof.
 transitivity (\det M * \det (triple_product_mat a b x)).
-  by rewrite scale_dotmul -crossmul_triple dotmul_crossmul.
+  by rewrite dotmulC dotmulZ dotmulC -crossmul_triple dotmul_crossmul.
 transitivity (\det (triple_product_mat (a *m M) (b *m M) (x *m M))).
   by rewrite mulrC -det_mulmx mulmx_triple_prod_mat.
 transitivity (((a *m M) *v (b *m M)) *d (x *m M)).
@@ -694,7 +700,7 @@ Proof. by rewrite -sqrtr0 eqr_sqrt // ?dotmulvv0 // le0dotmul. Qed.
 
 Lemma normZ (k : R) u : norm (k *: u) = `|k| * norm u.
 Proof.
-rewrite /norm scale_dotmul dotmulC scale_dotmul mulrA. 
+rewrite /norm dotmulZ dotmulC dotmulZ mulrA. 
 by rewrite sqrtrM -expr2 ?sqrtr_sqr // sqr_ge0.
 Qed.
 
@@ -1269,7 +1275,7 @@ Qed.
 Lemma dotmul0_scale (u v : vector) k (Hk : k != 0) : 
   (u *d (k *: v) == 0) = (u *d v == 0).
 Proof.
-rewrite dotmulC scale_dotmul dotmulC.
+rewrite dotmulZ.
 apply/idP/idP => [|/eqP ->]; last by rewrite mulr0.
 rewrite mulrI_eq0 //; by apply/GRing.lregP.
 Qed.
@@ -1329,30 +1335,39 @@ Definition angle0 := @Angle R _ (introT eqP (@normr1 _)).
 Lemma angle0_arg1 : angle0 = arg 1.
 Proof. apply val_inj => /=; by rewrite argK // ger0_norm // ler01. Qed.
 
-Lemma sin_vec_angle_ge0 (u v : vector) : 0 <= sin (vec_angle u v).
+Lemma norm_crossmul (u v : vector) : 0 <= sin (vec_angle u v) ->
+  norm (u *v v) = norm u * norm v * sin (vec_angle u v).
 Proof.
-rewrite /sin.
-case : (vec_angle u v) => e He.
-simpl.
-Admitted.
-
-Lemma norm_crossmul (u v : vector) : norm (u *v v) = norm u * norm v * sin (vec_angle u v).
-Proof.
+move=> Hsin.
 suff /eqP : (norm (u *v v))^+2 = (norm u * norm v * sin (vec_angle u v))^+2.
   rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm; last by rewrite norm_ge0.
   rewrite ger0_norm; last first.
-    rewrite -mulrA mulr_ge0 // ?norm_ge0 // mulr_ge0 // ? norm_ge0 //.
-    by apply sin_vec_angle_ge0.
+    by rewrite -mulrA mulr_ge0 // ?norm_ge0 // mulr_ge0 // ? norm_ge0.
   by move/eqP.
 rewrite norm_crossmul' dotmul_cos !exprMn.
-apply/eqP.
-by rewrite subr_eq -mulrDr addrC cos2Dsin2 mulr1.
+apply/eqP; by rewrite subr_eq -mulrDr addrC cos2Dsin2 mulr1.
+Qed.
+
+Lemma dotmul_normalize u : u *d normalize u = norm u.
 Admitted.
 
-Lemma ztriad_norm : norm (xtriad l1 l2 *v ytriad l1 l2 l3) = 1.
-Proof.
-rewrite norm_crossmul xtriad_norm ytriad_norm 2!mul1r.
+Lemma norm_scale_normalize u : norm u *: normalize u = u.
 Admitted.
+
+Lemma beuh u v : u != 0 -> u *d (v - (v *d normalize u) *: normalize u) = 0.
+Proof.
+move=> u0.
+rewrite dotmulDr dotmulN dotmulZ.
+rewrite dotmul_normalize mulrC -dotmulZ.
+by rewrite norm_scale_normalize dotmulC subrr.
+Qed.
+
+Definition pihalf := (arg (0 +i* 1) : angle R).
+
+Lemma coucou : vec_angle (xtriad l1 l2) (ytriad l1 l2 l3) = pihalf.
+Proof.
+rewrite /vec_angle /= /pihalf.
+Abort.
 
 Lemma xytriad_ortho : xtriad l1 l2 *d ytriad l1 l2 l3 = 0.
 Proof.
@@ -1361,8 +1376,20 @@ apply/eqP; rewrite dotmulC {1}/normalize dotmul0_scale; last first.
   by rewrite div1r invr_neq0 // -(normalize_eq0 _) xtriad_norm oner_neq0.
 rewrite dotmulC dotmul0_scale; last first.
   by rewrite div1r invr_neq0 // -(normalize_eq0 _) ytriad_norm oner_neq0.
-admit.
+rewrite /xtriad.
 Admitted.
+
+Lemma ztriad_norm : norm (xtriad l1 l2 *v ytriad l1 l2 l3) = 1.
+Proof.
+rewrite norm_crossmul; last first.
+  rewrite /sin /vec_angle /= argK //; last first.
+    rewrite normc_def /= xytriad_ortho expr0n /= add0r norm_crossmul //.
+   admit.
+   admit.
+   admit.
+rewrite xtriad_norm ytriad_norm 2!mul1r.
+Admitted.
+
 
 Definition rot3 : 'M_3 * 'M_3 :=
   let: (Xl, Yl, Zl) := triad l1 l2 l3 in
