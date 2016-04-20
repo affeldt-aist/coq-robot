@@ -838,6 +838,34 @@ Proof. by rewrite /colinear crossmul0v. Qed.
 Lemma colinear_sym : symmetric colinear.
 Proof. by move=> u v; rewrite /colinear crossmulC -eqr_opp opprK oppr0. Qed.
 
+Lemma dotmul_eq0_crossmul_neq0 (u v : vector) : u != 0 -> v != 0 -> u *d v == 0 -> u *v v != 0.
+Proof.
+move=> u0 v0 uv0.
+rewrite -norm_eq0 -(@eqr_expn2 _ 2) // ?norm_ge0 // exprnP expr0n.
+rewrite -exprnP norm_crossmul' (eqP uv0) expr0n subr0.
+rewrite -expr0n eqr_expn2 //.
+by rewrite mulf_eq0 negb_or 2!norm_eq0 u0.
+by rewrite mulr_ge0 // ?norm_ge0.
+Qed.
+
+Lemma colinear_trans v u w : u != 0 -> colinear v u -> colinear u w -> colinear v w.
+Proof.
+move=> u0.
+rewrite /colinear => vu0 uw0.
+move: (jacobi u v w).
+rewrite (crossmulC u v) (eqP vu0) oppr0 crossmulv0 addr0.
+rewrite (crossmulC w u) (eqP uw0) oppr0 crossmulv0 addr0.
+rewrite double_crossmul => /eqP; rewrite subr_eq0.
+case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite crossmul0v.
+case/boolP : (w == 0) => [/eqP ->|w0]; first by rewrite crossmulv0.
+have uw0' : u *d w != 0.
+  apply: contraL uw0.
+  by apply dotmul_eq0_crossmul_neq0.
+move/eqP/(congr1 (fun x => (u *d w)^-1 *: x )).
+rewrite scalerA mulVr // ?unitfE // scale1r => ->.
+by rewrite scalerA crossmulC linearZ /= crossmulvv scaler0 oppr0.
+Qed.
+
 Lemma colinear_dotmul (u v : vector) : colinear u v -> (u *d v) ^+ 2 = u *d u * (v *d v).
 Proof.
 rewrite /colinear crossmul0E => uv0.
@@ -1053,6 +1081,22 @@ rewrite norm_crossmul' addrC subrK sqrtr_sqr ger0_norm; last first.
   by rewrite mulr_ge0 // norm_ge0.
 rewrite mulrA mulrC mulrA mulVr ?mul1r //.
 by rewrite unitrMl // unitfE norm_eq0.
+Qed.
+
+Lemma norm_crossmul u v : 
+  norm (u *v v) = norm u * norm v * `| sin (vec_angle u v) |.
+Proof.
+suff /eqP : (norm (u *v v))^+2 = (norm u * norm v * `| sin (vec_angle u v) |)^+2.
+  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm; last by rewrite norm_ge0.
+  rewrite ger0_norm; first by move/eqP.
+  by rewrite -mulrA mulr_ge0 // ?norm_ge0 // mulr_ge0 // ? norm_ge0.
+rewrite norm_crossmul' dotmul_cos !exprMn.
+apply/eqP; rewrite subr_eq -mulrDr.
+rewrite real_normK; last first.
+  rewrite /sin; case: (expi _) => a b /=.
+  rewrite realE //.
+  case: (lerP 0 b) => //= b0; by rewrite ltrW.
+by rewrite addrC cos2Dsin2 mulr1.
 Qed.
 
 Lemma orth_preserves_vec_angle M v w : M \is 'O_3[R] ->
@@ -1298,11 +1342,40 @@ apply/idP/idP => [|/eqP v0].
 by rewrite /normalize v0 div1r invr0 scale0r norm0.
 Qed.
 
+Lemma norm_scale_normalize u : norm u *: normalize u = u.
+Proof.
+case/boolP : (u == 0) => [/eqP -> {u}|u0]; first by rewrite norm0 scale0r.
+by rewrite /normalize scalerA div1r divrr ?scale1r // unitfE norm_eq0.
+Qed.
+
+Lemma dotmul_normalize u : u *d normalize u = norm u.
+Proof.
+case/boolP : (u == 0) => [/eqP ->{u}|u0]; first by rewrite norm0 dotmul0v.
+rewrite -{1}(norm_scale_normalize u) dotmulC dotmulZ dotmulvv norm_normalize //.
+by rewrite -exprnP expr1n mulr1.
+Qed.
+
 Definition xtriad (a b : coordinate) := normalize (b - a).
+
+Definition orthogonalize (u v : vector) : vector := 
+  v - (v *d normalize u) *: normalize u.
+
+Lemma orthogonalizeP u v : u *d orthogonalize u v = 0.
+Proof.
+rewrite dotmulDr dotmulN dotmulZ dotmul_normalize mulrC -dotmulZ.
+by rewrite norm_scale_normalize dotmulC subrr.
+Qed.
+
+Lemma orthogonalize_neq0 u v : ~~ colinear u v -> orthogonalize u v != 0.
+Proof.
+move=> uv.
+rewrite /orthogonalize subr_eq0; apply: contra uv => /eqP ->.
+by rewrite colinear_sym /normalize scalerA scale_colinear.
+Qed.
 
 Definition ytriad (a b c : coordinate) :=
   let X := xtriad a b in
-  let y := (c - a) - ((c - a) *d X) *: X in
+  let y := orthogonalize X (c - a) in
   normalize y.
 
 Definition triad (a b c : coordinate) :=
@@ -1326,8 +1399,18 @@ Proof. by rewrite /xtriad norm_normalize // subr_eq0 eq_sym. Qed.
 
 Lemma ytriad_norm : norm (ytriad l1 l2 l3) = 1.
 Proof. 
-rewrite /xtriad norm_normalize // subr_eq0; apply: contra l1l2l3 => /eqP ->.
-by rewrite colinear_sym {2}/xtriad /normalize scalerA scale_colinear.
+rewrite /ytriad norm_normalize // orthogonalize_neq0 //.
+rewrite /xtriad /normalize. 
+apply: contra l1l2l3.
+apply: colinear_trans.
+  rewrite scalemx_eq0 negb_or subr_eq0 (eq_sym l2) l1l2 andbT.
+  by rewrite div1r invr_eq0 norm_eq0 subr_eq0 eq_sym.
+by rewrite colinear_sym scale_colinear.
+Qed.
+
+Lemma xytriad_ortho : xtriad l1 l2 *d ytriad l1 l2 l3 = 0.
+Proof.
+by rewrite /= /xtriad /ytriad {2}/normalize dotmulZ orthogonalizeP mulr0.
 Qed.
 
 Definition angle0 := @Angle R _ (introT eqP (@normr1 _)).
@@ -1335,61 +1418,20 @@ Definition angle0 := @Angle R _ (introT eqP (@normr1 _)).
 Lemma angle0_arg1 : angle0 = arg 1.
 Proof. apply val_inj => /=; by rewrite argK // ger0_norm // ler01. Qed.
 
-Lemma norm_crossmul (u v : vector) : 0 <= sin (vec_angle u v) ->
-  norm (u *v v) = norm u * norm v * sin (vec_angle u v).
+Lemma norm_crossmul_normal (u v : vector) : u *d v = 0 ->
+  norm u = 1 -> norm v = 1 -> norm (u *v v) = 1.
 Proof.
-move=> Hsin.
-suff /eqP : (norm (u *v v))^+2 = (norm u * norm v * sin (vec_angle u v))^+2.
-  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm; last by rewrite norm_ge0.
-  rewrite ger0_norm; last first.
-    by rewrite -mulrA mulr_ge0 // ?norm_ge0 // mulr_ge0 // ? norm_ge0.
-  by move/eqP.
-rewrite norm_crossmul' dotmul_cos !exprMn.
-apply/eqP; by rewrite subr_eq -mulrDr addrC cos2Dsin2 mulr1.
+move=> uv0 u1 v1; apply/eqP.
+rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 //.
+by rewrite norm_crossmul' u1 v1 uv0 expr0n /= subr0 mulr1 // norm_ge0.
 Qed.
 
-Lemma dotmul_normalize u : u *d normalize u = norm u.
-Admitted.
-
-Lemma norm_scale_normalize u : norm u *: normalize u = u.
-Admitted.
-
-Lemma beuh u v : u != 0 -> u *d (v - (v *d normalize u) *: normalize u) = 0.
-Proof.
-move=> u0.
-rewrite dotmulDr dotmulN dotmulZ.
-rewrite dotmul_normalize mulrC -dotmulZ.
-by rewrite norm_scale_normalize dotmulC subrr.
+Lemma ztriad_norm : norm (xtriad l1 l2 *v ytriad l1 l2 l3) = 1.
+Proof. 
+by rewrite norm_crossmul_normal // ?xtriad_norm // ?ytriad_norm // xytriad_ortho.
 Qed.
 
 Definition pihalf := (arg (0 +i* 1) : angle R).
-
-Lemma coucou : vec_angle (xtriad l1 l2) (ytriad l1 l2 l3) = pihalf.
-Proof.
-rewrite /vec_angle /= /pihalf.
-Abort.
-
-Lemma xytriad_ortho : xtriad l1 l2 *d ytriad l1 l2 l3 = 0.
-Proof.
-rewrite /= /xtriad /ytriad.
-apply/eqP; rewrite dotmulC {1}/normalize dotmul0_scale; last first.
-  by rewrite div1r invr_neq0 // -(normalize_eq0 _) xtriad_norm oner_neq0.
-rewrite dotmulC dotmul0_scale; last first.
-  by rewrite div1r invr_neq0 // -(normalize_eq0 _) ytriad_norm oner_neq0.
-rewrite /xtriad.
-Admitted.
-
-Lemma ztriad_norm : norm (xtriad l1 l2 *v ytriad l1 l2 l3) = 1.
-Proof.
-rewrite norm_crossmul; last first.
-  rewrite /sin /vec_angle /= argK //; last first.
-    rewrite normc_def /= xytriad_ortho expr0n /= add0r norm_crossmul //.
-   admit.
-   admit.
-   admit.
-rewrite xtriad_norm ytriad_norm 2!mul1r.
-Admitted.
-
 
 Definition rot3 : 'M_3 * 'M_3 :=
   let: (Xl, Yl, Zl) := triad l1 l2 l3 in
