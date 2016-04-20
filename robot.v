@@ -866,6 +866,18 @@ rewrite scalerA mulVr // ?unitfE // scale1r => ->.
 by rewrite scalerA crossmulC linearZ /= crossmulvv scaler0 oppr0.
 Qed.
 
+Lemma colinearZ1 (u v : vector) k : colinear u v -> colinear (k *: u) v.
+Proof.
+rewrite /colinear => uv.
+by rewrite /colinear crossmulC linearZ /= crossmulC (eqP uv) oppr0 scaler0 oppr0.
+Qed.
+
+Lemma colinearZ2 (u v : vector) k : k != 0 -> colinear (k *: u) v -> colinear u v.
+Proof.
+move=> k0; rewrite /colinear.
+by rewrite crossmulC linearZ /= crossmulC scalerN opprK scalemx_eq0 (negbTE k0).
+Qed.
+
 Lemma colinear_dotmul (u v : vector) : colinear u v -> (u *d v) ^+ 2 = u *d u * (v *d v).
 Proof.
 rewrite /colinear crossmul0E => uv0.
@@ -899,6 +911,8 @@ Qed.
 Fact angle0_subproof : `| 1 / `| 1 | | == 1 :> R[i].
 Proof. by rewrite normr1 divr1 normr1. Qed.
 
+Definition angle0 := Angle angle0_subproof.
+
 Canonical angle_subType := [subType for expi].
 
 Lemma normr_expi a : `|expi a| = 1.
@@ -907,8 +921,7 @@ Proof. by case: a => x /= /eqP. Qed.
 Lemma expi_eq0 a : (expi a == 0) = false.
 Proof. case: a => /= a /eqP Ha; apply/negbTE; by rewrite -normr_gt0 Ha. Qed.
 
-Definition arg (x : R[i]) : angle :=
-  insubd (Angle angle0_subproof) (x / `| x |). 
+Definition arg (x : R[i]) : angle := insubd angle0 (x / `| x |). 
 
 Lemma expiK : cancel expi arg.
 Proof.
@@ -931,6 +944,16 @@ Qed.
 Lemma argK x : `|x| = 1 -> expi (arg x) = x.
 Proof. by move=> Nx1; rewrite expi_arg ?Nx1 ?divr1 // -normr_gt0 Nx1. Qed.
 
+Lemma arg_Re k : 0 < k -> arg k%:C = arg 1.
+Proof.
+move=> k0.
+apply val_inj => /=.
+rewrite expi_arg; last by rewrite lt0r_neq0 // ltcR.
+rewrite ger0_norm; last by rewrite ler0c ler_eqVlt k0 orbC.
+rewrite divff //; last by rewrite lt0r_neq0 // ltcR.
+by rewrite argK // ger0_norm // ler01.
+Qed.
+
 Definition add_angle a b := arg (expi a * expi b).
 Definition opp_angle a := arg (expi a)^-1.
 
@@ -948,7 +971,7 @@ Proof. by rewrite /add_angle argK ?normr1 ?mul1r ?expiK. Qed.
 Lemma expi_is_unit x : expi x \is a GRing.unit. 
 Proof. by rewrite unitfE -normr_eq0 normr_expi oner_eq0. Qed.
 
-Lemma add_Nangle x : add_angle (opp_angle x) x = (arg 1).
+Lemma add_Nangle x : add_angle (opp_angle x) x = arg 1.
 Proof. 
 rewrite /add_angle /opp_angle argK; first by rewrite mulVr // expi_is_unit.
 by rewrite normrV ?expi_is_unit // normr_expi invr1.
@@ -1001,6 +1024,9 @@ Lemma expipi : expi pi = -1. Proof. by rewrite argK ?normrN1. Qed.
 
 Lemma arg1 : arg 1 = 0.
 Proof. apply val_inj => /=; by rewrite argK // normr1. Qed.
+
+Lemma cos0 : cos 0 = 1.
+Proof. by rewrite /cos -arg1 argK // ger0_norm // ler01. Qed.
 
 Lemma expi2pi : expi (pi + pi) = 1.
 Proof. by rewrite /pi expiD argK // ?normrN1 // mulrNN mulr1. Qed.
@@ -1055,6 +1081,13 @@ by rewrite subr_ge0 -[_ ^ _]real_normK ?num_real // exprn_ile1.
 Qed.
 
 Definition vec_angle v w : angle := arg (v *d w +i* norm (v *v w)).
+
+Lemma vec_angle0 u : u != 0 -> vec_angle u u = 0.
+Proof.
+move=> u0.
+rewrite /vec_angle /= crossmulvv norm0 complexr0 dotmulvv arg_Re ?arg1 //.
+by rewrite ltr_neqAle -exprnP sqr_ge0 andbT eq_sym sqrf_eq0 norm_eq0.
+Qed.
 
 Lemma dotmul_cos u v : u *d v = norm u * norm v * cos (vec_angle u v).
 Proof.
@@ -1268,8 +1301,6 @@ Qed.
 
 End homogeneous.
 
-Section chasles.
-
 (*
 Record object (A : frame) := {
   object_size : nat ;
@@ -1355,8 +1386,6 @@ rewrite -{1}(norm_scale_normalize u) dotmulC dotmulZ dotmulvv norm_normalize //.
 by rewrite -exprnP expr1n mulr1.
 Qed.
 
-Definition xtriad (a b : coordinate) := normalize (b - a).
-
 Definition orthogonalize (u v : vector) : vector := 
   v - (v *d normalize u) *: normalize u.
 
@@ -1373,50 +1402,7 @@ rewrite /orthogonalize subr_eq0; apply: contra uv => /eqP ->.
 by rewrite colinear_sym /normalize scalerA scale_colinear.
 Qed.
 
-Definition ytriad (a b c : coordinate) :=
-  let X := xtriad a b in
-  let y := orthogonalize X (c - a) in
-  normalize y.
-
-Definition triad (a b c : coordinate) :=
-  let x := xtriad a b in
-  let y := ytriad a b c in
-  (x, y, x *v y).
-
-Section homo_trans_given_three_points.
-
-Variable l1 l2 l3 r1 r2 r3 : coordinate.
-Hypothesis l1l2 : l1 != l2.
-Hypothesis l1l2l3 : ~~ colinear (l2 - l1) (l3 - l1).
-
-Fact l1l3 : l1 != l3.
-Proof.
-by apply: contra l1l2l3 => /eqP ->; rewrite subrr /colinear crossmulv0.
-Qed.
-
-Lemma xtriad_norm : norm (xtriad l1 l2) = 1.
-Proof. by rewrite /xtriad norm_normalize // subr_eq0 eq_sym. Qed.
-
-Lemma ytriad_norm : norm (ytriad l1 l2 l3) = 1.
-Proof. 
-rewrite /ytriad norm_normalize // orthogonalize_neq0 //.
-rewrite /xtriad /normalize. 
-apply: contra l1l2l3.
-apply: colinear_trans.
-  rewrite scalemx_eq0 negb_or subr_eq0 (eq_sym l2) l1l2 andbT.
-  by rewrite div1r invr_eq0 norm_eq0 subr_eq0 eq_sym.
-by rewrite colinear_sym scale_colinear.
-Qed.
-
-Lemma xytriad_ortho : xtriad l1 l2 *d ytriad l1 l2 l3 = 0.
-Proof.
-by rewrite /= /xtriad /ytriad {2}/normalize dotmulZ orthogonalizeP mulr0.
-Qed.
-
-Definition angle0 := @Angle R _ (introT eqP (@normr1 _)).
-
-Lemma angle0_arg1 : angle0 = arg 1.
-Proof. apply val_inj => /=; by rewrite argK // ger0_norm // ler01. Qed.
+Definition pihalf := (arg (0 +i* 1) : angle R).
 
 Lemma norm_crossmul_normal (u v : vector) : u *d v = 0 ->
   norm u = 1 -> norm v = 1 -> norm (u *v v) = 1.
@@ -1426,12 +1412,84 @@ rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 //.
 by rewrite norm_crossmul' u1 v1 uv0 expr0n /= subr0 mulr1 // norm_ge0.
 Qed.
 
-Lemma ztriad_norm : norm (xtriad l1 l2 *v ytriad l1 l2 l3) = 1.
+Section triad.
+
+Variable a b c : coordinate.
+Hypothesis ab : a != b.
+Hypothesis abc : ~~ colinear (b - a) (c - a).
+
+Definition xtriad := normalize (b - a).
+
+Definition ytriad := normalize (orthogonalize xtriad (c - a)).
+
+Definition triad := (xtriad, ytriad, xtriad *v ytriad).
+
+Let ac : a != c.
+Proof. by apply: contra abc => /eqP ->; rewrite subrr /colinear crossmulv0. Qed.
+
+Lemma xtriad_norm : norm xtriad = 1.
+Proof. by rewrite /xtriad norm_normalize // subr_eq0 eq_sym. Qed.
+
+Lemma xtriad_neq0 : xtriad != 0.
+Proof. by rewrite /xtriad -norm_eq0 norm_normalize // ?oner_neq0 // subr_eq0 eq_sym. Qed.
+
+Lemma ytriad_norm : norm ytriad = 1.
 Proof. 
-by rewrite norm_crossmul_normal // ?xtriad_norm // ?ytriad_norm // xytriad_ortho.
+rewrite /ytriad norm_normalize // orthogonalize_neq0 // /xtriad /normalize.
+apply: contra abc; apply colinearZ2.
+by rewrite div1r invr_eq0 norm_eq0 subr_eq0 eq_sym.
 Qed.
 
-Definition pihalf := (arg (0 +i* 1) : angle R).
+Lemma ytriad_neq0 : ytriad != 0.
+Proof.
+rewrite /ytriad -norm_eq0 norm_normalize ?oner_neq0 // orthogonalize_neq0 //.
+rewrite /xtriad /normalize.
+apply: contra abc.
+apply colinearZ2.
+by rewrite div1r invr_eq0 norm_eq0 subr_eq0 eq_sym.
+Qed.
+
+Lemma xytriad_ortho : xtriad *d ytriad = 0.
+Proof. by rewrite /= /xtriad /ytriad {2}/normalize dotmulZ orthogonalizeP mulr0. Qed.
+
+Definition ztriad := xtriad *v ytriad.
+
+Lemma ztriad_neq0 : ztriad != 0.
+Proof.
+by rewrite /ztriad dotmul_eq0_crossmul_neq0 // ?xytriad_ortho // ?xtriad_neq0 // ?ytriad_neq0.
+Qed.
+
+Lemma ztriad_norm : norm ztriad = 1.
+Proof. by rewrite norm_crossmul_normal // ?xtriad_norm // ?ytriad_norm // xytriad_ortho. Qed.
+
+Lemma triad_is_ortho : triple_product_mat xtriad ytriad ztriad \is 'O_3[R].
+Proof.
+apply/orthogonalP.
+case=> -[i0|[i1|[i2|//]]]; case=> -[j0|[j1|[j2|//]]] /=; rewrite !rowK /SimplFunDelta /=.
+- by rewrite dotmulvv xtriad_norm // exp1rz.
+  by rewrite xytriad_ortho.
+  by rewrite dotmul_crossmul crossmulvv dotmul0v.
+- by rewrite dotmulC xytriad_ortho.
+  by rewrite dotmulvv ytriad_norm // exp1rz.
+  by rewrite dotmulC -dotmul_crossmul crossmulvv dotmulv0.
+- by rewrite dotmulC dotmul_crossmul crossmulvv dotmul0v.
+  by rewrite -dotmul_crossmul crossmulvv dotmulv0.
+  by rewrite dotmulvv ztriad_norm // exp1rz.
+Qed.
+
+Lemma triad_is_orthonormal : triple_product_mat xtriad ytriad ztriad \is 'SO_3[R].
+Proof.
+rewrite rotationE triad_is_ortho /= -crossmul_triple dotmul_crossmul.
+by rewrite -/ztriad dotmul_cos ztriad_norm !mul1r vec_angle0 ?ztriad_neq0 // cos0.
+Qed.
+
+End triad.
+
+Section homo_trans_given_three_points.
+
+Variables l1 l2 l3 r1 r2 r3 : coordinate.
+Hypotheses (l12 : l1 != l2) (r12 : r1 != r2).
+Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1)) (r123 : ~~ colinear (r2 - r1) (r3 - r1)).
 
 Definition rot3 : 'M_3 * 'M_3 :=
   let: (Xl, Yl, Zl) := triad l1 l2 l3 in
@@ -1442,62 +1500,52 @@ Definition rot3 : 'M_3 * 'M_3 :=
 Let Ml := rot3.1.
 Let Mr := rot3.2.
 
-Lemma Ml_is_ortho : Ml \is 'O_3[R].
-Proof.
-apply/orthogonalP.
-case=> -[i0|[i1|[i2|//]]]; case=> -[j0|[j1|[j2|//]]] /=; rewrite !rowK /SimplFunDelta /=.
-- by rewrite dotmulvv xtriad_norm exp1rz.
-  by rewrite xytriad_ortho.
-  by rewrite dotmul_crossmul crossmulvv dotmul0v.
-- by rewrite dotmulC xytriad_ortho.
-  by rewrite dotmulvv ytriad_norm exp1rz.
-  by rewrite dotmulC -dotmul_crossmul crossmulvv dotmulv0.
-- by rewrite dotmulC dotmul_crossmul crossmulvv dotmul0v.
-  by rewrite -dotmul_crossmul crossmulvv dotmulv0.
-  by rewrite dotmulvv ztriad_norm exp1rz.
-Admitted.
+Lemma Ml_is_SO : Ml \is 'SO_3[R]. Proof. exact: triad_is_orthonormal. Qed.
 
-Lemma Mr_is_ortho : Mr \is 'O_3[R].
-Admitted.
-
-Lemma rot3_is_ortho : Ml *m Mr^T \is 'O_3[R].
-Proof. by rewrite rpredM // ?Ml_is_ortho // orthogonalV Mr_is_ortho. Qed.
+Lemma Mr_is_SO : Mr \is 'SO_3[R]. Proof. exact: triad_is_orthonormal. Qed.
 
 Lemma rot3_is_SO : Ml *m Mr^T \is 'SO_3[R].
-Proof.
-rewrite rotationE rot3_is_ortho /=.
-Admitted.
+Proof. by rewrite rpredM // ?Ml_is_SO // rotationV Mr_is_SO. Qed.
 
 Definition trans3 (R : 'M_3) : vector := r1 - l1 *m R.
 
 End homo_trans_given_three_points.
 
-Lemma displacementP m (from to : coordinate ^ m) :
-  displacement from to <->
-  exists T : htrans, 
-    forall i, to i = homogeneous_ap (from i) T.
+Section chasles.
+
+Lemma displacementP1 m (from to : coordinate ^ m) : 
+  (exists T : htrans, forall i, to i = homogeneous_ap (from i) T) ->
+  displacement from to.
 Proof.
-split => [|[T /= HT]]; last first.
-- split => [/= m0 m1|/= m0 m1 m2].
-  + rewrite 2!HT -(htrans_of_vector_preserves_norm (from m0 - from m1) T).
-    by rewrite -htrans_of_coordinateB coord_of_htB.
-  + rewrite 3!HT.
-    rewrite /homogeneous_ap -2!coord_of_htB 2!htrans_of_coordinateB.
-    rewrite 2!coord_of_ht_htrans_of_vectorE.
-    rewrite -orth_preserves_vec_angle //.
-    rewrite orthogonalV; apply rotation_sub; by case: T HT.
-- case=> Hnorm Hangle /=.
-  have m0 : 'I_m by admit.
-  have m1 : 'I_m by admit.
-  have m2 : 'I_m by admit.
-  pose l1 := from m0. pose l2 := from m0. pose l3 := from m0.
-  pose r1 := to m0. pose r2 := to m0. pose r3 := to m0.
-  have l1l2 : l1 != l2 by admit.
-  have l1l2l3 : ~~ colinear (l2 - l1) (l3 - l1) by admit.
-  exists (let r := rot3 l1 l2 l3 r1 r2 r3 in
-    HomogeneousTrans (trans3 l1 r1 r.1) (rot3_is_SO l1 l2 l3 l1l2 l1l2l3)).
-  move=> m3 /=.
-  admit.
+case=> [T /= HT].
+split => [/= m0 m1|/= m0 m1 m2].
+- rewrite 2!HT -(htrans_of_vector_preserves_norm (from m0 - from m1) T).
+  by rewrite -htrans_of_coordinateB coord_of_htB.
+- rewrite 3!HT.
+  rewrite /homogeneous_ap -2!coord_of_htB 2!htrans_of_coordinateB.
+  rewrite 2!coord_of_ht_htrans_of_vectorE.
+  rewrite -orth_preserves_vec_angle //.
+  rewrite orthogonalV; apply rotation_sub; by case: T HT.
+Qed.
+
+Variables l1 l2 l3 r1 r2 r3 : coordinate.
+Hypotheses (l12 : l1 != l2) (r12 : r1 != r2).
+Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1)) (r123 : ~~ colinear (r2 - r1) (r3 - r1)).
+
+Definition from : coordinate ^ 3 :=
+  Finfun (@Tuple _ _ [:: l1; l2; l3] (introT eqP (esym (@card_ord _)))).
+
+Definition to : coordinate ^ 3 :=
+  Finfun (@Tuple _ _ [:: r1; r2; r3] (introT eqP (esym (@card_ord _)))).
+
+Lemma displacementP2 : displacement from to ->
+  (exists T : htrans, forall i, to i = homogeneous_ap (from i) T).
+Proof.
+case=> Hnorm Hangle /=.
+set r := rot3 l1 l2 l3 r1 r2 r3.
+set Hr := rot3_is_SO l12 r12 l123 r123.
+set t := trans3 l1 r1 r.1.
+exists (HomogeneousTrans t Hr) => i.
 Abort.
 
 End chasles.
