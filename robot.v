@@ -1431,7 +1431,7 @@ Lemma xtriad_norm : norm xtriad = 1.
 Proof. by rewrite /xtriad norm_normalize // subr_eq0 eq_sym. Qed.
 
 Lemma xtriad_neq0 : xtriad != 0.
-Proof. by rewrite /xtriad -norm_eq0 norm_normalize // ?oner_neq0 // subr_eq0 eq_sym. Qed.
+Proof. by rewrite -norm_eq0 xtriad_norm oner_neq0. Qed.
 
 Lemma ytriad_norm : norm ytriad = 1.
 Proof. 
@@ -1441,26 +1441,18 @@ by rewrite div1r invr_eq0 norm_eq0 subr_eq0 eq_sym.
 Qed.
 
 Lemma ytriad_neq0 : ytriad != 0.
-Proof.
-rewrite /ytriad -norm_eq0 norm_normalize ?oner_neq0 // orthogonalize_neq0 //.
-rewrite /xtriad /normalize.
-apply: contra abc.
-apply colinearZ2.
-by rewrite div1r invr_eq0 norm_eq0 subr_eq0 eq_sym.
-Qed.
+Proof. by rewrite -norm_eq0 ytriad_norm oner_neq0. Qed.
 
 Lemma xytriad_ortho : xtriad *d ytriad = 0.
 Proof. by rewrite /= /xtriad /ytriad {2}/normalize dotmulZ orthogonalizeP mulr0. Qed.
 
 Definition ztriad := xtriad *v ytriad.
 
-Lemma ztriad_neq0 : ztriad != 0.
-Proof.
-by rewrite /ztriad dotmul_eq0_crossmul_neq0 // ?xytriad_ortho // ?xtriad_neq0 // ?ytriad_neq0.
-Qed.
-
 Lemma ztriad_norm : norm ztriad = 1.
 Proof. by rewrite norm_crossmul_normal // ?xtriad_norm // ?ytriad_norm // xytriad_ortho. Qed.
+
+Lemma ztriad_neq0 : ztriad != 0.
+Proof. by rewrite -norm_eq0 ztriad_norm oner_neq0. Qed.
 
 Lemma triad_is_ortho : triple_product_mat xtriad ytriad ztriad \is 'O_3[R].
 Proof.
@@ -1479,8 +1471,8 @@ Qed.
 
 Lemma triad_is_orthonormal : triple_product_mat xtriad ytriad ztriad \is 'SO_3[R].
 Proof.
-rewrite rotationE triad_is_ortho /= -crossmul_triple dotmul_crossmul.
-by rewrite -/ztriad dotmul_cos ztriad_norm !mul1r vec_angle0 ?ztriad_neq0 // cos0.
+rewrite rotationE triad_is_ortho /= -crossmul_triple dotmul_crossmul -/ztriad.
+by rewrite dotmul_cos ztriad_norm !mul1r vec_angle0 ?cos0 // -norm_eq0 ztriad_norm ?oner_neq0.
 Qed.
 
 End triad.
@@ -1491,23 +1483,24 @@ Variables l1 l2 l3 r1 r2 r3 : coordinate.
 Hypotheses (l12 : l1 != l2) (r12 : r1 != r2).
 Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1)) (r123 : ~~ colinear (r2 - r1) (r3 - r1)).
 
-Definition rot3 : 'M_3 * 'M_3 :=
+Definition rots : 'M_3 * 'M_3 :=
   let: (Xl, Yl, Zl) := triad l1 l2 l3 in
   let: (Xr, Yr, Zr) := triad r1 r2 r3 in
   (triple_product_mat Xl Yl Zl,
    triple_product_mat Xr Yr Zr).
 
-Let Ml := rot3.1.
-Let Mr := rot3.2.
+Let Ml := rots.1.
+Let Mr := rots.2.
 
 Lemma Ml_is_SO : Ml \is 'SO_3[R]. Proof. exact: triad_is_orthonormal. Qed.
-
 Lemma Mr_is_SO : Mr \is 'SO_3[R]. Proof. exact: triad_is_orthonormal. Qed.
 
-Lemma rot3_is_SO : Ml *m Mr^T \is 'SO_3[R].
-Proof. by rewrite rpredM // ?Ml_is_SO // rotationV Mr_is_SO. Qed.
+Definition rot3 := Ml^T *m Mr.
 
-Definition trans3 (R : 'M_3) : vector := r1 - l1 *m R.
+Lemma rot3_is_SO : rot3 \is 'SO_3[R].
+Proof. by rewrite rpredM // ?Mr_is_SO // rotationV Ml_is_SO. Qed.
+
+Definition trans3 : vector := r1 - l1 *m rot3.
 
 End homo_trans_given_three_points.
 
@@ -1538,14 +1531,88 @@ Definition from : coordinate ^ 3 :=
 Definition to : coordinate ^ 3 :=
   Finfun (@Tuple _ _ [:: r1; r2; r3] (introT eqP (esym (@card_ord _)))).
 
+(* inverse translation in homogeneous coordinates *)
+Definition inv_trans T := row_mx (col_mx 1 0) (col_mx (- (translation T)^T) 1).
+
+Lemma inv_transP T : trans_of_htrans T *m inv_trans T = 1.
+Proof.
+rewrite /trans_of_htrans /inv_trans.
+rewrite mul_mx_row.
+rewrite (mul_row_col (col_mx 1 0) (col_mx (translation T)^T 1)) mulmx0 addr0 mulmx1.
+rewrite (mul_row_col (col_mx 1 0) (col_mx (translation T)^T 1)) mulmx1.
+rewrite mul_col_mx mul1mx mul0mx add_col_mx addrC subrr add0r.
+rewrite -(block_mxEh (1 :'M_3) 0 0 1).
+rewrite -[in RHS](@submxK _ 3 1 3 1 (1 : 'M_4)).
+congr (@block_mx _ 3 1 3 1); apply/matrixP => i j.
+by rewrite !mxE -!val_eqE.
+rewrite !mxE -val_eqE /= (ord1 j) addn0.
+move: (ltn_ord i); by rewrite ltn_neqAle => /andP [] /negbTE ->.
+rewrite !mxE -val_eqE /= (ord1 i) addn0.
+by move: (ltn_ord j); rewrite ltn_neqAle eq_sym => /andP [] /negbTE ->.
+by rewrite !mxE -!val_eqE.
+Qed.
+
+Lemma triple_prod_mat_mulmx (v : vector) a b c : 
+  v *m (triple_product_mat a b c)^T = 
+  row_mx (v *d a)%:M (row_mx (v *d b)%:M (v *d c)%:M).
+Proof.
+(*rewrite {1}(_ : v = row_mx (v 0 0)%:M (row_mx (v 0 1)%:M (v 0 2%:R)%:M)); last first.
+  rewrite -{1}(@hsubmxK _ 1 1 2 v) -{1}(@hsubmxK _ 1 1 1 (rsubmx _)).
+  do 2 f_equal; apply/rowP => i; rewrite !mxE (ord1 i) eqxx mulr1n; congr (v _ _); by apply val_inj.*)
+rewrite (_ : triple_product_mat _ _ _ = col_mx a (col_mx b c)); last first.
+  apply/matrixP => i j; rewrite !mxE /SimplFunDelta /=.
+  case: ifPn => i0.
+    case: splitP => [j0|k ik]; first by rewrite (ord1 j0).
+    exfalso. move/negP: i0; apply; apply/negP; by rewrite -val_eqE /= ik.
+  case: ifPn => i1.
+    rewrite (eqP i1); case: splitP => [j0|]; first by rewrite (ord1 j0).
+    case => -[|k Hk] //= zerotwo _; rewrite mxE.
+    case: splitP => k; by rewrite (ord1 k).
+  case: ifPn => i2.
+    rewrite (eqP i2); case: splitP => [j0|]; first by rewrite (ord1 j0).
+    case => -[|[|k Hk]] //= onetwo _; rewrite mxE.
+    case: splitP => k; by rewrite (ord1 k).
+  by rewrite ifnot0 (negbTE i1) (negbTE i2) in i0.
+rewrite (tr_col_mx a) (tr_col_mx b) (mul_mx_row v a^T) (mul_mx_row v b^T).
+by rewrite /dotmul -!mx11_scalar.
+Qed.
+
 Lemma displacementP2 : displacement from to ->
   (exists T : htrans, forall i, to i = homogeneous_ap (from i) T).
 Proof.
 case=> Hnorm Hangle /=.
 set r := rot3 l1 l2 l3 r1 r2 r3.
 set Hr := rot3_is_SO l12 r12 l123 r123.
-set t := trans3 l1 r1 r.1.
+set t : vector := trans3 l1 l2 l3 r1 r2 r3.
 exists (HomogeneousTrans t Hr) => i.
+rewrite homogeneous_apE /htrans_of_coordinate trmx_mul trmxK.
+rewrite hmxE trmx_mul mulmxA.
+set fromi' := hcoor (from i) *m _.
+suff : hcoor (to i) = fromi' *m (trans_of_htrans (HomogeneousTrans t Hr))^T.
+  admit.
+rewrite -[LHS]mulmx1 -trmx1.
+move: (inv_transP (HomogeneousTrans t Hr)) => /(congr1 trmx) => <-.
+rewrite trmx_mul mulmxA.
+congr (_ *m _).
+rewrite {}/fromi'.
+set T := HomogeneousTrans t Hr.
+suff : (to i) - t = (from i) *m r.
+  admit.
+rewrite /t /trans3 -/r opprB -(addrC (- r1)) addrA -(opprK (l1 *m r)).
+apply/eqP; rewrite subr_eq; apply/eqP.
+rewrite -mulmxBl /r /rot3 mulmxA.
+rewrite -(mulmx1 (to i - r1)).
+move/rotation_sub : (Mr_is_SO l1 l2 l3 r12 r123).
+rewrite orthogonalEC => /eqP /(congr1 trmx).
+rewrite trmx_mul trmxK trmx1 => <-.
+rewrite mulmxA.
+rewrite (_ : (to i - r1) *m (rots l1 l2 l3 r1 r2 r3).2^T = (from i - l1) *m (rots l1 l2 l3 r1 r2 r3).1^T).
+  reflexivity.
+rewrite {1}/rots.
+rewrite triple_prod_mat_mulmx.
+rewrite {1}/rots.
+rewrite triple_prod_mat_mulmx.
+admit.
 Abort.
 
 End chasles.
