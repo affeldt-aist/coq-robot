@@ -301,6 +301,32 @@ Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
 Definition triple_product_mat (u v w : vector) :=
   \matrix_(i < 3) [eta \0 with 0 |-> u, 1 |-> v, 2%:R |-> w] i.
 
+Lemma triple_prod_matE (a b c : vector) : 
+  triple_product_mat a b c = col_mx a (col_mx b c).
+Proof.
+apply/matrixP => i j; rewrite !mxE /SimplFunDelta /=.
+case: ifPn => i0.
+  case: splitP => [j0|k ik]; first by rewrite (ord1 j0).
+  exfalso. move/negP: i0; apply; apply/negP; by rewrite -val_eqE /= ik.
+case: ifPn => i1.
+  rewrite (eqP i1); case: splitP => [j0|]; first by rewrite (ord1 j0).
+  case => -[|k Hk] //= zerotwo _; rewrite mxE.
+  case: splitP => k; by rewrite (ord1 k).
+case: ifPn => i2.
+  rewrite (eqP i2); case: splitP => [j0|]; first by rewrite (ord1 j0).
+  case => -[|[|k Hk]] //= onetwo _; rewrite mxE.
+  case: splitP => k; by rewrite (ord1 k).
+by rewrite ifnot0 (negbTE i1) (negbTE i2) in i0.
+Qed.
+
+Lemma triple_prod_mat_mulmx (v : vector) a b c : 
+  v *m (triple_product_mat a b c)^T = 
+  row_mx (v *d a)%:M (row_mx (v *d b)%:M (v *d c)%:M).
+Proof.
+rewrite triple_prod_matE (tr_col_mx a) (tr_col_mx b) (mul_mx_row v a^T). 
+by rewrite (mul_mx_row v b^T) /dotmul -!mx11_scalar.
+Qed.
+
 Lemma row'_triple_product_mat (i : 'I_3) (u v w : vector) :
   row' i (triple_product_mat u v w) = [eta \0 with
   0 |-> \matrix_(k < 2) [eta \0 with 0 |-> v, 1 |-> w] k,
@@ -1454,7 +1480,35 @@ Definition rot3 := rots.1^T *m rots.2.
 Lemma rot3_is_SO : rot3 \is 'SO_3[R].
 Proof. by rewrite rpredM // ?rots2_is_SO // rotationV rots1_is_SO. Qed.
 
-Definition trans3 : vector := r1 - l1 *m rot3^T.
+Definition trans3 : vector := r1 - l1 *m rot3.
+
+Lemma xtriad_l_r : xtriad l1 l2 *m rot3 = xtriad r1 r2.
+Proof.
+rewrite /rot3 /rots /= mulmxA triple_prod_mat_mulmx xytriad_ortho.
+rewrite dotmul_crossmul crossmulvv dotmul0v dotmulvv xtriad_norm //.
+rewrite -exprnP expr1n triple_prod_matE (mul_row_col 1%:M) mul1mx (mul_row_col 0%:M).
+do 2 rewrite mul_scalar_mx scale0r; by do 2 rewrite addr0.
+Qed.
+
+Lemma ytriad_l_r : ytriad l1 l2 l3 *m rot3 = ytriad r1 r2 r3.
+Proof.
+rewrite /rot3 /rots /= mulmxA triple_prod_mat_mulmx dotmulC xytriad_ortho.
+rewrite dotmulvv ytriad_norm // -exprnP expr1n dotmulC -dotmul_crossmul.
+rewrite crossmulvv dotmulv0 triple_prod_matE.
+rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
+rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r.
+by rewrite mul_scalar_mx scale0r addr0.
+Qed.
+
+Lemma ztriad_l_r : ztriad l1 l2 l3 *m rot3 = ztriad r1 r2 r3.
+Proof.
+rewrite /rot3 /rots /= mulmxA triple_prod_mat_mulmx.
+rewrite {1}/ztriad dotmulC dotmul_crossmul crossmulvv dotmul0v.
+rewrite {1}/ztriad -dotmul_crossmul crossmulvv dotmulv0.
+rewrite dotmulvv ztriad_norm // -exprnP expr1n triple_prod_matE.
+do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
+by rewrite mul_scalar_mx scale1r.
+Qed.
 
 End transformation_given_three_points.
 
@@ -1492,28 +1546,6 @@ split => [/= m0 m1|/= m0 m1 m2].
   rewrite orthogonalV; apply rotation_sub; by case: T HT.
 Qed.
 
-Lemma triple_prod_mat_mulmx (v : vector) a b c : 
-  v *m (triple_product_mat a b c)^T = 
-  row_mx (v *d a)%:M (row_mx (v *d b)%:M (v *d c)%:M).
-Proof.
-rewrite (_ : triple_product_mat _ _ _ = col_mx a (col_mx b c)); last first.
-  apply/matrixP => i j; rewrite !mxE /SimplFunDelta /=.
-  case: ifPn => i0.
-    case: splitP => [j0|k ik]; first by rewrite (ord1 j0).
-    exfalso. move/negP: i0; apply; apply/negP; by rewrite -val_eqE /= ik.
-  case: ifPn => i1.
-    rewrite (eqP i1); case: splitP => [j0|]; first by rewrite (ord1 j0).
-    case => -[|k Hk] //= zerotwo _; rewrite mxE.
-    case: splitP => k; by rewrite (ord1 k).
-  case: ifPn => i2.
-    rewrite (eqP i2); case: splitP => [j0|]; first by rewrite (ord1 j0).
-    case => -[|[|k Hk]] //= onetwo _; rewrite mxE.
-    case: splitP => k; by rewrite (ord1 k).
-  by rewrite ifnot0 (negbTE i1) (negbTE i2) in i0.
-rewrite (tr_col_mx a) (tr_col_mx b) (mul_mx_row v a^T) (mul_mx_row v b^T).
-by rewrite /dotmul -!mx11_scalar.
-Qed.
-
 Lemma hcoor_inv_htrans a t r (Hr : r \is 'SO_3[R]) :
   hcoor a *m (inv_htrans (Transform t Hr))^T = hcoor (a - t).
 Proof.
@@ -1534,42 +1566,41 @@ Qed.
 Variables l1 l2 l3 r1 r2 r3 : coordinate.
 Hypotheses (l12 : l1 != l2) (r12 : r1 != r2).
 Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1)) (r123 : ~~ colinear (r2 - r1) (r3 - r1)).
-
-Definition from : coordinate ^ 3 := 
-  [ffun x => if x == ord0 then l1 else if x == 1 then l2 else l3].
-
-Definition to : coordinate ^ 3 :=
-  [ffun x => if x == ord0 then r1 else if x == 1 then r2 else r3].
+Variable n' : nat.
+Let n := n'.+3.
+Variables from to : coordinate ^ n.
+Hypotheses (from0 : from ord0 = l1) (from1 : from 1 = l2) (from2 : from 2%:R = l3).
+Hypotheses (to0 : to ord0 = r1) (to1 : to 1 = r2) (to2 : to 2%:R = r3).
 
 Lemma displacementP2 : displacement from to ->
   (exists T : transform R, forall i, to i = homogeneous_ap (from i) T).
 Proof.
 case=> /= Hnorm Hangle /=.
 set r := rot3 l1 l2 l3 r1 r2 r3.
-set Hr := rot3_is_SO l12 r12 l123 r123.
+move: (rot3_is_SO l12 r12 l123 r123).
+rewrite -rotationV => Hr.
 set t := trans3 l1 l2 l3 r1 r2 r3.
-exists (Transform t Hr) => i.
+set T := Transform t Hr.
+exists T => i.
 rewrite homogeneous_apE /htrans_of_coordinate trmx_mul trmxK.
 rewrite hmxE trmx_mul mulmxA.
 set fromi' := hcoor (from i) *m _.
-suff : hcoor (to i) = fromi' *m (htrans_of_transform (Transform t Hr))^T.
+suff : hcoor (to i) = fromi' *m (htrans_of_transform T)^T.
   move=> <-.
   rewrite /hcoor (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
   by rewrite (cast_row_mx _ (to i)) row_mxKl castmx_id.
 rewrite -[LHS]mulmx1 -trmx1.
-move: (inv_htransP (Transform t Hr)) => /(congr1 trmx) => <-.
+move: (inv_htransP T) => /(congr1 trmx) => <-.
 rewrite trmx_mul mulmxA.
 congr (_ *m _).
 rewrite {}/fromi'.
-set T := Transform t Hr.
-suff : (to i) - t = (from i) *m r^T.
-  rewrite hcoor_inv_htrans => ->.
-  by rewrite hcoor_hrot_of_transform.
-rewrite /t /trans3 -/r opprB -(addrC (- r1)) addrA -(opprK (l1 *m r^T)).
+suff : (to i) - t = (from i) *m r.
+  rewrite hcoor_inv_htrans => ->; by rewrite hcoor_hrot_of_transform trmxK.
+rewrite /t /trans3 -/r opprB -(addrC (- r1)) addrA -(opprK (l1 *m r)).
 apply/eqP; rewrite subr_eq; apply/eqP.
-rewrite -mulmxBl /r /rot3 trmx_mul trmxK mulmxA.
+rewrite -mulmxBl /r /rot3 mulmxA.
 rewrite -(mulmx1 (to i - r1)).
-move/rotation_sub : (rots1_is_SO r1 r2 r3 l12 l123).
+move/rotation_sub : (rots2_is_SO l1 l2 l3 r12 r123).
 rewrite orthogonalEC => /eqP /(congr1 trmx).
 rewrite trmx_mul trmxK trmx1 => <-.
 rewrite mulmxA.
@@ -1577,23 +1608,58 @@ set M1 := (X in X *m _ = _). set M2 := (X in _ = X *m _).
 rewrite (_ : M1 = M2).
   reflexivity.
 rewrite {}/M1 {}/M2 {1}/rots triple_prod_mat_mulmx {1}/rots triple_prod_mat_mulmx.
-rewrite (_ : (to i - r1) *d xtriad l1 l2 = (from i - l1) *d xtriad r1 r2); last first.
-  rewrite 2!dotmul_cos.
-  rewrite (_ : l1 = from ord0); last by rewrite ffunE.
-  rewrite (_ : r1 = to ord0); last by rewrite ffunE.
-  rewrite Hnorm xtriad_norm ?mulr1; last by rewrite ffunE.
-  rewrite xtriad_norm ?mulr1; last by rewrite ffunE.
-  rewrite /xtriad.
+rewrite (_ : (to i - r1) *d xtriad r1 r2 = (from i - l1) *d xtriad l1 l2); last first.
+  rewrite 2!dotmul_cos (xtriad_norm l12) (xtriad_norm r12) 2!mulr1.
+  rewrite -from0 -to0 -to1 -from1 Hnorm.
+  rewrite /xtriad /normalize vec_angleZ; last first.
+    by rewrite divr_gt0 // ?ltr01 // lt0r norm_ge0 andbT norm_eq0 to0 to1 subr_eq0 eq_sym.
   rewrite /normalize vec_angleZ; last first.
-    by rewrite divr_gt0 // ?ltr01 // lt0r norm_ge0 andbT norm_eq0 ffunE /= subr_eq0 eq_sym.
-  rewrite /normalize vec_angleZ; last first.
-    by rewrite divr_gt0 // ?ltr01 // lt0r norm_ge0 andbT norm_eq0 ffunE /= subr_eq0 eq_sym.
-  rewrite (_ : l2 = from 1); last by rewrite ffunE.
-  rewrite (_ : r2 = to 1); last by rewrite ffunE.
-  suff : vec_angle (to i - to ord0) (from 1 - from ord0) =
-         vec_angle (from i - from ord0) (to 1 - to ord0).
-    by move=> ->.
+    by rewrite divr_gt0 // ?ltr01 // lt0r norm_ge0 andbT norm_eq0 from0 from1 /= subr_eq0 eq_sym.
+  by rewrite Hangle.
+rewrite (_ : (to i - r1) *d ytriad r1 r2 r3 = (from i - l1) *d ytriad l1 l2 l3); last first.
+  rewrite dotmul_cos (ytriad_norm r12 r123) dotmul_cos (ytriad_norm l12 l123) 2!mulr1.
+  rewrite -from0 -to0 -to1 -from1 -to2 -from2 Hnorm.
 
+Definition Ry (a : angle R) := triple_product_mat
+  (\row_k [eta \0 with 0 |-> cos a, 1 |-> 0, 2%:R |-> sin a] k)
+  (\row_k [eta \0 with 0 |-> 0, 1 |-> 1, 2%:R |-> 0] k)
+  (\row_k [eta \0 with 0 |-> - sin a, 1 |-> 0, 2%:R |-> cos a] k).
+
+Lemma Ry_is_SO a : Ry a \is 'O_3[R].
+Proof.
+rewrite orthogonalE.
+suff <- : Ry a *m (Ry a)^T = 1.
+  done.
+rewrite /Ry triple_prod_matE.
+set row1 := \row_k _. set row2 := \row_k _. set row3 := \row_k _.
+rewrite (tr_col_mx row1) (mul_col_row row1 _ row1^T).
+have -> : row1 *m row1^T = 1.
+  rewrite /row1.
+  admit.
+have -> : row1 *m (col_mx row2 row3)^T = 0.
+  admit.
+have -> : col_mx row2 row3 *m row1^T = 0.
+  admit.
+have -> : col_mx row2 row3 *m (col_mx row2 row3)^T = 1.
+  admit.
+Admitted.
+
+Lemma coucou i a b c : 
+  vec_angle (to i - a) (ytriad a b c) =
+  vec_angle ((to i - a) - ((to i - a) *d ztriad a b c)*: ztriad a b c) (ytriad a b c).
+  (* orthogonalize (to i - a) (ztriad a b c)*)
+Proof.
+set phi := acos (((to i - a) *d ztriad a b c) / (norm (ztriad a b c) * norm (to i - a))).
+suff -> : to i - a - ((to i - a) *d ztriad a b c) *: ztriad a b c = (to i - a) *m (Ry phi)^T.
+  rewrite {2}(_ : ytriad a b c = ytriad a b c *m (Ry phi)^T); last first.
+    rewrite /Ry triple_prod_mat_mulmx.
+    rewrite /ytriad.
+    admit.
+  by rewrite -orth_preserves_vec_angle // orthogonalV Ry_is_SO.
+Admitted.
+
+  rewrite coucou.
+  admit.
 admit.
 Abort.
 
