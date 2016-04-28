@@ -104,8 +104,11 @@ Proof. by rewrite dotmulC dotmulDr dotmulC (dotmulC c). Qed.
 Lemma dotmulD u v : (u + v) *d (u + v) = u *d u + (u *d v) *+ 2 + v *d v.
 Proof. rewrite dotmulDr 2!dotmulDl -!addrA; congr (_ + _); by rewrite dotmulC. Qed.
 
-Lemma dotmulN u v : u *d -v = - (u *d v).
+Lemma dotmulvN u v : u *d -v = - (u *d v).
 Proof. by rewrite /dotmul linearN /= mulmxN mxE. Qed.
+
+Lemma dotmulNv u v : - u *d v = - (u *d v).
+Proof. by rewrite dotmulC dotmulvN dotmulC. Qed.
 
 Lemma dotmulZ u k v : u *d (k *: v) = k * (u *d v).
 Proof. by rewrite /dotmul linearZ /= -scalemxAr mxE. Qed.
@@ -1137,19 +1140,23 @@ Proof. by simpc. Qed.
 
 Definition complexZ := (complexZ1, complexZ2).
 
+Lemma vec_anglev0 (a : 'rV[R]_3) : vec_angle a 0 = vec_angle 0 0. 
+Proof. by rewrite /vec_angle 2!dotmulv0 2!crossmulv0. Qed.
+
+Lemma vec_angle0v (a : 'rV[R]_3) : vec_angle 0 a = vec_angle 0 0. 
+Proof. by rewrite /vec_angle 2!dotmul0v 2!crossmul0v. Qed.
+
+Definition vec_angle0 := (vec_anglev0, vec_angle0v).
+
 Lemma vec_angleZ (u v : 'rV_3) k : 0 < k ->
   vec_angle u (k *: v) = vec_angle u v.
 Proof.
-case/boolP : (u == 0) => [/eqP ->|u0].
-  by rewrite /vec_angle !dotmul0v !crossmul0v.
-case/boolP : (v == 0) => [/eqP ->|v0].
-  by rewrite /vec_angle !scaler0 !dotmulv0 crossmulv0.
-move=> k0.
-rewrite /vec_angle dotmulZ linearZ /= normZ ger0_norm ?ltrW //.
-by rewrite complexZ argZ.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite !vec_angle0.
+case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite scaler0 !vec_angle0.
+move=> k0; by rewrite /vec_angle dotmulZ linearZ /= normZ ger0_norm ?ltrW // complexZ argZ.
 Qed.
 
-Lemma vec_angle0 u : u != 0 -> vec_angle u u = 0.
+Lemma vec_anglevv u : u != 0 -> vec_angle u u = 0.
 Proof.
 move=> u0.
 rewrite /vec_angle /= crossmulvv norm0 complexr0 dotmulvv arg_Re ?arg1 //.
@@ -1159,8 +1166,8 @@ Qed.
 Lemma dotmul_cos u v : u *d v = norm u * norm v * cos (vec_angle u v).
 Proof.
 wlog /andP[u0 v0] : u v / (u != 0) && (v != 0).
-  case/boolP : (u == 0) => u0; first by rewrite (eqP u0) dotmul0v norm0 2!mul0r.
-  case/boolP : (v == 0) => v0; first by rewrite (eqP v0) dotmulv0 norm0 !(mulr0,mul0r).
+  case/boolP : (u == 0) => [/eqP ->{u}|u0]; first by rewrite dotmul0v norm0 !mul0r.
+  case/boolP : (v == 0) => [/eqP ->{v}|v0]; first by rewrite dotmulv0 norm0 !(mulr0,mul0r).
   apply; by rewrite u0.
 rewrite /vec_angle /cos. set x := _ +i* _.
 case/boolP  : (x == 0) => [|x0].
@@ -1302,7 +1309,7 @@ Definition orthogonalize (u v : vector) : vector :=
 
 Lemma orthogonalizeP u v : u *d orthogonalize u v = 0.
 Proof.
-rewrite dotmulDr dotmulN dotmulZ dotmul_normalize mulrC -dotmulZ.
+rewrite dotmulDr dotmulvN dotmulZ dotmul_normalize mulrC -dotmulZ.
 by rewrite norm_scale_normalize dotmulC subrr.
 Qed.
 
@@ -1371,7 +1378,7 @@ Qed.
 Lemma triad_is_orthonormal : triple_product_mat xtriad ytriad ztriad \is 'SO_3[R].
 Proof.
 rewrite rotationE triad_is_ortho /= -crossmul_triple dotmul_crossmul -/ztriad.
-by rewrite dotmul_cos ztriad_norm !mul1r vec_angle0 ?cos0 // -norm_eq0 ztriad_norm ?oner_neq0.
+by rewrite dotmul_cos ztriad_norm !mul1r vec_anglevv ?cos0 // -norm_eq0 ztriad_norm ?oner_neq0.
 Qed.
 
 End triad.
@@ -1740,8 +1747,7 @@ Lemma vec_angleZ_displacement k (a a' b b' : vector) :
   a *d b = a' *d b' -> norm (a *v b) = norm (a' *v b') ->
   vec_angle (k *: a) b = vec_angle (k *: a') b'.
 Proof.
-case/boolP : (k == 0) => k0 H1 H2.
-  by rewrite (eqP k0) /vec_angle 2!scale0r /vec_angle !dotmul0v !crossmul0v.
+case/boolP : (k == 0) => [/eqP ->{k}|k0] H1 H2; first by rewrite 2!scale0r !vec_angle0.
 rewrite /vec_angle.
 rewrite dotmulC dotmulZ dotmulC.
 rewrite [in RHS]dotmulC dotmulZ [in RHS]dotmulC.
@@ -1757,41 +1763,118 @@ case: (ltrP 0 k) => k0'.
 by rewrite -H1 H2.
 Qed.
 
-(*  have Htmp2 : forall i j k l cst, cst != 0 ->
-    vec_angle (to j - to i) ((to k - to i) + cst *: (to l - to i)) =
-    vec_angle (from j - from i) ((from k - from i) + cst *: (from l - from i)).
-    move=> /= i0 j k l cst cst0.
+  have Htmp2 : forall i j k l cst, 
+    vec_angle (to j - to i) ((to k - to i) - cst *: (to l - to i)) =
+    vec_angle (from j - from i) ((from k - from i) - cst *: (from l - from i)).
+    move=> /= i0 j k l cst.
+    case/boolP : (cst == 0) => [/eqP ->{cst}|cst0]; first by rewrite 2!scale0r 2!subr0 Hangle.
     rewrite /vec_angle.
     set a := _ +i* _. set b := _ +i* _.
     suff : a = b by move=> ->.
     rewrite {}/a {}/b.
     apply/eqP; rewrite eq_complex /=.
     apply/andP; split; apply/eqP.
-      rewrite dotmulDr [RHS]dotmulDr; congr (_ + _).
+      rewrite [in LHS]dotmulDr [RHS]dotmulDr; congr (_ + _).
       by rewrite 2!dotmul_cos -(Hnorm j i0) -(Hnorm k i0) Hangle.
+      rewrite -2!scaleNr.
       rewrite dotmulZ dotmulZ.
       by rewrite 2!dotmul_cos -(Hnorm j i0) -(Hnorm l i0) Hangle.
     set a := to j - to i0. set b := to k - to i0. set c := to l - to i0.
     set a' := from j - from i0. set b' := from k - from i0. set c' := from l - from i0.
     rewrite 2!crossmulD.
+    rewrite -2!scaleNr.
     rewrite 2!linearZ /=.
-(*
-    rewrite (normD (a *v b) (a *v c)).
-    rewrite (normD (a' *v b') (a' *v c')).
-    have <- : norm (a *v b) = norm (a' *v b').
-      by rewrite norm_crossmul norm_crossmul /a /b /a' /b' 2!Hnorm Hangle.
-    have <- : norm (a *v c) = norm (a' *v c').
-      by rewrite norm_crossmul norm_crossmul /a /c /a' /c' 2!Hnorm Hangle.
+    rewrite [in LHS](normD (a *v b) (- cst *: (a *v c))).
+    rewrite [in RHS](normD (a' *v b') (- cst *: (a' *v c'))).
+    rewrite -[in RHS](_ : norm (a *v b) = norm (a' *v b')); last first.
+      by rewrite [in LHS]norm_crossmul [in RHS]norm_crossmul /a /b /a' /b' 2!Hnorm Hangle.
+    rewrite -[in RHS](_ : norm (- cst *: (a *v c)) = norm (- cst *: (a' *v c'))); last first.
+      rewrite [in RHS]normZ [in LHS]normZ.
+      by rewrite [in RHS]norm_crossmul [in LHS]norm_crossmul /a /c /a' /c' 2!Hnorm Hangle.
+
+Lemma argZ_neg x (k : R) : k < 0 -> arg (k %:C * x) = arg (- x).
+Proof.
+move=> k0; rewrite /arg; congr (insubd _ _).
+rewrite normrM ltr0_norm; last by rewrite ltcR.
+rewrite -mulf_div invrN mulrN divff ?mul1r; last by rewrite ltr0_neq0 // ltcR.
+by rewrite mulNr mul1r normrN mulNr.
+Qed.
+
+Lemma opp_conjc (a b : R) : - (a -i* b) = - a +i* b.
+Proof. by apply/eqP; rewrite eq_complex /= opprK !eqxx. Qed.
+
+Lemma crossmulNv (u v : vector) : - u *v v = - (u *v v).
+Proof.
+rewrite 2!crossmulE.
+apply/rowP => i; rewrite !mxE /=.
+case: ifP => i0.
+  by rewrite opprB addrC mulNr opprK mulNr.
+case: ifP => i1.
+  by rewrite opprB addrC mulNr opprK mulNr.
+case: ifP => i2.
+by rewrite opprB addrC mulNr opprK mulNr.
+by rewrite oppr0.
+Qed.
+
+Lemma normN (a : vector) : norm (- a) = norm a.
+Proof. by rewrite /norm dotmulNv dotmulvN opprK. Qed.
+
+Lemma vec_angleZ_neg (u v : 'rV[R]_3) k : k < 0 ->
+  vec_angle u (k *: v) = vec_angle (- u) v.
+Proof.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite oppr0 !vec_angle0.
+case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite scaler0 !vec_angle0.
+move=> k0.
+rewrite /vec_angle dotmulZ linearZ /= normZ ltr0_norm //.
+by rewrite mulNr complexZ argZ_neg // opp_conjc dotmulNv crossmulNv normN.
+Qed.
+
+Lemma cos_vec_angle_new (a b : vector) : a != 0 -> b != 0 -> cos (vec_angle (- a) b) = - cos (vec_angle a b).
+Proof.
+move=> a0 b0.
+rewrite /vec_angle /cos crossmulNv normN expi_arg; last first.
+  rewrite eq_complex /= negb_and.
+  case/boolP : (a *d b == 0) => ab; last by rewrite dotmulNv oppr_eq0 ab.
+  by rewrite dotmulNv (eqP ab) oppr0 eqxx /= norm_eq0 dotmul_eq0_crossmul_neq0.
+rewrite expi_arg; last first.
+  rewrite eq_complex /= negb_and.
+  by case/boolP : (_ == 0) => ab //=; rewrite norm_eq0 dotmul_eq0_crossmul_neq0.
+rewrite (_ : `|- a *d b +i* norm (a *v b)| = `|a *d b +i* norm (a *v b)|); last first.
+  by rewrite 2!normc_def /= dotmulNv sqrrN.
+by rewrite /= mul0r oppr0 mulr0 subr0 expr0n /= addr0 subr0 dotmulNv mulNr.
+Qed.
+
+Lemma cos_vec_angle_new_new (a b : vector) : a != 0 -> b != 0 -> cos (vec_angle (a) (- b)) = - cos (vec_angle a b).
+Proof.
+move=> a0 b0.
+rewrite /vec_angle /cos crossmulC crossmulNv opprK dotmulvN [in LHS]expi_arg; last first.
+  rewrite eq_complex /= negb_and.
+  case/boolP : (a *d b == 0) => ab. 
+    by rewrite oppr_eq0 (eqP ab) eqxx /= norm_eq0 dotmul_eq0_crossmul_neq0 // dotmulC.
+  by rewrite oppr_eq0 ab.
+rewrite expi_arg; last first.
+  rewrite eq_complex /= negb_and.
+  by case/boolP : (_ == 0) => ab //=; rewrite norm_eq0 dotmul_eq0_crossmul_neq0.
+rewrite (_ : `|- (a *d b) +i* norm (b *v a)| = `|a *d b +i* norm (a *v b)|); last first.
+  by rewrite 2!normc_def /= sqrrN crossmulC normN.
+by rewrite /= mul0r oppr0 mulr0 expr0n /= addr0 subr0 mulr0 subr0 mulNr.
+Qed.
+
+    case: (ltrP cst 0) => cst0'.
+
+    rewrite (_ : - cst = `| cst |); last by rewrite ltr0_norm.
+    rewrite [in LHS]vec_angleZ; last by rewrite normr_gt0 ltr0_neq0.
+    rewrite [in RHS]vec_angleZ; last by rewrite normr_gt0 ltr0_neq0.
     suff : (vec_angle (a *v b) (a *v c)) = (vec_angle (a' *v b') (a' *v c')).
       by move=> ->.
     rewrite /vec_angle.
     have -> : (a *v b) *d (a *v c) = (a' *v b') *d (a' *v c').
-      rewrite -dotmul_crossmul.
-      rewrite double_crossmul.
-      rewrite -dotmul_crossmul.
-      rewrite double_crossmul.
-      rewrite dotmulDr [in RHS]dotmulDr.
-      rewrite 2!dotmulN !dotmulZ.
+      rewrite -[in LHS]dotmul_crossmul.
+      rewrite [in LHS]double_crossmul.
+      rewrite -[in RHS]dotmul_crossmul.
+      rewrite [in RHS]double_crossmul.
+      rewrite [in LHS]dotmulDr [in RHS]dotmulDr.
+      rewrite 2!dotmulvN !dotmulZ.
       have -> : b *d c = b' *d c'.
         by rewrite 2!dotmul_cos /b /b' /c /c' 2!Hnorm Hangle.
       have -> : b *d a = b' *d a'.
@@ -1851,110 +1934,109 @@ Qed.
     rewrite [in RHS](normZ (- (a *d b)) (b' *v c')).
     have <- : norm (b *v c) = norm (b' *v c').
       by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
-    done.*) admit.
+    done.
 
-*)  
+    rewrite [in LHS]vec_angleZ_neg; last by rewrite oppr_lt0 ltr_neqAle eq_sym cst0.
+    rewrite [in RHS]vec_angleZ_neg; last by rewrite oppr_lt0 ltr_neqAle eq_sym cst0.
+    rewrite [in LHS]cos_vec_angle_new; last 2 first.
+      admit.
+      admit.
+    rewrite [in RHS]cos_vec_angle_new; last 2 first.
+      admit.
+      admit.
+    suff : (vec_angle (a *v b) (a *v c)) = (vec_angle (a' *v b') (a' *v c')).
+      by move=> ->.
+    rewrite /vec_angle.
+    have -> : (a *v b) *d (a *v c) = (a' *v b') *d (a' *v c').
+      rewrite -[in LHS]dotmul_crossmul.
+      rewrite [in LHS]double_crossmul.
+      rewrite -[in RHS]dotmul_crossmul.
+      rewrite [in RHS]double_crossmul.
+      rewrite [in LHS]dotmulDr [in RHS]dotmulDr.
+      rewrite 2!dotmulvN !dotmulZ.
+      have -> : b *d c = b' *d c'.
+        by rewrite 2!dotmul_cos /b /b' /c /c' 2!Hnorm Hangle.
+      have -> : b *d a = b' *d a'.
+        by rewrite 2!dotmul_cos /b /b' /a /a' 2!Hnorm Hangle.
+      have -> : a *d c = a' *d c'.
+        by rewrite 2!dotmul_cos /c /c' /a /a' 2!Hnorm Hangle.
+      by rewrite 2!dotmulvv [in norm _]/a /a' Hnorm.
+    suff Htmp : norm ((a *v b) *v (a *v c)) = norm ((a' *v b') *v (a' *v c')).
+      by rewrite [in LHS]Htmp.
+    rewrite [in LHS]dotmul_crossmul2.
+    rewrite [in RHS]dotmul_crossmul2.
+    rewrite 2!normZ.
+    rewrite -(_ : norm a = norm a'); last by rewrite Hnorm.
+    suff Htmp : `| a *d (b *v c) | = `| a' *d (b' *v c') |.
+      by rewrite [in LHS]Htmp.
+    rewrite dotmul_cos.
+    rewrite dotmul_cos.
+    rewrite -(_ : norm a = norm a'); last by rewrite Hnorm.
+    have <- : norm (b *v c) = norm (b' *v c').
+      by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
+    case/boolP : (norm a == 0) => [/eqP|]a0.
+      by rewrite a0 mul0r [in LHS]mul0r mul0r.
+    case/boolP : (norm (b *v c) == 0) => [/eqP|]bvc.
+      by rewrite bvc mulr0 [in LHS]mul0r mul0r.
+    suff Htmp : `| cos (vec_angle a (b *v c)) | = `| cos (vec_angle a' (b' *v c')) |.
+      rewrite [in LHS]normrM [in RHS]normrM.
+      by rewrite [in LHS]Htmp.
+    rewrite [in LHS]cos_vec_angle //.
+    rewrite [in RHS]cos_vec_angle; last 2 first.
+      by rewrite Hnorm.
+      have <- : norm (b *v c) = norm (b' *v c').
+        by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
+      done.
+    rewrite -(_ : norm a = norm a'); last by rewrite Hnorm.
+    have <- : norm (b *v c) = norm (b' *v c').
+      by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
+    suff Htmp : norm (a *v (b *v c)) = norm (a' *v (b' *v c')).
+      by rewrite [in LHS]Htmp.
+    rewrite 2!double_crossmul 2!normD.
+    have <- : a *d c = a' *d c'.
+      by rewrite 2!dotmul_cos /c /c' /a /a' 2!Hnorm Hangle.
+    have <- : a *d b = a' *d b'.
+      by rewrite 2!dotmul_cos /b /b' /a /a' 2!Hnorm Hangle.
+    rewrite -!scaleNr !normZ.
+    suff -> : (vec_angle ((a *d c) *: b) (- (a *d b) *: c)) = 
+              (vec_angle ((a *d c) *: b') (- (a *d b) *: c')).
+      rewrite -(_ : norm c = norm c'); last by rewrite Hnorm.
+      rewrite -(_ : norm b = norm b'); last by rewrite Hnorm.
+      reflexivity.
+    apply vec_angleZ_displacement.
+    rewrite !dotmulZ.
+    have <- : b *d c = b' *d c'.
+      by rewrite 2!dotmul_cos /b /b' /c /c' 2!Hnorm Hangle.
+    done.
+    rewrite !linearZ /=.
+    rewrite [in LHS](normZ (- (a *d b)) (b *v c)).
+    rewrite [in RHS](normZ (- (a *d b)) (b' *v c')).
+    have <- : norm (b *v c) = norm (b' *v c').
+      by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
+    done.
   
-
-  have Htmp : forall i j k l,
-    vec_angle (to j - to i) ((to k - to i) + (to l - to i)) =
-    vec_angle (from j - from i) ((from k - from i) + (from l - from i)).
-    move=> /= i0 j k l.
-    rewrite /vec_angle.
-    set a := _ +i* _. set b := _ +i* _.
-    suff : a = b by move=> ->.
-    rewrite {}/a {}/b.
-    apply/eqP; rewrite eq_complex /=.
-    apply/andP; split; apply/eqP.
-      rewrite dotmulDr [RHS]dotmulDr; congr (_ + _).
-      by rewrite 2!dotmul_cos -(Hnorm j i0) -(Hnorm k i0) Hangle.
-      by rewrite 2!dotmul_cos -(Hnorm j i0) -(Hnorm l i0) Hangle.
-    set a := to j - to i0. set b := to k - to i0. set c := to l - to i0.
-    set a' := from j - from i0. set b' := from k - from i0. set c' := from l - from i0.
-    rewrite 2!crossmulD.
-    rewrite (normD (a *v b) (a *v c)).
-    rewrite (normD (a' *v b') (a' *v c')).
-    have <- : norm (a *v b) = norm (a' *v b').
-      by rewrite norm_crossmul norm_crossmul /a /b /a' /b' 2!Hnorm Hangle.
-    have <- : norm (a *v c) = norm (a' *v c').
-      by rewrite norm_crossmul norm_crossmul /a /c /a' /c' 2!Hnorm Hangle.
-    suff : (vec_angle (a *v b) (a *v c)) = (vec_angle (a' *v b') (a' *v c')).
-      by move=> ->.
-    rewrite /vec_angle.
-    have -> : (a *v b) *d (a *v c) = (a' *v b') *d (a' *v c').
-      rewrite -dotmul_crossmul.
-      rewrite double_crossmul.
-      rewrite -dotmul_crossmul.
-      rewrite double_crossmul.
-      rewrite dotmulDr [in RHS]dotmulDr.
-      rewrite 2!dotmulN !dotmulZ.
-      have -> : b *d c = b' *d c'.
-        by rewrite 2!dotmul_cos /b /b' /c /c' 2!Hnorm Hangle.
-      have -> : b *d a = b' *d a'.
-        by rewrite 2!dotmul_cos /b /b' /a /a' 2!Hnorm Hangle.
-      have -> : a *d c = a' *d c'.
-        by rewrite 2!dotmul_cos /c /c' /a /a' 2!Hnorm Hangle.
-      by rewrite 2!dotmulvv [in norm _]/a /a' Hnorm.
-    suff Htmp : norm ((a *v b) *v (a *v c)) = norm ((a' *v b') *v (a' *v c')).
-      by rewrite [in LHS]Htmp.
-    rewrite [in LHS]dotmul_crossmul2.
-    rewrite [in RHS]dotmul_crossmul2.
-    rewrite 2!normZ.
-    rewrite -(_ : norm a = norm a'); last by rewrite Hnorm.
-    suff Htmp : `| a *d (b *v c) | = `| a' *d (b' *v c') |.
-      by rewrite [in LHS]Htmp.
-    rewrite dotmul_cos.
-    rewrite dotmul_cos.
-    rewrite -(_ : norm a = norm a'); last by rewrite Hnorm.
-    have <- : norm (b *v c) = norm (b' *v c').
-      by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
-    case/boolP : (norm a == 0) => [/eqP|]a0.
-      by rewrite a0 mul0r [in LHS]mul0r mul0r.
-    case/boolP : (norm (b *v c) == 0) => [/eqP|]bvc.
-      by rewrite bvc mulr0 [in LHS]mul0r mul0r.
-    suff Htmp : `| cos (vec_angle a (b *v c)) | = `| cos (vec_angle a' (b' *v c')) |.
-      rewrite [in LHS]normrM [in RHS]normrM.
-      by rewrite [in LHS]Htmp.
-    rewrite [in LHS]cos_vec_angle //.
-    rewrite [in RHS]cos_vec_angle; last 2 first.
-      by rewrite Hnorm.
-      have <- : norm (b *v c) = norm (b' *v c').
-        by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
-      done.
-    rewrite -(_ : norm a = norm a'); last by rewrite Hnorm.
-    have <- : norm (b *v c) = norm (b' *v c').
-      by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
-    suff Htmp : norm (a *v (b *v c)) = norm (a' *v (b' *v c')).
-      by rewrite [in LHS]Htmp.
-    rewrite 2!double_crossmul 2!normD.
-    have <- : a *d c = a' *d c'.
-      by rewrite 2!dotmul_cos /c /c' /a /a' 2!Hnorm Hangle.
-    have <- : a *d b = a' *d b'.
-      by rewrite 2!dotmul_cos /b /b' /a /a' 2!Hnorm Hangle.
-    rewrite -!scaleNr !normZ.
-    suff -> : (vec_angle ((a *d c) *: b) (- (a *d b) *: c)) = 
-              (vec_angle ((a *d c) *: b') (- (a *d b) *: c')).
-      rewrite -(_ : norm c = norm c'); last by rewrite Hnorm.
-      rewrite -(_ : norm b = norm b'); last by rewrite Hnorm.
-      reflexivity.
-    apply vec_angleZ_displacement.
-    rewrite !dotmulZ.
-    have <- : b *d c = b' *d c'.
-      by rewrite 2!dotmul_cos /b /b' /c /c' 2!Hnorm Hangle.
-    done.
-    rewrite !linearZ /=.
-    rewrite [in LHS](normZ (- (a *d b)) (b *v c)).
-    rewrite [in RHS](normZ (- (a *d b)) (b' *v c')).
-    have <- : norm (b *v c) = norm (b' *v c').
-      by rewrite norm_crossmul norm_crossmul /c /b /c' /b' 2!Hnorm Hangle.
-    done.
-    
   rewrite {1}/normalize.
   rewrite vec_angleZ; last first.
     admit.
-  
-
+  rewrite {2}/normalize scalerA {3}/xtriad {2}/normalize scalerA.
+  rewrite (Htmp2 ord0 i 2%:R 1 ((to 2%:R - to ord0) *d normalize (xtriad (to ord0) (to 1)) *
+          (1 / norm (xtriad (to ord0) (to 1))) *
+          (1 / norm (to 1 - to ord0)))).
+  rewrite /ytriad.
+  rewrite [in RHS]/normalize.
+  rewrite vec_angleZ; last first.
+    admit.
+  rewrite [in RHS]/orthogonalize.
+  rewrite {3}/normalize.
+  rewrite {3}[in RHS]/xtriad.
+  rewrite {3}/normalize.
+  rewrite scalerA.
+  rewrite xtriad_norm; last first.
+    admit.
+  rewrite xtriad_norm; last first.
+    admit.
   admit.
+
 admit.
 Abort.
 
