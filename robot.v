@@ -1601,9 +1601,15 @@ Qed.
 
 Definition homogeneous := 'rV[R]_4.
 
-Definition hvect (x : vector) : homogeneous := row_mx x 0. 
+(*Definition hvect (x : vector) : homogeneous := row_mx x 0. *)
+Inductive hvect := HVec of vector.
+Coercion homogeneous_of_hvect (hv : hvect) : homogeneous :=
+  let: HVec x := hv in row_mx x 0.
 
-Definition hcoor (x : coordinate) : homogeneous := row_mx x 1.
+(*Definition hcoor (x : coordinate) : homogeneous := row_mx x 1.*)
+Inductive hcoor := HCor of coordinate.
+Coercion homogeneous_of_hcoor (hc : hcoor) : homogeneous :=
+  let: HCor x := hc in row_mx x 1.
 
 Definition coord_of_h (x : homogeneous) : coordinate := 
   lsubmx (castmx (erefl, esym (addn1 3)) x).
@@ -1618,7 +1624,7 @@ apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
 Qed.
 
 Definition htrans_of_vector (x : vector) (T : transform) : homogeneous :=
-  (T *m (hvect x)^T)^T.
+  (T *m ((HVec x) : homogeneous)^T)^T.
 
 Lemma htrans_of_vectorE a T : htrans_of_vector a T = a *m row_mx (rot T)^T 0.
 Proof.
@@ -1631,16 +1637,16 @@ Lemma linear_htrans_of_vector T : linear (htrans_of_vector^~ T).
 Proof. move=> ? ? ?; by rewrite 3!htrans_of_vectorE mulmxDl -scalemxAl. Qed.
 
 Definition htrans_of_coordinate (x : coordinate) (T : transform) : homogeneous :=
-  (T *m (hcoor x)^T)^T.
+  (T *m (HCor x : homogeneous)^T)^T.
 
 Lemma htrans_of_coordinateB a b T :
   htrans_of_coordinate a T - htrans_of_coordinate b T = htrans_of_vector (a - b) T.
 Proof.
-rewrite {1}/htrans_of_coordinate {1}/hmx {1}/hcoor.
+rewrite {1}/htrans_of_coordinate {1}/hmx.
 rewrite (tr_row_mx a) trmx1 (mul_row_col (col_mx (rot T) 0)) trmxD.
 rewrite mulmx1 trmx_mul trmxK (tr_col_mx (rot T)) trmx0.
 rewrite (tr_col_mx (translation T)^T) trmxK trmx1.
-rewrite {1}/htrans_of_coordinate {1}/hmx {1}/hcoor.
+rewrite {1}/htrans_of_coordinate {1}/hmx.
 rewrite trmx_mul trmxK.
 rewrite (tr_row_mx (col_mx (rot T) 0)) (tr_col_mx (translation T)^T) trmxK trmx1.
 rewrite (tr_col_mx (rot T)) trmx0 (mul_row_col b) mul1mx.
@@ -1685,20 +1691,19 @@ by rewrite (row_mxEl (u *m (rot T)^T)).
 Qed.
 
 Lemma hcoor_inv_htrans a t r (Hr : r \is 'SO_3[R]) :
-  hcoor a *m (inv_htrans (Transform t Hr))^T = hcoor (a - t).
+  (HCor a : homogeneous) *m (inv_htrans (Transform t Hr))^T = HCor (a - t) :> homogeneous.
 Proof.
-rewrite /inv_htrans /= {1}/hcoor tr_row_mx 2!tr_col_mx !trmx1 trmx0.
+rewrite /inv_htrans /= tr_row_mx 2!tr_col_mx !trmx1 trmx0.
 rewrite (mul_row_col a) mul1mx mul_mx_row mulmx1 mulmx0 add_row_mx add0r.
 by rewrite linearN /= trmxK.
 Qed.
 
 Lemma hcoor_hrot_of_transform a t r (Hr : r \is 'SO_3[R]) :
-  hcoor a *m (hrot_of_transform (Transform t Hr))^T = hcoor (a *m r^T).
+  (HCor a : homogeneous) *m (hrot_of_transform (Transform t Hr))^T = HCor (a *m r^T) :> homogeneous.
 Proof.
-rewrite {1}/hcoor /hrot_of_transform /=.
-rewrite (tr_row_mx (col_mx r 0)) !tr_col_mx !trmx0 trmx1.
-rewrite (mul_row_col a) mul1mx (mul_mx_row a r^T) mulmx0. 
-by rewrite (add_row_mx (a *m r^T)) addr0 add0r /hcoor.
+rewrite /hrot_of_transform /= (tr_row_mx (col_mx r 0)) !tr_col_mx !trmx0 trmx1.
+rewrite (mul_row_col a) mul1mx (mul_mx_row a r^T) mulmx0 (add_row_mx (a *m r^T)).
+by rewrite addr0 add0r.
 Qed.
 
 End homogeneous_transformation.
@@ -2085,10 +2090,10 @@ exists T => i.
 (* goal at this point: to i = homogeneous_ap (from i) T *)
 rewrite homogeneous_apE /htrans_of_coordinate trmx_mul trmxK.
 rewrite hmxE trmx_mul mulmxA.
-set fromi' := hcoor (from i) *m _.
-suff : hcoor (to i) = fromi' *m (htrans_of_transform T)^T.
+set fromi' := (HCor (from i) : homogeneous R) *m _.
+suff : HCor (to i) = fromi' *m (htrans_of_transform T)^T :> homogeneous R.
   move=> <-.
-  rewrite /hcoor (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
+  rewrite (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
   by rewrite (cast_row_mx _ (to i)) row_mxKl castmx_id.
 rewrite -[LHS]mulmx1 -trmx1.
 move: (inv_htransP T) => /(congr1 trmx) => <-.
