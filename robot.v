@@ -1103,6 +1103,14 @@ Definition cos a := Re (expi a).
 Definition sin a := Im (expi a).
 Definition tan a := sin a / cos a.
 
+Lemma cos1sin0 a : cos a = 1 -> sin a = 0.
+Proof.
+case: a => -[a b] ab1; rewrite /cos /sin /= => a1; move: ab1.
+rewrite {}a1 normc_def /= expr1n => /eqP[] /(congr1 (fun x => x ^+ 2)).
+rewrite expr1n sqr_sqrtr; last by rewrite addr_ge0 // ?ler01 // sqr_ge0.
+by move/eqP; rewrite eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
+Qed.
+
 Lemma cos_max (a : angle) : `| cos a | <= 1.
 Proof. rewrite -lecR (ler_trans (normc_ge_Re _)) //; by case: a => ? /= /eqP ->. Qed. 
 
@@ -2385,6 +2393,30 @@ Proof.
 by rewrite /exp_mx !trmxD !linearZ /= trmx1 expr2 trmx_mul expr2.
 Qed.
 
+Lemma inv_exp_mx phi M : M ^+ 4 = - M ^+ 2 -> exp_mx phi M * exp_mx phi (- M) = 1.
+Proof.
+move=> aM.
+case/boolP : (cos phi == 1) => [/eqP cphi|cphi].
+  by rewrite /exp_mx cphi subrr 2!scale0r !addr0 scalerN (cos1sin0 cphi) scale0r addr0 subr0 mulr1.
+rewrite /exp_mx !mulrDr !mulrDl !mulr1 !mul1r -[RHS]addr0 -!addrA; congr (_ + _).
+rewrite !addrA (_ : (- M) ^+ 2 = M ^+ 2); last by rewrite expr2 mulNr mulrN opprK -expr2.
+rewrite -!addrA (addrCA (_ *: M ^+ 2)) !addrA scalerN subrr add0r.
+rewrite (_ : (1 - _) *: _ * _ = - (sin phi *: M * ((1 - cos phi) *: M ^+ 2))); last first.
+  rewrite mulrN; congr (- _).
+  rewrite -2!scalerAr -!scalerAl -exprS -exprSr 2!scalerA; congr (_ *: _).
+  by rewrite mulrC.
+rewrite -!addrA (addrCA (- (sin phi *: _ * _))) !addrA subrK.
+rewrite mulrN -scalerAr -scalerAl -expr2 scalerA -expr2.
+rewrite -[in X in _ - _ + _ + X = _]scalerAr -scalerAl -exprD scalerA -expr2.
+rewrite -scalerBl -scalerDl.
+move: (cos2Dsin2 phi).
+rewrite -2!exprnP => /eqP; rewrite eq_sym addrC -subr_eq => /eqP <-.
+rewrite -{2}(expr1n _ 2) subr_sqr -{1 3}(mulr1 (1 - cos phi)) -mulrBr -mulrDr.
+rewrite opprD addrA subrr add0r -(addrC 1) -expr2 -scalerDr.
+apply/eqP; rewrite scaler_eq0 sqrf_eq0 subr_eq0 eq_sym (negbTE cphi) /=.
+by rewrite aM subrr.
+Qed.
+
 Coercion rodrigues_mx r := 
   let (phi, w) := (aangle r, aaxis r) in exp_mx phi (skew_mx w).
 
@@ -2526,15 +2558,21 @@ rewrite (_ : - _ = - 2%:R); last by rewrite expr1n mulr1.
 by rewrite mulrDl addrA mul1r -natrB // mulrC mulrN -mulNr opprK.
 Qed.
 
-Lemma inv_exp_mx phi M : exp_mx phi M * exp_mx phi (- M) = 1.
+Lemma rodrigues_mx_is_O r : norm (aaxis r) = 1 -> rodrigues_mx r \in 'O_3[R].
+Proof.
+move=> axis1.
+rewrite /rodrigues_mx orthogonalE tr_exp_mx {2}anti_skew linearN /= trmxK inv_exp_mx //.
+by rewrite exprS cube_skew -scalerCA -scalerAl -expr2 axis1 expr1n scaleN1r.
+Qed.
+
+Lemma det_exp_mx phi w : \det (exp_mx phi w) = 1.
 Proof.
 rewrite /exp_mx.
-rewrite !mulrDr !mulrDl !mulr1 !mul1r.
 Admitted.
 
-Lemma rodrigues_mx_is_O r : rodrigues_mx r \in 'O_3[R].
+Lemma det_rodrigues_mx r : \det (rodrigues_mx r) = 1.
 Proof.
-by rewrite /rodrigues_mx orthogonalE tr_exp_mx {2}anti_skew linearN /= trmxK inv_exp_mx.
+by rewrite /rodrigues_mx det_exp_mx.
 Qed.
 
 Lemma rodrigues_mx_diag r (i : 'I_3) : 
