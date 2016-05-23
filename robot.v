@@ -37,6 +37,7 @@ Require Import fingroup perm.
  15. section rodrigues
      (sample lemmas: equivalence exponential map <-> Rodrigues' formula,
                     the exponential map is a orthogonal)
+ 16. section quaternion
 *)
 
 Set Implicit Arguments.
@@ -2834,45 +2835,288 @@ rewrite (symp_antip M^T).
 suff : symp M^T = 1 + (1 - cos phi) *: skew_mx w ^ 2 /\ 
        antip M^T = sin phi *: skew_mx w.
   case=> H1 H2.
-(*  by rewrite -{1}H2 addrAC H1.
-split; last first.
-  rewrite /anti trmxK.
-  apply: (@scaler_injl _ _ 2%:R); first by rewrite unitfE pnatr_eq0.
-  rewrite scalerA mul1r mulrV ?scale1r; last by rewrite unitfE pnatr_eq0.
-  rewrite scalerA; apply/matrixP => i j.
-  rewrite 3![in LHS]mxE [in RHS]mxE.
-  case/boolP : (i == 0) => i0.
-    case/boolP : (j == 0) => j0.
-      by rewrite (eqP i0) (eqP j0) subrr skew_mx_diag mulr0.
-    case/boolP : (j == 1) => j1.
-      rewrite (eqP i0) (eqP j1) skew_mx_non_diag //= expr0 [in RHS]mul1r.
-      rewrite /w.
-      admit.
-    case/boolP : (j == 2%:R) => j2.
-      admit.
-    admit.
-  admit.
-rewrite /sym trmxK.
-apply: (@scaler_injl _ _ 2%:R); first by rewrite unitfE pnatr_eq0.
-rewrite scalerA mul1r mulrV ?scale1r; last by rewrite unitfE pnatr_eq0.
-rewrite scalerDr scalerA.
-apply/matrixP => i j.
-rewrite 2![in LHS]mxE.
-rewrite [in RHS]mxE.
-rewrite 2![in X in _ = X + _]mxE.
-rewrite [in X in _ = _ + X]mxE.
-case/boolP : (i == 0) => i0.
-  case/boolP : (j == 0) => j0.
-    rewrite (eqP i0) (eqP j0) skew_mx2_diag0 mulr1.
-    rewrite /w {2}/axis_of_rotation -/phi.
-    rewrite !mxE /= -/phi.
-
-    admit.
-  admit.
-admit.*)
 Abort.
 
 End Rodrigues.
+
+Section quaternion.
+
+Variable R : rcfType.
+
+Definition row3 (a b c : R) : 'rV[R]_3 := \row_p 
+  [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
+
+Record quat := mkQuat {quatl : R ; quatr : 'rV[R]_3 }.
+
+Definition pair_of_quat (Q : quat) := let: mkQuat Q1 Q2 := Q in (Q1, Q2).
+Definition quat_of_pair (Q : (R * 'rV[R]_3)%type) := let: (Q1, Q2) := Q in mkQuat Q1 Q2.
+
+Lemma quat_of_pairK : cancel pair_of_quat quat_of_pair.
+Proof. by case. Qed.
+
+Notation "Q '_0'" := (quatl Q) (at level 1, format "Q '_0'").
+Notation "Q '_1'" := ((quatr Q) 0 0) (at level 1, format "Q '_1'").
+Notation "Q '_2'" := ((quatr Q) 0 1) (at level 1, format "Q '_2'").
+Notation "Q '_3'" := ((quatr Q) 0 (2%:R : 'I_3)) (at level 1, format "Q '_3'").
+
+Definition quat_eqMixin := CanEqMixin quat_of_pairK.
+Canonical Structure quat_eqType := EqType quat quat_eqMixin.
+Definition quat_choiceMixin := CanChoiceMixin quat_of_pairK.
+Canonical Structure quat_choiceType := ChoiceType quat quat_choiceMixin.
+
+Definition addq (Q P : quat) := mkQuat (Q _0 + P _0) (quatr Q + quatr P).
+
+Lemma addqC : commutative addq.
+Proof. move=> Q P; congr mkQuat; by rewrite addrC. Qed. 
+
+Lemma addqA : associative addq.
+Proof. move=> Q1 Q2 Q3; congr mkQuat; by rewrite addrA. Qed.
+
+Definition quat0 := mkQuat 0 0.
+
+Lemma add0q : left_id quat0 addq.
+Proof. case=> Q1 Q2; by rewrite /addq /= 2!add0r. Qed.
+
+Definition oppq (Q : quat) := mkQuat (- Q _0) (- quatr Q).
+
+Lemma addNq : left_inverse quat0 oppq addq.
+Proof. move=> Q; congr mkQuat; by rewrite addNr. Qed.
+
+Definition quat_ZmodMixin := ZmodMixin addqA addqC add0q addNq.
+Canonical quat_ZmodType := ZmodType quat quat_ZmodMixin.
+
+Definition mulq (Q P : quat) :=
+  let Q1 := Q _0 in let P1 := P _0 in
+  let Q2 := quatr Q in let P2 := quatr P in
+  mkQuat (Q1 * P1 - Q2 *d P2) (Q1 *: P2 + P1 *: Q2 + Q2 *v P2).
+
+Lemma mulqA : associative mulq.
+Proof.
+move=> [a a'] [b b'] [c c']; congr mkQuat => /=.
+- rewrite mulrDr mulrDl mulrA -!addrA; congr (_ + _).
+  rewrite mulrN !dotmulDr !dotmulDl !opprD !addrA dotmul_crossmul; congr (_ + _).
+  rewrite addrC addrA; congr (_ + _ + _).
+  by rewrite mulrC dotmulZ mulrN.
+  by rewrite dotmulC -dotmulZ dotmulC.
+  by rewrite dotmulZ [in RHS]dotmulC dotmulZ dotmulC.
+- rewrite 2![in LHS]scalerDr 1![in RHS]scalerDl scalerA.
+  rewrite -4![in LHS]addrA -3![in RHS]addrA; congr (_ + _).
+  rewrite [in RHS]scalerDr [in RHS]addrCA -[in RHS]addrA -[in LHS]addrA; congr (_ + _).
+    by rewrite scalerA mulrC -scalerA.
+  rewrite [in RHS]scalerDr [in LHS]scalerDl [in LHS]addrCA -[in RHS]addrA -addrA; congr (_ + _).
+    by rewrite scalerA mulrC.
+  rewrite (addrC (a *: _)) crossmulD (addrC (a' *v _)) crossmulD.
+  rewrite -![in LHS]addrA ![in LHS]addrA (addrC (- _ *: a')) -![in LHS]addrA; congr (_ + _).
+    by rewrite linearZ.
+  rewrite [in RHS]crossmulC crossmulD opprD [in RHS]addrCA ![in LHS]addrA addrC -[in LHS]addrA; congr (_ + _).
+    by rewrite linearZ /= crossmulC scalerN.
+  rewrite addrA addrC crossmulD opprD [in RHS]addrCA; congr (_ + _).
+    by rewrite !linearZ /= crossmulC.
+  rewrite 2!double_crossmul opprD opprK [in RHS]addrC addrA; congr (_ + _); last first.
+    by rewrite scaleNr.
+  by rewrite dotmulC scaleNr; congr (_ + _); rewrite dotmulC.
+Qed.
+
+Definition quat1 := mkQuat 1 0.
+
+Lemma mul1q : left_id quat1 mulq.
+Proof.
+case=> a a'; rewrite /mulq /=; congr mkQuat; simp => /=.
+  by rewrite dotmul0v subr0.
+by rewrite crossmul0v scaler0 scale1r 2!addr0.
+Qed.
+
+Lemma mulq1 : right_id quat1 mulq.
+Proof.
+case=> a a'; rewrite /mulq /=; congr mkQuat; simp => /=.
+  by rewrite dotmulv0 subr0.
+by rewrite scaler0 scale1r crossmulv0 add0r addr0.
+Qed.
+
+Lemma mulqDl : left_distributive mulq addq.
+Proof.
+move=> [a a'] [b b'] [c c']; rewrite /mulq /=; congr mkQuat => /=.
+  by rewrite [in RHS]addrCA 2!addrA -mulrDl (addrC a) dotmulDl opprD addrA.
+rewrite scalerDl -!addrA; congr (_ + _).
+rewrite (addrCA (a' *v c')) [in RHS]addrCA; congr (_ + _).
+rewrite scalerDr -addrA; congr (_ + _).
+rewrite addrCA; congr (_ + _).
+by rewrite crossmulC crossmulD crossmulC opprD opprK (crossmulC b').
+Qed.
+
+Lemma mulqDr : right_distributive mulq addq.
+Proof.
+move=> [a a'] [b b'] [c c']; rewrite /mulq /=; congr mkQuat => /=.
+  rewrite mulrDr -!addrA; congr (_ + _).
+  rewrite addrCA; congr (_ + _).
+  by rewrite dotmulDr opprD.
+rewrite scalerDr -!addrA; congr (_ + _).
+rewrite (addrCA (a' *v b')) [in RHS]addrCA; congr (_ + _).
+rewrite scalerDl -addrA; congr (_ + _).
+by rewrite addrCA crossmulD.
+Qed.
+
+Lemma oneq_neq0 : quat1 != 0 :> quat.
+Proof. apply/eqP => -[]; apply/eqP. exact: oner_neq0. Qed.
+
+Definition quat_RingMixin := RingMixin mulqA mul1q mulq1 mulqDl mulqDr oneq_neq0.
+Canonical Structure quat_Ring := Eval hnf in RingType quat quat_RingMixin.
+
+Definition quati := mkQuat 0 (row3 1 0 0).
+Definition quatj := mkQuat 0 (row3 0 1 0).
+Definition quatk := mkQuat 0 (row3 0 0 1).
+
+Lemma quatii : mulq quati quati = -1.
+Proof.
+rewrite /mulq /= scale0r crossmulvv dotmulE sum3E !mxE /=; simp => /=; congr mkQuat.
+by rewrite /= oppr0.
+Qed.
+
+Lemma quatij : mulq quati quatj = quatk.
+Proof.
+rewrite /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=; simp => /=. 
+rewrite oppr0; congr mkQuat.
+apply/rowP => i; rewrite !mxE /=; do 3 case: ifP => //; by simp.
+Qed.
+
+Lemma quatik : mulq quati quatk = - quatj.
+Proof.
+rewrite /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=; simp => /=.
+congr mkQuat.
+apply/rowP => i; rewrite !mxE /=.
+do 3 case : ifP => //; by rewrite oppr0.
+Qed.
+
+Definition conjq (Q : quat) := mkQuat (quatl Q) (- quatr Q).
+Notation "x '^*q'" := (conjq x) (at level 2, format "x '^*q'").
+
+Definition sqrq (Q : quat) := Q _0 ^+ 2 + (quatr Q) *d (quatr Q).
+
+Lemma sqrq_eq0 Q : (sqrq Q == 0) = (Q == 0).
+Proof.
+case: Q => a a' /=; apply/idP/idP.
+  by rewrite /sqrq /= paddr_eq0 ?sqr_ge0 // ?le0dotmul // sqrf_eq0 dotmulvv0 => /andP[/eqP -> /eqP ->].
+by case/eqP => -> ->; rewrite /sqrq /= expr0n dotmul0v /= addr0.
+Qed.
+
+Lemma conjqP (Q : quat) : mulq Q Q^*q = mkQuat (sqrq Q) 0.
+Proof.
+rewrite /mulq /=; congr mkQuat.
+  by rewrite dotmulvN opprK.
+by rewrite scalerN addNr add0r crossmulvN crossmulvv oppr0.
+Qed.
+
+Definition scaleq k (Q : quat) := mkQuat (k * quatl Q) (k *: quatr Q).
+
+Definition invq (Q : quat) : quat := scaleq (1 / sqrq Q) (Q ^*q).
+
+Definition unitq : pred quat := [pred Q | Q != quat0].
+
+Lemma mulVq : {in unitq, left_inverse 1 invq mulq}.
+Proof.
+move=> a; rewrite inE /= => a0.
+rewrite /invq /mulq /=; congr mkQuat.
+  rewrite dotmulC dotmulZ dotmulC -mulrA -mulrBr dotmulNv opprK.
+  by rewrite div1r mulVr // unitfE sqrq_eq0.
+rewrite scalerA scalerN -scalerBl mulrC subrr scale0r.
+by rewrite scalerN crossmulNv crossmulZ crossmulvv scaler0 subrr.
+Qed.
+
+Lemma mulqV : {in unitq, right_inverse 1 invq mulq}.
+Proof.
+move=> a; rewrite inE /= => a0.
+rewrite /invq /mulq /=; congr mkQuat.
+  by rewrite scalerN dotmulvN opprK dotmulZ mulrCA -mulrDr div1r mulVr // unitfE sqrq_eq0.
+by rewrite scalerA scalerN -scaleNr -scalerDl mulrC addNr scale0r linearZ /= crossmulvN crossmulvv scalerN scaler0 subrr.
+Qed.
+
+Lemma unitqP : forall x y : quat, y * x = 1 /\ x * y = 1 -> unitq x.
+Proof.
+move=> x y [yx1 xy1]; rewrite /unitq inE; apply/eqP => x0.
+move/esym: xy1; rewrite x0 mul0r.
+apply/eqP; exact: oneq_neq0.
+Qed.
+
+Lemma invq0id : {in [predC unitq], invq =1 id}.
+Proof.
+move=> a; rewrite !inE negbK => /eqP ->.
+by rewrite /invq /= /scaleq /= oppr0 scaler0 mulr0.
+Qed.
+
+Definition quat_UnitRingMixin := UnitRingMixin mulVq mulqV unitqP invq0id.
+Canonical quat_unitRing := UnitRingType quat quat_UnitRingMixin.
+
+Definition normq (Q : quat) := Num.sqrt (sqrq Q).
+
+Lemma normq0 : normq 0 = 0.
+Proof. by rewrite /normq /sqrq expr0n /= dotmul0v add0r sqrtr0. Qed.
+
+Notation "x %:Q" := (mkQuat x 0).
+
+Definition normQ Q := (normq Q)%:Q. 
+
+Record uquat := {
+  quat_of_uquat :> quat ;
+  _ : normq quat_of_uquat == 1 }.
+
+Canonical uquat_subType := [subType for quat_of_uquat].
+
+Definition uquat_eqMixin := [eqMixin of uquat by <:].
+Canonical uquat_eqType := EqType uquat uquat_eqMixin.
+Definition uquat_choiceMixin := [choiceMixin of uquat by <:].
+Canonical uquat_choiceType := ChoiceType uquat uquat_choiceMixin.
+
+Axiom muluq : uquat -> uquat -> uquat.
+
+Axiom muluqA : associative muluq.
+
+Axiom muluqC : commutative muluq.
+
+Axiom uquat1 : uquat.
+
+Axiom mul1uq : left_id uquat1 muluq.
+
+Axiom invuq : uquat -> uquat.
+
+Axiom mulVuq : left_inverse uquat1 invuq muluq.
+
+Definition uquat_ZmodMixin := ZmodMixin muluqA muluqC mul1uq mulVuq.
+
+Definition lequat (Q P : quat) := 
+  let: mkQuat Q1 Q2 := Q in let: mkQuat P1 P2 := P in
+  (Q2 == P2) && (Q1 <= P1).
+
+Lemma lequat_normD x y : lequat (normQ (x + y)) (normQ x + normQ y).
+Admitted.
+
+Definition ltquat (Q P : quat) := 
+  let: mkQuat Q1 Q2 := Q in let: mkQuat P1 P2 := P in
+  (Q2 == P2) && (Q1 < P1).
+
+Lemma ltquat0_add : forall x y, ltquat 0 x -> ltquat 0 y -> ltquat 0 (x + y).
+Admitted.
+
+Lemma eq0_normQ x : normQ x = 0 -> x = 0.
+Admitted.
+
+Lemma ge0_lequat_total x y : lequat 0 x -> lequat 0 y -> lequat x y || lequat y x.
+Admitted.
+
+Lemma normQM x y : normQ (x * y) = normQ x * normQ y.
+Admitted.
+
+Lemma lequat_def x y : lequat x y = (normQ (y - x) == y - x).
+Admitted.
+
+Lemma ltquat_def x y : ltquat x y = (y != x) && lequat x y.
+Admitted.
+
+Definition quat_POrderedMixin := NumMixin lequat_normD ltquat0_add eq0_normQ
+  ge0_lequat_total normQM lequat_def ltquat_def.
+Fail Canonical Structure quat_numDomainType :=
+  NumDomainType _ quat_POrderedMixin.
+
+End quaternion.
 
 (*
 
