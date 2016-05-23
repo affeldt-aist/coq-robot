@@ -1140,7 +1140,7 @@ Qed.
 Lemma cos_max (a : angle) : `| cos a | <= 1.
 Proof. rewrite -lecR (ler_trans (normc_ge_Re _)) //; by case: a => ? /= /eqP ->. Qed. 
 
-Lemma cos2Dsin2 a : (cos a)^2 + (sin a)^2 = 1.
+Lemma cos2Dsin2 a : (cos a) ^+ 2 + (sin a) ^+ 2 = 1.
 Proof.
 move: (add_Re2_Im2 (expi a)).
 by rewrite normr_expi expr1n => /(congr1 (fun x => Re x)) => /= <-.
@@ -1223,7 +1223,7 @@ Lemma cosK a : a \in Opi_closed -> acos (cos a) = a.
 Proof.
 rewrite inE => adom.
 rewrite /acos /cos /= expi_cos_sin /= -(cos2Dsin2 a) addrAC subrr add0r.
-by rewrite -exprnP sqrtr_sqr /= ger0_norm // -expi_cos_sin expiK.
+by rewrite sqrtr_sqr /= ger0_norm // -expi_cos_sin expiK.
 Qed.
 
 (*cancel asin sin*)
@@ -1422,7 +1422,7 @@ move=> Ha Hb.
 rewrite norm_crossmul mulrAC divrr // ?mul1r; last by rewrite unitfE mulf_neq0.
 rewrite norm2.
 move: (cos2Dsin2 (vec_angle a b)) => /eqP; rewrite eq_sym -subr_eq => /eqP ->.
-by rewrite -exprnP sqrtr_sqr.
+by rewrite sqrtr_sqr.
 Qed.
 
 Lemma orth_preserves_vec_angle M v w : M \is 'O_3[R] ->
@@ -2179,9 +2179,9 @@ rewrite -(@eqr_expn2 _ 2 _ _ erefl) ?normr_ge0; try reflexivity.
 apply/eqP; rewrite -[in LHS]normrX -[in RHS]normrX.
 set a := (X in `| sin X ^+ _ | = _). set b := (X in _ = `| sin X ^+ _| ).
 move: (cos2Dsin2 a) => /esym/eqP.
-rewrite addrC -subr_eq -!exprnP => /eqP Ha.
+rewrite addrC -subr_eq => /eqP Ha.
 move: (cos2Dsin2 b) => /esym/eqP.
-rewrite addrC -subr_eq -!exprnP => /eqP Hb.
+rewrite addrC -subr_eq => /eqP Hb.
 rewrite [in LHS]ger0_norm; last by rewrite sqr_ge0.
 rewrite [in RHS]ger0_norm; last by rewrite sqr_ge0.
 by rewrite -[in LHS]Ha -Hb [in LHS]H.
@@ -2597,8 +2597,7 @@ rewrite -!addrA (addrCA (- (sin phi *: _ * _))) !addrA subrK.
 rewrite mulrN -scalerAr -scalerAl -expr2 scalerA -expr2.
 rewrite -[in X in _ - _ + _ + X = _]scalerAr -scalerAl -exprD scalerA -expr2.
 rewrite -scalerBl -scalerDl.
-move: (cos2Dsin2 phi).
-rewrite -2!exprnP => /eqP; rewrite eq_sym addrC -subr_eq => /eqP <-.
+move: (cos2Dsin2 phi) => /eqP; rewrite eq_sym addrC -subr_eq => /eqP <-.
 rewrite -{2}(expr1n _ 2) subr_sqr -{1 3}(mulr1 (1 - cos phi)) -mulrBr -mulrDr.
 rewrite opprD addrA subrr add0r -(addrC 1) -expr2 -scalerDr.
 apply/eqP; rewrite scaler_eq0 sqrf_eq0 subr_eq0 eq_sym (negbTE cphi) /=.
@@ -3062,7 +3061,7 @@ Notation "x %:Q" := (mkQuat x 0).
 
 Definition normQ Q := (normq Q)%:Q. 
 
-Record uquat := {
+Record uquat := mkUQuat {
   quat_of_uquat :> quat ;
   _ : normq quat_of_uquat == 1 }.
 
@@ -3083,9 +3082,22 @@ rewrite {1}crossmulC dotmulvN dotmul_crossmul crossmulvv dotmul0v oppr0 mulr0 ad
 rewrite dotmul_crossmul crossmulvv dotmul0v mulr0 addr0.
 rewrite -dotmul_crossmul crossmulvv dotmulv0 mulr0 add0r.
 rewrite {1}crossmulC dotmulNv -dotmul_crossmul crossmulvv dotmulv0 oppr0 mulr0 add0r.
-Abort.
+rewrite (mulrCA b _0 a _0) (dotmulC (quatr a) (quatr b)) -!addrA (addrA (a _0 * (b _0 * _))).
+rewrite -mulr2n 3!(addrCA _ (_ *+ 2)) (addrA (_ *+ 2)) -mulrA subrr add0r.
+rewrite !dotmulvv norm_crossmul dotmul_cos addrCA !addrA addrC !addrA.
+rewrite exprMn (@exprMn _ _ _ (cos _)) (mulrC (norm (quatr a))).
+rewrite -mulrDr norm2 (addrC (sin _ ^+ 2)) vec_angle_switch cos2Dsin2 mulr1.
+rewrite (@exprMn _ _ (a _0)) mulrA -expr2 -2!addrA (addrA (a _0 ^+ 2 * _)) -mulrDr.
+rewrite /normq /sqrq dotmulvv -(@eqr_expn2 _ 2%N) // ?sqrtr_ge0 // sqr_sqrtr in b'; last first.
+  by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
+move/eqP : (b') => ->; rewrite expr1n mulr1.
+rewrite mulrA -expr2 exprMn addrCA -mulrDl -(addrC (b _0 ^+ 2)) (eqP b') expr1n mul1r.
+rewrite /normq /sqrq dotmulvv -(@eqr_expn2 _ 2%N) // ?sqrtr_ge0 // sqr_sqrtr in a'; last first.
+  by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
+by rewrite expr1n in a'.
+Qed.
 
-Axiom muluq : uquat -> uquat -> uquat.
+Definition muluq (Q P : uquat) : uquat := mkUQuat (muluq_proof Q P).
 
 Axiom muluqA : associative muluq.
 
