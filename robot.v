@@ -3061,11 +3061,37 @@ Notation "x %:Q" := (mkQuat x 0).
 
 Definition normQ Q := (normq Q)%:Q. 
 
+Lemma normqM (Q P : quat) : normq (mulq Q P) = normq Q * normq P.
+Proof.
+case: Q P => [a a'] [b b'] /=; apply/eqP.
+rewrite /mulq /normq /= /sqrq /= -(@eqr_expn2 _ 2%N) // ?sqrtr_ge0 //; last first.
+  by rewrite mulr_ge0 // sqrtr_ge0.
+rewrite sqr_sqrtr //; last by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
+rewrite exprMn sqr_sqrtr //; last by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
+rewrite sqr_sqrtr //; last by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
+rewrite sqrrB !dotmulDl !dotmulDr !dotmulvZ !dotmulZv.
+rewrite {1}crossmulC dotmulvN dotmul_crossmul crossmulvv dotmul0v oppr0 mulr0 addr0.
+rewrite dotmul_crossmul crossmulvv dotmul0v mulr0 addr0.
+rewrite -dotmul_crossmul crossmulvv dotmulv0 mulr0 add0r.
+rewrite {1}crossmulC dotmulNv -dotmul_crossmul crossmulvv dotmulv0 oppr0 mulr0 add0r.
+rewrite (mulrCA b a) (dotmulC a' b') -!addrA (addrA (a * (b * _))).
+rewrite -mulr2n 3!(addrCA _ (_ *+ 2)) (addrA (_ *+ 2)) -mulrA subrr add0r.
+rewrite !dotmulvv norm_crossmul dotmul_cos addrCA !addrA addrC !addrA.
+rewrite exprMn (@exprMn _ _ _ (cos _)) (mulrC (norm a')).
+rewrite -mulrDr norm2 (addrC (sin _ ^+ 2)) vec_angle_switch cos2Dsin2 mulr1.
+rewrite (@exprMn _ _ a) mulrA -expr2 -2!addrA (addrA (a ^+ 2 * _)) -mulrDr.
+rewrite mulrA -expr2 exprMn [in X in _ == X]mulrDl addrCA; apply/eqP; congr (_ + _).
+rewrite mulrDr mulrC addrC; congr (_ + _); by rewrite mulrC.
+Qed.
+
 Record uquat := mkUQuat {
   quat_of_uquat :> quat ;
   _ : normq quat_of_uquat == 1 }.
 
 Canonical uquat_subType := [subType for quat_of_uquat].
+
+Lemma normuq (Q : uquat) : normq Q = 1.
+Proof. by case: Q => /= Q /eqP. Qed.
 
 Definition uquat_eqMixin := [eqMixin of uquat by <:].
 Canonical uquat_eqType := EqType uquat uquat_eqMixin.
@@ -3073,33 +3099,13 @@ Definition uquat_choiceMixin := [choiceMixin of uquat by <:].
 Canonical uquat_choiceType := ChoiceType uquat uquat_choiceMixin.
 
 Lemma muluq_proof (Q P : uquat) : normq (mulq Q P) == 1.
-Proof.
-case: Q P => [a a'] [b b'] /=.
-rewrite /mulq /normq /= /sqrq /= -(@eqr_expn2 _ 2%N) // ?sqrtr_ge0 // sqr_sqrtr; last first.
-  by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
-rewrite sqrrB !dotmulDl !dotmulDr !dotmulvZ !dotmulZv.
-rewrite {1}crossmulC dotmulvN dotmul_crossmul crossmulvv dotmul0v oppr0 mulr0 addr0.
-rewrite dotmul_crossmul crossmulvv dotmul0v mulr0 addr0.
-rewrite -dotmul_crossmul crossmulvv dotmulv0 mulr0 add0r.
-rewrite {1}crossmulC dotmulNv -dotmul_crossmul crossmulvv dotmulv0 oppr0 mulr0 add0r.
-rewrite (mulrCA b _0 a _0) (dotmulC (quatr a) (quatr b)) -!addrA (addrA (a _0 * (b _0 * _))).
-rewrite -mulr2n 3!(addrCA _ (_ *+ 2)) (addrA (_ *+ 2)) -mulrA subrr add0r.
-rewrite !dotmulvv norm_crossmul dotmul_cos addrCA !addrA addrC !addrA.
-rewrite exprMn (@exprMn _ _ _ (cos _)) (mulrC (norm (quatr a))).
-rewrite -mulrDr norm2 (addrC (sin _ ^+ 2)) vec_angle_switch cos2Dsin2 mulr1.
-rewrite (@exprMn _ _ (a _0)) mulrA -expr2 -2!addrA (addrA (a _0 ^+ 2 * _)) -mulrDr.
-rewrite /normq /sqrq dotmulvv -(@eqr_expn2 _ 2%N) // ?sqrtr_ge0 // sqr_sqrtr in b'; last first.
-  by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
-move/eqP : (b') => ->; rewrite expr1n mulr1.
-rewrite mulrA -expr2 exprMn addrCA -mulrDl -(addrC (b _0 ^+ 2)) (eqP b') expr1n mul1r.
-rewrite /normq /sqrq dotmulvv -(@eqr_expn2 _ 2%N) // ?sqrtr_ge0 // sqr_sqrtr in a'; last first.
-  by rewrite addr_ge0 // ?sqr_ge0 // ?le0dotmul.
-by rewrite expr1n in a'.
-Qed.
+Proof. by rewrite normqM 2!normuq mulr1. Qed.
 
 Definition muluq (Q P : uquat) : uquat := mkUQuat (muluq_proof Q P).
 
-Axiom muluqA : associative muluq.
+Lemma muluqA : associative muluq.
+Proof.
+Admitted.
 
 Axiom muluqC : commutative muluq.
 
