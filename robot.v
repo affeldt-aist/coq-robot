@@ -2891,7 +2891,7 @@ Definition aaxis (a : angle_axis) := (val a).2.
 Lemma norm_axis a : norm (aaxis a) = 1.
 Proof. by case: a => *; apply/eqP. Qed.
 
-Fact norm_e1_subproof : norm (@delta_mx R _ _ 0 0) == 1.
+Fact norm_e1_subproof : norm (@delta_mx R _ 3 0 0) == 1.
 Proof. by rewrite norm_delta_mx. Qed.
 
 Definition angle_axis_of (a : angle R) (v : vector) :=
