@@ -1239,6 +1239,17 @@ move=> Nx_le1; rewrite /sin /acos argK //; simpc; rewrite sqr_sqrtr.
 by rewrite subr_ge0 -[_ ^ _]real_normK ?num_real // exprn_ile1.
 Qed.
 
+Definition scalea k a : R[i] := (expi a) ^+ k.
+
+Lemma scalea_proof k a : `| scalea k a | == 1.
+Proof. by rewrite /scalea normrX normr_expi expr1n. Qed.
+
+Definition scale_angle k a := Angle (scalea_proof k a).
+
+Lemma scale_angleD k1 k2 a : 
+  scale_angle (k1 + k2) a = add_angle (scale_angle k1 a) (scale_angle k2 a).
+Proof. apply val_inj => /=; by rewrite /add_angle expiD /scalea exprD. Qed.
+
 Definition vec_angle v w : angle := arg (v *d w +i* norm (v *v w)).
 
 Lemma vec_anglev0 (a : 'rV[R]_3) : vec_angle a 0 = vec_angle 0 0. 
@@ -2921,14 +2932,37 @@ rewrite /rodrigues_mx orthogonalE tr_exp_mx {2}(eqP (anti_skew _)) linearN /= tr
 by rewrite exprS cube_skew -scalerCA -scalerAl -expr2 axis1 expr1n scaleN1r.
 Qed.
 
-Lemma det_exp_mx (phi : angle R) w : \det (exp_mx phi w) = 1.
+Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> \det (exp_mx phi (skew_mx w)) = 1.
 Proof.
-rewrite /exp_mx.
+move=> w1.
+rewrite exp_mx_skew_mxE // crossmul_dotmul crossmulE /= !mxE /=.
+rewrite dotmulE sum3E !mxE /=.
+set x := w 0 0. set y := w 0 1. set z := w 0 2%:R. 
+set sa := sin phi. set ca := cos phi. set va := 1 - ca.
+set xymz := x * y * va - z * sa.
+set yzmx := y * z * va - x * sa.
+set xzmy := x * z * va - y * sa.
+set xypz := x * y * va + z * sa.
+set yzpx := y * z * va + x * sa.
+set xzpy := x * z * va + y * sa.
+set y2 := y ^+ 2.
+set x2 := x ^+ 2.
+set z2 := z ^+ 2.
+rewrite -(expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -!expr2 -/x -/y -/z -/x2 -/y2 -/z2.
+rewrite 2!mulrBl .
+(*set B := (X in _ + X + _ = 1). set C := (X in _ + _ + X = 1).
+rewrite mulrBl -[in X in _ + X + _ + _ = _ ]mulrA mulrCA (mulrC (_ + y * sa)) -subr_sqr.
+set A := (X in X + _ + _ = 1). 
+rewrite {}/B mulrBl -[in X in _ + (_ - X) + _ = _ ]mulrA -subr_sqr.
+set B := (X in _ + X + _ = 1).
+rewrite {}/C -subr_sqr.
+set C := (X in _ + _ + X = 1).
+rewrite {}/A {}/B {}/C.*)
 Admitted.
 
-Lemma det_rodrigues_mx r : \det (rodrigues_mx r) = 1.
+Lemma det_rodrigues_mx r : norm (aaxis r) = 1 -> \det (rodrigues_mx r) = 1.
 Proof.
-by rewrite /rodrigues_mx det_exp_mx.
+move=> ?; by rewrite /rodrigues_mx det_exp_mx.
 Qed.
 
 Lemma rodrigues_mx_diag r (i : 'I_3) : 
