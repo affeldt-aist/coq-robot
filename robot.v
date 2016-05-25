@@ -86,6 +86,12 @@ Proof. by case: i => -[i0 //| [i1 //| [i2 // | //]]]. Qed.
 Lemma ifnot2 (i : 'I_3) : (i != 2%:R) = (i == 0) || (i == 1).
 Proof. by case: i => -[i0 //| [i1 //| [i2 // | //]]]. Qed.
 
+Lemma sum3E {T : ringType} (f : 'I_3 -> T) : \sum_(i < 3) f i = f 0 + f 1 + f 2%:R.
+Proof.
+rewrite (bigD1 ord0) // (bigD1 (1 : 'I_3)) // (bigD1 (2%:R : 'I_3)) //= big_pred0 ?addr0 ?addrA //.
+move=> i; by case/boolP : (i != 0) => //=; rewrite ifnot0 => /orP [] /eqP ->.
+Qed.
+
 Lemma opp_conjc {R : rcfType} (a b : R) : - (a -i* b) = - a +i* b.
 Proof. by apply/eqP; rewrite eq_complex /= opprK !eqxx. Qed.
 
@@ -108,21 +114,14 @@ End extra.
 
 Section dot_product.
 
-Variable R : rcfType.
-Implicit Types u v : 'rV[R]_3.
+Variables (R : rcfType) (n : nat).
 
-Definition dotmul u v : R := (u *m v^T) 0 0.
+Definition dotmul (u v : 'rV[R]_n) : R := (u *m v^T) 0 0.
 Local Notation "*d%R" := (@dotmul _).
 Local Notation "u *d w" := (dotmul u w) (at level 40).
 
 Lemma dotmulE u v : u *d v = \sum_k u 0 k * v 0 k.
 Proof. by rewrite [LHS]mxE; apply: eq_bigr=> i; rewrite mxE. Qed.
-
-Lemma sum3E {T : ringType} (f : 'I_3 -> T) : \sum_(i < 3) f i = f 0 + f 1 + f 2%:R.
-Proof.
-rewrite (bigD1 ord0) // (bigD1 (1 : 'I_3)) // (bigD1 (2%:R : 'I_3)) //= big_pred0 ?addr0 ?addrA //.
-move=> i; by case/boolP : (i != 0) => //=; rewrite ifnot0 => /orP [] /eqP ->.
-Qed.
 
 Lemma dotmulC u v : u *d v = v *d u.
 Proof. by rewrite /dotmul -[_ *m _]trmxK trmx_mul !trmxK mxE. Qed.
@@ -134,7 +133,7 @@ Lemma dotmulv0 v : v *d 0 = 0.
 Proof. by rewrite dotmulC dotmul0v. Qed.
 
 Lemma dotmulDr a b c : a *d (b + c) = a *d b + a *d c.
-Proof. by rewrite {1}/dotmul linearD /= mulmxDr mxE. Qed.
+Proof. by rewrite {1}/dotmul linearD /= linearD /= mxE. Qed.
 
 Lemma dotmulDl a b c : (b + c) *d a = b *d a + c *d a.
 Proof. by rewrite dotmulC dotmulDr dotmulC (dotmulC c). Qed.
@@ -147,7 +146,7 @@ Proof. by rewrite /dotmul linearN /= mulmxN mxE. Qed.
 
 Lemma dotmulNv u v : - u *d v = - (u *d v).
 Proof. by rewrite dotmulC dotmulvN dotmulC. Qed.
-
+ 
 Lemma dotmulvZ u k v : u *d (k *: v) = k * (u *d v).
 Proof. by rewrite /dotmul linearZ /= -scalemxAr mxE. Qed.
 
@@ -184,7 +183,7 @@ Proof. by rewrite /dotmul trmx_mul mulmxA. Qed.
 
 End dot_product.
 
-Notation "*d%R" := (@dotmul _) : ring_scope.
+Notation "*d%R" := (@dotmul _ _) : ring_scope.
 Notation "u *d w" := (dotmul u w) (at level 40) : ring_scope.
 
 Section orthogonal_rotation_def.
@@ -285,8 +284,8 @@ Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
 
 End orthogonal.
 
-Lemma orthogonalP R M : 
-  reflect (forall i j, row i M *d row j M = (i == j)%:R) (M \is 'O_3[R]).
+Lemma orthogonalP {n} R M : 
+  reflect (forall i j, row i M *d row j M = (i == j)%:R) (M \is 'O_n.+1[R]).
 Proof.
 apply: (iffP idP) => [|H] /=.
   rewrite orthogonalE => /eqP H i j.
@@ -497,21 +496,8 @@ rewrite /cofactor !det_mx22 !mxE /= mul1r mulN1r opprB -signr_odd mul1r.
 by simp_ord; case: i => [[|[|[]]]] //= ?; rewrite ?(mul1r,mul0r,add0r,addr0).
 Qed.
 
-Lemma crossmulD (a b c : vector) : a *v (b + c) = a *v b + a *v c.
-Proof.
-apply/rowP => i.
-rewrite !crossmulE !mxE /=.
-do 3 (case: ifP => [/eqP|] ?;
-  first by rewrite 2!mulrDr -!addrA; congr (_ + _); by rewrite addrCA opprD).
-by rewrite addr0.
-Qed.
-
 Lemma crossmulNv (u v : vector) : - u *v v = - (u *v v).
-Proof.
-rewrite 2!crossmulE; apply/rowP => i; rewrite !mxE /=.
-do 3 (case: ifP => ?; first by rewrite opprB addrC mulNr opprK mulNr).
-by rewrite oppr0.
-Qed.
+Proof. by rewrite crossmulC linearN /= opprK crossmulC. Qed.
 
 Lemma crossmulvN (a b : vector) : a *v (- b) = - (a *v b).
 Proof. by rewrite crossmulC crossmulNv opprK crossmulC. Qed.
@@ -770,8 +756,8 @@ Notation "u *v w" := (crossmul u w) (at level 40) : ring_scope.
 
 Section norm.
 
-Variable R : rcfType.
-Implicit Types u : 'rV[R]_3.
+Variables (R : rcfType) (n : nat).
+Implicit Types u : 'rV[R]_n.
 
 Definition norm u := Num.sqrt (u *d u).
 
@@ -814,6 +800,37 @@ Proof.
 rewrite /norm [_ ^+ _]sqr_sqrtr // dotmulE sumr_ge0 //.
 by move=> i _; rewrite sqr_ge0.
 Qed.
+
+End norm.
+
+Lemma orth_preserves_dotmulvv R n v M : M \is 'O_n.+1[R] -> (v *m M) *d (v *m M) = v *d v.
+Proof.
+move=> HM; rewrite dotmul_trmx -mulmxA (_ : M *m _ = 1%:M) ?mulmx1 //.
+by move: HM; rewrite orthogonalE => /eqP.
+Qed.
+
+Lemma orth_preserves_norm R n v M : M \is 'O_n.+1[R] -> norm (v *m M) = norm v.
+Proof. move=> HM; by rewrite /norm orth_preserves_dotmulvv. Qed.
+
+Lemma orth_preserves_dotmul R n M u v : M \is 'O_n.+1[R] -> (u *m M) *d (v *m M) = u *d v.
+Proof.
+move=> HM.
+have := orth_preserves_dotmulvv (u + v) HM.
+rewrite mulmxDl dotmulD.
+rewrite dotmulD.
+rewrite orth_preserves_dotmulvv // (orth_preserves_dotmulvv v HM) //.
+move/(congr1 (fun x => x - v *d v)).
+rewrite -!addrA subrr 2!addr0.
+move/(congr1 (fun x => - (u *d u) + x)).
+rewrite !addrA (addrC (- (u *d u))) subrr 2!add0r.
+rewrite -2!mulr2n => /eqP.
+by rewrite eqr_pmuln2r // => /eqP.
+Qed.
+
+Section norm3.
+
+Variable R : rcfType.
+Implicit Types u : 'rV[R]_3.
 
 Lemma sqr_norm u : norm u ^+ 2 = u 0 0 ^+ 2 + u 0 1 ^+ 2 + u 0 2%:R ^+ 2.
 Proof. by rewrite -dotmulvv dotmulE sum3E !expr2. Qed.
@@ -889,30 +906,6 @@ rewrite exprMn -2!sqr_norm; congr (_ - _ ^+ 2).
 by rewrite dotmulE sum3E.
 Qed.
 
-Lemma orth_preserves_dotmulvv v M : M \is 'O_3[R] -> (v *m M) *d (v *m M) = v *d v.
-Proof.
-move=> HM; rewrite dotmul_trmx -mulmxA (_ : M *m _ = 1) ?mulmx1 //.
-by move: HM; rewrite orthogonalE => /eqP.
-Qed.
-
-Lemma orth_preserves_norm u M : M \is 'O_3[R] -> norm (u *m M) = norm u.
-Proof. move=> HM; by rewrite /norm orth_preserves_dotmulvv. Qed.
-
-Lemma orth_preserves_dotmul M u v : M \is 'O_3[R] -> (u *m M) *d (v *m M) = u *d v.
-Proof.
-move=> HM.
-have := orth_preserves_dotmulvv (u + v) HM.
-rewrite mulmxDl dotmulD.
-rewrite dotmulD.
-rewrite orth_preserves_dotmulvv // (orth_preserves_dotmulvv v HM) //.
-move/(congr1 (fun x => x - v *d v)).
-rewrite -!addrA subrr 2!addr0.
-move/(congr1 (fun x => - (u *d u) + x)).
-rewrite !addrA (addrC (- (u *d u))) subrr 2!add0r.
-rewrite -2!mulr2n => /eqP.
-by rewrite eqr_pmuln2r // => /eqP.
-Qed.
-
 Lemma orth_preserves_norm_crossmul M u v : M \is 'O_3[R] ->
   norm (u *v v) = norm ((u *m M) *v (v *m M)).
 Proof.
@@ -928,7 +921,7 @@ rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 //.
 by rewrite norm_crossmul' u1 v1 uv0 expr0n /= subr0 mulr1 // norm_ge0.
 Qed.
 
-End norm.
+End norm3.
 
 Section colinear.
 
@@ -1187,6 +1180,12 @@ Proof. apply val_inj => /=; by rewrite argK // normr1. Qed.
 Lemma cos0 : cos 0 = 1.
 Proof. by rewrite /cos -arg1 argK // ger0_norm // ler01. Qed.
 
+Lemma sin0 : sin 0 = 0.
+Proof.
+move: (cos2Dsin2 0); rewrite cos0 expr2 mulr1 => /eqP.
+by rewrite eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
+Qed.
+
 Lemma expi2pi : expi (pi + pi) = 1.
 Proof. by rewrite /pi expiD argK // ?normrN1 // mulrNN mulr1. Qed.
 
@@ -1247,8 +1246,25 @@ Proof. by rewrite /scalea normrX normr_expi expr1n. Qed.
 Definition scale_angle k a := Angle (scalea_proof k a).
 
 Lemma scale_angleD k1 k2 a : 
-  scale_angle (k1 + k2) a = add_angle (scale_angle k1 a) (scale_angle k2 a).
+  scale_angle (k1 + k2) a = (scale_angle k1 a) + (scale_angle k2 a).
 Proof. apply val_inj => /=; by rewrite /add_angle expiD /scalea exprD. Qed.
+
+Lemma expi0 : expi 0 = 1.
+Proof. by rewrite expi_cos_sin cos0 sin0. Qed.
+
+Lemma scale_angle0a a : scale_angle 0 a = 0.
+Proof. apply val_inj => /=; by rewrite /scalea expr0 expi0. Qed.
+
+Lemma scale_angle1a a : scale_angle 1 a = a.
+Proof. apply val_inj => /=; by rewrite /scalea expr1. Qed.
+
+Lemma moivre n a :
+  (cos a +i* sin a) ^+n = cos (scale_angle n a) +i* sin (scale_angle n a).
+Proof.
+rewrite -!expi_cos_sin.
+elim: n => [|n ih]; first by rewrite scale_angle0a expr0 expi0.
+by rewrite exprS ih -addn1 scale_angleD expiD scale_angle1a mulrC.
+Qed.
 
 Definition vec_angle v w : angle := arg (v *d w +i* norm (v *v w)).
 
@@ -1321,6 +1337,18 @@ rewrite /vec_angle /= crossmulvv norm0 complexr0 dotmulvv arg_Re ?arg1 //.
 by rewrite ltr_neqAle sqr_ge0 andbT eq_sym sqrf_eq0 norm_eq0.
 Qed.
 
+Lemma polarization_identity (a b : 'rV[R]_3) : 
+  a *d b = 1 / 4%:R * (norm (a + b) ^+ 2 - norm (a - b) ^+ 2).
+Proof.
+apply: (@mulrI _ 4%:R); first by rewrite unitfE pnatr_eq0.
+rewrite [in RHS]mulrA div1r divrr ?mul1r; last by rewrite unitfE pnatr_eq0.
+rewrite -2!dotmulvv dotmulD dotmulD mulr_natl (addrC (a *d a)).
+rewrite (_ : 4 = 2 + 2)%N // mulrnDr -3![in RHS]addrA; congr (_ + _).
+rewrite opprD addrCA 2!addrA -(addrC (a *d a)) subrr add0r.
+rewrite addrC opprD 2!dotmulvN dotmulNv opprK subrK.
+by rewrite -mulNrn opprK.
+Qed.
+
 Lemma dotmul_cos u v : u *d v = norm u * norm v * cos (vec_angle u v).
 Proof.
 wlog /andP[u0 v0] : u v / (u != 0) && (v != 0).
@@ -1370,18 +1398,6 @@ rewrite /norm dotmulD {1}dotmulvv -exprnP sqr_sqrtr ?le0dotmul //.
 rewrite -exprnP sqr_sqrtr ?le0dotmul // !dotmulvv !sqrtr_sqr normN.
 rewrite dotmulvN dotmul_cos ger0_norm ?norm_ge0 // ger0_norm ?norm_ge0 //.
 by rewrite mulNrn.
-Qed.
-
-Lemma polarization_identity (a b : 'rV[R]_3) : 
-  a *d b = 1 / 4%:R * (norm (a + b) ^+ 2 - norm (a - b) ^+ 2).
-Proof.
-apply: (@mulrI _ 4%:R); first by rewrite unitfE pnatr_eq0.
-rewrite [in RHS]mulrA div1r divrr ?mul1r; last by rewrite unitfE pnatr_eq0.
-rewrite -2!dotmulvv dotmulD dotmulD mulr_natl (addrC (a *d a)).
-rewrite (_ : 4 = 2 + 2)%N // mulrnDr -3![in RHS]addrA; congr (_ + _).
-rewrite opprD addrCA 2!addrA -(addrC (a *d a)) subrr add0r.
-rewrite addrC opprD 2!dotmulvN dotmulNv opprK subrK.
-by rewrite -mulNrn opprK.
 Qed.
 
 Lemma cosine_law' a b c :
@@ -1445,9 +1461,8 @@ End angle.
 
 Section normalize_orthogonalize.
 
-Variable R : rcfType.
-Let coordinate := 'rV[R]_3.
-Let vector := 'rV[R]_3.
+Variables (R : rcfType) (n : nat).
+Let vector := 'rV[R]_n.
 
 Definition normalize (v : vector) := 1 / norm v *: v.
 
@@ -1492,7 +1507,7 @@ rewrite -{1}(norm_scale_normalize u) dotmulZv dotmulvv norm_normalize //.
 by rewrite expr1n mulr1.
 Qed.
 
-Definition orthogonalize (u v : vector) : vector := 
+Definition orthogonalize (u v : 'rV[R]_n) : 'rV[R]_n := 
   v - (v *d normalize u) *: normalize u.
 
 Lemma orthogonalizeP u v : u *d orthogonalize u v = 0.
@@ -1501,14 +1516,15 @@ rewrite dotmulDr dotmulvN dotmulvZ dotmul_normalize mulrC -dotmulvZ.
 by rewrite norm_scale_normalize dotmulC subrr.
 Qed.
 
-Lemma orthogonalize_neq0 u v : ~~ colinear u v -> orthogonalize u v != 0.
+End normalize_orthogonalize.
+
+Lemma orthogonalize_neq0 {R : rcfType} (u v : 'rV[R]_3) : 
+  ~~ colinear u v -> orthogonalize u v != 0.
 Proof.
 move=> uv.
 rewrite /orthogonalize subr_eq0; apply: contra uv => /eqP ->.
 by rewrite colinear_sym /normalize scalerA scale_colinear.
 Qed.
-
-End normalize_orthogonalize.
 
 Section triad.
 
@@ -2217,7 +2233,7 @@ apply/andP; split; apply/eqP.
   by rewrite -[in X in _ = X + _](preserves_norm_cos_angle pnorm). 
 set a := to j - to i0. set b := to k - to i0. set c := to l - to i0.
 set a' := from j - from i0. set b' := from k - from i0. set c' := from l - from i0.
-rewrite 2!crossmulD -2!scaleNr 2!linearZ /= [in LHS](normD (a *v b) (- cst *: (a *v c))).
+rewrite [in LHS]linearD [in RHS]linearD /= -2!scaleNr 2!linearZ /= [in LHS](normD (a *v b) (- cst *: (a *v c))).
 rewrite [in RHS](normD (a' *v b') (- cst *: (a' *v c'))).
 rewrite -[in RHS](_ : norm (a *v b) = norm (a' *v b')); last first.
   rewrite [in LHS]norm_crossmul [in RHS]norm_crossmul /a /b /a' /b' 2!pnorm.
@@ -3125,12 +3141,12 @@ move=> [a a'] [b b'] [c c']; congr mkQuat => /=.
     by rewrite scalerA mulrC -scalerA.
   rewrite [in RHS]scalerDr [in LHS]scalerDl [in LHS]addrCA -[in RHS]addrA -addrA; congr (_ + _).
     by rewrite scalerA mulrC.
-  rewrite (addrC (a *: _)) crossmulD (addrC (a' *v _)) crossmulD.
+  rewrite (addrC (a *: _)) linearD /= (addrC (a' *v _)) linearD /=.
   rewrite -![in LHS]addrA ![in LHS]addrA (addrC (- _ *: a')) -![in LHS]addrA; congr (_ + _).
     by rewrite linearZ.
-  rewrite [in RHS]crossmulC crossmulD opprD [in RHS]addrCA ![in LHS]addrA addrC -[in LHS]addrA.
+  rewrite [in RHS]crossmulC linearD /= opprD [in RHS]addrCA ![in LHS]addrA addrC -[in LHS]addrA.
   congr (_ + _); first by rewrite linearZ /= crossmulC scalerN.
-  rewrite addrA addrC crossmulD opprD [in RHS]addrCA; congr (_ + _).
+  rewrite addrA addrC linearD /= opprD [in RHS]addrCA; congr (_ + _).
     by rewrite !linearZ /= crossmulC.
   rewrite 2!double_crossmul opprD opprK [in RHS]addrC addrA; congr (_ + _); last first.
     by rewrite scaleNr.
@@ -3159,7 +3175,7 @@ rewrite scalerDl -!addrA; congr (_ + _).
 rewrite (addrCA (a' *v c')) [in RHS]addrCA; congr (_ + _).
 rewrite scalerDr -addrA; congr (_ + _).
 rewrite addrCA; congr (_ + _).
-by rewrite crossmulC crossmulD crossmulC opprD opprK (crossmulC b').
+by rewrite crossmulC linearD /= crossmulC opprD opprK (crossmulC b').
 Qed.
 
 Lemma mulqDr : right_distributive mulq addq.
@@ -3171,7 +3187,7 @@ move=> [a a'] [b b'] [c c']; rewrite /mulq /=; congr mkQuat => /=.
 rewrite scalerDr -!addrA; congr (_ + _).
 rewrite (addrCA (a' *v b')) [in RHS]addrCA; congr (_ + _).
 rewrite scalerDl -addrA; congr (_ + _).
-by rewrite addrCA crossmulD.
+by rewrite addrCA linearD.
 Qed.
 
 Lemma oneq_neq0 : 1%:q != 0 :> quat.
