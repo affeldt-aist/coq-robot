@@ -69,9 +69,6 @@ Qed.
 Lemma rew_condAr (a b c : bool) : a = b && c -> (b -> c = a).
 Proof. by case: b. Qed.
 
-Lemma trmxD (R : comRingType) m n (A B : 'M[R]_(m, n)) : (A + B)^T = A^T + B^T.
-Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
-
 Lemma thirdI3 (i j : 'I_3) : i != j -> exists k, (k != i) && (k != j).
 Proof.
 case: i j => -[i0|[i1|[i2|//]]].
@@ -137,7 +134,7 @@ Lemma dotmulv0 v : v *d 0 = 0.
 Proof. by rewrite dotmulC dotmul0v. Qed.
 
 Lemma dotmulDr a b c : a *d (b + c) = a *d b + a *d c.
-Proof. by rewrite {1}/dotmul trmxD mulmxDr mxE. Qed.
+Proof. by rewrite {1}/dotmul linearD /= mulmxDr mxE. Qed.
 
 Lemma dotmulDl a b c : (b + c) *d a = b *d a + c *d a.
 Proof. by rewrite dotmulC dotmulDr dotmulC (dotmulC c). Qed.
@@ -1967,7 +1964,7 @@ Definition htrans_of_vector (x : vector) (T : transform) : homogeneous :=
 Lemma htrans_of_vectorE a T : htrans_of_vector a T = a *m row_mx (rot T)^T 0.
 Proof.
 rewrite /htrans_of_vector /hmx /hvect.
-rewrite (tr_row_mx a) (mul_row_col (col_mx (rot T) 0)) trmxD trmx_mul.
+rewrite (tr_row_mx a) (mul_row_col (col_mx (rot T) 0)) linearD /= trmx_mul.
 by rewrite (tr_col_mx (rot T)) trmx_mul !trmx0 !trmxK mul0mx addr0.
 Qed.
 
@@ -1981,7 +1978,7 @@ Lemma htrans_of_coordinateB a b T :
   htrans_of_coordinate a T - htrans_of_coordinate b T = htrans_of_vector (a - b) T.
 Proof.
 rewrite {1}/htrans_of_coordinate {1}/hmx.
-rewrite (tr_row_mx a) trmx1 (mul_row_col (col_mx (rot T) 0)) trmxD.
+rewrite (tr_row_mx a) trmx1 (mul_row_col (col_mx (rot T) 0)) linearD /=.
 rewrite mulmx1 trmx_mul trmxK (tr_col_mx (rot T)) trmx0.
 rewrite (tr_col_mx (translation T)^T) trmxK trmx1.
 rewrite {1}/htrans_of_coordinate {1}/hmx.
@@ -2501,7 +2498,7 @@ Definition common_normal_xz (i : 'I_n) :=
 
 End chains.
 
-Section skew_def.
+Section anti_sym_def.
 
 Variables (n : nat) (R : rcfType).
 
@@ -2509,7 +2506,11 @@ Definition anti := [qualify M : 'M[R]_n | M == - M^T].
 Fact anti_key : pred_key anti. Proof. by []. Qed.
 Canonical anti_keyed := KeyedQualifier anti_key.
 
-End skew_def.
+Definition sym := [qualify M : 'M[R]_n | M == M^T].
+Fact sym_key : pred_key sym. Proof. by []. Qed.
+Canonical sym_keyed := KeyedQualifier sym_key.
+
+End anti_sym_def.
 
 Local Notation "''so_' n [ R ]" := (anti n R)
   (at level 8, n at level 2, format "''so_' n [ R ]").
@@ -2520,8 +2521,43 @@ Variable R : rcfType.
 
 Lemma antiE {n} M : (M \is 'so_n[R]) = (M == - M^T). Proof. by []. Qed.
 
+Lemma symE {n} M : (M \is sym n R) = (M == M^T). Proof. by []. Qed.
+
 Let vector := 'rV[R]_3.
 
+Lemma anti_diag {n} M (i : 'I_n) : M \is 'so_n[R] -> M i i = 0.
+Proof.
+rewrite antiE -addr_eq0 => /eqP/matrixP/(_ i i); rewrite !mxE.
+by rewrite -mulr2n -mulr_natr => /eqP; rewrite mulf_eq0 pnatr_eq0 orbF => /eqP.
+Qed.
+
+Lemma antiP {n} (A B : 'M[R]_n) : A \is 'so_n[R] -> B \is 'so_n[R] -> 
+  (forall i j : 'I_n, (i < j)%N -> A i j = - B j i) -> A = B.
+Proof.
+move=> soA soB AB; apply/matrixP => i j.
+case/boolP : (i == j) => [/eqP ->|ij]; first by do 2 rewrite anti_diag //.
+wlog : i j ij / (i < j)%N.
+  move=> wlo; move: ij; rewrite neq_ltn => /orP [] ij.
+    rewrite wlo //; by apply: contraL ij => /eqP ->; by rewrite ltnn.
+  move: (soA); by rewrite antiE => /eqP ->; rewrite 2!mxE AB // opprK.
+move=> {ij}ij; rewrite AB //.
+move: (soB); rewrite antiE -eqr_oppLR => /eqP/matrixP/(_ i j).
+rewrite !mxE => <-; by rewrite opprK.
+Qed.
+
+Lemma symP {n} (A B : 'M[R]_n) : A \in sym n R -> B \in sym n R -> 
+  (forall i j : 'I_n, (i <= j)%N -> A i j = B i j) -> A = B.
+Proof.
+move=> symA symB AB; apply/matrixP => i j.
+case/boolP : (i == j) => [/eqP ->|ij]; first by rewrite AB.
+wlog : i j ij / (i < j)%N.
+  move=> wlo; move: ij; rewrite neq_ltn => /orP [] ij.
+    rewrite wlo //; by apply: contraL ij => /eqP ->; by rewrite ltnn.
+  move: (symA) (symB) => /eqP -> /eqP ->; by rewrite 2!mxE AB // leq_eqVlt ij orbC.
+by move=> {ij}ij; rewrite AB // leq_eqVlt ij orbC.
+Qed.
+
+(* (anti)symmetric parts of a matrix *)
 Definition symp {n} (A : 'M[R]_n) := 1/2%:R *: (A + A^T).
 Definition antip {n} (A : 'M[R]_n) := 1/2%:R *: (A - A^T).
 
@@ -2531,13 +2567,38 @@ rewrite /symp /antip -scalerDr addrCA addrK -mulr2n- scaler_nat.
 by rewrite scalerA div1r mulVr ?scale1r // unitfE pnatr_eq0.
 Qed.
 
-Definition sym {n} (M : 'M[R]_n) := M == M^T.
-
-Lemma anti_diag {n} M (i : 'I_n) : M \is 'so_n[R] -> M i i = 0.
+Lemma antip_is_so {n} (M : 'M[R]_n) : antip M \is 'so_n[R].
 Proof.
-rewrite antiE -addr_eq0 => /eqP/matrixP/(_ i i); rewrite !mxE.
-by rewrite -mulr2n -mulr_natr => /eqP; rewrite mulf_eq0 pnatr_eq0 orbF => /eqP.
+rewrite antiE /antip; apply/eqP; rewrite [in RHS]linearZ -scalerN /=.
+by rewrite [in RHS]linearD /= opprD linearN /= opprK trmxK addrC.
 Qed.
+
+Lemma antip_scaler_closed {n} : GRing.scaler_closed 'so_n[R].
+Proof.
+move=> ? ?; rewrite antiE => /eqP H; by rewrite antiE linearZ /= -scalerN -H.
+Qed.
+
+Lemma sym_symp {n} (M : 'M[R]_n) : symp M^T \in sym n R.
+Proof.
+by apply/eqP; rewrite /symp trmxK linearZ /= [in RHS]linearD /= trmxK addrC.
+Qed.
+
+Lemma sym_addr_closed {n} : addr_closed (sym n R).
+Proof.
+split; first by rewrite symE trmx0.
+move=> /= A B; rewrite 2!symE => /eqP sA /eqP sB.
+by rewrite symE linearD /= -sA -sB.
+Qed.
+
+Canonical SymAddrPred n := AddrPred (@sym_addr_closed n).
+
+Lemma sym1 {n} : 1%:M \is sym n R.
+Proof. by rewrite symE trmx1. Qed.
+
+Lemma sym_scaler_closed {n} : GRing.scaler_closed (sym n R).
+Proof. move=> ? ?; rewrite 2!symE => /eqP H; by rewrite linearZ /= -H. Qed.
+
+(* TODO: Canonical? *)
 
 Lemma trace_anti {n} (M : 'M[R]_n) : M \is 'so_n[R] -> \tr M = 0.
 Proof.
@@ -2570,7 +2631,10 @@ Proof. move/eqP: (anti_skew u) => ->; by rewrite 2!mxE skew02. Qed.
 Lemma skew21 u : skew_mx u 2%:R 1 = u 0 0.
 Proof. move/eqP: (anti_skew u) => ->; by rewrite 2!mxE skew12 opprK. Qed.
 
-Definition skewij := (skew01, skew10, skew02, skew20, skew21, skew12).
+Lemma skewii u i : skew_mx u i i = 0.
+Proof. by rewrite anti_diag // anti_skew. Qed.
+
+Definition skewij := (skew01, skew10, skew02, skew20, skew21, skew12, skewii).
 
 Lemma skew_mxE (u w : vector) : u *m (skew_mx w) = u *v w.
 Proof.
@@ -2583,7 +2647,7 @@ Definition exp_mx (phi : angle R) (w : 'M[R]_3) : 'M_3 :=
 
 Lemma tr_exp_mx phi M : (exp_mx phi M)^T = exp_mx phi M^T.
 Proof.
-by rewrite /exp_mx !trmxD !linearZ /= trmx1 expr2 trmx_mul expr2.
+by rewrite /exp_mx !linearD /= !linearZ /= trmx1 expr2 trmx_mul expr2.
 Qed.
 
 Lemma inv_exp_mx phi M : M ^+ 4 = - M ^+ 2 -> exp_mx phi M * exp_mx phi (- M) = 1.
@@ -2609,8 +2673,6 @@ apply/eqP; rewrite scaler_eq0 sqrf_eq0 subr_eq0 eq_sym (negbTE cphi) /=.
 by rewrite aM subrr.
 Qed.
 
-Ltac skewE := rewrite !skewij !(anti_diag _ (anti_skew _)).
-
 Lemma sqr_skew (u : 'rV[R]_3) : let a := skew_mx u in 
   a ^+ 2 = \matrix_i [eta \0 with 0 |-> (\row_j [eta \0 with 
 0 |-> - u 0 2%:R ^+ 2 - u 0 1 ^+ 2, 1 |-> u 0 0 * u 0 1, 2%:R |-> u 0 0 * u 0 2%:R] j),
@@ -2622,18 +2684,18 @@ Proof.
 move=> a; apply/matrixP => i j.
 rewrite !mxE /= sum3E /a.
 case: ifPn => [/eqP ->|]; first rewrite [in RHS]mxE.
-  case: ifPn => [/eqP ->|]; first by skewE; simp.
-  rewrite ifnot0 => /orP [] /eqP -> /=; skewE; simp => //=; by rewrite mulrC.
+  case: ifPn => [/eqP ->|]; first by rewrite !skewij; simp.
+  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij; simp => //=; by rewrite mulrC.
 rewrite ifnot0 => /orP [] /eqP -> /=; rewrite mxE.
-  case: ifPn => [/eqP ->|]; first by skewE; simp.
+  case: ifPn => [/eqP ->|]; first by rewrite !skewij; simp.
   rewrite ifnot0 => /orP [] /eqP -> /=.
-  by skewE; simp.
-  skewE; simp => //=; by rewrite mulrC.
-case: ifPn => [/eqP ->|]; first by skewE; simp.
-rewrite ifnot0 => /orP [] /eqP -> /=; by skewE; simp. 
+  by rewrite !skewij; simp.
+  rewrite !skewij; simp => //=; by rewrite mulrC.
+case: ifPn => [/eqP ->|]; first by rewrite !skewij; simp.
+rewrite ifnot0 => /orP [] /eqP -> /=; by rewrite !skewij; simp. 
 Qed.
 
-Lemma sym_sqr_skew u : sym (skew_mx u ^+ 2).
+Lemma sym_sqr_skew u : skew_mx u ^+ 2 \is sym 3 R.
 Proof.
 rewrite sqr_skew /sym; apply/eqP/matrixP => i j; rewrite !mxE /=.
 case: ifPn => [i0|].
@@ -2665,27 +2727,27 @@ move: (H); rewrite -addrA addrC subr_eq addrC => /eqP ->.
 rewrite [in RHS]mxE.
 case/boolP : (i == 0) => [/eqP -> |].
   case: ifPn => [/eqP ->|].
-    rewrite /a; skewE; simp => /=.
+    rewrite /a !skewij; simp => /=.
     by rewrite addrC !mulNr mulrAC -mulrA mulrC subrr.
-  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite /a; skewE; simp => /=.
+  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite /a !skewij; simp => /=.
     rewrite -expr2 -mulrN mulrC -mulrDl; congr (_ * _).
     by rewrite opprD opprK subrK.
   rewrite -(mulrC (u 0 1)) -mulrA -mulrDr -mulNr mulrC; congr (_ * _).
   by rewrite addrC mulNr addrK.
 rewrite ifnot0 => /orP [] /eqP -> /=.
   case: ifPn => [/eqP ->|].
-    rewrite /a; skewE; simp => /=.
+    rewrite /a !skewij; simp => /=.
     rewrite mulrC -mulrDl -[in RHS]mulNr; congr (_ * _).
     by rewrite mulNr -expr2 addrK.
-  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite /a; skewE; simp => /=.
+  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite /a !skewij; simp => /=.
     by rewrite -mulrA mulrC 2!mulNr -mulrBl subrr mul0r.
   rewrite -mulrA mulrC -mulrA -mulrBr mulrC; congr (_ * _).
   by rewrite opprD opprK addrCA -expr2 subrr addr0.
 case: ifPn => [/eqP ->|].
-  rewrite /a; skewE; simp => /=.
+  rewrite /a !skewij; simp => /=.
   rewrite -mulrN mulrC -mulrDl; congr (_ * _).
   by rewrite opprD opprK -expr2 subrK.
-rewrite ifnot0 => /orP [] /eqP -> /=; rewrite /a; skewE; simp => /=.
+rewrite ifnot0 => /orP [] /eqP -> /=; rewrite /a !skewij; simp => /=.
   rewrite -mulrA mulrCA -mulrDr -[in RHS]mulNr [in RHS]mulrC; congr (_ * _).
   by rewrite addrC mulNr -expr2 addrK.
 by rewrite -mulrA mulrCA -mulrA -mulrDr addrC mulNr subrr mulr0.
@@ -2722,6 +2784,66 @@ rewrite -opprB -opprD opprK; congr (- _).
 by rewrite addrC -addrA addrCA addrA  -dotmulvv dotmulE sum3E -!expr2.
 Qed.
 
+(* see table 1.1 of handbook of robotics *)
+Lemma exp_mx_skew_mxE phi (w : 'rV[R]_3) : norm w = 1 ->
+  let va := 1 - cos phi in let ca := cos phi in let sa := sin phi in
+  exp_mx phi (skew_mx w) = 
+  triple_product_mat
+  (\row_k [eta \0 with 0 |-> w 0 0 ^+2 * va + ca, 
+                       1 |-> w 0 0 * w 0 1 * va - w 0 2%:R * sa, 
+                       2%:R |-> w 0 0 * w 0 2%:R * va + w 0 1 * sa] k)
+  (\row_k [eta \0 with 0 |-> w 0 0 * w 0 1 * va + w 0 2%:R * sa, 
+                       1 |-> w 0 1 ^+2 * va + ca, 
+                       2%:R |-> w 0 1 * w 0 2%:R * va - w 0 0 * sa] k)
+  (\row_k [eta \0 with 0 |-> w 0 0 * w 0 2%:R * va - w 0 1 * sa, 
+                       1 |-> w 0 1 * w 0 2%:R * va + w 0 0 * sa, 
+                       2%:R |-> w 0 2%:R ^+2 * va + ca] k).
+Proof.
+move=> w1 va ca sa.
+apply/matrixP => i j.
+case/boolP : (i == 0) => [/eqP ->|].
+  case/boolP : (j == 0) => [/eqP ->|].
+    rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+    rewrite sqr_skew !mxE /=.
+    rewrite (_ : - _ - _ = w 0 0 ^+ 2 - 1); last first.
+      rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
+      by rewrite !opprD !addrA subrr add0r addrC.
+    rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
+    by rewrite /va opprB addrC subrK.
+  rewrite ifnot0 => /orP [] /eqP ->.
+    rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+    by rewrite sqr_skew !mxE /= addrC mulrC (mulrC sa).
+  rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+  by rewrite sqr_skew !mxE /= addrC mulrC (mulrC sa).
+rewrite ifnot0 => /orP [] /eqP ->.
+  case/boolP : (j == 0) => [/eqP ->|].
+    rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+    by rewrite sqr_skew !mxE /= addrC mulrC (mulrC sa).
+  rewrite ifnot0 => /orP [] /eqP ->.
+    rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+    rewrite sqr_skew !mxE /=.
+    rewrite (_ : - _ - _ = w 0 1 ^+ 2 - 1); last first.
+      rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
+      by rewrite 2!opprD addrCA addrA subrK addrC.
+    rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
+    by rewrite /va opprB addrC subrK.
+  rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+  by rewrite sqr_skew !mxE /= addrC mulrC (mulrC sa).
+case/boolP : (j == 0) => [/eqP ->|].
+  rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+  by rewrite sqr_skew !mxE /= addrC mulrC (mulrC sa).
+rewrite ifnot0 => /orP [] /eqP ->.
+  rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+  by rewrite sqr_skew !mxE /= addrC mulrC (mulrC sa).
+rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; simp => /=.
+rewrite sqr_skew !mxE /=.
+rewrite (_ : - _ - _ = w 0 2%:R ^+ 2 - 1); last first.
+  rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
+  by rewrite 2!opprD [in RHS]addrC subrK addrC.
+rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
+by rewrite /va opprB addrC subrK.
+Qed.
+
 End skew.
 
 Section Rodrigues.
@@ -2753,6 +2875,13 @@ Lemma aaxis_of (a : angle R) (v : vector) : v != 0 ->
 Proof.
 move=> v_neq0 /=; rewrite /angle_axis_of /aaxis val_insubd /=.
 by rewrite normZ normfV normr_norm mulVf ?norm_eq0 // eqxx.
+Qed.
+
+Lemma aaxis_of1 (a : angle R) (v : vector) : norm v = 1 ->
+  aaxis (angle_axis_of a v) = v.
+Proof.
+move=> v1; rewrite aaxis_of; last by rewrite -norm_eq0 v1 oner_neq0.
+by rewrite v1 invr1 scale1r.
 Qed.
 
 Lemma aangle_of (a : angle R) (v : vector) : aangle (angle_axis_of a v) = a.
@@ -2816,16 +2945,17 @@ Definition angle_of_rotation (M : 'M[R]_3) := acos ((\tr M - 1) / 2%:R).
 Definition axis_of_rotation (M : 'M[R]_3) : 'rV[R]_3 := 
   let phi := angle_of_rotation M in 
   (1 / (2%:R * sin phi) *: \row_i [eta \0 with 
-    0 |-> M 2%:R 1 - M 1 2%:R, 1 |-> M 0 2%:R - M 2%:R 0, 2%:R |-> M 1 0 - M 0 1] i).
+    0 |-> M 1 2%:R - M 2%:R 1, 1 |-> M 2%:R 0 - M 0 2%:R, 2%:R |-> M 0 1 - M 1 0] i).
 Definition angle_axis_of_rotation (M : 'M[R]_3) :=
   angle_axis_of (angle_of_rotation M) (axis_of_rotation M).
 
 Lemma rodriguesE M u (HM : M \in 'SO_3[R]) :
-  norm (aaxis (angle_axis_of_rotation M)) = 1 ->
+  norm (axis_of_rotation M) = 1 ->
+  sin (angle_of_rotation M) != 0 (* to avoid singularity *) ->
   rodrigues u (angle_axis_of_rotation M) =
   homogeneous_ap u (Transform 0 HM).
 Proof.
-move=> norm1.
+move=> norm1 sin0.
 transitivity (u *m M^T); last first.
   (* TODO: lemma? *)
   rewrite homogeneous_apE /htrans_of_coordinate trmx_mul trmxK.
@@ -2835,17 +2965,59 @@ transitivity (u *m M^T); last first.
   rewrite (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
   rewrite (@cast_row_mx _ _ _ _ _ _ (u *m M^T)) //.
   by rewrite row_mxKl /= castmx_id.
-rewrite rodriguesP.
-congr (_ *m _).
-rewrite /rodrigues_mx.
-set phi := aangle _.
-set w := aaxis _.
-rewrite /exp_mx.
-set va := 1 - cos phi. set ca := cos phi. set sa := sin phi. set w' := skew_mx w.
-rewrite (symp_antip M^T).
-suff : symp M^T = 1 + (1 - cos phi) *: skew_mx w ^ 2 /\ 
-       antip M^T = sin phi *: skew_mx w.
-  case=> H1 H2.
+rewrite rodriguesP; congr (_ *m _).
+rewrite /rodrigues_mx. set phi := aangle _. set w := aaxis _.
+rewrite exp_mx_skew_mxE; last by rewrite /w aaxis_of1.
+have antiM : antip M^T = sin phi *: skew_mx w.
+  apply/antiP.
+  rewrite antip_is_so //.
+  rewrite antip_scaler_closed // anti_skew //.
+  move=> i j.
+  case/boolP : (i == 0) => [/eqP ->|].
+    case/boolP : (j == 0) => [/eqP -> //|].
+    rewrite ifnot0 => /orP [] /eqP -> _.
+      rewrite 7!mxE skewij /w aaxis_of1 // 2!mxE /= mulrA -mulrN opprB; congr (_ * _).
+      rewrite mulrA -mulf_div [in RHS]mulrC mulrA [in RHS]div1r /phi.
+      by rewrite aangle_of mulVr // unitfE.
+    rewrite 7!mxE skewij /w aaxis_of1 // 2!mxE /= -mulrN opprK mulrA; congr (_ * _).
+    rewrite mulrA -mulf_div [in RHS]mulrC mulrA [in RHS]div1r /phi.
+    by rewrite aangle_of mulVr // unitfE.
+  rewrite ifnot0 => /orP [] /eqP ->.
+    case/boolP : (j == 0) => [/eqP ->//|].
+    rewrite ifnot0 => /orP [] /eqP -> // _.
+    rewrite 7!mxE skewij /w aaxis_of1 // 2!mxE /= -2!mulrN opprB mulrA; congr (_ * _).
+    rewrite mulrA -mulf_div [in RHS]mulrC mulrA [in RHS]div1r /phi.
+    by rewrite aangle_of mulVr // unitfE.
+  by case: j => -[] // [] // [].
+suff symM : symp M^T = 1 + (1 - cos phi) *: skew_mx w ^+ 2.
+  rewrite (symp_antip M^T) antiM symM -exp_mx_skew_mxE; last by rewrite /w aaxis_of1.
+  by rewrite /exp_mx addrAC.
+apply/symP.
+  by rewrite sym_symp.
+  by rewrite rpredD // ?sym1 // sym_scaler_closed // sym_sqr_skew.
+move=> i j.
+case/boolP : (i == 0) => [/eqP ->|].
+  case/boolP : (j == 0) => [/eqP -> _|].
+    rewrite ![in LHS]mxE /= 3!mxE sqr_skew /= 2!mxE /=.
+    rewrite div1r -mulr2n -(mulr_natr (M 0 0) 2%N) -mulrCA mulVr ?unitfE ?pnatr_eq0 // mulr1.
+    admit. (* M 0 0 *)
+  rewrite ifnot0 => /orP [] /eqP -> _.
+    rewrite ![in LHS]mxE /= 3!mxE sqr_skew /= 2!mxE /=; simp => /=.
+    admit.
+  rewrite ![in LHS]mxE /= 3!mxE sqr_skew /= 2!mxE /=; simp => /=.
+  admit.
+rewrite ifnot0 => /orP [] /eqP ->.
+  case/boolP : (j == 0) => [/eqP -> //|].
+  rewrite ifnot0 => /orP [] /eqP -> _.
+    rewrite ![in LHS]mxE /= 3!mxE sqr_skew /= 2!mxE /=; simp => /=.
+    rewrite -mulr2n -(mulr_natr (M 1 1) 2%N) -mulrCA mulVr ?unitfE ?pnatr_eq0 // mulr1.
+    admit. (* M 1 1 *)
+  admit.
+case/boolP : (j == 0) => [/eqP -> //|].
+rewrite ifnot0 => /orP [] /eqP -> _ //.
+rewrite ![in LHS]mxE /= 3!mxE sqr_skew /= 2!mxE /=; simp => /=.
+rewrite -mulr2n -(mulr_natr (M 2%:R 2%:R) 2%N) -mulrCA mulVr ?unitfE ?pnatr_eq0 // mulr1.
+admit.
 Abort.
 
 End Rodrigues.
@@ -3176,7 +3348,7 @@ Definition muluq (Q P : uquat) : uquat := mkUQuat (muluq_proof Q P).
 Let vector := 'rV[R]_3.
 
 (* rotation of a vector v about the direction "quatr Q" *)
-Definition quat_rotation (Q : uquat) (v : vector) := (Q : quat) * v%:v * Q^*q.
+Definition quat_rotation (Q : uquat) (v : vector) : quat := (Q : quat) * v%:v * Q^*q.
 
 End quaternion.
 
