@@ -146,7 +146,7 @@ Proof. by rewrite /dotmul linearN /= mulmxN mxE. Qed.
 
 Lemma dotmulNv u v : - u *d v = - (u *d v).
 Proof. by rewrite dotmulC dotmulvN dotmulC. Qed.
- 
+
 Lemma dotmulvZ u k v : u *d (k *: v) = k * (u *d v).
 Proof. by rewrite /dotmul linearZ /= -scalemxAr mxE. Qed.
 
@@ -2981,15 +2981,6 @@ Proof.
 move=> ?; by rewrite /rodrigues_mx det_exp_mx.
 Qed.
 
-Lemma rodrigues_mx_diag r (i : 'I_3) : 
-  rodrigues_mx r i i = (aaxis r) 0 i ^+ 2 * (1 - cos (aangle r)) + cos (aangle r).
-Admitted.
-
-Lemma rodrigues_mx_non_diag r (i j : 'I_3) (ij : i != j) : 
-  rodrigues_mx r i j - rodrigues_mx r j i = 
-  2%:R * (aaxis r) 0 (3%:R - (i + j)) * sin (aangle r).
-Admitted.
-
 (* see table 1.2 of handbook of robotics *)
 Definition angle_of_rotation (M : 'M[R]_3) := acos ((\tr M - 1) / 2%:R).
 Definition axis_of_rotation (M : 'M[R]_3) : 'rV[R]_3 := 
@@ -2998,6 +2989,16 @@ Definition axis_of_rotation (M : 'M[R]_3) : 'rV[R]_3 :=
     0 |-> M 1 2%:R - M 2%:R 1, 1 |-> M 2%:R 0 - M 0 2%:R, 2%:R |-> M 0 1 - M 1 0] i).
 Definition angle_axis_of_rotation (M : 'M[R]_3) :=
   angle_axis_of (angle_of_rotation M) (axis_of_rotation M).
+
+Definition unskew (M : 'M[R]_3) : 'rV[R]_3 :=
+  \row_k [eta \0 with 0 |-> - M 1 2%:R, 1 |-> M 0 2%:R, 2%:R|-> - M 0 1] k.
+
+Lemma unskew_skew u : unskew (skew_mx u) = u.
+Proof.
+apply/rowP => i; rewrite 3!mxE /=.
+case: ifPn => [/eqP ->|]; first by rewrite crossmulE /= !mxE /=; simp => /=; rewrite subr0.
+by rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij // opprK.
+Qed.
 
 Lemma rodriguesE M u (HM : M \in 'SO_3[R]) :
   norm (axis_of_rotation M) = 1 ->
