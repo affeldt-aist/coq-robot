@@ -2641,6 +2641,11 @@ Qed.
 
 Definition skew_mx (w : vector) : 'M[R]_3 := - \matrix_i (w *v delta_mx 0 i).
 
+Lemma skew_mx0 : skew_mx 0 = 0.
+Proof.
+by apply/matrixP => i j; rewrite !mxE -crossmul_triple crossmul0v dotmulv0 oppr0.
+Qed.
+
 Lemma anti_skew u : skew_mx u \is 'so_3[R].
 Proof.
 rewrite antiE; apply/eqP/matrixP => i j; rewrite !mxE -triple_prod_mat_perm_02.
@@ -2674,6 +2679,13 @@ Lemma skew_mxE (u w : vector) : u *m (skew_mx w) = u *v w.
 Proof.
 rewrite [RHS]crossmulC -crossmulvN [u]row_sum_delta -/(mulmxr _ _) !linear_sum.
 apply: eq_bigr=> i _; by rewrite !linearZ /= -rowE linearN /= rowK crossmulvN.
+Qed.
+
+(* more general result for antisymmetric matrices? *)
+Lemma det_skew_mx (u : 'rV[R]_3) : \det (skew_mx u) = 0.
+Proof.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite skew_mx0 det0.
+apply/eqP/det0P; exists u => //; by rewrite skew_mxE crossmulvv.
 Qed.
 
 Lemma sqr_antip (M : 'M[R]_3) : M \is 'so_3[R] ->
@@ -2931,6 +2943,40 @@ rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
 by rewrite /va opprB addrC subrK.
 Qed.
 
+Lemma char_poly3 (M : 'M[R]_3) :
+  let Z := - 1 / 2%:R * (\tr (M ^+ 2) - (\tr M) ^+ 2) in
+  char_poly M = 'X^3 - (\tr M) *: 'X^2 + Z *: 'X - (\det M)%:P.
+Proof.
+move=> Z.
+rewrite /char_poly.
+rewrite /char_poly_mx.
+(* TODO *)
+Admitted.
+
+Lemma char_poly_skew_mx (u : 'rV[R]_3) : norm u = 1 -> 
+  char_poly (skew_mx u) = 'X^3 + 'X.
+Proof.
+move=> u1.
+rewrite char_poly3 det_skew_mx subr0 trace_anti ?anti_skew // expr0n subr0.
+rewrite scale0r subr0 mxtrace_sqr_skew_mx /= u1 expr1n mulr1 -mulr_natl mulrN.
+by rewrite mulr1 mulNr div1r mulNr mulVr ?unitfE ?pnatr_eq0 // opprK scale1r.
+Qed.
+
+Fail Lemma eigenvalue_skew_mx (u : 'rV[R]_3) : eigenvalue (skew_mx u) (0 +i* 1).
+
+Lemma trace_sqr_exp_mx_skew_mx (phi : angle R) w : norm w = 1 ->
+  \tr (exp_mx phi (skew_mx w) ^+ 2) = 0(*?*).
+Proof.
+move=> w1.
+Abort.
+
+Lemma char_poly_exp_mx (phi : angle R) (u : 'rV[R]_3) : norm u = 1 ->
+  char_poly (exp_mx phi (skew_mx u)) = 0(*?*).
+Proof.
+move=> u1.
+rewrite char_poly3 trace_exp_mx_skew_mx //.
+Abort.
+
 Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> \det (exp_mx phi (skew_mx w)) = 1.
 Proof.
 move=> w1.
@@ -2958,7 +3004,8 @@ set B := (X in _ + X + _ = 1).
 rewrite {}/C -subr_sqr.
 set C := (X in _ + _ + X = 1).
 rewrite {}/A {}/B {}/C.*)
-Abort.
+Admitted.
+
 
 End skew.
 
