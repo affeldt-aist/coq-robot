@@ -49,6 +49,16 @@ Import Num.Theory.
 
 Local Open Scope ring_scope.
 
+Lemma lift0E m (i : 'I_m.+1) : fintype.lift ord0 i = i.+1%:R.
+Proof. by apply/val_inj; rewrite Zp_nat /= modn_small // ltnS. Qed.
+
+Ltac simp_ord :=
+  do ?[rewrite !lift0E
+      |rewrite ord1
+      |rewrite -[fintype.lift _ _]natr_Zp /=
+      |rewrite -[Ordinal _]natr_Zp /=].
+Ltac simpr := rewrite ?(mulr0,mul0r,mul1r,mulr1,addr0,add0r).
+
 Section extra.
 
 Lemma row_mx_eq0 (M : zmodType) (m n1 n2 : nat)
@@ -86,10 +96,63 @@ Proof. by case: i => -[i0 //| [i1 //| [i2 // | //]]]. Qed.
 Lemma ifnot2 (i : 'I_3) : (i != 2%:R) = (i == 0) || (i == 1).
 Proof. by case: i => -[i0 //| [i1 //| [i2 // | //]]]. Qed.
 
+Lemma sum1E {T : ringType} (f : 'I_1 -> T) : \sum_(i < 1) f i = f 0.
+Proof. rewrite (bigD1 ord0) //= big_pred0 ?addr0 //; by case => -[]. Qed.
+
+Lemma sum2E {T : ringType} (f : 'I_2 -> T) : \sum_(i < 2) f i = f 0 + f 1.
+Proof. rewrite big_ord_recr /= sum1E; congr (f _ + f _); by apply val_inj. Qed.
+
 Lemma sum3E {T : ringType} (f : 'I_3 -> T) : \sum_(i < 3) f i = f 0 + f 1 + f 2%:R.
+Proof. rewrite big_ord_recr //= sum2E; congr (f _ + f _ + f _); by apply val_inj. Qed.
+
+Lemma det_mx11 {T : comRingType }(A : 'M[T]_1) : \det A = A 0 0.
+Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
+
+Lemma cofactor_mx22 {T : comRingType} (A : 'M[T]_2) i j :
+  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
 Proof.
-rewrite (bigD1 ord0) // (bigD1 (1 : 'I_3)) // (bigD1 (2%:R : 'I_3)) //= big_pred0 ?addr0 ?addrA //.
-move=> i; by case/boolP : (i != 0) => //=; rewrite ifnot0 => /orP [] /eqP ->.
+rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
+by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
+Qed.
+
+Lemma liftE0 m (i : 'I_m.+2) : fintype.lift i ord0 = (i == 0)%:R.
+Proof. 
+apply/val_inj => /=; rewrite /bump leqn0 addn0.
+by case: i => // -[].
+Qed.
+
+Lemma liftE1 {m} (i : 'I_m.+3) : fintype.lift i 1 = (i <= 1).+1%:R.
+Proof.
+apply val_inj => /=.
+case: i => -[/= _|]; first by rewrite /bump modn_small.
+by case.
+Qed.
+
+Lemma det_mx22 {T : comRingType} (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
+Proof.
+rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
+rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
+by rewrite !(lift0E, add0r) /= addrr_char2.
+Qed.
+
+Lemma cofactor_mx33 {T : comRingType} (A : 'M[T]_3) i j :
+  cofactor A i j = (-1) ^+ (i + j) * 
+                   (A (i == 0)%:R (j == 0)%:R * A ((i <= 1).+1%:R) ((j <= 1).+1%:R) -
+                    A (i == 0)%:R ((j <= 1).+1%:R) * A ((i <= 1).+1%:R) (j == 0)%:R).
+Proof.
+rewrite /cofactor det_mx22 !mxE; congr (_ * (A _ _ * A _ _ - A _ _ * A _ _));
+  by rewrite (liftE0, liftE1).
+Qed.
+
+Lemma det_mx33 {T : comRingType } (M : 'M[T]_3) :
+  \det M = M 0 0 * (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R) +
+           M 0 1 * (M 2%:R 0 * M 1 2%:R - M 1 0 * M 2%:R 2%:R) +
+           M 0 2%:R * (M 1 0 * M 2%:R 1 - M 2%:R 0 * M 1 1).
+Proof.
+rewrite (expand_det_row M 0) sum3E -2!addrA; congr (_ * _ + (_ * _ + _ * _)).
+  by rewrite cofactor_mx33 /= expr0 mul1r [in X in _ - X]mulrC.
+by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
+by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
 Qed.
 
 Lemma opp_conjc {R : rcfType} (a b : R) : - (a -i* b) = - a +i* b.
@@ -297,15 +360,68 @@ rewrite -H /dotmul !mxE.
 apply eq_bigr => k _; by rewrite !mxE.
 Qed.
 
-Lemma lift0E m (i : 'I_m.+1) : fintype.lift ord0 i = i.+1%:R.
-Proof. by apply/val_inj; rewrite Zp_nat /= modn_small // ltnS. Qed.
+Section triple_prod_mat.
 
-Ltac simp_ord :=
-  do ?[rewrite !lift0E
-      |rewrite ord1
-      |rewrite -[fintype.lift _ _]natr_Zp /=
-      |rewrite -[Ordinal _]natr_Zp /=].
-Ltac simpr := rewrite ?(mulr0,mul0r,mul1r,mulr1,addr0,add0r).
+Variable (T : ringType).
+
+(* find a better name *)
+Definition triple_prod_mat (u v w : 'rV[T]_3) :=
+  \matrix_(i < 3) [eta \0 with 0 |-> u, 1 |-> v, 2%:R |-> w] i.
+(*Definition triple_product_mat (u v w : vector) :=
+  \matrix_(i < 3) [eta \0 with 0 |-> u, 1 |-> v, 2%:R |-> w] i.*)
+
+Lemma triple_prod_matE a b c : 
+  triple_prod_mat a b c = col_mx a (col_mx b c).
+Proof.
+apply/matrixP => i j; rewrite !mxE /SimplFunDelta /=.
+case: ifPn => [i0|].
+  case: splitP => [j0|k ik]; first by rewrite (ord1 j0).
+  exfalso. move/negP: i0; apply; apply/negP; by rewrite -val_eqE /= ik.
+rewrite ifnot0 => /orP [] /eqP -> /=.
+  case: splitP => [j0|]; first by rewrite (ord1 j0).
+  case => -[|k Hk] //= zerotwo _; rewrite mxE.
+  case: splitP => k; by rewrite (ord1 k).
+case: splitP => [j0|]; first by rewrite (ord1 j0).
+case => -[|[|k Hk]] //= onetwo _; rewrite mxE.
+case: splitP => k; by rewrite (ord1 k).
+Qed.
+
+Lemma row'_triple_prod_mat (i : 'I_3) (u v w : 'rV[T]_3) :
+  row' i (triple_prod_mat u v w) = [eta \0 with
+  0 |-> \matrix_(k < 2) [eta \0 with 0 |-> v, 1 |-> w] k,
+  1 |-> \matrix_(k < 2) [eta \0 with 0 |-> u, 1 |-> w] k,
+  2%:R |-> \matrix_(k < 2) [eta \0 with 0 |-> u, 1 |-> v] k] i.
+Proof.
+case: i => [[|[|[|?]]]] ?; apply/matrixP=> [] [[|[|[|?]]]] ? j;
+by rewrite !mxE.
+Qed.
+
+Lemma triple_prod_mat_perm_12 (a b c : 'rV[T]_3) :
+  xrow 1 2%:R (triple_prod_mat a b c) = triple_prod_mat a c b.
+Proof.
+apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
+Qed.
+
+Lemma triple_prod_mat_perm_01 a b c :
+  xrow 0 1 (triple_prod_mat a b c) = triple_prod_mat b a c.
+Proof.
+apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
+Qed.
+
+Lemma triple_prod_mat_perm_02 a b c :
+ xrow 0 2%:R (triple_prod_mat a b c) = triple_prod_mat c b a.
+Proof.
+apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
+Qed.
+
+Lemma mulmx_triple_prod_mat M a b c : 
+  triple_prod_mat a b c *m M = triple_prod_mat (a *m M) (b *m M) (c *m M).
+Proof.
+apply/matrixP => i j.
+move: i => -[[|[|[] // ]] ?]; rewrite !mxE; apply eq_bigr => /= ? _; by rewrite mxE.
+Qed.
+
+End triple_prod_mat.
 
 Section crossmul.
 
@@ -340,42 +456,12 @@ Proof. by rewrite ![A _|_ _]normal_sym normalDm. Qed.
 Lemma normalvv (u v : 'rV[R]_3) : (u _|_ v) = (u *d v == 0).
 Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
 
-(* find a better name *)
-Definition triple_product_mat (u v w : vector) :=
-  \matrix_(i < 3) [eta \0 with 0 |-> u, 1 |-> v, 2%:R |-> w] i.
-
-Lemma triple_prod_matE (a b c : vector) : 
-  triple_product_mat a b c = col_mx a (col_mx b c).
-Proof.
-apply/matrixP => i j; rewrite !mxE /SimplFunDelta /=.
-case: ifPn => [i0|].
-  case: splitP => [j0|k ik]; first by rewrite (ord1 j0).
-  exfalso. move/negP: i0; apply; apply/negP; by rewrite -val_eqE /= ik.
-rewrite ifnot0 => /orP [] /eqP -> /=.
-  case: splitP => [j0|]; first by rewrite (ord1 j0).
-  case => -[|k Hk] //= zerotwo _; rewrite mxE.
-  case: splitP => k; by rewrite (ord1 k).
-case: splitP => [j0|]; first by rewrite (ord1 j0).
-case => -[|[|k Hk]] //= onetwo _; rewrite mxE.
-case: splitP => k; by rewrite (ord1 k).
-Qed.
-
 Lemma triple_prod_mat_mulmx (v : vector) a b c : 
-  v *m (triple_product_mat a b c)^T = 
+  v *m (triple_prod_mat a b c)^T = 
   row_mx (v *d a)%:M (row_mx (v *d b)%:M (v *d c)%:M).
 Proof.
 rewrite triple_prod_matE (tr_col_mx a) (tr_col_mx b) (mul_mx_row v a^T). 
 by rewrite (mul_mx_row v b^T) /dotmul -!mx11_scalar.
-Qed.
-
-Lemma row'_triple_product_mat (i : 'I_3) (u v w : vector) :
-  row' i (triple_product_mat u v w) = [eta \0 with
-  0 |-> \matrix_(k < 2) [eta \0 with 0 |-> v, 1 |-> w] k,
-  1 |-> \matrix_(k < 2) [eta \0 with 0 |-> u, 1 |-> w] k,
-  2%:R |-> \matrix_(k < 2) [eta \0 with 0 |-> u, 1 |-> v] k] i.
-Proof.
-case: i => [[|[|[|?]]]] ?; apply/matrixP=> [] [[|[|[|?]]]] ? j;
-by rewrite !mxE /=.
 Qed.
 
 (* Definition mixed_product_mat n (u : 'I_n -> 'rV[R]_n) :=  *)
@@ -385,7 +471,7 @@ Qed.
 (*   \row_(k < n) \det (mixed_product_mat (delta_mx 0 k)). *)
 
 Definition crossmul (u v : vector) : vector :=
-  \row_(k < 3) \det (triple_product_mat (delta_mx 0 k) u v).
+  \row_(k < 3) \det (triple_prod_mat (delta_mx 0 k) u v).
 
 Local Notation "*v%R" := (@crossmul _).
 Local Notation "u *v w" := (crossmul u w) (at level 40).
@@ -416,16 +502,16 @@ Lemma crossmulv0 u : u *v 0 = 0.
 Proof. by rewrite crossmulC crossmul0v oppr0. Qed.
 
 Lemma crossmul_triple (u v w : 'rV[R]_3) :
-  u *d (v *v w) = \det (triple_product_mat u v w).
+  u *d (v *v w) = \det (triple_prod_mat u v w).
 Proof.
-pose M (k : 'I_3) : 'M_3 := triple_product_mat (delta_mx 0 k) v w.
-pose Mu12 := triple_product_mat (u 0 1 *: delta_mx 0 1 + u 0 2%:R *: delta_mx 0 2%:R) v w.
+pose M (k : 'I_3) : 'M_3 := triple_prod_mat (delta_mx 0 k) v w.
+pose Mu12 := triple_prod_mat (u 0 1 *: delta_mx 0 1 + u 0 2%:R *: delta_mx 0 2%:R) v w.
 rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u 0 0) 1) ?mul1r
-        ?row'_triple_product_mat //; last first.
+        ?row'_triple_prod_mat //; last first.
   apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
   by case: j => [[|[|[]]]] ? //=; simp_ord; simpr.
 rewrite [\det Mu12](@determinant_multilinear _ _ _
-  (M 1) (M 2%:R) 0 (u 0 1) (u 0 2%:R)) ?row'_triple_product_mat //; last first.
+  (M 1) (M 2%:R) 0 (u 0 1) (u 0 2%:R)) ?row'_triple_prod_mat //; last first.
   apply/matrixP => i j; rewrite !mxE !eqxx.
   by case: j => [[|[|[]]]] ? //=; simp_ord; simpr.
 by rewrite dotmulE !big_ord_recl big_ord0 addr0 /= !mxE; simp_ord.
@@ -448,9 +534,9 @@ Qed.
 Lemma crossmul_linear u : linear (crossmul u).
 Proof.
 move=> a v w; apply/rowP => k; rewrite !mxE.
-pose M w := triple_product_mat (delta_mx 0 k) u w.
+pose M w := triple_prod_mat (delta_mx 0 k) u w.
 rewrite (@determinant_multilinear _ _ (M _) (M v) (M w) 2%:R a 1);
-  rewrite ?row'_triple_product_mat ?mul1r ?scale1r ?mxE //=.
+  rewrite ?row'_triple_prod_mat ?mul1r ?scale1r ?mxE //=.
 by apply/rowP => j; rewrite !mxE.
 Qed.
 
@@ -467,23 +553,6 @@ Qed.
 
 Canonical crossmulr_is_additive u := Additive (crossmulr_linear u).
 Canonical crossmulr_is_linear u := AddLinear (crossmulr_linear u).
-
-Lemma det_mx11 (A : 'M[R]_1) : \det A = A 0 0.
-Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
-
-Lemma cofactor_mx22 (A : 'M[R]_2) i j :
-  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
-Proof.
-rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
-by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
-Qed.
-
-Lemma det_mx22 (A : 'M[R]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
-Proof.
-rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
-rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
-by rewrite !(lift0E, add0r) /= addrr_char2.
-Qed.
 
 Lemma crossmulE u v : (u *v v) = \row_j [eta \0 with
   0 |-> u 0 1 * v 0 2%:R - u 0 2%:R * v 0 1,
@@ -580,24 +649,6 @@ Proof. by rewrite crossmulC mulmxN mulmxl_crossmulr -crossmulC. Qed.
 Qed.
 *)
 
-Lemma triple_prod_mat_perm_12 a b c :
-  xrow 1 2%:R (triple_product_mat a b c) = triple_product_mat a c b.
-Proof.
-apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
-Qed.
-
-Lemma triple_prod_mat_perm_01 a b c :
-  xrow 0 1 (triple_product_mat a b c) = triple_product_mat b a c.
-Proof.
-apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
-Qed.
-
-Lemma triple_prod_mat_perm_02 a b c :
- xrow 0 2%:R (triple_product_mat a b c) = triple_product_mat c b a.
-Proof.
-apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE. 
-Qed.
-
 Lemma scalar_triple_prod_circ_shift a b c : a *d (b *v c) = c *d (a *v b).
 Proof. 
 rewrite crossmul_triple.
@@ -610,22 +661,15 @@ Lemma dotmul_crossmul u v x : u *d (v *v x) = (u *v v) *d x.
 Proof. by rewrite scalar_triple_prod_circ_shift dotmulC. Qed.
 
 Lemma crossmul_dotmul u v (x : vector) : 
-  \det (triple_product_mat u v x) = (u *v v) *d x.
+  \det (triple_prod_mat u v x) = (u *v v) *d x.
 Proof. by rewrite -crossmul_triple dotmul_crossmul. Qed.
-
-Lemma mulmx_triple_prod_mat M a b c : 
-  triple_product_mat a b c *m M = triple_product_mat (a *m M) (b *m M) (c *m M).
-Proof.
-apply/matrixP => i j.
-move: i => -[[|[|[] // ]] ?]; rewrite !mxE; apply eq_bigr => /= ? _; by rewrite mxE.
-Qed.
 
 Lemma det_crossmul_dotmul M a b (x : vector) : 
   (\det M *: (a *v b)) *d x = (((a *m M) *v (b *m M)) *m M^T) *d x.
 Proof.
-transitivity (\det M * \det (triple_product_mat a b x)).
+transitivity (\det M * \det (triple_prod_mat a b x)).
   by rewrite dotmulZv -crossmul_triple dotmul_crossmul.
-transitivity (\det (triple_product_mat (a *m M) (b *m M) (x *m M))).
+transitivity (\det (triple_prod_mat (a *m M) (b *m M) (x *m M))).
   by rewrite mulrC -det_mulmx mulmx_triple_prod_mat.
 transitivity (((a *m M) *v (b *m M)) *d (x *m M)).
   by rewrite crossmul_dotmul.
@@ -1572,7 +1616,7 @@ Proof. by rewrite norm_crossmul_normal // ?xtriad_norm // ?ytriad_norm // xytria
 Lemma ztriad_neq0 : ztriad != 0.
 Proof. by rewrite -norm_eq0 ztriad_norm oner_neq0. Qed.
 
-Lemma triad_is_ortho : triple_product_mat xtriad ytriad ztriad \is 'O_3[R].
+Lemma triad_is_ortho : triple_prod_mat xtriad ytriad ztriad \is 'O_3[R].
 Proof.
 apply/orthogonalP.
 case=> -[i0|[i1|[i2|//]]]; case=> -[j0|[j1|[j2|//]]] /=; rewrite !rowK /SimplFunDelta /=.
@@ -1587,7 +1631,7 @@ case=> -[i0|[i1|[i2|//]]]; case=> -[j0|[j1|[j2|//]]] /=; rewrite !rowK /SimplFun
   by rewrite dotmulvv ztriad_norm // expr1n.
 Qed.
 
-Lemma triad_is_orthonormal : triple_product_mat xtriad ytriad ztriad \is 'SO_3[R].
+Lemma triad_is_orthonormal : triple_prod_mat xtriad ytriad ztriad \is 'SO_3[R].
 Proof.
 rewrite rotationE triad_is_ortho /= -crossmul_triple dotmul_crossmul -/ztriad.
 by rewrite dotmul_cos ztriad_norm !mul1r vec_anglevv ?cos0 // -norm_eq0 ztriad_norm ?oner_neq0.
@@ -1609,8 +1653,8 @@ Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1))
 Definition rots : 'M_3 * 'M_3 :=
   let: (Xl, Yl, Zl) := triad l1 l2 l3 in
   let: (Xr, Yr, Zr) := triad r1 r2 r3 in
-  (triple_product_mat Xl Yl Zl,
-   triple_product_mat Xr Yr Zr).
+  (triple_prod_mat Xl Yl Zl,
+   triple_prod_mat Xr Yr Zr).
 
 Lemma rots1_is_SO : rots.1 \is 'SO_3[R]. Proof. exact: triad_is_orthonormal. Qed.
 Lemma rots2_is_SO : rots.2 \is 'SO_3[R]. Proof. exact: triad_is_orthonormal. Qed.
@@ -1662,7 +1706,7 @@ Definition canonical_z {R : rcfType} : 'rV[R]_3 :=
   \row_k [eta \0 with 0 |-> 0, 1 |-> 0, 2%:R |-> 1] k.
 
 (* row-vector * Ry => rotation around the y axis (x goes towards z) *)
-Definition Ry R (a : angle R) := triple_product_mat
+Definition Ry R (a : angle R) := triple_prod_mat
   (\row_k [eta \0 with 0 |-> cos a, 1 |-> 0, 2%:R |-> sin a] k)
   (\row_k [eta \0 with 0 |-> 0, 1 |-> 1, 2%:R |-> 0] k)
   (\row_k [eta \0 with 0 |-> - sin a, 1 |-> 0, 2%:R |-> cos a] k).
@@ -1712,12 +1756,12 @@ have -> : col_mx row2 row3 *m (col_mx row2 row3)^T = 1.
 by rewrite -scalar_mx_block idmxE.
 Qed.
 
-Definition Rx R (a : angle R) := triple_product_mat
+Definition Rx R (a : angle R) := triple_prod_mat
   (\row_k [eta \0 with 0 |-> 1, 1 |-> 0, 2%:R |-> 0] k)
   (\row_k [eta \0 with 0 |-> 0, 1 |-> cos a, 2%:R |-> - sin a] k)
   (\row_k [eta \0 with 0 |-> 0, 1 |-> sin a, 2%:R |-> cos a] k).
 
-Definition Rz R (a : angle R) := triple_product_mat
+Definition Rz R (a : angle R) := triple_prod_mat
   (\row_k [eta \0 with 0 |-> cos a, 1 |-> - sin a, 2%:R |-> 0] k)
   (\row_k [eta \0 with 0 |-> sin a, 1 |-> cos a, 2%:R |-> 0] k)
   (\row_k [eta \0 with 0 |-> 0, 1 |-> 0, 2%:R |-> 1] k).
@@ -1759,7 +1803,7 @@ Qed.
 End Frame.
 Coercion FrameM {R} := @Frame.M R.
 
-Definition canonical_M {R} := triple_product_mat 
+Definition canonical_M {R} := triple_prod_mat 
   (@canonical_x R) canonical_y canonical_z.
 Lemma norm_canonical_x {R} : norm (row 0 (@canonical_M R)) = 1.
 Proof. apply/eqP; rewrite -sqrp_eq1 ?norm_ge0 // -dotmulvv dotmulE sum3E !mxE /=. by simp. Qed.
@@ -1829,7 +1873,7 @@ Variables l1 l2 l3 : coordinate.
 Hypotheses (l12 : l1 != l2).
 Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1)).
 
-Definition M_triad := triple_product_mat (xtriad l1 l2) (ytriad l1 l2 l3) (ztriad l1 l2 l3).
+Definition M_triad := triple_prod_mat (xtriad l1 l2) (ytriad l1 l2 l3) (ztriad l1 l2 l3).
 
 Lemma normx1_triad : norm (row 0 M_triad) = 1.
 Proof. by rewrite /M_triad rowK /= xtriad_norm. Qed.
@@ -2728,18 +2772,20 @@ Lemma sqr_skewE (u : 'rV[R]_3) : let a := skew_mx u in
  2%:R |-> (\row_j [eta \0 with 
 0 |-> u 0 0 * u 0 2%:R, 1 |-> u 0 1 * u 0 2%:R, 2%:R |-> - u 0 1%:R ^+ 2 - u 0 0 ^+ 2] j)] i.
 Proof.
-move=> a; apply/matrixP => i j.
-rewrite !mxE /= sum3E /a.
-case: ifPn => [/eqP ->|]; first rewrite [in RHS]mxE.
-  case: ifPn => [/eqP ->|]; first by rewrite !skewij; simp.
-  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij; simp => //=; by rewrite mulrC.
-rewrite ifnot0 => /orP [] /eqP -> /=; rewrite mxE.
-  case: ifPn => [/eqP ->|]; first by rewrite !skewij; simp.
-  rewrite ifnot0 => /orP [] /eqP -> /=.
-  by rewrite !skewij; simp.
-  rewrite !skewij; simp => //=; by rewrite mulrC.
-case: ifPn => [/eqP ->|]; first by rewrite !skewij; simp.
-rewrite ifnot0 => /orP [] /eqP -> /=; by rewrite !skewij; simp. 
+move=> a; rewrite (sqr_antip (anti_skew u)); apply/matrixP => i j.
+rewrite [in LHS]mxE [in RHS]mxE /=.
+case: ifPn => [_|]; first rewrite 2!mxE.
+  case: ifPn => [_|]; first by rewrite !skewij; simp; rewrite sqrrN.
+  case: ifPn => [_|]; first by rewrite !skewij; simp.
+  case: ifPn => [_|//]; by rewrite !skewij mulrN mulNr opprK mulrC.
+case: ifPn => [_|]; first rewrite 2!mxE.
+  case: ifPn => [_|]; first by rewrite !skewij opprK.
+  case: ifPn => [_|]; first by rewrite !skewij 2!sqrrN.
+  case: ifPn => [_|//]; by rewrite !skewij opprK mulrC.
+case: ifPn => [_|//]; first rewrite 2!mxE.
+case: ifPn => [_|]; first by rewrite !skewij mulrN mulNr opprK.
+case: ifPn => [_|]; first by rewrite !skewij mulrN mulNr opprK.
+case: ifPn => [_|//]; by rewrite !skewij sqrrN.
 Qed.
 
 Lemma sym_sqr_skew u : skew_mx u ^+ 2 \is sym 3 R.
@@ -2886,8 +2932,7 @@ Qed.
 (* see table 1.1 of handbook of robotics *)
 Lemma exp_mx_skew_mxE phi (w : 'rV[R]_3) : norm w = 1 ->
   let va := 1 - cos phi in let ca := cos phi in let sa := sin phi in
-  exp_mx phi (skew_mx w) = 
-  triple_product_mat
+  exp_mx phi (skew_mx w) = triple_prod_mat
   (\row_k [eta \0 with 0 |-> w 0 0 ^+2 * va + ca, 
                        1 |-> w 0 0 * w 0 1 * va - w 0 2%:R * sa, 
                        2%:R |-> w 0 0 * w 0 2%:R * va + w 0 1 * sa] k)
@@ -2943,45 +2988,178 @@ rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
 by rewrite /va opprB addrC subrK.
 Qed.
 
+Lemma row'0_triple_prod_mat tmp (XM : 'M[{poly R}]_3) :
+  row' ord0 (triple_prod_mat tmp (row 1 XM) (row 2%:R XM)) = row' ord0 XM.
+Proof.
+rewrite row'_triple_prod_mat /=.
+apply/matrixP => i j; rewrite !mxE.
+case: ifPn => [/eqP ->|].
+  by rewrite !mxE; simp_ord.
+case: i => [] [] // [] // i _ /=.
+by rewrite !mxE; simp_ord.
+Qed.
+
+Lemma diag_sqr {n} (M : 'M[R]_n) (i : 'I_n) : (M *m M) i i = (row i M) *d (col i M)^T.
+Proof.
+rewrite mxE dotmulE; apply/eq_bigr => /= j _; by rewrite 3!mxE.
+Qed.
+
+Lemma tr_sqr (M : 'M[R]_3) : \tr (M^+2) = \sum_(i < 3) (row i M) *d (col i M)^T.
+Proof. apply/eq_bigr => i _; by rewrite diag_sqr. Qed.
+
+Lemma tr_sqr3 (M : 'M[R]_3) : \tr (M *m M) =
+  \sum_i (M i i ^+2) + M 0 1 * M 1 0 *+ 2 + M 0 2%:R * M 2%:R 0 *+ 2 +
+  M 1 2%:R * M 2%:R 1 *+ 2.
+Proof.
+rewrite sum3E tr_sqr sum3E !dotmulE !sum3E !mxE -!expr2 -!addrA; congr (_ + _).
+do 3 rewrite addrC -!addrA; congr (_ + _).
+do 3 rewrite addrC -!addrA; congr (_ + _).
+congr (_ + _).
+rewrite addrC -!addrA mulrC; congr (_ + _).
+rewrite addrC -!addrA mulrC; congr (_ + _).
+rewrite addrC -!addrA; congr (_ + _).
+by rewrite mulrC.
+Qed.
+
+Lemma sqr_tr3 (M : 'M[R]_3) : (\tr M) ^+ 2 =
+  \sum_i (M i i ^+2) + M 0 0 * M 1 1 *+ 2 + (M 0 0 + M 1 1) * M 2%:R 2%:R *+ 2.  
+Proof.
+rewrite /mxtrace sum3E 2!sqrrD sum3E .
+rewrite -!addrA; congr (_ + _).
+do 2 rewrite addrC -!addrA; congr (_ + _).
+do 2 rewrite addrC -!addrA; congr (_ + _).
+Qed.
+
+Lemma char_poly3_coef1 (M : 'M[R]_3) :
+  let Z := 1 / 2%:R * (\tr M ^+ 2 - \tr (M ^+ 2)) in
+  (char_poly M)`_1 = Z.
+Proof.
+move=> Z.
+rewrite /char_poly /char_poly_mx det_mx33 !mxE mulr1n mulr0n !add0r.
+rewrite !mulNr !mulrN !opprK.
+rewrite !coefD.
+(* 1 *)
+rewrite [X in X + _ + _](_ : _ = M 0 0 * (M 2%:R 2%:R + M 1 1) +
+   (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R)); last first.
+  rewrite coefM sum2E coefD coefX add0r coefN coefC [- _]/=.
+  rewrite subn0 coefD.
+  rewrite coefM sum2E subn0 coefD coefX add0r coefN (_ : _`_0 = M 1 1); last by rewrite coefC.
+  rewrite coefD coefX coefN coefC subr0 mulr1.
+  rewrite coefD coefN coefX coefN coefC subr0 mul1r.
+  rewrite subnn coefD coefX add0r coefN coefC [in X in - M 1 1 - X]/=.
+  rewrite coefM sum2E coefC coefC mulr0 add0r coefC mul0r subr0.
+  rewrite coefD coefX coefN coefC subr0 mul1r.
+  rewrite coefD coefM sum1E coefD coefX add0r coefN coefC [in X in - X * _`_ _]/=.
+  rewrite coefD coefX add0r coefN coefC mulrN !mulNr opprK.
+  rewrite coefN coefM sum1E coefC coefC [in X in M 1 1 * _ - X]/=.
+  by rewrite -opprB mulrN 2!opprK.
+rewrite [X in _ + X + _](_ : _ = - M 0 1 * M 1 0); last first.
+  rewrite coefN coefM sum2E coefC [in X in X * _]/= subnn.
+  rewrite coefD subn0 coefM sum2E.
+  rewrite subn0 subnn coefC coefC mulr0 add0r.
+  rewrite coefC mul0r add0r.
+  rewrite coefM sum2E subn0 subnn coefC coefD coefX coefN coefC subr0 mulr1.
+  rewrite coefC mul0r addr0 coefC mul0r addr0.
+  by rewrite mulNr.
+rewrite [X in _ + _ + X](_ : _ = - M 0 2%:R * M 2%:R 0); last first.
+  rewrite coefN coefM sum2E subn0 subnn coefC.
+  rewrite [in X in X * _]/=.
+  rewrite coefD coefM sum2E subn0 coefC coefC mulr0 add0r.
+  rewrite coefC mul0r add0r coefM sum2E subn0 subnn coefC [in X in X * _`_1]/=.
+  by rewrite coefD coefX coefN coefC subr0 mulr1 coefC mul0r addr0 coefC mul0r addr0 mulNr.
+rewrite /Z.
+apply/(@mulrI _ 2%:R); first by rewrite unitfE pnatr_eq0.
+rewrite mulrA div1r divrr ?mul1r ?unitfE ?pnatr_eq0 //.
+rewrite sqr_tr3.
+rewrite tr_sqr3.
+rewrite 3!opprD -[in RHS]addrAC [in RHS](addrC (\sum_ _ _)) 3![in RHS]addrA addrK.
+
+rewrite mulrDr addrC mulNr mulrN (mulrC 2%:R) mulr_natr.
+rewrite -2![in RHS]addrA [in RHS]addrC -[in RHS]addrA; congr (_ + _).
+rewrite mulrDr addrC mulNr mulrN (mulrC 2%:R) mulr_natr.
+rewrite [in RHS]addrA [in RHS]addrC; congr (_ + _).
+rewrite addrA mulrDr addrC mulrN (mulrC 2%:R) mulr_natr mulrC -addrA; congr (_ + _).
+rewrite (mulrC 2%:R) mulr_natr.
+rewrite mulrDr.
+rewrite mulrDl.
+rewrite mulr2n.
+rewrite [in RHS]mulr2n.
+rewrite [in X in _ = _ + X]mulr2n.
+rewrite -!addrA; congr (_ + _).
+rewrite addrC -!addrA; congr (_ + (_ + _)).
+by rewrite addrCA.
+Qed.
+
 Lemma char_poly3 (M : 'M[R]_3) :
-  let Z := - 1 / 2%:R * (\tr (M ^+ 2) - (\tr M) ^+ 2) in
+  let Z := 1 / 2%:R * ((\tr M) ^+ 2 - \tr (M ^+ 2)) in
   char_poly M = 'X^3 - (\tr M) *: 'X^2 + Z *: 'X - (\det M)%:P.
 Proof.
 move=> Z.
-rewrite /char_poly.
-rewrite /char_poly_mx.
-(* TODO *)
-Admitted.
+rewrite -(coefK (char_poly M)) (size_char_poly M).
+apply/polyP.
+case. (* coef0 *)
+  rewrite coef_poly char_poly_det !coef_add_poly !coef_opp_poly !coefZ.
+  rewrite !coefX !coefXn add0r mulr0 oppr0 mulr0 add0r add0r coefC /=.
+  by rewrite exprS sqrrN expr1n mulr1 mulN1r.
+case; last first.
+  case. (* coef2 *)
+    rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
+    by rewrite add0r mulr0 mulr1 addr0 coefC subr0 char_poly_trace.
+  case; last first. (* coef n >= 4 *)
+    move=> n.
+    rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
+    by rewrite add0r mulr0 mulr0 coefC subr0 addr0 oppr0.
+  (* coef3 *)
+  rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
+  rewrite mulr0 subr0 mulr0 addr0 coefC subr0; apply/eqP.
+  rewrite (_ : _`_3 = lead_coef (char_poly M)); last first.
+    by rewrite lead_coefE size_char_poly.
+  by rewrite -monicE char_poly_monic.
+(* coef1 *)
+rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
+rewrite add0r mulr1 mulr0 oppr0 add0r coefC subr0.
+suff : (char_poly M)`_1 = Z by move=> ->.
+by rewrite char_poly3_coef1.
+Qed.
 
 Lemma char_poly_skew_mx (u : 'rV[R]_3) : norm u = 1 -> 
   char_poly (skew_mx u) = 'X^3 + 'X.
 Proof.
 move=> u1.
-rewrite char_poly3 det_skew_mx subr0 trace_anti ?anti_skew // expr0n subr0.
-rewrite scale0r subr0 mxtrace_sqr_skew_mx /= u1 expr1n mulr1 -mulr_natl mulrN.
-by rewrite mulr1 mulNr div1r mulNr mulVr ?unitfE ?pnatr_eq0 // opprK scale1r.
+rewrite char_poly3 det_skew_mx subr0 trace_anti ?anti_skew //.
+rewrite scale0r subr0 expr0n add0r mulrN mxtrace_sqr_skew_mx mulrN opprK.
+by rewrite u1 expr1n mulr1 div1r mulVr ?unitfE ?pnatr_eq0 // scale1r.
 Qed.
 
 Fail Lemma eigenvalue_skew_mx (u : 'rV[R]_3) : eigenvalue (skew_mx u) (0 +i* 1).
 
-Lemma trace_sqr_exp_mx_skew_mx (phi : angle R) w : norm w = 1 ->
-  \tr (exp_mx phi (skew_mx w) ^+ 2) = 0(*?*).
-Proof.
-move=> w1.
-Abort.
-
-Lemma char_poly_exp_mx (phi : angle R) (u : 'rV[R]_3) : norm u = 1 ->
-  char_poly (exp_mx phi (skew_mx u)) = 0(*?*).
+Lemma trace_mul_exp_mx (a : angle R) u : norm u = 1 ->
+  exp_mx a (skew_mx u) ^+ 2 = exp_mx (add_angle a a) (skew_mx u).
 Proof.
 move=> u1.
-rewrite char_poly3 trace_exp_mx_skew_mx //.
-Abort.
+rewrite /exp_mx.
+rewrite expr2.
+rewrite 2!mulrDr mulr1.
+rewrite 2!mulrDl mul1r.
+Admitted.    
+
+Lemma trace_sqr_exp_mx_skew_mx (phi : angle R) w : norm w = 1 ->
+  \tr (exp_mx phi (skew_mx w) ^+ 2) = - (1 + 2%:R * cos phi) ^+ 2(*?*).
+Proof.
+move=> w1.
+rewrite trace_mul_exp_mx //.
+rewrite trace_exp_mx_skew_mx // cosD.
+rewrite -!expr2.
+move/eqP: (cos2Dsin2 phi); rewrite eq_sym addrC -subr_eq => /eqP <-.
+rewrite opprD opprK addrCA.
+Admitted.
 
 Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> \det (exp_mx phi (skew_mx w)) = 1.
 Proof.
 move=> w1.
+rewrite det_mx33 !exp_mx_skew_mxE // !mxE /=.
 (*rewrite /exp_mx sqr_skew w1 expr1n scalerBr.*)
-rewrite exp_mx_skew_mxE // crossmul_dotmul crossmulE /= !mxE /=.
+(*rewrite exp_mx_skew_mxE // crossmul_dotmul crossmulE /= !mxE /=.
 rewrite dotmulE sum3E !mxE /=.
 set x := w 0 0. set y := w 0 1. set z := w 0 2%:R. 
 set sa := sin phi. set ca := cos phi. set va := 1 - ca.
@@ -3003,9 +3181,19 @@ rewrite {}/B mulrBl -[in X in _ + (_ - X) + _ = _ ]mulrA -subr_sqr.
 set B := (X in _ + X + _ = 1).
 rewrite {}/C -subr_sqr.
 set C := (X in _ + _ + X = 1).
-rewrite {}/A {}/B {}/C.*)
+rewrite {}/A {}/B {}/C.*) *)
 Admitted.
 
+Lemma char_poly_exp_mx (phi : angle R) (u : 'rV[R]_3) : norm u = 1 ->
+  char_poly (exp_mx phi (skew_mx u)) = 0(*?*).
+Proof.
+move=> u1.
+rewrite char_poly3 trace_exp_mx_skew_mx // det_exp_mx //.
+rewrite trace_sqr_exp_mx_skew_mx // opprK.
+rewrite -mulr2n -(mulr_natr ( _ ^+ 2)).
+rewrite mulrCA div1r mulVr ?unitfE ?pnatr_eq0 //.
+rewrite mulr1.
+Abort.
 
 End skew.
 
