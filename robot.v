@@ -17,10 +17,10 @@ Require Import fingroup perm.
  3. sections O[R]_3 and SO[R]_3
  4. section crossmul (definition of "normal" also) (sample lemma: double_crossmul)
  5. section norm (sample lemma: multiplication by a O[R]_3 matrix preserves norm)
- 6. section colinear (seemed clearer to me to have a dedicated section)
+ 6. section colinear (seemed clearer to me to have a dedicated definition)
  7. section angle (definitions of cos, sin, etc. also) 
-    (sample lemma: multiplication by a O[R]_3 matrix preserves angle)
-    (NB: angles seem to be restricted to [0,pi])
+    (sample lemma: multiplication by a O[R]_3 matrix preserves vec_angle)
+    (NB: vec_angles seem to be restricted to [0,pi])
  8. section normalize_orthogonalize (easy definitions)
  9. section triad 
     (construction d'une base orthonormee a partir de trois points non-colineaires)
@@ -3160,7 +3160,11 @@ rewrite scale0r subr0 expr0n add0r mulrN mxtrace_sqr_skew_mx mulrN opprK.
 by rewrite u1 expr1n mulr1 div1r mulVr ?unitfE ?pnatr_eq0 // scale1r.
 Qed.
 
-Definition skew_mx_eigenvalues : seq R[i] := [:: 0; 0 +i* 1; 0 -i* 1].
+Definition skew_mx_eigenvalues : seq R[i] := [:: 0; 'i; 0 -i* 1].
+
+Ltac eigenvalue_skew_mx_eval_poly := 
+  rewrite /map_poly horner_poly size_addl; [ |by rewrite size_polyXn size_polyX] ;
+  rewrite size_polyXn sum4E !coefD !coefXn !coefX !add0r !mul0r !mul1r !add0r !addr0 mul1r.
 
 Lemma eigenvalue_skew_mx (u : 'rV[R]_3) : norm u = 1 -> 
   eigenvalue (map_mx (fun x => x%:C) (skew_mx u)) =1 [pred k | k \in skew_mx_eigenvalues].
@@ -3169,20 +3173,16 @@ move=> u1 /= k.
 rewrite inE eigenvalue_root_char -map_char_poly (char_poly_skew_mx u1).
 apply/rootP.
 case: ifPn => [|Hk].
+  rewrite inE => /orP [/eqP ->|]; first by rewrite /= horner_map !hornerE.
   rewrite inE => /orP [/eqP ->|].
-    by rewrite /= horner_map !hornerE.
-  rewrite inE => /orP [/eqP ->|].
-    rewrite /map_poly horner_poly size_addl; last by rewrite size_polyXn size_polyX.
-    rewrite size_polyXn sum4E !coefD !coefXn !coefX !add0r !mul0r !mul1r !add0r !addr0 mul1r.
+    eigenvalue_skew_mx_eval_poly.
     by rewrite expr1 exprS sqr_i mulrN1 subrr.
   rewrite inE => /eqP ->.
-  rewrite /map_poly horner_poly size_addl; last by rewrite size_polyXn size_polyX.
-  rewrite size_polyXn sum4E !coefD !coefXn !coefX !add0r expr1 !mul0r !mul1r !add0r !addr0 mul1r.
+  eigenvalue_skew_mx_eval_poly.
   apply/eqP. simpc. by rewrite addrC subrr eq_complex /= eqxx.
 apply/eqP; apply: contra Hk.
-rewrite /map_poly horner_poly size_addl; last by rewrite size_polyXn size_polyX.
-rewrite size_polyXn sum4E !coefD !coefXn !coefX !add0r expr1 !mul0r !mul1r !add0r !addr0 mul1r.
-rewrite exprS -{1}(mulr1 k) -mulrDr mulf_eq0 => /orP [/eqP ->|].
+eigenvalue_skew_mx_eval_poly.
+rewrite (exprS _ 2) -{1}(mulr1 k) -mulrDr mulf_eq0 => /orP [/eqP ->|].
   by rewrite inE eqxx.
 rewrite eq_sym addrC -subr_eq add0r -sqr_i eqf_sqr => /orP [/eqP <-|].
   by rewrite !inE eqxx orbC.
@@ -3194,54 +3194,75 @@ Qed.
 Definition exp_skew_mx_eigenvalues (phi : angle R) : seq R[i] := 
   [:: 1; expi phi; expi (- phi)].
 
+Lemma skew_mx4 w : norm w = 1 -> skew_mx w ^+ 4 = - skew_mx w ^+ 2.
+Proof. move=> w1; by rewrite exprS cube_skew // w1 expr1n scaleN1r mulrN -expr2. Qed.
+
+Lemma exp_mx_is_ortho (a : angle R) (w : 'rV_3) : norm w = 1 ->
+  exp_mx a (skew_mx w) \is 'O_3[R].
+Proof.
+move=> w1.
+rewrite orthogonalE tr_exp_mx.
+move: (anti_skew w); rewrite antiE -eqr_oppLR => /eqP <-.
+by rewrite inv_exp_mx // skew_mx4. 
+Qed.
+
+Lemma rank_exp_mx (a : angle R) (w : 'rV_3) : norm w = 1 ->
+  \rank (exp_mx a (skew_mx w)) = 3.
+Proof.
+move=> w1; by rewrite mxrank_unit // orthogonal_unit // exp_mx_is_ortho.
+Qed.
+
+Lemma det_exp_mx0 w : norm w = 1 -> \det (exp_mx 0 (skew_mx w)) = 1.
+Proof. move=> w1; by rewrite /exp_mx sin0 cos0 subrr 2!scale0r 2!addr0 det1. Qed.
+
+Lemma mul_exp_mx (a b : angle R) u : norm u = 1 ->
+  exp_mx a (skew_mx u) * exp_mx b (skew_mx u) = exp_mx (a + b) (skew_mx u).
+Proof.
+move=> u1.
+rewrite /exp_mx sinD cosD !mulrDr !mulrDl. 
+simp => /=.
+rewrite -scalerCA -2!scalerAl -expr2.
+rewrite -scalerAl -scalerAr -exprSr cube_skew u1 expr1n scaleN1r (scalerN (sin b) (skew_mx u)) (scalerN (1 - cos a)).
+rewrite -(scalerAl (sin a)) -(scalerCA (1 - cos b) (skew_mx u)) -(scalerAl (1 - cos b)) -exprS.
+rewrite cube_skew u1 expr1n scaleN1r (scalerN _ (skew_mx u)) (scalerN (sin a) (_ *: _)).
+rewrite -!addrA; congr (_ + _).
+do 2 rewrite addrC -!addrA. 
+rewrite addrC scalerA (mulrC (sin b)) -!addrA.
+rewrite [in RHS]addrC [in RHS]scalerBl [in RHS]scalerBl [in RHS]opprB [in RHS]addrCA -![in RHS]addrA; congr (_ + _).
+rewrite scalerBl scale1r opprB (scalerA (cos a)) -!addrA.
+rewrite [in RHS]scalerDl ![in RHS]addrA [in RHS]addrC -[in RHS]addrA; congr (_ + _).
+rewrite addrC ![in LHS]addrA addrK.
+rewrite -![in LHS]addrA addrC scalerBl scale1r scalerBr opprB scalerA -![in LHS]addrA.
+rewrite [in RHS]addrA [in RHS]addrC; congr (_ + _).
+rewrite addrCA ![in LHS]addrA subrK.
+rewrite -scalerCA -2!scalerAl -exprD skew_mx4 // 2!scalerN scalerA.
+rewrite addrC -scaleNr -2!scalerDl -scalerBl; congr (_ *: _).
+rewrite -!addrA; congr (_ + _).
+rewrite mulrBr mulr1 mulrBl mul1r opprB opprB !addrA subrK addrC.
+rewrite -(addrC (cos a)) !addrA -(addrC (cos a)) subrr add0r.
+by rewrite addrC addrA subrr add0r mulrC.
+Qed.
+
+(* TODO: *)
+Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> 
+  \det (exp_mx phi (skew_mx w)) = 1.
+Proof.
+move=> w1.
+Admitted.
+
 Lemma eigenvalue_exp_mx (a : angle R) (w : 'rV[R]_3) : norm w = 1 ->
   eigenvalue (map_mx (fun x => x%:C) (exp_mx a (skew_mx w))) =1 
     [pred k | k \in exp_skew_mx_eigenvalues a].
 Proof.
 move=> u1 /= k.
 rewrite inE eigenvalue_root_char -map_char_poly.
-Admitted.
-
-Lemma trace_mul_exp_mx (a b : angle R) u : norm u = 1 ->
-  exp_mx a (skew_mx u) * exp_mx b (skew_mx u) = exp_mx (add_angle a b) (skew_mx u).
-Proof.
-Admitted.
+Abort.
 
 Lemma trace_sqr_exp_mx_skew_mx (phi : angle R) w : norm w = 1 ->
   \tr (exp_mx phi (skew_mx w) ^+ 2) = - (1 + 2%:R * cos phi) ^+ 2(*?*).
 Proof.
 move=> w1.
 Abort.
-
-Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> \det (exp_mx phi (skew_mx w)) = 1.
-Proof.
-move=> w1.
-(*rewrite det_mx33 !exp_mx_skew_mxE // !mxE /=.*)
-(*rewrite /exp_mx sqr_skew w1 expr1n scalerBr.*)
-(*rewrite exp_mx_skew_mxE // crossmul_dotmul crossmulE /= !mxE /=.
-rewrite dotmulE sum3E !mxE /=.
-set x := w 0 0. set y := w 0 1. set z := w 0 2%:R. 
-set sa := sin phi. set ca := cos phi. set va := 1 - ca.
-set xymz := x * y * va - z * sa.
-set yzmx := y * z * va - x * sa.
-set xzmy := x * z * va - y * sa.
-set xypz := x * y * va + z * sa.
-set yzpx := y * z * va + x * sa.
-set xzpy := x * z * va + y * sa.
-set y2 := y ^+ 2.
-set x2 := x ^+ 2.
-set z2 := z ^+ 2.
-rewrite -(expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -!expr2 -/x -/y -/z -/x2 -/y2 -/z2.
-rewrite 2!mulrBl .
-(*set B := (X in _ + X + _ = 1). set C := (X in _ + _ + X = 1).
-rewrite mulrBl -[in X in _ + X + _ + _ = _ ]mulrA mulrCA (mulrC (_ + y * sa)) -subr_sqr.
-set A := (X in X + _ + _ = 1). 
-rewrite {}/B mulrBl -[in X in _ + (_ - X) + _ = _ ]mulrA -subr_sqr.
-set B := (X in _ + X + _ = 1).
-rewrite {}/C -subr_sqr.
-set C := (X in _ + _ + X = 1).
-rewrite {}/A {}/B {}/C.*) *)
-Admitted.
 
 End skew.
 
@@ -3312,13 +3333,15 @@ Lemma rodrigues_mx_is_O r : norm (aaxis r) = 1 -> rodrigues_mx r \in 'O_3[R].
 Proof.
 move=> axis1.
 rewrite /rodrigues_mx orthogonalE tr_exp_mx {2}(eqP (anti_skew _)) linearN /= trmxK inv_exp_mx //.
+skew_mx4
+
 by rewrite exprS cube_skew -scalerCA -scalerAl -expr2 axis1 expr1n scaleN1r.
 Qed.
 
 Lemma det_rodrigues_mx r : norm (aaxis r) = 1 -> \det (rodrigues_mx r) = 1.
 Proof.
-(*move=> ?; by rewrite /rodrigues_mx det_exp_mx.
-Qed.*) Abort.
+move=> ?; by rewrite /rodrigues_mx det_exp_mx.
+Qed.
 
 (* see table 1.2 of handbook of robotics *)
 Definition angle_of_rotation (M : 'M[R]_3) := acos ((\tr M - 1) / 2%:R).
