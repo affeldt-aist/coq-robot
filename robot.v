@@ -3243,12 +3243,34 @@ rewrite -(addrC (cos a)) !addrA -(addrC (cos a)) subrr add0r.
 by rewrite addrC addrA subrr add0r mulrC.
 Qed.
 
+Definition half (a : angle R) : angle R.
+apply (@Angle R (Num.sqrt ((1 + cos a)/2%:R) +i* Num.sqrt ((1 - cos a)/2%:R))).
+rewrite normc_def /=.
+rewrite sqr_sqrtr; last first.
+  rewrite divr_ge0 => //; last by rewrite ler0n.
+  rewrite -ler_subl_addr add0r.
+  apply: (ler_trans _ (cos_max a)).
+  admit.
+rewrite sqr_sqrtr; last first.
+  rewrite divr_ge0 => //; last by rewrite ler0n.
+  by rewrite subr_ge0 (ler_trans (ler_norm _) (cos_max _)).
+by rewrite mulrC (mulrC (1 - cos a)) -mulrDr addrCA addrK -mulr2n mulVr ?unitfE ?pnatr_eq0 // sqrtr1.
+Admitted.
+
+Axiom halfP : forall (a : angle R), half a + half a = a.
+
 (* TODO: *)
 Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> 
   \det (exp_mx phi (skew_mx w)) = 1.
 Proof.
 move=> w1.
-Admitted.
+move: (exp_mx_is_ortho (half phi) w1).
+move/orthogonal_det.
+move/eqP.
+rewrite -(@eqr_expn2 _ 2%N) // expr1n.
+rewrite norm2 expr2 -det_mulmx mulmxE mul_exp_mx // => /eqP.
+by rewrite halfP.
+Qed.
 
 Lemma eigenvalue_exp_mx (a : angle R) (w : 'rV[R]_3) : norm w = 1 ->
   eigenvalue (map_mx (fun x => x%:C) (exp_mx a (skew_mx w))) =1 
