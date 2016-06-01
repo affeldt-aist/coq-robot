@@ -3332,10 +3332,8 @@ Proof. by rewrite trace_exp_mx_skew_mx // norm_axis. Qed.
 Lemma rodrigues_mx_is_O r : norm (aaxis r) = 1 -> rodrigues_mx r \in 'O_3[R].
 Proof.
 move=> axis1.
-rewrite /rodrigues_mx orthogonalE tr_exp_mx {2}(eqP (anti_skew _)) linearN /= trmxK inv_exp_mx //.
-skew_mx4
-
-by rewrite exprS cube_skew -scalerCA -scalerAl -expr2 axis1 expr1n scaleN1r.
+rewrite /rodrigues_mx orthogonalE tr_exp_mx {2}(eqP (anti_skew _)) linearN /= trmxK.
+by rewrite inv_exp_mx // skew_mx4.
 Qed.
 
 Lemma det_rodrigues_mx r : norm (aaxis r) = 1 -> \det (rodrigues_mx r) = 1.
