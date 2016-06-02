@@ -1173,6 +1173,9 @@ Canonical angle_choiceType := ChoiceType angle angle_choiceMixin.
 Definition angle_ZmodMixin := ZmodMixin add_angleA add_angleC add_0angle add_Nangle.
 Canonical angle_ZmodType := ZmodType angle angle_ZmodMixin.
 
+Lemma add_angleE (a b : angle) : a + b = add_angle a b.
+Proof. done. Qed.
+
 Definition cos a := Re (expi a).
 Definition sin a := Im (expi a).
 Definition tan a := sin a / cos a.
@@ -3243,28 +3246,124 @@ rewrite -(addrC (cos a)) !addrA -(addrC (cos a)) subrr add0r.
 by rewrite addrC addrA subrr add0r mulrC.
 Qed.
 
-Definition half (a : angle R) : angle R.
-apply (@Angle R (Num.sqrt ((1 + cos a)/2%:R) +i* Num.sqrt ((1 - cos a)/2%:R))).
-rewrite normc_def /=.
-rewrite sqr_sqrtr; last first.
-  rewrite divr_ge0 => //; last by rewrite ler0n.
-  rewrite -ler_subl_addr add0r.
-  apply: (ler_trans _ (cos_max a)).
-  admit.
-rewrite sqr_sqrtr; last first.
-  rewrite divr_ge0 => //; last by rewrite ler0n.
-  by rewrite subr_ge0 (ler_trans (ler_norm _) (cos_max _)).
-by rewrite mulrC (mulrC (1 - cos a)) -mulrDr addrCA addrK -mulr2n mulVr ?unitfE ?pnatr_eq0 // sqrtr1.
-Admitted.
+Lemma Re_half_anglec (x : R[i]) : `|x| = 1 -> 0 <= 1 + Re x.
+Proof.
+move=> x1; rewrite -ler_subl_addr add0r.
+suff : `| Re x |%:C <= `|x|; last by rewrite normc_ge_Re.
+rewrite x1 -lecR; apply: ler_trans; by rewrite lecR ler_normr lerr orbT.
+Qed.
 
-Axiom halfP : forall (a : angle R), half a + half a = a.
+Lemma Im_half_anglec (x : R[i]) : `|x| = 1 -> 0 <= 1 - Re x.
+Proof.
+move=> x1; rewrite subr_ge0.
+suff : `| Re x |%:C <= `|x|; last by rewrite normc_ge_Re.
+rewrite x1 -lecR; apply: ler_trans; by rewrite lecR ler_normr lerr.
+Qed.
+
+Lemma eq_angle (a b : angle R) : (a == b) = ((cos a == cos b) && (sin a == sin b)).
+Proof.
+case: a b => [[a b] ab] [[c d] cd].
+rewrite /cos /= /sin /=.
+apply/idP/idP; first by case/eqP => -> ->; rewrite 2!eqxx.
+case/andP => /eqP ac /eqP bd.
+apply/eqP/val_inj => /=; by rewrite ac bd.
+Qed.
+
+Definition half_anglec (x : R[i]) :=
+  if 0 <= Im x then 
+    Num.sqrt ((1 + Re x) / 2%:R) +i* Num.sqrt ((1 - Re x) / 2%:R)
+  else
+    Num.sqrt ((1 + Re x) / 2%:R) -i* Num.sqrt ((1 - Re x) / 2%:R).
+
+Lemma norm_half_anglec (x : R[i]) : `|x| = 1 -> `|half_anglec x| == 1.
+Proof.
+move=> x1.
+rewrite /half_anglec.
+case: ifP => a0.
+  rewrite normc_def /= sqr_sqrtr; last first.
+    by rewrite divr_ge0 // ?Re_half_anglec // ler0n.
+  rewrite sqr_sqrtr; last first.
+    by rewrite divr_ge0 // ?Im_half_anglec // ler0n.
+  by rewrite mulrC (mulrC (1 - Re x)) -mulrDr addrCA addrK -mulr2n mulVr ?unitfE ?pnatr_eq0 // sqrtr1.
+rewrite normc_def /= sqr_sqrtr; last first.
+  by rewrite divr_ge0 // ?Re_half_anglec // ler0n.
+rewrite sqrrN sqr_sqrtr; last first.
+  by rewrite divr_ge0 // ?Im_half_anglec // ler0n.
+by rewrite mulrC (mulrC (1 - Re x)) -mulrDr addrCA addrK -mulr2n mulVr ?unitfE ?pnatr_eq0 // sqrtr1.
+Qed.
+
+Definition half_angle (x : angle R) := Angle (norm_half_anglec (normr_expi x)).
+
+Lemma halfP (a : angle R) : half_angle a + half_angle a = a.
+Proof.
+apply/eqP.
+rewrite eq_angle; apply/andP; split.
+  rewrite /cos /= add_angleE /add_angle /half_angle /= argK //.
+    rewrite /half_anglec. simpc. rewrite /=.
+
+    case: ifP => a0 /=.  
+
+    rewrite -2!expr2 sqr_sqrtr; last first.
+      by rewrite divr_ge0 // ?Re_half_anglec // ?normr_expi // ler0n.
+    rewrite sqr_sqrtr; last first.
+      by rewrite divr_ge0 // ?Im_half_anglec // ?normr_expi // ler0n.
+    rewrite mulrC (mulrC (_ - _)) -mulrBr opprB addrC addrA subrK -mulr2n.
+    by rewrite -(mulr_natl (Re _)) mulrA mulVr ?mul1r // unitfE pnatr_eq0.
+
+    rewrite mulNr mulrN opprK.
+    rewrite -2!expr2 sqr_sqrtr; last first.
+      by rewrite divr_ge0 // ?Re_half_anglec // ?normr_expi // ler0n.
+    rewrite sqr_sqrtr; last first.
+      by rewrite divr_ge0 // ?Im_half_anglec // ?normr_expi // ler0n.
+    rewrite mulrC (mulrC (_ - _)) -mulrBr opprB addrC addrA subrK -mulr2n.
+    by rewrite -(mulr_natl (Re _)) mulrA mulVr ?mul1r // unitfE pnatr_eq0.
+
+  by rewrite normrM (eqP (norm_half_anglec (normr_expi _))) mulr1.
+rewrite /sin /= add_angleE /add_angle /half_angle /= argK //.
+  rewrite /half_anglec. simpc. rewrite /=.
+
+  case: ifP => a0 /=.
+
+  rewrite mulrC -mulr2n -mulr_natl sqrtrM; last by rewrite Im_half_anglec // normr_expi.
+  rewrite mulrAC sqrtrM; last by rewrite Re_half_anglec // normr_expi.
+  rewrite -!mulrA -sqrtrM; last by rewrite invr_ge0 ler0n.
+  rewrite -expr2 sqrtr_sqr !mulrA mulrC normrV ?unitfE ?pnatr_eq0 //.
+  rewrite normr_nat !mulrA mulVr ?mul1r ?unitfE ?pnatr_eq0 //.
+  rewrite -sqrtrM; last by rewrite Im_half_anglec // normr_expi.
+  rewrite -subr_sqr expr1n.
+  rewrite -(@eqr_expn2 _ 2%N) //; last by rewrite sqrtr_ge0.
+  rewrite sqr_sqrtr //; last first.
+
+    rewrite subr_ge0.
+    admit. (* ok *)
+  admit.
+  
+  rewrite mulrN mulNr -opprB opprK.
+  rewrite eqr_oppLR.
+
+  rewrite mulrC -mulr2n -mulr_natl sqrtrM; last by rewrite Re_half_anglec // normr_expi.
+  rewrite mulrAC sqrtrM; last by rewrite Im_half_anglec // normr_expi.
+  rewrite -!mulrA -sqrtrM; last by rewrite invr_ge0 ler0n.
+  rewrite -expr2 sqrtr_sqr !mulrA mulrC normrV ?unitfE ?pnatr_eq0 //.
+  rewrite normr_nat !mulrA mulVr ?mul1r ?unitfE ?pnatr_eq0 //.
+  rewrite -sqrtrM; last by rewrite Re_half_anglec // normr_expi.
+  rewrite mulrC -subr_sqr expr1n.
+  rewrite -(@eqr_expn2 _ 2%N) //; last 2 first.
+    by rewrite sqrtr_ge0.
+    admit.
+  rewrite sqr_sqrtr //; last first.
+    admit.
+  rewrite sqrrN.
+  admit. (* ok *)
+by rewrite normrM (eqP (norm_half_anglec (normr_expi _))) mulr1.
+Admitted.
 
 (* TODO: *)
 Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> 
   \det (exp_mx phi (skew_mx w)) = 1.
 Proof.
 move=> w1.
-move: (exp_mx_is_ortho (half phi) w1).
+move: (exp_mx_is_ortho (half_angle phi) w1).
 move/orthogonal_det.
 move/eqP.
 rewrite -(@eqr_expn2 _ 2%N) // expr1n.
