@@ -55,14 +55,17 @@ Require Import fingroup perm.
  21. section kinematics chains
  22. section symmetric/antisymmetry/skew (properties of skew matrices)
      (sample lemma: eigenvalues of skew matrices)
- 23. section exponential_map (properties of exponential map)
-     (sample lemma: inverse of the exponential map,
+ 23. section exponential_coordinates_rotation
+     specialized exponential map
+     (sample lemmas: inverse of the exponential map,
        exponential map of a skew matrix is a rotation)
+     (NB: see below for a more generic definition of the exponential map (section twist))
  24. section rodrigues
      (sample lemmas: equivalence exponential map <-> Rodrigues' formula)
      (TODO: prove that rotations can always be expressed as exponential maps)
- 25. section twist (TODO)
- 26. section quaternion (NB: in progress)
+ 25. section exponential_map (TODO)
+ 26. section exponential_coordinates_rigid (NB: in progress)
+ 27. section quaternion (NB: in progress)
 *)
 
 Set Implicit Arguments.
@@ -1265,16 +1268,22 @@ case: a => -[a b] ab1; rewrite /cos /sin /= => a1; move: ab1.
 rewrite {}a1 normc_def /= expr0n add0r => /eqP[]; by rewrite sqrtr_sqr.
 Qed.
 
-Lemma cos_max (a : angle) : `| cos a | <= 1.
+Lemma cos_max a : `| cos a | <= 1.
 Proof. rewrite -lecR (ler_trans (normc_ge_Re _)) //; by case: a => ? /= /eqP ->. Qed. 
 
 Lemma cos2Dsin2 a : (cos a) ^+ 2 + (sin a) ^+ 2 = 1.
 Proof.
 move: (add_Re2_Im2 (expi a)).
-by rewrite normr_expi expr1n => /(congr1 (fun x => Re x)) => /= <-.
+by rewrite normr_expi expr1n => /(congr1 (@Re R)) => /= <-.
 Qed.
 
-Lemma abs_sin (a : angle) : `| sin a | = Num.sqrt (1 - cos a ^+ 2).
+Lemma sin2cos2 a : sin a ^+ 2 = 1 - cos a ^+ 2.
+Proof. move/eqP: (cos2Dsin2 a); by rewrite eq_sym addrC -subr_eq => /eqP. Qed.
+
+Lemma cos2sin2 a : cos a ^+ 2 = 1 - sin a ^+ 2.
+Proof. move/eqP: (cos2Dsin2 a); by rewrite eq_sym -subr_eq => /eqP. Qed.
+
+Lemma abs_sin a : `| sin a | = Num.sqrt (1 - cos a ^+ 2).
 Proof.
 apply/eqP; rewrite -(@eqr_expn2 _ 2) //; last by rewrite sqrtr_ge0.
 rewrite -normrX ger0_norm; last by rewrite sqr_ge0.
@@ -1320,8 +1329,7 @@ Proof. by rewrite /cos -arg1 argK // ger0_norm // ler01. Qed.
 
 Lemma sin0 : sin 0 = 0.
 Proof.
-move: (cos2Dsin2 0); rewrite cos0 expr2 mulr1 => /eqP.
-by rewrite eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
+by move/eqP: (sin2cos2 0); rewrite cos0 (expr2 1) mulr1 subrr sqrf_eq0 => /eqP.
 Qed.
 
 Lemma expi0 : expi 0 = 1.
@@ -1359,15 +1367,15 @@ rewrite expr1n sqr_sqrtr; last by rewrite addr_ge0 // ?ler01 // sqr_ge0.
 by move/eqP; rewrite addr0 -{1}(@expr1n _ 2%N) -norm2 eqr_expn2 // ?ler01 // => /eqP.
 Qed.
 
-Lemma arg0_inv (a : R[i]) : `|a| = 1 -> arg a = 0 -> a = 1.
+Lemma arg0_inv (x : R[i]) : `|x| = 1 -> arg x = 0 -> x = 1.
 Proof.
-case: a => x y a1 H.
+case: x => x y a1 H.
 by rewrite -expi0 -H expi_arg ?a1 ?divr1 // -normr_eq0 a1 oner_eq0.
 Qed.
 
-Lemma argpi_inv (a : R[i]) : `|a| = 1 -> arg a = pi -> a = -1.
+Lemma argpi_inv (x : R[i]) : `|x| = 1 -> arg x = pi -> x = -1.
 Proof.
-case: a => x y a1 H.
+case: x => x y a1 H.
 by rewrite -expipi -H expi_arg ?a1 ?divr1 // -normr_eq0 a1 oner_eq0.
 Qed.
 
@@ -1403,8 +1411,8 @@ Qed.
 Lemma cosK a : a \in Opi_closed -> acos (cos a) = a.
 Proof.
 rewrite inE => adom.
-rewrite /acos /cos /= expi_cos_sin /= -(cos2Dsin2 a) addrAC subrr add0r.
-by rewrite sqrtr_sqr /= ger0_norm // -expi_cos_sin expiK.
+rewrite /acos /cos /= expi_cos_sin /= -sin2cos2 sqrtr_sqr /=.
+by rewrite ger0_norm // -expi_cos_sin expiK.
 Qed.
 
 (*cancel asin sin*)
@@ -1524,9 +1532,7 @@ case: ifPn => a0 /=.
   rewrite -sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
   rewrite -subr_sqr expr1n.
   rewrite -(@eqr_expn2 _ 2%N) //; last by rewrite sqrtr_ge0.
-  rewrite sqr_sqrtr //; last first.
-    by rewrite subr_ge0 -(cos2Dsin2 a) /cos ler_paddr // sqr_ge0.
-  by rewrite -(cos2Dsin2 a) /cos addrAC subrr add0r eqxx.
+  by rewrite -sin2cos2 sqr_sqrtr // sqr_ge0.
 rewrite mulrN mulNr -opprB opprK eqr_oppLR.
 rewrite mulrC -mulr2n -mulr_natl sqrtrM; last by rewrite Re_half_anglec // normr_expi.
 rewrite mulrAC sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
@@ -1538,9 +1544,7 @@ rewrite mulrC -subr_sqr expr1n.
 rewrite -(@eqr_expn2 _ 2%N) //; last 2 first.
   by rewrite sqrtr_ge0.
   by rewrite ltrW // oppr_gt0 ltrNge.
-rewrite sqr_sqrtr //; last first.
-  by rewrite -(cos2Dsin2 a) addrAC subrr add0r sqr_ge0.
-by rewrite sqrrN -(cos2Dsin2 a) addrAC subrr add0r.
+by rewrite -sin2cos2 sqrrN sqr_sqrtr // sqr_ge0.
 Qed.
 
 Definition vec_angle v w : angle := arg (v *d w +i* norm (v *v w)).
@@ -1761,9 +1765,7 @@ Lemma cos_vec_angle a b : norm a != 0 -> norm b != 0 ->
 Proof.
 move=> Ha Hb.
 rewrite norm_crossmul mulrAC divrr // ?mul1r; last by rewrite unitfE mulf_neq0.
-rewrite norm2.
-move: (cos2Dsin2 (vec_angle a b)) => /eqP; rewrite eq_sym -subr_eq => /eqP ->.
-by rewrite sqrtr_sqr.
+by rewrite norm2 -cos2sin2 sqrtr_sqr.
 Qed.
 
 Lemma orth_preserves_vec_angle M v w : M \is 'O_3[R] ->
@@ -1977,8 +1979,8 @@ suff : Ry a *m (Ry a)^T = 1 by move=> <-.
 rewrite /Ry triple_prod_matE.
 set row1 := row3 _ _ _. set row2 := row3 _ _ _. set row3 := row3 _ _ _.
 rewrite (tr_col_mx row1) (mul_col_row row1 _ row1^T).
-  rewrite (mx11_scalar (row1 *m _)) -/(row1 *d row1) dotmulE sum3E.
-  rewrite ![row1 _ _]mxE /= mulr0 addr0 -2!expr2 exprnP cos2Dsin2.
+rewrite (mx11_scalar (row1 *m _)) -/(row1 *d row1) dotmulE sum3E.
+rewrite ![row1 _ _]mxE /= mulr0 addr0 -2!expr2 exprnP cos2Dsin2.
 have -> : row1 *m (col_mx row2 row3)^T = 0.
   rewrite tr_col_mx mul_mx_row (mx11_scalar (_ *m _)) -/(row1 *d row2) dotmulE sum3E.
   rewrite (mx11_scalar (_ *m _)) -/(row1 *d row3) dotmulE sum3E.
@@ -3257,7 +3259,7 @@ Record joint := mkJoint {
 
 Record link := mkLink {
   length : R ;
-  twist : angle R }.
+  link_angle : angle R }.
 
 Variable n' : nat.
 Let n := n'.+1.
@@ -3780,18 +3782,20 @@ Qed.
 
 End skew.
 
-Section exponential_map.
+Section exponential_coordinates_rotation.
 
 Variable R : rcfType.
 
-Definition exp_mx (phi : angle R) (w : 'M[R]_3) : 'M_3 :=
+Definition exp_rot (phi : angle R) (w : 'M[R]_3) : 'M_3 :=
   1 + sin phi *: w + (1 - cos phi) *: w ^+ 2.
 
-Lemma mul_exp_mx (a b : angle R) u : u ^+ 3 = - u ->
-  exp_mx a u * exp_mx b u = exp_mx (a + b) u.
+Local Notation "'`e^(' a ',' w ')'" := (exp_rot a w).
+
+Lemma mul_exp_rot (a b : angle R) u : u ^+ 3 = - u ->
+  `e^(a, u) * `e^(b, u) = `e^(a + b, u).
 Proof.
 move=> cube_u.
-rewrite /exp_mx sinD cosD !mulrDr !mulrDl. 
+rewrite /exp_rot sinD cosD !mulrDr !mulrDl.
 simp => /=.
 rewrite -scalerCA -2!scalerAl -expr2.
 rewrite -scalerAl -scalerAr -exprSr cube_u (scalerN (sin b) u) (scalerN (1 - cos a)).
@@ -3816,36 +3820,35 @@ rewrite -(addrC (cos a)) !addrA -(addrC (cos a)) subrr add0r.
 by rewrite addrC addrA subrr add0r mulrC.
 Qed.
 
-Lemma tr_exp_mx phi M : (exp_mx phi M)^T = exp_mx phi M^T.
+Lemma tr_exp_rot a M : `e^(a, M)^T = `e^(a, M^T).
 Proof.
-by rewrite /exp_mx !linearD /= !linearZ /= trmx1 expr2 trmx_mul expr2.
+by rewrite /exp_rot !linearD /= !linearZ /= trmx1 expr2 trmx_mul expr2.
 Qed.
 
-Lemma inv_exp_mx phi M : M ^+ 4 = - M ^+ 2 -> exp_mx phi M * exp_mx phi (- M) = 1.
+Lemma inv_exp_rot a M : M ^+ 4 = - M ^+ 2 -> `e^(a, M) * `e^(a, -M) = 1.
 Proof.
 move=> aM.
-case/boolP : (cos phi == 1) => [/eqP cphi|cphi].
-  by rewrite /exp_mx cphi subrr 2!scale0r !addr0 scalerN (cos1sin0 cphi) scale0r addr0 subr0 mulr1.
-rewrite /exp_mx !mulrDr !mulrDl !mulr1 !mul1r -[RHS]addr0 -!addrA; congr (_ + _).
+case/boolP : (cos a == 1) => [/eqP cphi|cphi].
+  by rewrite /exp_rot cphi subrr 2!scale0r !addr0 scalerN (cos1sin0 cphi) scale0r addr0 subr0 mulr1.
+rewrite /exp_rot !mulrDr !mulrDl !mulr1 !mul1r -[RHS]addr0 -!addrA; congr (_ + _).
 rewrite !addrA (_ : (- M) ^+ 2 = M ^+ 2); last by rewrite expr2 mulNr mulrN opprK -expr2.
 rewrite -!addrA (addrCA (_ *: M ^+ 2)) !addrA scalerN subrr add0r.
-rewrite (_ : (1 - _) *: _ * _ = - (sin phi *: M * ((1 - cos phi) *: M ^+ 2))); last first.
+rewrite (_ : (1 - _) *: _ * _ = - (sin a *: M * ((1 - cos a) *: M ^+ 2))); last first.
   rewrite mulrN; congr (- _).
   rewrite -2!scalerAr -!scalerAl -exprS -exprSr 2!scalerA; congr (_ *: _).
   by rewrite mulrC.
-rewrite -!addrA (addrCA (- (sin phi *: _ * _))) !addrA subrK.
+rewrite -!addrA (addrCA (- (sin a *: _ * _))) !addrA subrK.
 rewrite mulrN -scalerAr -scalerAl -expr2 scalerA -expr2.
 rewrite -[in X in _ - _ + _ + X = _]scalerAr -scalerAl -exprD scalerA -expr2.
-rewrite -scalerBl -scalerDl.
-move: (cos2Dsin2 phi) => /eqP; rewrite eq_sym addrC -subr_eq => /eqP <-.
-rewrite -{2}(expr1n _ 2) subr_sqr -{1 3}(mulr1 (1 - cos phi)) -mulrBr -mulrDr.
+rewrite -scalerBl -scalerDl sin2cos2.
+rewrite -{2}(expr1n _ 2) subr_sqr -{1 3}(mulr1 (1 - cos a)) -mulrBr -mulrDr.
 rewrite opprD addrA subrr add0r -(addrC 1) -expr2 -scalerDr.
 apply/eqP; rewrite scaler_eq0 sqrf_eq0 subr_eq0 eq_sym (negbTE cphi) /=.
 by rewrite aM subrr.
 Qed.
 
-Lemma trace_exp_mx_skew_mx (phi : angle R) w : norm w = 1 ->
-  \tr (exp_mx phi (skew_mx w)) = 1 + 2%:R * cos phi.
+Lemma trace_exp_rot_skew_mx (a : angle R) w : norm w = 1 ->
+  \tr `e^(a, skew_mx w) = 1 + 2%:R * cos a.
 Proof.
 move=> w1.
 rewrite 2!mxtraceD !mxtraceZ /= mxtrace1.
@@ -3855,18 +3858,18 @@ by rewrite mulrDl addrA mul1r -natrB // mulrC mulrN -mulNr opprK.
 Qed.
 
 (* see table 1.1 of handbook of robotics *)
-Lemma exp_mx_skew_mxE phi (w : 'rV[R]_3) : norm w = 1 ->
-  let va := 1 - cos phi in let ca := cos phi in let sa := sin phi in
-  exp_mx phi (skew_mx w) = triple_prod_mat
-  (\row_k [eta \0 with 0 |-> w 0 0 ^+2 * va + ca, 
-                       1 |-> w 0 0 * w 0 1 * va - w 0 2%:R * sa, 
-                       2%:R |-> w 0 0 * w 0 2%:R * va + w 0 1 * sa] k)
-  (\row_k [eta \0 with 0 |-> w 0 0 * w 0 1 * va + w 0 2%:R * sa, 
-                       1 |-> w 0 1 ^+2 * va + ca, 
-                       2%:R |-> w 0 1 * w 0 2%:R * va - w 0 0 * sa] k)
-  (\row_k [eta \0 with 0 |-> w 0 0 * w 0 2%:R * va - w 0 1 * sa, 
-                       1 |-> w 0 1 * w 0 2%:R * va + w 0 0 * sa, 
-                       2%:R |-> w 0 2%:R ^+2 * va + ca] k).
+Lemma exp_rot_skew_mxE a (w : 'rV[R]_3) : norm w = 1 ->
+  let va := 1 - cos a in let ca := cos a in let sa := sin a in
+  `e^(a, skew_mx w) = triple_prod_mat
+  (row3 (w 0 0 ^+2 * va + ca)
+        (w 0 0 * w 0 1 * va - w 0 2%:R * sa)
+        (w 0 0 * w 0 2%:R * va + w 0 1 * sa))
+  (row3 (w 0 0 * w 0 1 * va + w 0 2%:R * sa)
+        (w 0 1 ^+2 * va + ca)
+        (w 0 1 * w 0 2%:R * va - w 0 0 * sa))
+  (row3 (w 0 0 * w 0 2%:R * va - w 0 1 * sa)
+        (w 0 1 * w 0 2%:R * va + w 0 0 * sa)
+        (w 0 2%:R ^+2 * va + ca)).
 Proof.
 move=> w1 va ca sa.
 apply/matrixP => i j.
@@ -3913,53 +3916,54 @@ rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
 by rewrite /va opprB addrC subrK.
 Qed.
 
-Definition exp_skew_mx_eigenvalues (phi : angle R) : seq R[i] := 
-  [:: 1; expi phi; expi (- phi)].
+Definition exp_rot_skew_mx_eigenvalues (a : angle R) : seq R[i] := 
+  [:: 1; expi a; expi (- a)].
 
-Lemma exp_mx_is_ortho (a : angle R) (w : 'rV_3) : norm w = 1 ->
-  exp_mx a (skew_mx w) \is 'O_3[R].
+Lemma exp_rot_is_ortho (a : angle R) w : norm w = 1 ->
+  `e^(a, skew_mx w) \is 'O_3[R].
 Proof.
 move=> w1.
-rewrite orthogonalE tr_exp_mx.
+rewrite orthogonalE tr_exp_rot.
 move: (anti_skew w); rewrite antiE -eqr_oppLR => /eqP <-.
-by rewrite inv_exp_mx // skew_mx4. 
+by rewrite inv_exp_rot // skew_mx4. 
 Qed.
 
-Lemma rank_exp_mx (a : angle R) (w : 'rV_3) : norm w = 1 ->
-  \rank (exp_mx a (skew_mx w)) = 3.
+Lemma rank_exp_rot (a : angle R) w : norm w = 1 ->
+  \rank `e^(a, skew_mx w) = 3.
 Proof.
-move=> w1; by rewrite mxrank_unit // orthogonal_unit // exp_mx_is_ortho.
+move=> w1; by rewrite mxrank_unit // orthogonal_unit // exp_rot_is_ortho.
 Qed.
 
-Lemma det_exp_mx0 w : norm w = 1 -> \det (exp_mx 0 (skew_mx w)) = 1.
-Proof. move=> w1; by rewrite /exp_mx sin0 cos0 subrr 2!scale0r 2!addr0 det1. Qed.
+Lemma det_exp_rot0 w : norm w = 1 -> \det `e^(0, skew_mx w) = 1.
+Proof. move=> w1; by rewrite /exp_rot sin0 cos0 subrr 2!scale0r 2!addr0 det1. Qed.
 
-Lemma det_exp_mx (phi : angle R) w : norm w = 1 -> 
-  \det (exp_mx phi (skew_mx w)) = 1.
+Lemma det_exp_rot (a : angle R) w : norm w = 1 -> \det `e^(a, skew_mx w) = 1.
 Proof.
 move=> w1.
-move: (exp_mx_is_ortho (half_angle phi) w1).
+move: (exp_rot_is_ortho (half_angle a) w1).
 move/orthogonal_det/eqP.
 rewrite -(@eqr_expn2 _ 2%N) // expr1n norm2 expr2 -det_mulmx.
-rewrite mulmxE mul_exp_mx; last by rewrite cube_skew w1 expr1n scaleN1r.
+rewrite mulmxE mul_exp_rot; last by rewrite cube_skew w1 expr1n scaleN1r.
 move/eqP; by rewrite halfP.
 Qed.
 
-Lemma eigenvalue_exp_mx (a : angle R) (w : 'rV[R]_3) : norm w = 1 ->
-  eigenvalue (map_mx (fun x => x%:C) (exp_mx a (skew_mx w))) =1 
-    [pred k | k \in exp_skew_mx_eigenvalues a].
+Lemma eigenvalue_exp_rot (a : angle R) w : norm w = 1 ->
+  eigenvalue (map_mx (fun x => x%:C) `e^(a, skew_mx w)) =1
+    [pred k | k \in exp_rot_skew_mx_eigenvalues a].
 Proof.
 move=> u1 /= k.
 rewrite inE eigenvalue_root_char -map_char_poly.
 Abort.
 
-Lemma trace_sqr_exp_mx_skew_mx (phi : angle R) w : norm w = 1 ->
-  \tr (exp_mx phi (skew_mx w) ^+ 2) = - (1 + 2%:R * cos phi) ^+ 2(*?*).
+Lemma trace_sqr_exp_rot_skew_mx (phi : angle R) w : norm w = 1 ->
+  \tr `e^(phi, (skew_mx w) ^+ 2) = - (1 + 2%:R * cos phi) ^+ 2(*?*).
 Proof.
 move=> w1.
 Abort.
 
-End exponential_map.
+End exponential_coordinates_rotation.
+
+Notation "'`e^(' a ',' w ')'" := (exp_rot a w).
 
 Section Rodrigues.
 
@@ -4003,15 +4007,15 @@ Lemma aangle_of (a : angle R) (v : vector) : aangle (angle_axis_of a v) = a.
 Proof. by rewrite /angle_axis_of /aangle val_insubd /= fun_if if_same. Qed.
 
 Coercion rodrigues_mx r := 
-  let (phi, w) := (aangle r, aaxis r) in exp_mx phi (skew_mx w).
+  let (a, w) := (aangle r, aaxis r) in `e^(a, skew_mx w).
 
 Definition rodrigues (x : vector) r := 
-  let (phi, w) := (aangle r, aaxis r) in
-  cos phi *: x + (1 - cos phi) * (x *d w) *: w + sin phi *: (x *v w).
+  let (a, w) := (aangle r, aaxis r) in
+  cos a *: x + (1 - cos a) * (x *d w) *: w + sin a *: (x *v w).
 
 Lemma rodriguesP u r : rodrigues u r = u *m r.
 Proof.
-rewrite /rodrigues; set phi := aangle _; set w := aaxis _.
+rewrite /rodrigues; set a := aangle _; set w := aaxis _.
 rewrite addrAC !mulmxDr mulmx1 -!scalemxAr mulmxA !skew_mxE.
 rewrite [in X in _ = _ + _ + X]crossmulC scalerN.
 rewrite double_crossmul dotmulvv norm_axis [_ ^+ _]expr1n scale1r.
@@ -4022,40 +4026,40 @@ by rewrite addrAC subrr add0r.
 Qed.
 
 Lemma trace_rodrigues r : \tr (rodrigues_mx r) = 1 + 2%:R * cos (aangle r).
-Proof. by rewrite trace_exp_mx_skew_mx // norm_axis. Qed.
+Proof. by rewrite trace_exp_rot_skew_mx // norm_axis. Qed.
 
 Lemma rodrigues_mx_is_O r : norm (aaxis r) = 1 -> rodrigues_mx r \in 'O_3[R].
 Proof.
 move=> axis1.
-rewrite /rodrigues_mx orthogonalE tr_exp_mx {2}(eqP (anti_skew _)) linearN /= trmxK.
-by rewrite inv_exp_mx // skew_mx4.
+rewrite /rodrigues_mx orthogonalE tr_exp_rot {2}(eqP (anti_skew _)) linearN /= trmxK.
+by rewrite inv_exp_rot // skew_mx4.
 Qed.
 
 Lemma det_rodrigues_mx r : norm (aaxis r) = 1 -> \det (rodrigues_mx r) = 1.
 Proof.
-move=> ?; by rewrite /rodrigues_mx det_exp_mx.
+move=> ?; by rewrite /rodrigues_mx det_exp_rot.
 Qed.
 
 (* see table 1.2 of handbook of robotics *)
 Definition angle_of_rotation (M : 'M[R]_3) := acos ((\tr M - 1) / 2%:R).
 Definition axis_of_rotation (M : 'M[R]_3) : 'rV[R]_3 := 
   let phi := angle_of_rotation M in 
-  (1 / (2%:R * sin phi) *: \row_i [eta \0 with 
-    0 |-> M 2%:R 1 - M 1 2%:R, 1 |-> M 0 2%:R - M 2%:R 0, 2%:R |-> M 1 0 - M 0 1] i).
+  1 / (2%:R * sin phi) *:
+    (row3 (M 2%:R 1 - M 1 2%:R) (M 0 2%:R - M 2%:R 0) (M 1 0 - M 0 1)).
 Definition angle_axis_of_rotation (M : 'M[R]_3) :=
   angle_axis_of (angle_of_rotation M) (axis_of_rotation M).
 
 Definition log_mx (M : 'M[R]_3) : angle R * 'rV[R]_3 :=
   (angle_of_rotation M, axis_of_rotation M).
 
-Lemma log_exp_mx (phi : angle R) (w : 'rV[R]_3) : 
-  sin phi != 0 -> phi \in Opi_closed R -> norm w = 1 ->
-  log_mx (exp_mx phi (skew_mx w)) = (phi, w).
+Lemma log_exp_rot (a : angle R) (w : 'rV[R]_3) :
+  sin a != 0 -> a \in Opi_closed R -> norm w = 1 ->
+  log_mx `e^(a, skew_mx w) = (a, w).
 Proof.
 move=> sphi phiOpi w1 [:Hphi].
 congr pair.
   abstract: Hphi.
-  rewrite /angle_of_rotation trace_exp_mx_skew_mx // addrAC subrr add0r.
+  rewrite /angle_of_rotation trace_exp_rot_skew_mx // addrAC subrr add0r.
   by rewrite mulrC mulrA mulVr ?mul1r ?cosK // unitfE pnatr_eq0.
 apply/rowP => i.
 rewrite 2!mxE /= Hphi => [:twosphi].
@@ -4077,10 +4081,9 @@ rewrite mulrN opprK -mulr2n -(mulr_natl (_ * _) 2).
 by rewrite (mulrA 2%:R) div1r mulrCA mulrA divrr ?mul1r ?mxE.
 Qed.
 
-Definition unskew (M : 'M[R]_3) : 'rV[R]_3 :=
-  \row_k [eta \0 with 0 |-> - M 1 2%:R, 1 |-> M 0 2%:R, 2%:R|-> - M 0 1] k.
+Definition unskew (M : 'M[R]_3) := row3 (- M 1 2%:R) (M 0 2%:R) (- M 0 1).
 
-Lemma unskew_skew u : unskew (skew_mx u) = u.
+Lemma unskew_skew w : unskew (skew_mx w) = w.
 Proof.
 apply/rowP => i; rewrite 3!mxE /=.
 case: ifPn => [/eqP ->|]; first by rewrite crossmulE /= !mxE /=; simp => /=; rewrite subr0.
@@ -4124,18 +4127,18 @@ rewrite ifnot0 => /orP [] /eqP -> //=; by rewrite mulrN.
 Qed.
 
 Definition ln_mx (M : 'M[R]_3) : angle R * 'rV[R]_3 :=
-  let phi := acos ((\tr M - 1) /2%:R) in
-  (phi, 1 / (2%:R * sin phi) *: unskew (M - M^T)).
+  let a := acos ((\tr M - 1) /2%:R) in
+  (a, 1 / (2%:R * sin a) *: unskew (M - M^T)).
 
 Lemma exp_ln M :
-  let: (phi, w) := ln_mx M in
-  sin phi != 0 ->
-  exp_mx phi (skew_mx w) = M.
+  let: (a, w) := ln_mx M in
+  sin a != 0 ->
+  `e^(a, skew_mx w) = M.
 Proof.
 move H : (ln_mx M) => h.
 case: h => phi w in H *.
 move=> sphi.
-rewrite /exp_mx.
+rewrite /exp_rot.
 case : H => H1 H2.
 rewrite -H2 H1 skew_mxZ.
 rewrite (_ : 1 / (2%:R * sin phi) = (1 / sin phi) * (1 / 2 %:R)); last first.
@@ -4182,7 +4185,7 @@ rewrite aaxis_of1; last by done.
 by rewrite /exp_mx.  
 *)
 
-rewrite exp_mx_skew_mxE; last by rewrite /w aaxis_of1.
+rewrite exp_rot_skew_mxE; last by rewrite /w aaxis_of1.
 have antiM : antip M = sin phi *: skew_mx w.
   apply/antiP.
   rewrite antip_is_so //.
@@ -4205,8 +4208,8 @@ have antiM : antip M = sin phi *: skew_mx w.
     by rewrite aangle_of mulVr // unitfE.
   by case: j => -[] // [] // [].
 suff symM : symp M = 1 + (1 - cos phi) *: skew_mx w ^+ 2.
-  rewrite (symp_antip M) antiM symM -exp_mx_skew_mxE; last by rewrite /w aaxis_of1.
-  by rewrite /exp_mx addrAC.
+  rewrite (symp_antip M) antiM symM -exp_rot_skew_mxE; last by rewrite /w aaxis_of1.
+  by rewrite /exp_rot addrAC.
 rewrite sqr_skew {3}/w aaxis_of1 // norm1 expr1n.
 rewrite scalerBl scale1r addrCA addrA scalemx1 subrK.
 rewrite scalerBr opprB addrCA -{1}(scale1r (w^T *m w)) -scalerBl.
@@ -4272,23 +4275,80 @@ Abort.
 
 End Rodrigues.
 
-Section twist.
+(* most generic definition of the exponential map *)
+Section exponential_map.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 
-(* TODO: rename twist in the definition of kinematics chain *)
-Definition Twist (w v : vector) : 'M[R]_4 :=
+Definition expmx n (M : 'M[R]_n.+1) k := \sum_(i < k) (i`!%:R)^-1 *: (M ^+ i).
+
+Lemma expr_mulmulV n (M : 'M[R]_n.+1) i (g : 'M[R]_n.+1) : g \in unitmx ->
+  (g * M * g^-1)^+i = g * M ^+i  *g^-1.
+Proof.
+move=> Hg; elim: i => [|i ih]; first by rewrite 2!expr0 mulr1 divrr.
+rewrite exprS ih -!mulrA exprS -mulrA; congr (_ * (_ * _)).
+by rewrite mulrA mulVr // mul1r.
+Qed.
+
+Lemma expmx_mulmulV n (M : 'M[R]_n.+1) k (g : 'M[R]_n.+1) : g \in unitmx ->
+  expmx (g * M * g^-1) k = g * expmx M k * g^-1.
+Proof.
+move=> Hg.
+rewrite /expmx big_distrr /= big_distrl /=; apply/eq_bigr => i _.
+by rewrite expr_mulmulV // 2!scalerAl scalerCA.
+Qed.
+
+End exponential_map.
+
+Section exponential_coordinates_rigid.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+
+Definition twist (w v : vector) : 'M[R]_4 :=
   row_mx (col_mx (skew_mx w) 0) (col_mx v^T 0).
 
 (* TODO: notation 'se_3[R] for the set of twists *)
 
-Definition twist_exp_mx (w v : vector) (a : angle R) :=
-  row_mx 
-  (col_mx (exp_mx a (skew_mx w)) 0)
-  (col_mx ((w *v v) *m (1 - exp_mx a (skew_mx w)) + v (*NB: should be v*a *) *m (w ^T *m w)) 1).
+Lemma expr_twist0v (v : vector) n : (twist 0 v) ^+ n.+2 = 0.
+Proof.
+elim: n => [|n ih]; last by rewrite exprS ih mulr0.
+apply/eqP; rewrite expr2 /twist.
+set a := col_mx (skew_mx _) _. rewrite -mulmxE (mul_mx_row (row_mx a _) a) {}/a.
+set b := _ *m _. rewrite (row_mx_eq0 b) {}/b. apply/andP; split;
+  by rewrite mul_row_col mulmx0 addr0 mul_col_mx skew_mx0 !(mul0mx,mulmx0) col_mx0.
+Qed.
 
-End twist.
+Definition exp_twist0 (* w = 0 *) (v : vector) (a : angle R) : 'M_4 :=
+  row_mx (col_mx 1 0) (col_mx v^T 1).
+
+(* closed expression for the exponential of a twist with w = 0 *)
+Lemma expmx_exp_twist0 (v : vector) (a : angle R) k :
+  expmx (twist 0 v) k.+2 = exp_twist0 v a.
+Proof.
+rewrite /expmx 2!big_ord_recl big1 ?addr0; last first.
+  move=> /= i _; by rewrite expr_twist0v scaler0.
+rewrite liftE0 eqxx factS fact0 expr0 expr1 invr1 2!scale1r /twist skew_mx0.
+rewrite /exp_twist0 (_ : 1 = row_mx (@col_mx _ 3 1 _ 1 0) (col_mx 0 1)); last first.
+  by rewrite -block_mxEh -idmxE (@scalar_mx_block _ 3 1 1).
+set x1 := col_mx _ _.
+by rewrite (add_row_mx x1) col_mx0 addr0 add_col_mx add0r addr0.
+Qed.
+
+(* see p.42 on math. foundations, p.17 of springer's handbook *)
+(* closed expression for the exponential of a twist with w != 0 *)
+Definition exp_twist (w v : vector) (a : angle R) : 'M_4 :=
+  row_mx 
+  (col_mx `e^(a, skew_mx w) 0)
+  (col_mx ((w *v v) *m (1 - `e^(a, skew_mx w)) + v *m (w^T *m w))^T 1).
+
+Lemma expmx_exp_twist (w v : vector) (a : angle R) k :
+  expmx (twist w v) k.+2 = exp_twist w v a.
+Proof.
+Abort.
+
+End exponential_coordinates_rigid.
 
 Section quaternion.
 
