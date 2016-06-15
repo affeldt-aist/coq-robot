@@ -4343,9 +4343,38 @@ Definition exp_twist (w v : vector) (a : angle R) : 'M_4 :=
   (col_mx `e^(a, skew_mx w) 0)
   (col_mx ((w *v v) *m (1 - `e^(a, skew_mx w)) + v *m (w^T *m w))^T 1).
 
-Lemma expmx_exp_twist (w v : vector) (a : angle R) k :
+Definition rigid_trans (w v : vector) : 'M_4 := 
+  row_mx (col_mx 1 0) (col_mx (w *v v) 1).
+
+Lemma rigid_trans_unitmx w v : rigid_trans w v \in unitmx.
+Proof.
+by rewrite unitmxE /rigid_trans -block_mxEh (det_ublock 1 (w *v v)) 2!det1 mulr1 unitr1.
+Qed.
+
+Lemma expmx_Vmulmul w v :
+  let e' := (rigid_trans w v)^-1 *m twist w v *m rigid_trans w v in
+  forall k, e'^+k.+2 = row_mx (col_mx ((skew_mx w)^+k.+2) 0) (0 : 'cV_4).
+Proof.
+move=> e'.
+elim.
+Admitted.
+
+Lemma expmx_exp_twist (w v : vector) (a : angle R) k : norm w = 1 ->
   expmx (twist w v) k.+2 = exp_twist w v a.
 Proof.
+move=> w1.
+pose g := rigid_trans w v.
+pose e' := g^-1 *m twist w v *m g.
+have : expmx e' k.+2 = row_mx (col_mx `e^(a, skew_mx w) 0) (col_mx w^T 1).
+  admit.
+rewrite /e'.
+rewrite -{2}(invmxK g).
+rewrite expmx_mulmulV; last by rewrite unitrV rigid_trans_unitmx.
+move/(congr1 (fun x => g *m x)).
+rewrite !mulmxA mulmxV ?mul1mx ?rigid_trans_unitmx // invrK.
+move/(congr1 (fun x => x *m g^-1)).
+rewrite -mulmxA mulmxV ?mulmx1 ?rigid_trans_unitmx //.
+move=> ->.
 Abort.
 
 End exponential_coordinates_rigid.
