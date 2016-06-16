@@ -3436,6 +3436,13 @@ rewrite [RHS]crossmulC -crossmulvN [u]row_sum_delta -/(mulmxr _ _) !linear_sum.
 apply: eq_bigr=> i _; by rewrite !linearZ /= -rowE linearN /= rowK crossmulvN.
 Qed.
 
+Lemma skew_mxT (w : vector) : skew_mx w *m w^T = 0.
+Proof.
+rewrite -(trmxK (skew_mx w)) -trmx_mul.
+move: (anti_skew w); rewrite antiE -eqr_oppLR => /eqP <-.
+by rewrite mulmxN skew_mxE crossmulvv oppr0 trmx0.
+Qed.
+
 (* more general result for antisymmetric matrices? *)
 Lemma det_skew_mx (u : 'rV[R]_3) : \det (skew_mx u) = 0.
 Proof.
@@ -3789,7 +3796,7 @@ Variable R : rcfType.
 Definition exp_rot (phi : angle R) (w : 'M[R]_3) : 'M_3 :=
   1 + sin phi *: w + (1 - cos phi) *: w ^+ 2.
 
-Local Notation "'`e^(' a ',' w ')'" := (exp_rot a w).
+Local Notation "'`e^(' a ',' w ')'" := (exp_rot a w) (format "'`e^(' a ','  w ')'").
 
 Lemma mul_exp_rot (a b : angle R) u : u ^+ 3 = - u ->
   `e^(a, u) * `e^(b, u) = `e^(a + b, u).
@@ -4336,28 +4343,77 @@ set x1 := col_mx _ _.
 by rewrite (add_row_mx x1) col_mx0 addr0 add_col_mx add0r addr0.
 Qed.
 
+Definition rigid_trans (w v : vector) : 'M_4 := 
+  row_mx (col_mx 1 0) (col_mx (w *v v)^T 1).
+
+Definition inv_rigid_trans (w v : vector) := row_mx (col_mx 1 0) (col_mx (- w *v v)^T 1).
+
+Lemma Vrigid_trans w v : inv_rigid_trans w v * rigid_trans w v = 1.
+Proof.
+rewrite /inv_rigid_trans /rigid_trans.
+rewrite -[in X in _ * X = _]block_mxEh.
+rewrite -mulmxE (mul_row_block (col_mx 1 0) (col_mx (- w *v v)^T 1) 1).
+rewrite 2!mulmx1 mulmx0 addr0 mul_col_mx mul0mx mul1mx.
+by rewrite add_col_mx crossmulNv linearN subrr add0r -block_mxEh -scalar_mx_block.
+Qed.
+
+Lemma rigid_trans_unitmx w v : rigid_trans w v \in unitmx.
+Proof.
+by rewrite unitmxE /rigid_trans -block_mxEh (det_ublock 1 (w *v v)^T) 2!det1 mulr1 unitr1.
+Qed.
+
+Lemma inv_rigid_transE w v : (rigid_trans w v)^-1 = inv_rigid_trans w v.
+Proof.
+rewrite -[LHS]mul1mx -[X in X *m _ = _](Vrigid_trans w v) -mulmxA.
+by rewrite mulmxV ?rigid_trans_unitmx // mulmx1.
+Qed.
+
+(* 2.34, p.41 *)
+Lemma Vmulmul w v : norm w = 1 ->
+  let e' := (rigid_trans w v)^-1 *m twist w v *m rigid_trans w v in
+  let h := w *d v in
+  e' = col_mx (row_mx (skew_mx w) (h *: w^T)) 0.
+Proof.
+move=> w1 e'; rewrite /e'.
+rewrite inv_rigid_transE /inv_rigid_trans /rigid_trans /twist.
+rewrite -[in X in _ *m X *m _ = _]block_mxEh.
+rewrite (mul_row_block (col_mx 1 0) (col_mx (- w *v v)^T 1) (skew_mx w)) 2!mulmx0 2!addr0.
+rewrite mul_col_mx mul1mx mul0mx mul_col_mx mul0mx mul1mx.
+rewrite -[in X in _ *m X = _]block_mxEh.
+rewrite (mul_row_col (col_mx (skew_mx w) 0) (col_mx v^T 0)).
+rewrite mul_col_mx mul0mx mul_col_mx mul0mx add_col_mx addr0.
+rewrite (mul_mx_row (skew_mx w) 1) mulmx1.
+rewrite (@mul_mx_row _ _ _ 3 1 v^T 0 1) mulmx0 mulmx1.
+rewrite (add_row_mx (skew_mx w)) addr0.
+rewrite -{2}(trmxK (skew_mx w)) -trmx_mul.
+move: (anti_skew w); rewrite antiE -eqr_oppLR => /eqP <-.
+rewrite mulmxN skew_mxE crossmulC opprK double_crossmul.
+by rewrite dotmulvv w1 expr1n scale1r linearD /= linearN /= subrK linearZ /=.
+Qed.
+
+Lemma expmx_Vmulmul w v : norm w = 1 ->
+  let e' := (rigid_trans w v)^-1 *m twist w v *m rigid_trans w v in
+  forall k, e'^+k.+2 = col_mx (row_mx ((skew_mx w)^+k.+2) 0) (0 : 'rV_4).
+Proof.
+move=> w1 e' k.
+rewrite /e' (Vmulmul _ w1).
+set h := w *d v.
+elim: k => [|k ih].
+  rewrite (@expr2 _ (col_mx (row_mx (skew_mx w) _) 0)).
+  rewrite -{1}row_mx0 -block_mxEv -mulmxE (mul_block_col (skew_mx w)).
+  rewrite 2!mulmx0 mul0mx 2!addr0 (mul_mx_row (skew_mx w) (skew_mx w)).
+  by rewrite mulmxE -expr2 /h -scalemxAr skew_mxT scaler0.
+rewrite exprS ih -{1}row_mx0 -block_mxEv -mulmxE (mul_block_col (skew_mx w)).
+rewrite 2!mul0mx mulmx0 2!addr0 (mul_mx_row (skew_mx w) ((skew_mx w)^+k.+2)).
+by rewrite mulmx0 mulmxE -exprS.
+Qed.
+
 (* see p.42 on math. foundations, p.17 of springer's handbook *)
 (* closed expression for the exponential of a twist with w != 0 *)
 Definition exp_twist (w v : vector) (a : angle R) : 'M_4 :=
   row_mx 
   (col_mx `e^(a, skew_mx w) 0)
-  (col_mx ((w *v v) *m (1 - `e^(a, skew_mx w)) + v *m (w^T *m w))^T 1).
-
-Definition rigid_trans (w v : vector) : 'M_4 := 
-  row_mx (col_mx 1 0) (col_mx (w *v v) 1).
-
-Lemma rigid_trans_unitmx w v : rigid_trans w v \in unitmx.
-Proof.
-by rewrite unitmxE /rigid_trans -block_mxEh (det_ublock 1 (w *v v)) 2!det1 mulr1 unitr1.
-Qed.
-
-Lemma expmx_Vmulmul w v :
-  let e' := (rigid_trans w v)^-1 *m twist w v *m rigid_trans w v in
-  forall k, e'^+k.+2 = row_mx (col_mx ((skew_mx w)^+k.+2) 0) (0 : 'cV_4).
-Proof.
-move=> e'.
-elim.
-Admitted.
+  (col_mx ((w *v v) *m (1 - `e^(a, (skew_mx w)^T)) + v *m (w^T *m w))^T 1).
 
 Lemma expmx_exp_twist (w v : vector) (a : angle R) k : norm w = 1 ->
   expmx (twist w v) k.+2 = exp_twist w v a.
@@ -4365,16 +4421,40 @@ Proof.
 move=> w1.
 pose g := rigid_trans w v.
 pose e' := g^-1 *m twist w v *m g.
-have : expmx e' k.+2 = row_mx (col_mx `e^(a, skew_mx w) 0) (col_mx w^T 1).
+pose h := w *d v.
+have : expmx e' k.+2 = row_mx (col_mx `e^(a, skew_mx w) 0) (col_mx (h *: w^T) 1).
   admit.
 rewrite /e'.
-rewrite -{2}(invmxK g).
+rewrite -{2}(invrK g).
 rewrite expmx_mulmulV; last by rewrite unitrV rigid_trans_unitmx.
 move/(congr1 (fun x => g *m x)).
 rewrite !mulmxA mulmxV ?mul1mx ?rigid_trans_unitmx // invrK.
 move/(congr1 (fun x => x *m g^-1)).
 rewrite -mulmxA mulmxV ?mulmx1 ?rigid_trans_unitmx //.
 move=> ->.
+rewrite (mul_mx_row g (col_mx `e^( a, skew_mx w) 0)).
+rewrite inv_rigid_transE /inv_rigid_trans.
+rewrite -[in X in _ *m X = _]block_mxEh.
+rewrite (mul_row_block (g *m col_mx `e^( a, skew_mx w) 0) (g *m col_mx (h *: w^T) 1) 1).
+rewrite 2!mulmx1 mulmx0 addr0.
+rewrite /g /rigid_trans.
+rewrite (mul_row_col (col_mx 1 0) (col_mx (w *v v)^T 1)) mulmx0 addr0.
+rewrite mul_col_mx mul1mx mul0mx.
+rewrite /exp_twist.
+f_equal.
+rewrite (mul_row_col (col_mx 1 0) (col_mx (w *v v)^T 1)) mulmx1.
+rewrite (mul_col_mx _ _ (h *: w^T)) mul1mx mul0mx.
+rewrite add_col_mx add0r.
+rewrite (mul_col_mx (`e^(a, skew_mx w))) mul0mx.
+rewrite (add_col_mx (`e^( a, skew_mx w) *m (- w *v v)^T) 0 _ 1) add0r.
+f_equal.
+rewrite addrCA addrC linearD /=; congr (_ + _).
+  rewrite mulmxBr mulmx1 linearD /= addrC; congr (_ + _).
+  rewrite linearN /= trmx_mul -mulmxN; congr (_ *m _); last by rewrite crossmulNv linearN.
+  by rewrite tr_exp_rot trmxK.
+rewrite 2!trmx_mul trmxK -mulmxA (_ : w *m v^T = (w *d v)%:M); last first.
+  by rewrite /dotmul -mx11_scalar.
+by rewrite -/h -mul_scalar_mx scalar_mxC.
 Abort.
 
 End exponential_coordinates_rigid.
