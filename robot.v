@@ -798,11 +798,14 @@ Lemma rotationE M : (M \is 'SO_n[R]) = (M \is 'O_n[R]) && (\det M == 1). Proof. 
 Lemma rotationV M : (M^T \is 'SO_n[R]) = (M \is 'SO_n[R]).
 Proof. by rewrite rotationE orthogonalV det_tr -rotationE. Qed.
 
-Lemma rotation1 : 1 \is 'SO_n[R].
-Proof. apply/andP; by rewrite orthogonal1 det1. Qed.
+Lemma rotation_inv M : M \is 'SO_n[R] -> M^-1 = M^T.
+Proof. by rewrite rotationE orthogonalEinv => /andP[/andP[_ /eqP]]. Qed.
 
 Lemma rotation_det M : M \is 'SO_n[R] -> \det M = 1.
 Proof. by move=> /andP[_ /eqP]. Qed.
+
+Lemma rotation1 : 1 \is 'SO_n[R].
+Proof. apply/andP; by rewrite orthogonal1 det1. Qed.
 
 Lemma rotation_sub : {subset 'SO_n[R] <= 'O_n[R]}.
 Proof. by move=> M /andP []. Qed.
@@ -854,8 +857,8 @@ Qed.
 Lemma mulmxr_crossmulr_SO r u v : r \is 'SO_3[R] ->
   (u *v v) *m r = (u *m r) *v (v *m r).
 Proof. 
-rewrite rotationE => /andP[rO detr1].
-by rewrite mulmxr_crossmulr // (eqP detr1) scale1r.
+rewrite rotationE => /andP[rO /eqP detr1].
+by rewrite mulmxr_crossmulr // detr1 scale1r.
 Qed.
 
 Lemma det_rotN1 (M : 'M[R]_3) : M \is 'SO_3[R] -> \det (M - 1) = 0.
@@ -2371,6 +2374,16 @@ move=> k; rewrite mxE; case: splitP => //.
 by move=> k0; rewrite (ord1 k0) addn0 => -> _.
 Qed.
 
+Lemma norm_of_frame {R : rcfType} (f : frame R) (i : 'I_3) : norm (row i f) = 1.
+Proof.
+case: f => a b c [] [] a1 b1 c1 H1 H2 H3 Hsgn.
+case/boolP : (i == 0) => [/eqP ->|].
+  by rewrite row0_frame /=.
+rewrite ifnot0 => /orP [] /eqP ->.
+by rewrite row1_frame.
+by rewrite row2_frame.
+Qed.
+
 Lemma frame_rot R (f : frame R) : matrix_of_frame f \in 'SO_3[R]. 
 Proof.
 case: f => u1 u2 u3 /= [ [normu1 normu2 normu3 u12 u13 u23] sgn].
@@ -2452,7 +2465,7 @@ Variable R : rcfType.
 Variables A B : frame R.
 Record t := mkT {
   M :> 'M[R]_3 ;
-  HM : forall i j, M i j = row j B *d row i A
+  HM : M == \matrix_(i, j) (row j B *d row i A)
   (* transpose of def 1.1 of handbook ->
      "orientation of coor frame B related to coor frame A" (A ^R_ B) *)
 }.
@@ -2462,58 +2475,15 @@ Coercion RotM {R} (A B : frame R) := @FromToCoor.M _ A B.
 
 Notation "A ^R_ B" := (@FromToCoor.t _ A B) (at level 5).
 
-Lemma delta_mx_mul {R : comRingType} (M : 'M[R]_3) i j :
-  (delta_mx 0 j *m M) (0 : 'I_1) i = M j i.
+Lemma maprot R (A B : frame R) (M : A ^R_ B) :
+  M = (matrix_of_frame A) *m (matrix_of_frame B)^-1 :> 'M[R]_3.
 Proof.
-rewrite mxE sum3E 3!mxE /=.
-case/boolP : (j == 0) => [/eqP -> /=|]; first by simp.
-rewrite ifnot0 => /orP [] /eqP -> /=; by simp.
+case: M => /= M HM.
+rewrite (eqP HM).
+apply/matrixP => i j.
+rewrite mxE dotmulE /= mxE; apply eq_bigr => /= k _.
+by rewrite mxE [row _ _ _ _]mxE (rotation_inv (frame_rot B)) [_^T _ _]mxE mulrC.
 Qed.
-
-Lemma MapRotP {R : rcfType} (A B : frame R) (M : A ^R_ B) (x : vec A) :
-  Vec B (vec_of x *m M) = Vec B (((vec_of x) *m A) *m B^T).
-Proof.
-congr Vec.
-case: x => x /=.
-rewrite -mulmxA; congr (_ *m _).
-have -> : M = A *m B^T :> 'M[R]_3.
-  apply/matrixP => i j.
-  rewrite mxE.
-  case: M => /= M ->.
-  rewrite 2!rowE dotmul_trmx dotmul_delta_mx -mulmxA.
-  by rewrite (delta_mx_mul (B *m A^T)) -{1}(trmxK B) -trmx_mul !mxE.
-done.
-Qed.
-
-Lemma MapRotCan {R:rcfType} (A : frame R) (M : A ^R_ (canonical_frame R))
-  (x : vec A) :
-  [fun x : 'rV_3 => x *m M] =1 [fun x => x *m A].
-Proof.
-move=> i.
-rewrite /=.
-case: M => M HM /=.
-apply/rowP => j.
-rewrite 2!mxE.
-apply eq_bigr => /= k _.
-congr (_ * _).
-rewrite HM dotmulE sum3E.
-rewrite ![row _ _ _ _]mxE.
-case/boolP : (j == 0) => [/eqP ->|].
-  rewrite !canonical_framei ![veci R _ _]mxE /=. by simp.
-rewrite ifnot0 => /orP [] /eqP ->.
-  rewrite !canonical_framej ![vecj R _ _]mxE /=. by simp.
-rewrite !canonical_framek ![veck R _ _]mxE /=. by simp.
-Qed.
-
-Lemma MapRotComp_proof {R : rcfType} (A B C : frame R) (M1 : A ^R_ B) (M2 : B ^R_ C) :
-  forall i j, (M1 *m M2) i j = (row j C *d row i A).
-Proof.
-case: M1 => M1 HM1 /=.
-case: M2 => M2 HM2 /=.
-Admitted.
-
-Definition MapRotComp {R:rcfType} (A B C: frame R) (M1 : A ^R_ B) (M2 : B ^R_ C) : A ^R_ C :=
-  FromToCoor.mkT (MapRotComp_proof M1 M2).
 
 Lemma abs {R:rcfType} (f : frame R) i j :
   f i j = row j (canonical_frame R) *d row i f.
@@ -2546,9 +2516,65 @@ rewrite row2_frame /= dotmulE sum3E ![(row3 _ _ _) _ _]mxE /=.
 by rewrite !(mul1r,mul0r,addr0,add0r) [in RHS]mxE.
 Qed.
 
-Check (fun (R : rcfType) (f: frame R) => (FromToCoor.mkT (abs f))).
+(*Definition frame_Rz R (a : angle R) : frame R.
+apply (@mkFrame _
+  (row3 (cos a) (- sin a) 0)
+  (row3 (sin a) (cos a) 0)
+  (row3 0 0 1)).
+apply: mkPFrame.
+  apply mkOFrame.
+  admit.
+  admit.
+  admit.
+  rewrite dotmulE sum3E !mxE /=.
+  admit.
+  admit.
+  admit.
+move=> H.
+rewrite /oframe_sgn.
+admit.
+Abort.*)
 
+(*Lemma delta_mx_mul {R : comRingType} (M : 'M[R]_3) i j :
+  (delta_mx 0 j *m M) (0 : 'I_1) i = M j i.
+Proof.
+rewrite mxE sum3E 3!mxE /=.
+case/boolP : (j == 0) => [/eqP -> /=|]; first by simp.
+rewrite ifnot0 => /orP [] /eqP -> /=; by simp.
+Qed.*)
 
+Lemma MapRotP {R : rcfType} (A B : frame R) (M : A ^R_ B) (x : vec A) :
+  Vec B (vec_of x *m M) = Vec B (((vec_of x) *m A) *m B^T).
+Proof.
+congr Vec.
+case: x => x /=.
+rewrite -mulmxA; congr (_ *m _).
+by rewrite (maprot M) (rotation_inv (frame_rot B)).
+Qed.
+
+Lemma MapRotCan {R:rcfType} (A : frame R) (M : A ^R_ (canonical_frame R))
+  (x : vec A) :
+  [fun x : 'rV_3 => x *m M] =1 [fun x => x *m A].
+Proof.
+move=> i /=.
+case: M => M /= /eqP ->.
+congr (_ *m _).
+apply/matrixP => a b.
+by rewrite mxE -abs.
+Qed.
+
+Lemma MapRotComp_proof {R : rcfType} (A B C : frame R) (M1 : A ^R_ B) (M2 : B ^R_ C) :
+  (M1 *m M2) == \matrix_(i, j) (row j C *d row i A).
+Proof.
+rewrite (maprot M1) (maprot M2) -mulmxA (mulmxA (matrix_of_frame B)^-1) mulVmx; last first.
+  by rewrite unitmxE (rotation_det (frame_rot B)) unitr1.
+rewrite mul1mx; apply/eqP/matrixP => i j.
+rewrite !mxE dotmulE; apply/eq_bigr => k _.
+by rewrite 2![row _ _ _ _]mxE (rotation_inv (frame_rot C)) [_^T _ _]mxE mulrC.
+Qed.
+
+Definition MapRotComp {R:rcfType} (A B C: frame R) (M1 : A ^R_ B) (M2 : B ^R_ C) : A ^R_ C :=
+  FromToCoor.mkT (MapRotComp_proof M1 M2).
 
 (*Module Frame.
 Section frame_section.
@@ -3443,9 +3469,7 @@ rewrite /= mulmxr_crossmulr /= ?ortho_of_iso_is_ortho //.
 rewrite (_ : \det (ortho_of_iso _) = 1).
   by rewrite scale1r.
 case: T HT => trans rot Hrot HT.
-rewrite det_ortho_htrans /=.
-move: Hrot {HT}; rewrite rotationE => /andP[_ /eqP].  
-by rewrite det_tr.
+by rewrite det_ortho_htrans /= rotation_det // rotationV.
 Qed.
 
 End rigid_transformation_is_homogenous_transformation.
@@ -4140,9 +4164,8 @@ Lemma is_eigenvector1_colinear r (Hr : r \is 'SO_3[R]) n :
 Proof.
 move=> Hn.
 have HnT : n *m r^T = n.
-  move/eigenspace_trmx : Hn.
-  move: Hr; rewrite rotationE => /andP[Hr _].
-  by move/(_ Hr)/eigenspaceP; rewrite scale1r.
+  move/eigenspace_trmx : Hn => /(_ (rotation_sub Hr))/eigenspaceP.
+  by rewrite scale1r.
 set Q := r^T - r.
 have nrrT : n *m Q = 0.
  rewrite mulmxDr [in LHS]mulmxN HnT.
