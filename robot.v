@@ -1245,9 +1245,28 @@ Canonical angle_ZmodType := ZmodType angle angle_ZmodMixin.
 Lemma add_angleE (a b : angle) : a + b = add_angle a b.
 Proof. done. Qed.
 
+Lemma opp_angleE (a : angle) : - a = opp_angle a.
+Proof. done. Qed.
+
 Definition cos a := Re (expi a).
 Definition sin a := Im (expi a).
 Definition tan a := sin a / cos a.
+
+Lemma cosN a : cos (- a) = cos a.
+Proof.
+case: a => -[a b] ab; rewrite opp_angleE /cos /opp_angle /=.
+rewrite invc_norm (eqP ab) expr1n invr1 mul1r expi_arg; last first.
+  by rewrite conjc_eq0 -normr_eq0 (eqP ab) oner_eq0.
+by rewrite normcJ (eqP ab) divr1.
+Qed.
+
+Lemma sinN a : sin (- a) = - sin a.
+Proof.
+case: a => -[a b] ab; rewrite opp_angleE /sin /opp_angle /=.
+rewrite invc_norm (eqP ab) expr1n invr1 mul1r expi_arg; last first.
+  by rewrite conjc_eq0 -normr_eq0 (eqP ab) oner_eq0.
+by rewrite normcJ (eqP ab) divr1.
+Qed.
 
 Lemma cos1sin0 a : cos a = 1 -> sin a = 0.
 Proof.
@@ -2032,6 +2051,10 @@ apply orthogonal_expansion_helper.
 Qed.
 
 Definition frame_sgn (_ : oframe) := i *d (j *v k).
+
+Lemma idotj (f : oframe) : i *d j = 0. Proof. by case: f. Qed.
+Lemma jdotk (f : oframe) : j *d k = 0. Proof. by case: f. Qed.
+Lemma idotk (f : oframe) : i *d k = 0. Proof. by case: f. Qed.
 
 Lemma frame_sgn1 (f : oframe) : `| frame_sgn f | = 1.
 Proof.
@@ -4567,20 +4590,23 @@ Lemma aangle_of (a : angle R) (v : vector) : aangle (angle_axis_of a v) = a.
 Proof. by rewrite /angle_axis_of /aangle val_insubd /= fun_if if_same. Qed.
 
 Lemma is_around_axis_exp_rot (a : angle R) (u : vector) (u1 : norm u = 1) :
-  is_around_axis u1 a (`e^(a, skew_mx u)).
+  is_around_axis u1 (- a) (`e^(a, skew_mx u)).
 Proof.
 red.
+pose f := projT2 (Build_frame u1).
 set v := _.1.
 set w := _.2.
 split.
   rewrite -rodriguesP // /rodrigues dotmulvv u1 expr1n mulr1 scalerBl.
   by rewrite scale1r addrCA subrr addr0 crossmulvv scaler0 addr0.
 split.
-  rewrite -rodriguesP // /rodrigues.
-  admit. (* ok *)
-rewrite -rodriguesP // /rodrigues.
-admit. (* ok *)
-Admitted.
+  rewrite -rodriguesP // /rodrigues dotmulC (idotj f) mulr0 scale0r addr0.
+  rewrite crossmulC -(frame_pos_crossmul (pframeP f)) -/w scalerN.
+  by rewrite cosN sinN scaleNr.
+rewrite -rodriguesP // /rodrigues dotmulC (idotk f) mulr0 scale0r addr0.
+rewrite -(proj1 (oframe_posP f (frame_pos_crossmul (pframeP f)))) -/v.
+by rewrite sinN opprK cosN addrC.
+Qed.
 
 (* see table 1.2 of handbook of robotics *)
 Definition angle_of_rotation (M : 'M[R]_3) := acos ((\tr M - 1) / 2%:R).
