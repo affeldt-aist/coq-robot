@@ -25,7 +25,7 @@ Require Import fingroup perm.
     (NB: some specialized lemmas for dimension 3 (Section norm3))
  6. section angle
     (addition, scalar multiplication, half-angle)
-    (definitions of cos, sin, acos, etc., and various properties) 
+    (definitions of cos, sin, tan, acos, asin, and atan, and various properties) 
     definition of vec_angle (restricted to [0,pi])
     (sample lemma: multiplication by a O_3[R] matrix preserves vec_angle)
  7. section colinear
@@ -1284,9 +1284,68 @@ Proof. done. Qed.
 Lemma opp_angleE (a : angle) : - a = opp_angle a.
 Proof. done. Qed.
 
+Lemma argc (z : R[i]) : z != 0 -> arg z^* = - arg z.
+Proof.
+case: z => a b z0 /=; by rewrite {2}/arg opp_angleE /opp_angle expi_conjc //= expiK.
+Qed.
+
+Definition pi := arg (-1).
+
+Lemma expipi : expi pi = -1. Proof. by rewrite argK ?normrN1. Qed.
+
+Definition pihalf := (arg (0 +i* 1) : angle).
+
+Lemma arg1 : arg 1 = 0.
+Proof. apply val_inj => /=; by rewrite argK // normr1. Qed.
+
+Lemma argN1 : arg (- 1) = pi.
+Proof. apply val_inj => /=; by rewrite argK // ?normrN1. Qed.
+
+Lemma expi_inj : injective expi.
+Proof. move=> [a a1] [b b1] /= ab; by apply/val_inj. Qed.
+
+Lemma expiD a b : expi (a + b) = expi a * expi b.
+Proof.
+move: a b => [a a1] [b b1] /=.
+by rewrite /add_angle /= argK // normrM  (eqP a1) (eqP b1) mulr1.
+Qed.
+
+Lemma expi2pi : expi (pi + pi) = 1.
+Proof. by rewrite /pi expiD argK // ?normrN1 // mulrNN mulr1. Qed.
+
+Lemma pi2 : pi *+ 2 = 0.
+Proof. apply expi_inj => //; by rewrite expi2pi -arg1 argK // normr1. Qed.
+
 Definition cos a := Re (expi a).
 Definition sin a := Im (expi a).
 Definition tan a := sin a / cos a.
+
+Lemma cos2Dsin2 a : (cos a) ^+ 2 + (sin a) ^+ 2 = 1.
+Proof.
+move: (add_Re2_Im2 (expi a)).
+by rewrite normr_expi expr1n => /(congr1 (@Re R)) => /= <-.
+Qed.
+
+Lemma sin2cos2 a : sin a ^+ 2 = 1 - cos a ^+ 2.
+Proof. move/eqP: (cos2Dsin2 a); by rewrite eq_sym addrC -subr_eq => /eqP. Qed.
+
+Lemma cos2sin2 a : cos a ^+ 2 = 1 - sin a ^+ 2.
+Proof. move/eqP: (cos2Dsin2 a); by rewrite eq_sym -subr_eq => /eqP. Qed.
+
+Lemma cos2_tan2 x : cos x != 0 -> 1 / (cos x) ^+ 2 = 1 + (tan x) ^+ 2.
+Proof.
+move=> cosx; rewrite /tan exprMn sin2cos2 mulrBl -exprMn divrr ?unitfE //.
+by rewrite expr1n addrCA subrr addr0 div1r mul1r exprVn.
+Qed.
+
+Lemma expi_cos_sin a : expi a = cos a +i* sin a.
+Proof. by case: a => -[a0 a1] Ha; rewrite /cos /sin. Qed.
+
+Lemma sinD a b : sin (a + b) = sin a * cos b + cos a * sin b.
+Proof. by rewrite {1}/sin expiD 2!expi_cos_sin /= addrC. Qed.
+
+Lemma cosD a b : cos (a + b) = cos a * cos b - sin a * sin b.
+Proof. by rewrite {1}/cos expiD 2!expi_cos_sin /= addrC. Qed.
 
 Lemma cosN a : cos (- a) = cos a.
 Proof.
@@ -1304,34 +1363,22 @@ rewrite invc_norm (eqP ab) expr1n invr1 mul1r expi_arg; last first.
 by rewrite normcJ (eqP ab) divr1.
 Qed.
 
-Lemma cos1sin0 a : cos a = 1 -> sin a = 0.
-Proof.
-case: a => -[a b] ab1; rewrite /cos /sin /= => a1; move: ab1.
-rewrite {}a1 normc_def /= expr1n => /eqP[] /(congr1 (fun x => x ^+ 2)).
-rewrite expr1n sqr_sqrtr; last by rewrite addr_ge0 // ?ler01 // sqr_ge0.
-by move/eqP; rewrite eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
-Qed.
+Lemma tanN x : tan (- x) = - tan x :> R.
+Proof. by rewrite /tan sinN cosN mulNr. Qed.
 
-Lemma cos0sin1 a : cos a = 0 -> `| sin a | = 1.
-Proof.
-case: a => -[a b] ab1; rewrite /cos /sin /= => a1; move: ab1.
-rewrite {}a1 normc_def /= expr0n add0r => /eqP[]; by rewrite sqrtr_sqr.
-Qed.
+Lemma cos0 : cos 0 = 1.
+Proof. by rewrite /cos -arg1 argK // ger0_norm // ler01. Qed.
 
 Lemma cos_max a : `| cos a | <= 1.
 Proof. rewrite -lecR (ler_trans (normc_ge_Re _)) //; by case: a => ? /= /eqP ->. Qed. 
 
-Lemma cos2Dsin2 a : (cos a) ^+ 2 + (sin a) ^+ 2 = 1.
+Lemma sin0 : sin 0 = 0.
 Proof.
-move: (add_Re2_Im2 (expi a)).
-by rewrite normr_expi expr1n => /(congr1 (@Re R)) => /= <-.
+by move/eqP: (sin2cos2 0); rewrite cos0 (expr2 1) mulr1 subrr sqrf_eq0 => /eqP.
 Qed.
 
-Lemma sin2cos2 a : sin a ^+ 2 = 1 - cos a ^+ 2.
-Proof. move/eqP: (cos2Dsin2 a); by rewrite eq_sym addrC -subr_eq => /eqP. Qed.
-
-Lemma cos2sin2 a : cos a ^+ 2 = 1 - sin a ^+ 2.
-Proof. move/eqP: (cos2Dsin2 a); by rewrite eq_sym -subr_eq => /eqP. Qed.
+Lemma tan0 : tan 0 = 0 :> R.
+Proof. by rewrite /tan sin0 cos0 mul0r. Qed.
 
 Lemma abs_sin a : `| sin a | = Num.sqrt (1 - cos a ^+ 2).
 Proof.
@@ -1341,52 +1388,22 @@ rewrite sqr_sqrtr; last by rewrite lter_sub_addr add0r -norm2 exprn_ilte1 // cos
 by rewrite -subr_eq opprK addrC cos2Dsin2.
 Qed.
 
-(*
-sin(t) = ( exp(it) - exp(-it) )/2i
-cos(t) = ( exp(it) + exp(-it) )/2
-*)
-
-Lemma expiD a b : expi (a + b) = expi a * expi b.
-Proof.
-move: a b => [a a1] [b b1] /=.
-by rewrite /add_angle /= argK // normrM  (eqP a1) (eqP b1) mulr1.
-Qed.
-
-Lemma expi_cos_sin a : expi a = cos a +i* sin a.
-Proof. by case: a => -[a0 a1] Ha; rewrite /cos /sin. Qed.
-
-Lemma sinD a b : sin (a + b) = sin a * cos b + cos a * sin b.
-Proof. by rewrite {1}/sin expiD 2!expi_cos_sin /= addrC. Qed.
-
-Lemma cosD a b : cos (a + b) = cos a * cos b - sin a * sin b.
-Proof. by rewrite {1}/cos expiD 2!expi_cos_sin /= addrC. Qed.
-
-Definition atan (x : R) : angle := arg (x +i* 1) *~ sgz (x).
-Definition asin (x : R) : angle := arg (Num.sqrt (1 - x^2) +i* x).
-Definition acos (x : R) : angle := arg (x +i* Num.sqrt (1 - x^2)).
-
-Definition pi := arg (-1).
-
-Definition pihalf := (arg (0 +i* 1) : angle).
-
-Lemma expipi : expi pi = -1. Proof. by rewrite argK ?normrN1. Qed.
-
-Lemma arg1 : arg 1 = 0.
-Proof. apply val_inj => /=; by rewrite argK // normr1. Qed.
-
-Lemma argN1 : arg (- 1) = pi.
-Proof. apply val_inj => /=; by rewrite argK // ?normrN1. Qed.
-
-Lemma cos0 : cos 0 = 1.
-Proof. by rewrite /cos -arg1 argK // ger0_norm // ler01. Qed.
-
-Lemma sin0 : sin 0 = 0.
-Proof.
-by move/eqP: (sin2cos2 0); rewrite cos0 (expr2 1) mulr1 subrr sqrf_eq0 => /eqP.
-Qed.
-
 Lemma expi0 : expi 0 = 1.
 Proof. by rewrite expi_cos_sin cos0 sin0. Qed.
+
+Lemma arg0_inv (x : R[i]) a : a != 0 -> `|x| = a -> arg x = 0 -> x = a.
+Proof.
+move=> a0; case: x => x y norma H.
+rewrite -(mulr1 a) -expi0 -H expi_arg; last by rewrite -normr_eq0 norma.
+by rewrite norma mulrCA divrr // mulr1.
+Qed.
+
+Lemma argpi_inv (x : R[i]) a : a != 0 -> `|x| = a -> arg x = pi -> x = -a.
+Proof.
+move=> a0; case: x => x y norma H.
+rewrite -(mulrN1 a) -expipi -H expi_arg; last by rewrite -normr_eq0 norma.
+by rewrite norma mulrCA divrr // mulr1.
+Qed.
 
 Lemma cos1_angle0 a : cos a = 1 -> a = 0.
 Proof.
@@ -1412,6 +1429,20 @@ apply val_inj => /=; rewrite x1 y0 expipi complexr0.
 by rewrite real_complexE; apply/eqP; rewrite eq_complex /= oppr0 2!eqxx.
 Qed.
 
+Lemma cos1sin0 a : cos a = 1 -> sin a = 0.
+Proof.
+case: a => -[a b] ab1; rewrite /cos /sin /= => a1; move: ab1.
+rewrite {}a1 normc_def /= expr1n => /eqP[] /(congr1 (fun x => x ^+ 2)).
+rewrite expr1n sqr_sqrtr; last by rewrite addr_ge0 // ?ler01 // sqr_ge0.
+by move/eqP; rewrite eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
+Qed.
+
+Lemma cos0sin1 a : cos a = 0 -> `| sin a | = 1.
+Proof.
+case: a => -[a b] ab1; rewrite /cos /sin /= => a1; move: ab1.
+rewrite {}a1 normc_def /= expr0n add0r => /eqP[]; by rewrite sqrtr_sqr.
+Qed.
+
 Lemma sin0cos1 a : sin a = 0 -> `| cos a | = 1.
 Proof.
 case: a => -[a b] ab1; rewrite /cos /sin /= => a1; move: ab1.
@@ -1420,28 +1451,33 @@ rewrite expr1n sqr_sqrtr; last by rewrite addr_ge0 // ?ler01 // sqr_ge0.
 by move/eqP; rewrite addr0 -{1}(@expr1n _ 2%N) -norm2 eqr_expn2 // ?ler01 // => /eqP.
 Qed.
 
-Lemma arg0_inv (x : R[i]) a : a != 0 -> `|x| = a -> arg x = 0 -> x = a.
+(*
+sin(t) = ( exp(it) - exp(-it) )/2i
+cos(t) = ( exp(it) + exp(-it) )/2
+*)
+
+Definition asin (x : R) : angle := arg (Num.sqrt (1 - x^2) +i* x).
+Definition acos (x : R) : angle := arg (x +i* Num.sqrt (1 - x^2)).
+Definition atan (x : R) : angle := if x == 0 then 0 else arg ((x^-1 +i* 1) *~ sgz (x)).
+
+Lemma atan0 : atan 0 = 0.
+Proof. by rewrite /atan eqxx. Qed.
+
+Lemma atanN x : - atan (- x) = atan x.
 Proof.
-move=> a0; case: x => x y norma H.
-rewrite -(mulr1 a) -expi0 -H expi_arg; last by rewrite -normr_eq0 norma.
-by rewrite norma mulrCA divrr // mulr1.
+rewrite /atan eqr_oppLR oppr0.
+case: ifPn => [|x0]; first by rewrite oppr0.
+rewrite -argc.
+  congr arg; apply/eqP.
+  rewrite sgzN mulrNz /= eq_complex /=.
+  move: x0; rewrite neqr_lt => /orP [] x0.
+    by rewrite ltr0_sgz // 2!mulrN1z opprK /= invrN 2!eqxx.
+  by rewrite gtr0_sgz // 2!mulr1z /= invrN 2!opprK 2!eqxx.
+move: x0; rewrite neqr_lt => /orP [] x0.
+  by rewrite gtr0_sgz ?oppr_gt0 // mulr1z eq_complex /= negb_and oner_neq0 orbC.
+rewrite ltr0_sgz -?oppr_gt0 ?opprK // mulrN1z eq_complex /= negb_and orbC.
+by rewrite eqr_oppLR oppr0 oner_neq0.
 Qed.
-
-Lemma argpi_inv (x : R[i]) a : a != 0 -> `|x| = a -> arg x = pi -> x = -a.
-Proof.
-move=> a0; case: x => x y norma H.
-rewrite -(mulrN1 a) -expipi -H expi_arg; last by rewrite -normr_eq0 norma.
-by rewrite norma mulrCA divrr // mulr1.
-Qed.
-
-Lemma expi2pi : expi (pi + pi) = 1.
-Proof. by rewrite /pi expiD argK // ?normrN1 // mulrNN mulr1. Qed.
-
-Lemma expi_inj : injective expi.
-Proof. move=> [a a1] [b b1] /= ab; by apply/val_inj. Qed.
-
-Lemma pi2 : pi *+ 2 = 0.
-Proof. apply expi_inj => //; by rewrite expi2pi -arg1 argK // normr1. Qed.
 
 (* The following lemmas are true in specific domains only, such as
 ]-pi/2, pi/2[ = [pred a | cos a > 0] 
@@ -1453,11 +1489,16 @@ Proof. apply expi_inj => //; by rewrite expi2pi -arg1 argK // normr1. Qed.
 
 Definition Opi_closed := [pred a | 0 <= sin a].
 
+(* ]-pi/2, pi/2[ *)
+Definition Npi2pi2_open : pred angle := [pred a | cos a > 0].
+
+Lemma Npi2pi2_openP a : (a \in Npi2pi2_open) = (0 < cos a).
+Proof. by rewrite inE. Qed.
+
 (*cancel acos cos*)
 Lemma acosK (r : R) : -1 <= r <= 1 -> cos (acos r) = r.
 Proof. 
-move=> rdom.
-rewrite /acos /cos argK // normc_def /= sqr_sqrtr; last first.
+move=> rdom; rewrite /acos /cos argK // normc_def /= sqr_sqrtr; last first.
   by rewrite subr_ge0 -ler_sqrt // ?ltr01 // sqrtr1 -exprnP sqrtr_sqr ler_norml.
 by rewrite addrC subrK sqrtr1.
 Qed.
@@ -1465,25 +1506,63 @@ Qed.
 (*cancel cos acos*)
 Lemma cosK a : a \in Opi_closed -> acos (cos a) = a.
 Proof.
-rewrite inE => adom.
-rewrite /acos /cos /= expi_cos_sin /= -sin2cos2 sqrtr_sqr /=.
-by rewrite ger0_norm // -expi_cos_sin expiK.
+rewrite inE => adoml; rewrite /acos /cos /= expi_cos_sin /= -sin2cos2. 
+by rewrite sqrtr_sqr /= ger0_norm // -expi_cos_sin expiK.
 Qed.
 
 (*cancel asin sin*)
 Lemma asinK r : -1 <= r <= 1 -> sin (asin r) = r.
 Proof.
-move=> rdom.
-rewrite /sin /asin argK // normc_def /= sqr_sqrtr; last first.
+move=> rdom; rewrite /sin /asin argK // normc_def /= sqr_sqrtr; last first.
   by rewrite subr_ge0 -ler_sqrt // ?ltr01 // sqrtr1 -exprnP sqrtr_sqr ler_norml.
 by rewrite subrK sqrtr1.
+Qed.
+
+Lemma atanKpos x : 0 < x -> tan (atan x) = x.
+Proof.
+move=> x0; rewrite /atan gtr_eqF // gtr0_sgz // mulr1z /tan /sin /cos.
+rewrite expi_arg /=; last by rewrite eq_complex /= negb_and oner_neq0 orbT.
+rewrite mul0r oppr0 mulr0 add0r mulr0 subr0 expr0n addr0 expr1n.
+rewrite sqr_sqrtr; last by rewrite addr_ge0 // ?ler01 // sqr_ge0.
+set y := Num.sqrt _ / _; move=> [:yunit].
+rewrite mul1r invrM; last 2 first.
+  by rewrite unitrV unitfE gtr_eqF. 
+  abstract: yunit.
+  rewrite unitfE /y mulf_eq0 negb_or sqrtr_eq0 -ltrNge invr_eq0.
+  move=> [:x2D1]; apply/andP; split.
+    abstract: x2D1.
+    by rewrite addr_gt0 // ?ltr01 // exprn_even_gt0 //= invr_eq0 gtr_eqF.
+  by rewrite gtr_eqF.
+by rewrite mulrA divrr // invrK mul1r.
+Qed.
+
+Lemma atanKneg x : x < 0 -> tan (atan x) = x.
+Proof.
+rewrite -oppr_gt0 => x0; rewrite /atan ltr_eqF -?oppr_gt0 //.
+move/eqP: (atanKpos x0); rewrite -eqr_oppLR => /eqP H.
+by rewrite -{3}H {H} -[in RHS]tanN atanN /atan ltr_eqF // -oppr_gt0.
+Qed.
+
+Lemma atanK x : tan (atan x) = x.
+Proof.
+case: (lerP 0 x); last by apply atanKneg.
+rewrite ler_eqVlt => /orP [/eqP <-|]; by [rewrite atan0 tan0 | apply atanKpos].
 Qed.
 
 Lemma sin_acos x : `|x| <= 1 -> sin (acos x) = Num.sqrt (1 - x ^ 2).
 Proof.
 move=> Nx_le1; rewrite /sin /acos argK //; simpc; rewrite sqr_sqrtr.
-  by rewrite addrC addrNK sqrtr1 //.
+  by rewrite addrC addrNK sqrtr1.
 by rewrite subr_ge0 -[_ ^ _]real_normK ?num_real // exprn_ile1.
+Qed.
+
+Lemma cos_atan x : atan x \in Npi2pi2_open -> cos (atan x) = 1 / Num.sqrt (1 + x ^+ 2).
+Proof.
+rewrite Npi2pi2_openP ltr_neqAle => /andP [H1 H2].
+move: (H1); rewrite eq_sym; move/cos2_tan2.
+rewrite atanK => <-.
+rewrite sqrtrM ?ler01 // sqrtr1 2!mul1r.
+rewrite -exprVn sqrtr_sqr ger0_norm; by [rewrite invrK | rewrite invr_ge0].
 Qed.
 
 Definition scalea k a : R[i] := (expi a) ^+ k.
@@ -5149,16 +5228,24 @@ Proof. move=> *; congr mkQuat; by rewrite addNr. Qed.
 Definition quat_ZmodMixin := ZmodMixin addqA addqC add0q addNq.
 Canonical quat_ZmodType := ZmodType quat quat_ZmodMixin.
 
+Lemma addqE p q : p + q = addq p q. Proof. done. Qed.
+
+Lemma oppqE a : - a = oppq a. Proof. done. Qed.
+
 Lemma quatE Q : Q = (Q `0)%:q + Q _i *`i + Q _j *`j + Q _k *`k.
 Proof.
 apply/eqP; rewrite eq_quat /= !addr0 eqxx /= add0r.
 case: Q => /= _ Q; by rewrite {1}(row3E Q).
 Qed.
 
-Lemma oppqE a : oppq a = - a. Proof. done. Qed.
-
 Lemma quat_real0 x : (x%:q == 0) = (x == 0).
 Proof. apply/idP/idP => /eqP; by [case=> -> | move=> ->]. Qed.
+
+Lemma quat_realD (x y : R) : (x + y)%:q = x%:q + y%:q.
+Proof. by rewrite addqE /addq /= addr0. Qed.
+
+Lemma quat_vectD (x y : 'rV[R]_3) : (x + y)%:v = x%:v + y%:v.
+Proof. by rewrite addqE /addq /= addr0. Qed.
 
 Definition mulq (Q P : quat) :=
   let Q1 := Q `0 in let P1 := P `0 in
@@ -5235,27 +5322,27 @@ Proof. apply/eqP => -[]; apply/eqP. exact: oner_neq0. Qed.
 Definition quat_RingMixin := RingMixin mulqA mul1q mulq1 mulqDl mulqDr oneq_neq0.
 Canonical Structure quat_Ring := Eval hnf in RingType quat quat_RingMixin.
 
-Lemma mulqE a b : mulq a b = a * b. Proof. done. Qed.
+Lemma mulqE a b : a * b = mulq a b. Proof. done. Qed.
 
 Lemma quat_realM (x y : R) : (x * y)%:q = x%:q * y%:q.
 Proof.
-by rewrite -mulqE /mulq /= dotmul0v subr0 scaler0 add0r scaler0 crossmulv0 addr0.
+by rewrite mulqE /mulq /= dotmul0v subr0 scaler0 add0r scaler0 crossmulv0 addr0.
 Qed.
 
 Lemma iiN1 : `i * `i = -1.
 Proof.
-rewrite -mulqE /mulq /= scale0r crossmulvv dotmulE sum3E !mxE /=; simp => /=; congr mkQuat.
+rewrite mulqE /mulq /= scale0r crossmulvv dotmulE sum3E !mxE /=; simp => /=; congr mkQuat.
 by rewrite /= oppr0.
 Qed.
 
 Lemma ijk : `i * `j = `k.
 Proof.
-rewrite -mulqE /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=; by simp. 
+rewrite mulqE /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=; by simp. 
 Qed.
 
 Lemma ikNj : `i * `k = - `j.
 Proof.
-rewrite -mulqE /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=. simp.
+rewrite mulqE /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=. simp.
 congr mkQuat.
 by simp.
 apply/rowP => i; rewrite !mxE /=.
@@ -5295,8 +5382,11 @@ Lemma scaleqE (k : R) (a : quat) :
   k *: a = k *: (a `0) %:q + k *: (a _i) *`i + k *: (a _j) *`j + k *: (a _k) *`k.
 Proof. apply/eqP; by rewrite eq_quat /= !mulr0 !addr0 eqxx /= -3!scalerDr add0r -row3E. Qed.
 
-Definition conjq (Q : quat) := mkQuat (quatl Q) (- quatr Q).
+Definition conjq (Q : quat) := mkQuat (Q`0) (- Q`1).
 Notation "x '^*q'" := (conjq x) (at level 2, format "x '^*q'").
+
+Lemma conjqI q : (q^*q)^*q = q.
+Proof. by case: q => q0 q1; rewrite /conjq /= opprK. Qed.
 
 Lemma conjq0 : (0%:v)^*q = 0.
 Proof. apply/eqP; by rewrite eq_quat /= oppr0 !eqxx. Qed.
@@ -5342,12 +5432,19 @@ rewrite {1}(orthogonal_expansion Q`1 (V.frame R)) /=.
 by rewrite 3!(dotmulC Q`1) -[in X in _ == X]addrA addrCA addrA.
 Qed.
 
-Lemma conjq_scalar Q : (quatl Q)%:q = (1 / 2%:R) *: (Q + Q^*q).
+Lemma conjq_scalar Q : (Q`0)%:q = (1 / 2%:R) *: (Q + Q^*q).
 Proof.
-Abort.
+case: Q => Q0 Q1.
+rewrite /conjq /= addqE /addq /= subrr quat_realD scalerDr -scalerDl.
+by rewrite -mulr2n -mulr_natr div1r mulVr ?scale1r // unitfE pnatr_eq0.
+Qed.
 
-Lemma conjq_vector Q : (quatr Q)%:v = (1 / 2%:R) *: (Q - Q^*q).
-Abort.
+Lemma conjq_vector Q : (Q`1)%:v = (1 / 2%:R) *: (Q - Q^*q).
+Proof.
+case: Q => Q0 Q1.
+rewrite /conjq /= addqE /addq /= subrr opprK quat_vectD scalerDr -scalerDl.
+by rewrite -mulr2n -mulr_natr div1r mulVr ?scale1r // unitfE pnatr_eq0.
+Qed.
 
 Definition invq (Q : quat) : quat := (1 / sqrq Q) *: (Q ^*q).
 
@@ -5387,10 +5484,21 @@ Qed.
 Definition quat_UnitRingMixin := UnitRingMixin mulVq mulqV unitqP invq0id.
 Canonical quat_unitRing := UnitRingType quat quat_UnitRingMixin.
 
+Lemma invqE (q : quat) : q^-1 = invq q. Proof. by done. Qed.
+
 Definition normq (Q : quat) := Num.sqrt (sqrq Q).
 
 Lemma normq0 : normq 0 = 0.
 Proof. by rewrite /normq /sqrq expr0n /= norm0 add0r expr0n sqrtr0. Qed.
+
+Lemma normqc q : normq q^*q = normq q.
+Proof. by rewrite /normq /sqrq /= normN. Qed.
+
+Lemma normqE q : ((normq q) ^+ 2)%:q = q^*q * q.
+Proof.
+rewrite -normqc /normq sqr_sqrtr; last by rewrite /sqrq addr_ge0 // sqr_ge0.
+by rewrite -conjqP conjqI.
+Qed.
 
 Lemma normq_ge0 u : normq u >= 0.
 Proof. by apply sqrtr_ge0. Qed.
@@ -5430,6 +5538,13 @@ Qed.
 Lemma normqZ (k : R) (q : quat) : normq (k *: q) = `|k| * normq q.
 Proof.
 by rewrite /normq /sqrq /= normZ 2!exprMn norm2 -mulrDr sqrtrM ?sqr_ge0 // sqrtr_sqr.
+Qed.
+
+Lemma normqV (q : quat) : normq (q^-1) = normq q / sqrq q.
+Proof.
+rewrite invqE /invq normqZ ger0_norm; last first.
+  by rewrite divr_ge0 // ?ler01 // /sqrq addr_ge0 // sqr_ge0.
+by rewrite normqc mulrC mul1r.
 Qed.
 
 Definition normQ Q := (normq Q)%:q. 
@@ -5487,6 +5602,13 @@ Canonical uquat_subType := [subType for quat_of_uquat].
 Lemma normuq (Q : uquat) : normq Q = 1.
 Proof. by case: Q => /= Q /eqP. Qed.
 
+Lemma sqruq (q : uquat) : sqrq q = 1.
+Proof.
+apply/eqP; rewrite -eqr_sqrt ?ler01 //.
+  by rewrite -/(normq q) normuq sqrtr1.
+by rewrite /sqrq addr_ge0 // sqr_ge0.
+Qed.
+
 Definition uquat_eqMixin := [eqMixin of uquat by <:].
 Canonical uquat_eqType := EqType uquat uquat_eqMixin.
 Definition uquat_choiceMixin := [choiceMixin of uquat by <:].
@@ -5497,79 +5619,49 @@ Proof. by rewrite normqM 2!normuq mulr1. Qed.
 
 Definition muluq (Q P : uquat) : uquat := mkUQuat (muluq_proof Q P).
 
-Lemma cos2_atan2 (x : angle R) : cos x != 0 -> 
-  1 / (cos x) ^+ 2 = 1 + (tan x) ^+ 2.
+Lemma invuq_proof (q : uquat) : normq (invq q) == 1.
 Proof.
-move=> cosx.
-rewrite /tan exprMn sin2cos2 mulrBl -exprMn divrr ?unitfE //.
-by rewrite expr1n addrCA subrr addr0 div1r mul1r exprVn.
+rewrite normqV (normuq q).
+move/eqP: (normuq q).
+rewrite -(@eqr_expn2 _ 2) // ?normq_ge0 // expr1n /normq sqr_sqrtr.
+  move/eqP => ->; by rewrite div1r invr1.
+by rewrite /sqrq addr_ge0 // sqr_ge0.
 Qed.
 
-Lemma cos_atan_gt0 (x : R) : cos (atan x) > 0.
-Proof.
-rewrite /cos /atan /=.
-case: (lerP 0 x) => [|x0].
-  rewrite ler_eqVlt => /orP [/eqP <-|x0]; first by rewrite sgz0 mulr0z expi0 ltr01.
-  move=> [:abs].
-  rewrite gtr0_sgz // mulr1z expi_arg; last first.
-    rewrite -normr_eq0 normc_def /= expr1n eq_complex /= eqxx andbT.
-    rewrite gtr_eqF //.
-    abstract: abs.
-    by rewrite sqrtr_gt0 addr_gt0 // ?ltr01 // exprn_gte0.
-  rewrite Re_scale /=.
-    by rewrite divr_gt0 // expr1n.
-  by rewrite gtr_eqF // expr1n.  
-rewrite ltr0_sgz // mulrN1z.
-Admitted.
+Definition invuq (q : uquat) : uquat := mkUQuat (invuq_proof q).
 
-(* ]-pi/2, pi/2[ *)
-Definition Npi2pi2_open : pred (angle R) := [pred a | cos a > 0].
+Lemma invq_uquat (q : uquat) : invq q = q^*q :> quat.
+Proof. by rewrite /invq sqruq div1r invr1 scale1r. Qed.
 
-Lemma atanK (x : R) : atan x \in Npi2pi2_open -> tan (atan x) = x.
-Proof.
-move=> Ha.
-rewrite /atan.
-Admitted.
+Definition polar_of_uquat (q : uquat) := (normalize q`1, atan (norm q`1 / q`0)).
 
-Lemma cos_atan (x : R) : cos (atan x) > 0 -> cos (atan x) = 1 / Num.sqrt (1 + x ^+ 2).
+Lemma norm_polar_of_uquat (q : uquat) :
+  let: (u, a) := polar_of_uquat q in
+  normq (mkQuat (cos a) (sin a *: u)) = 1.
 Proof.
-rewrite ltr_neqAle => /andP [H1 H2].
-move: (H1); rewrite eq_sym; move/cos2_atan2.
-rewrite atanK; last by rewrite inE ltr_neqAle H1.
-move=> <-.
-rewrite sqrtrM ?ler01 // sqrtr1 2!mul1r.
-rewrite -exprVn sqrtr_sqr ger0_norm.
-  by rewrite invrK.
-by rewrite invr_ge0.
+case: q => -[q0 q1] nq.
+case/boolP : (q1 == 0) => [/eqP /= ->|q10].
+  by rewrite norm0 mul0r atan0 cos0 sin0 scale0r /normq /sqrq /= norm0 expr0n addr0 expr1n sqrtr1.
+by rewrite /= /normq /sqrq /= normZ exprMn norm_normalize // expr1n mulr1 norm2 cos2Dsin2 sqrtr1.
 Qed.
 
-Lemma cossin_of_uquat (q : quat) :
-  let u := normalize q`1 in
-  let a := atan (norm q`1 / q`0) in
-  normq q = 1 ->
-  q = mkQuat (cos a) ((sin a) *: u).
-Proof.
-case: q => q0 q1 /=.
-rewrite /normq /sqrq => Hq1.
-congr mkQuat.
-  rewrite cos_atan.
-Abort.
-
-Let vector := 'rV[R]_3.
-
-(* rotation of a vector v about the direction "quatr Q" *)
-Definition quat_rotation (Q : uquat) (v : vector) : quat := 
-  (Q : quat) * v%:v * Q^*q.
-
-Definition associated_unit_quaternion (a : angle R) (w : 'rV[R]_3) :=
+Definition quat_of_polar (a : angle R) (w : 'rV[R]_3) : quat :=
   mkQuat (cos (half_angle a)) (sin (half_angle a) *: w).
 
-Lemma normq_associated_unit_quaternion a w : norm w = 1 -> 
-  normq (associated_unit_quaternion a w) = 1.
+Lemma normq_quat_of_polar a w : norm w = 1 -> normq (quat_of_polar a w) == 1.
 Proof.
 move=> w1.
 by rewrite /normq /sqrq /= normZ exprMn w1 expr1n mulr1 norm2 cos2Dsin2 sqrtr1.
 Qed.
+
+Definition uquat_of_polar a w (H : norm w = 1) : uquat := mkUQuat (normq_quat_of_polar a H).
+
+Let vector := 'rV[R]_3.
+
+(* rotation of the vector v by an angle 2a about the axis w
+where w is q`1 and a = (polar_of_uquat).2 *)
+Definition quat_rot (q : uquat) (v : vector) : quat := 
+  (q : quat) * v%:v * q^*q.
 
 Definition rotation_of_unit_quaternion' (q : uquat) : angle R * vector :=
   let a := scale_angle 2 (acos (q `0)) in
@@ -5578,6 +5670,7 @@ Definition rotation_of_unit_quaternion' (q : uquat) : angle R * vector :=
      0 
    else
      (1 / (2%:R * sin (half_angle a)) *: quatr q)).
+
 (* NB:
 Record angle_axis := AngleAxis {
   angle_axis_val : angle R * vector ;
