@@ -182,6 +182,24 @@ apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP ->|]; first by simp.
 rewrite ifnot0 => /orP [] /eqP -> /=; by simp.
 Qed.
 
+Lemma row3_row_mx {R : ringType} (a b c : R) : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
+Proof.
+apply/rowP => i.
+case/boolP : (i == 0) => [/eqP ->|].
+  rewrite !mxE /=.
+  case: splitP => // j.
+  by rewrite (ord1 j) mxE.
+rewrite ifnot0 => /orP [] /eqP ->; rewrite !mxE /=.
+  case: splitP => k; first by rewrite (ord1 k).
+  case=> k0; rewrite !mxE.
+  case: splitP => // j; first by rewrite (ord1 j) mxE.
+  by rewrite -k0 (ord1 j).
+case: splitP => k; first by rewrite (ord1 k).
+case=> k0; rewrite !mxE.
+case: splitP => // j; first by rewrite -k0 (ord1 j).
+by rewrite (ord1 j) mxE.
+Qed.
+
 Lemma sum1E {T : ringType} (f : 'I_1 -> T) : \sum_(i < 1) f i = f 0.
 Proof. rewrite (bigD1 ord0) //= big_pred0 ?addr0 //; by case => -[]. Qed.
 
@@ -451,11 +469,10 @@ Lemma normalvv (u v : 'rV[R]_3) : (u _|_ v) = (u *d v == 0).
 Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
 
 Lemma triple_prod_mat_mulmx (v : vector) a b c : 
-  v *m (triple_prod_mat a b c)^T = 
-  row_mx (v *d a)%:M (row_mx (v *d b)%:M (v *d c)%:M).
+  v *m (triple_prod_mat a b c)^T = row3 (v *d a) (v *d b) (v *d c).
 Proof.
-rewrite triple_prod_matE (tr_col_mx a) (tr_col_mx b) (mul_mx_row v a^T). 
-by rewrite (mul_mx_row v b^T) /dotmul -!mx11_scalar.
+rewrite triple_prod_matE (tr_col_mx a) (tr_col_mx b) (mul_mx_row v a^T).
+by rewrite row3_row_mx (mul_mx_row v b^T) /dotmul -!mx11_scalar.
 Qed.
 
 (* Definition mixed_product_mat n (u : 'I_n -> 'rV[R]_n) :=  *)
@@ -2137,8 +2154,7 @@ do 3 rewrite dotmulE sum3E.
 move=> H1 H2 H3.
 have /eqP : p *m (triple_prod_mat i j k) ^T = 0.
   rewrite triple_prod_mat_mulmx dotmulE sum3E H1 dotmulE sum3E H2 dotmulE sum3E H3.
-  rewrite (_ : 0%:M = 0); last by apply/matrixP => ? ?; rewrite !mxE mul0rn.
-  by rewrite 2!row_mx0.
+  apply/rowP => a; rewrite !mxE /=; by do 3 case: ifPn => //.
 rewrite mul_mx_rowfree_eq0; first by move/eqP.
 apply/row_freeP; exists (triple_prod_mat i j k).
 apply/eqP; rewrite -orthogonalEC.
@@ -2847,7 +2863,7 @@ Proof.
 rewrite /rot3 /= mulmxA triple_prod_mat_mulmx dotmulC xytriad_ortho.
 rewrite dotmulvv ytriad_norm // expr1n dotmul_crossmulCA crossmulvv dotmulv0.
 rewrite /matrix_of_frame /=.
-rewrite triple_prod_matE.
+rewrite triple_prod_matE row3_row_mx.
 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r.
 by rewrite mul_scalar_mx scale0r addr0.
@@ -2860,33 +2876,27 @@ rewrite {1}/ztriad dotmulC dotmul_crossmulA crossmulvv dotmul0v.
 rewrite {1}/ztriad -dotmul_crossmulA crossmulvv dotmulv0.
 rewrite /matrix_of_frame /=.
 rewrite dotmulvv ztriad_norm // expr1n triple_prod_matE.
+rewrite row3_row_mx.
 do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite mul_scalar_mx scale1r.
 Qed.
 
 Lemma mul_tr (M1 M2 : 'M[R]_3) : M1^T *m M2 = \matrix_(i < 3, j < 3) (row i M1^T *d row j M2^T).
 Proof.
-apply/matrixP => i j.
-rewrite !mxE /dotmul !mxE.
-apply eq_bigr => /= k _.
-by rewrite !mxE.
+apply/matrixP => i j; rewrite /dotmul !mxE.
+apply eq_bigr => /= k _; by rewrite !mxE.
 Qed.
 
 Definition FromLeftToRight : lframe %> rframe.
 apply FromToCoor.mkT with (lframe^T *m rframe).
 rewrite -(trmxK lframe) mul_tr.
-apply/eqP/matrixP => i j.
-rewrite [in LHS]mxE.
-rewrite [in RHS]mxE.
-rewrite dotmulC.
-by congr (_ *d _).
+apply/eqP/matrixP => i j; by rewrite [in LHS]mxE [in RHS]mxE dotmulC.
 Qed.
 
 Lemma FromLeftToRightE (u : 'rV[R]_3) : 
   u *m FromLeftToRight = u *m rot3.
 Proof.
-rewrite MapRotCompE.
-by rewrite /rot3 ?trmx_mul mulmxA.
+by rewrite MapRotCompE /rot3 ?trmx_mul mulmxA.
 Qed.
 
 End transformation_given_three_points.
@@ -4903,6 +4913,133 @@ Qed.
 
 End exponential_map.
 
+Section screw.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Let coordinate := 'rV[R]_3.
+Variable f : 'SE_3[R].
+Let Q : 'M[R]_3 := ortho_of_iso f.
+Let T : vector := trans_of_iso f.
+Variable e : vector.
+Hypothesis ne : norm e = 1.
+Variable phi : angle R.
+Hypothesis Maxis : is_around_axis ne phi Q.
+
+Lemma is_around_axis_axis : e *m Q = e.
+Proof. by case: Maxis. Qed.
+
+(* p.91 *)
+(* the displacements of all the points of B have the same component along e *)
+Lemma thm321 (a p : coordinate) :
+  let da := f a - a in let dp := f p - p in
+  da *d e = dp *d e.
+Proof.
+move=> da dp.
+have eq34 : dp = da + (p - a) *m (Q - 1).
+  rewrite /da mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA subrK.
+  rewrite /dp; congr (_ - _).
+  apply/eqP; rewrite addrC -subr_eq.
+  (* TODO: lemma? *)
+  move/esym/eqP: (ortho_of_iso_is_rot f p).
+  move/esym/eqP: (ortho_of_iso_is_rot f a).
+  rewrite -/Q -/T.
+  rewrite mulmxBl => /eqP <- /eqP <-.
+  by rewrite opprB addrA subrK.
+have : dp *m e^T = da *m e^T + (p - a) *m (Q - 1) *m e^T.
+  by rewrite -mulmxDl -eq34.
+rewrite -mulmxA (mulmxBl Q 1 e^T) mul1mx.
+have -> : Q *m e^T = e^T.
+  rewrite -{1}(is_around_axis_axis) trmx_mul mulmxA mulmxE.
+  have : Q \is 'O_3[R] by rewrite /Q ortho_of_iso_is_ortho.
+  rewrite orthogonalE => /eqP ->; by rewrite mul1mx.
+rewrite subrr mulmx0 addr0 /dotmul; by move=> ->.
+Qed.
+
+Definition d0 := (f 0 - 0) *d e.
+
+Lemma d0_is_a_lb_of_a_displacement p :
+  (d0 ^+ 2 <= norm (f p - p) ^+ 2).
+Proof.
+set dp := f p - p.
+rewrite /d0 (thm321 0 p) -/dp.
+case: (Build_frame ne) => -[v w] /= evw.
+have -> : norm dp = norm (dp *m (triple_prod_mat e v w)^T).
+  rewrite orth_preserves_norm // orthogonalV.
+  by move: (pframe_is_rot evw) => /andP[].
+by rewrite triple_prod_mat_mulmx sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add // addr_ge0 // sqr_ge0.
+Qed.
+
+Definition parpart (p : vector) : vector :=
+  let dp := f p - p in dp *m (e^T *m e).
+
+Lemma parpartP (p : vector) : parpart p = d0 *: e.
+Proof.
+rewrite /parpart; set dp := f p - p.
+rewrite /d0 -mul_scalar_mx mulmxA; congr (_ *m _).
+by rewrite -(thm321 p 0) /dotmul -mx11_scalar.
+Qed.
+
+Definition perppart (p : coordinate) : vector :=
+  let dp := f p - p in dp *m (1 - e^T *m e).
+
+Lemma etre : e *m e^T = 1.
+Proof.
+have : (e *d e) = 1 by rewrite dotmulvv ne expr1n.
+rewrite /dotmul => He.
+by rewrite (mx11_scalar (e *m e^T)) He.
+Qed.
+
+Lemma perppartP (p : vector) : let dp := f p - p in
+  parpart p *d perppart p = 0.
+Proof.
+move=> dp.
+rewrite parpartP /perppart -/dp /dotmul trmx_mul linearD /= trmx1 linearN /=.
+rewrite trmx_mul trmxK mulmxA -scalemxAl mulmxBr mulmxA mulmx1 etre.
+by rewrite mul1mx subrr -scalemxAl mul0mx scaler0 mxE.
+Qed.
+
+Lemma decomp (p : coordinate) : let dp := f p - p in
+  dp = parpart p + perppart p.
+Proof. move=> dp; by rewrite /parpart /perppart -/dp mulmxBr mulmx1 addrCA subrr addr0. Qed.
+
+Lemma perpart_colinear (p : coordinate) :
+  let dp := f p - p in
+  (perppart p == 0) = (colinear dp e).
+Proof.
+move=> dp.
+apply/idP/idP => [/eqP|/colinearP].
+  rewrite /perppart -/dp mulmxBr mulmx1 => /eqP.
+  rewrite subr_eq add0r => /eqP ->.
+  rewrite /colinear mulmxA (mx11_scalar (dp *m e^T)) -/(dotmul dp e).
+  by rewrite  mul_scalar_mx crossmulC linearZ /= crossmulvv scaler0 oppr0.
+rewrite ne -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
+by rewrite /perppart -/dp Hk2 -scalemxAl mulmxBr mulmx1 mulmxA etre mul1mx subrr scaler0.
+Qed.
+
+(* d0 is the minimal norm of a displacement, all such points are along a line parallel
+   to e *)
+Lemma MozziChasles1 p : let dp := f p - p in
+  norm dp = d0 -> colinear dp e.
+Proof.
+move=> dp H.
+have Hp : forall p : coordinate, let dp := f p - p in
+    norm dp ^+ 2 = norm (d0 *: e) ^+2 + norm (perppart p) ^+ 2.
+  move=> p' dp'.
+  rewrite /dp' (decomp p') normD -dotmul_cos perppartP mul0rn addr0 sqr_sqrtr; last first.
+    by rewrite addr_ge0 // ?sqr_ge0.
+  by rewrite -2!exprnP parpartP.
+move: {Hp}(Hp p) => Hp.
+rewrite -perpart_colinear.
+rewrite -norm_eq0.
+suff : norm dp ^+2 <= norm (d0 *: e) ^+ 2.
+  by rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 //= norm_eq0.
+rewrite 2!expr2.
+by rewrite ler_pmul // ?norm_ge0 // H normZ ne mulr1 ler_norm.
+Qed.
+
+End screw.
+
 Section exponential_coordinates_rigid.
 
 Variable R : rcfType.
@@ -5049,6 +5186,7 @@ Definition exp_twist (w v : vector) (a : angle R) : 'M_4 :=
   (col_mx `e^(a, skew_mx w) 0)
   (col_mx ((w *v v) *m (1 - `e^(a, (skew_mx w)^T)) + v *m (w^T *m w))^T 1).
 
+(*
 Lemma expmx_exp_twist (w v : vector) (a : angle R) k : norm w = 1 ->
   expmx (twist w v) k.+2 = exp_twist w v a.
 Proof.
@@ -5156,6 +5294,7 @@ move/(congr1 (fun x => x *m g^-1)).
 rewrite -mulmxA mulmxV ?mulmx1 ?rigid_trans_unitmx //.
 move=> ->.*)
 Abort.
+*)
 
 End exponential_coordinates_rigid.
 
