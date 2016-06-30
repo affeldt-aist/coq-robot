@@ -154,6 +154,9 @@ Qed.
 Lemma rew_condAr (a b c : bool) : a = b && c -> (b -> c = a).
 Proof. by case: b. Qed.
 
+Lemma ifnot01 (i : 'I_2) : (i != 0) = (i == 1).
+Proof. by case: i => -[] // []. Qed.
+
 Lemma thirdI3 (i j : 'I_3) : i != j -> exists k, (k != i) && (k != j).
 Proof.
 case: i j => -[i0|[i1|[i2|//]]].
@@ -171,8 +174,21 @@ Proof. by case: i => -[i0 //| [i1 //| [i2 // | //]]]. Qed.
 Lemma ifnot2 (i : 'I_3) : (i != 2%:R) = (i == 0) || (i == 1).
 Proof. by case: i => -[i0 //| [i1 //| [i2 // | //]]]. Qed.
 
-Definition row3 {R : ringType} (a b c : R) : 'rV[R]_3 := \row_p 
-  [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
+Lemma liftE0 m (i : 'I_m.+2) : fintype.lift i ord0 = (i == 0)%:R.
+Proof.
+apply/val_inj => /=; rewrite /bump leqn0 addn0; by case: i => // -[].
+Qed.
+
+Lemma liftE1 {m} (i : 'I_m.+3) : fintype.lift i 1 = (i <= 1).+1%:R.
+Proof.
+apply val_inj => /=; case: i => -[/= _| [] //]; by rewrite /bump modn_small.
+Qed.
+
+Definition row2 {R : ringType} (a b : R) : 'rV[R]_2 :=
+  \row_p [eta \0 with 0 |-> a, 1 |-> b] p.
+
+Definition row3 {R : ringType} (a b c : R) : 'rV[R]_3 :=
+  \row_p [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
 
 Lemma row30 {R : ringType} : row3 0 0 0 = 0 :> 'rV[R]_3.
 Proof. by apply/rowP => a; rewrite !mxE /=; do 3 case: ifPn => //. Qed.
@@ -222,19 +238,6 @@ Lemma cofactor_mx22 {T : comRingType} (A : 'M[T]_2) i j :
 Proof.
 rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
 by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
-Qed.
-
-Lemma liftE0 m (i : 'I_m.+2) : fintype.lift i ord0 = (i == 0)%:R.
-Proof. 
-apply/val_inj => /=; rewrite /bump leqn0 addn0.
-by case: i => // -[].
-Qed.
-
-Lemma liftE1 {m} (i : 'I_m.+3) : fintype.lift i 1 = (i <= 1).+1%:R.
-Proof.
-apply val_inj => /=.
-case: i => -[/= _|]; first by rewrite /bump modn_small.
-by case.
 Qed.
 
 Lemma det_mx22 {T : comRingType} (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
@@ -367,6 +370,9 @@ Notation "u *d w" := (dotmul u w) (at level 40) : ring_scope.
 Section triple_prod_mat.
 
 Variable (T : ringType).
+
+Definition double_prod_mat (u v : 'rV[T]_2) :=
+  \matrix_(i < 2) [eta \0 with 0 |-> u, 1 |-> v] i.
 
 (* find a better name *)
 Definition triple_prod_mat (u v w : 'rV[T]_3) :=
@@ -1014,6 +1020,33 @@ rewrite scale1r in Hx.
 by rewrite x0 /= Hx.
 Qed.
 
+Lemma O3_RO (M : 'M[R]_3) (P : 'M[R]_2) : M = block_mx (1 : 'M_1) 0 0 P ->
+  (M \is 'O_3[R]) = (P \is 'O_2[R]).
+Proof.
+move=> HM.
+rewrite HM !orthogonalE (tr_block_mx (1 : 'M_1)) trmx1 2!trmx0.
+rewrite -mulmxE (mulmx_block (1 : 'M_1) _ _ _ 1) !(mulmx0,mul0mx,mulmx1,mul1mx,addr0,add0r).
+rewrite -[X in (_ == X) = _](@submxK _ 1 2 1 2).
+rewrite (_ : ulsubmx _ = 1); last by apply/rowP => i; rewrite !mxE.
+rewrite (_ : ursubmx _ = 0); last by apply/rowP => i; rewrite !mxE.
+rewrite (_ : dlsubmx _ = 0); last by apply/colP => i; rewrite !mxE.
+rewrite (_ : drsubmx _ = 1); last first.
+  apply/matrixP => i j.
+  case/boolP : (i == 0) => [/eqP ->|].
+    case/boolP : (j == 0) => [/eqP ->|]; first by rewrite !mxE.
+    rewrite ifnot01 => /eqP ->; by rewrite !mxE.
+  rewrite ifnot01 => /eqP ->; by rewrite !mxE.
+rewrite mulmxE.
+apply/idP/idP => [|/eqP -> //].
+by case/eqP/(@eq_block_mx _ 1 2 1 2) => _ _ _ ->.
+Qed.
+
+Lemma SO_RO (M : 'M[R]_3) (P : 'M[R]_2) : M = block_mx (1 : 'M_1) 0 0 P ->
+  (M \is 'SO_3[R]) = (P \is 'SO_2[R]).
+Proof.
+move=> ->; by rewrite rotationE (@O3_RO _ P) // rotationE (@det_lblock _ 1 2) det1 mul1r.
+Qed.
+
 End orthogonal_crossmul.
 
 Section norm.
@@ -1078,6 +1111,13 @@ End norm1.
 
 End norm.
 
+Lemma norm_row_of_O {R : rcfType} n M : M \is 'O_n.+1[R] -> forall i, norm (row i M) = 1.
+Proof.
+move=> MSO i.
+apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
+rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
+Qed.
+
 Definition preserves_dotmul {R : rcfType} n (f : 'rV[R]_n -> 'rV[R]_n) :=
   forall a b, f a *d f b = a *d b.
 
@@ -1113,6 +1153,16 @@ Definition preserves_norm {R : rcfType} n (f : 'rV[R]_n -> 'rV[R]_n) :=
 (* NB: useful? *)
 Lemma orth_preserves_norm R n M : M \is 'O_n.+1[R] -> preserves_norm (fun x : 'rV[R]_n.+1 => x *m M).
 Proof. move=> HM v; by rewrite /norm (proj2 (orth_preserves_dotmul M) HM). Qed.
+
+Section norm2.
+
+Variable R : rcfType.
+Implicit Types u : 'rV[R]_2.
+
+Lemma sqr_norm2 u : norm u ^+ 2 = u 0 0 ^+ 2 + u 0 1 ^+ 2.
+Proof. by rewrite -dotmulvv dotmulE sum2E -2!expr2. Qed.
+
+End norm2.
 
 Section norm3.
 
@@ -1436,6 +1486,22 @@ Definition cos a := Re (expi a).
 Definition sin a := Im (expi a).
 Definition tan a := sin a / cos a.
 
+Lemma sin_pihalf : sin pihalf = 1.
+Proof.
+have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
+rewrite /sin /pihalf expi_arg //.
+by rewrite i1 divr1.
+by rewrite -normr_eq0 i1 oner_neq0.
+Qed.
+
+Lemma cos_pihalf : cos pihalf = 0.
+Proof.
+have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
+rewrite /cos /pihalf expi_arg //.
+by rewrite i1 divr1.
+by rewrite -normr_eq0 i1 oner_neq0.
+Qed.
+
 Lemma cos2Dsin2 a : (cos a) ^+ 2 + (sin a) ^+ 2 = 1.
 Proof.
 move: (add_Re2_Im2 (expi a)).
@@ -1482,6 +1548,28 @@ rewrite invc_norm (eqP ab) expr1n invr1 mul1r expi_arg; last first.
 by rewrite normcJ (eqP ab) divr1.
 Qed.
 
+Lemma cosB a b : cos (a - b) = cos a * cos b + sin a * sin b.
+Proof. by rewrite cosD cosN sinN mulrN opprK. Qed.
+
+Lemma sinB a b : sin (a - b) = sin a * cos b - cos a * sin b.
+Proof. by rewrite sinD cosN sinN mulrN. Qed.
+
+Lemma cosDpihalf a : cos (a + pihalf) = - sin a.
+Proof. by rewrite cosD cos_pihalf mulr0 add0r sin_pihalf mulr1. Qed.
+
+Lemma cosBpihalf a : cos (a - pihalf) = sin a.
+Proof. by rewrite cosB cos_pihalf sin_pihalf mulr0 add0r mulr1. Qed.
+
+Lemma sinBpihalf a : sin (a - pihalf) = - cos a.
+Proof. by rewrite sinB cos_pihalf sin_pihalf mulr0 add0r mulr1. Qed.
+
+Lemma expiNi : expi (- arg 'i) = -'i :> R[i].
+Proof.
+have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
+rewrite expi_cos_sin sinN cosN /cos /sin expi_arg; last by rewrite -normr_eq0 i1 oner_neq0.
+rewrite i1 divr1 /=; apply/eqP; by rewrite eq_complex /= oppr0 2!eqxx.
+Qed.
+
 Lemma tanN x : tan (- x) = - tan x :> R.
 Proof. by rewrite /tan sinN cosN mulNr. Qed.
 
@@ -1491,6 +1579,21 @@ Proof. by rewrite /cos -arg1 argK // ger0_norm // ler01. Qed.
 Lemma cos_max a : `| cos a | <= 1.
 Proof.
 rewrite -lecR (ler_trans (normc_ge_Re _)) //; by case: a => ? /= /eqP ->. 
+Qed.
+
+Lemma cos0_inv a : cos a = 0 -> a = pihalf \/ a = -pihalf.
+Proof.
+case: a => -[a b] ni; rewrite /cos /= => a0.
+have [b1|b1] : b = 1 \/ b = - 1.
+  move: ni.
+  rewrite a0 normc_def /= expr0n add0r sqrtr_sqr eq_complex /= eqxx andbT.
+  case: (lerP 0 b) => b0.
+  + rewrite ger0_norm // => /eqP ->; by left.
+  + rewrite ltr0_norm // eqr_oppLR => /eqP ->; by right.
+- left; apply val_inj => /=;
+  by rewrite /pihalf argK // ?a0 ?b1 // normc_def /= expr0n add0r expr1n sqrtr1.
+- right; apply val_inj => /=.
+  by rewrite /pihalf a0 b1 /= expiNi; apply/eqP; rewrite eq_complex /= oppr0 2!eqxx.
 Qed.
 
 Lemma sin0 : sin 0 = 0.
@@ -1616,10 +1719,10 @@ Qed.
 *)
 
 Definition Opi_closed := [pred a | 0 <= sin a].
+Definition piO_closed := [pred a | sin a < 0].
 
 (* ]-pi/2, pi/2[ *)
 Definition Npi2pi2_open : pred angle := [pred a | cos a > 0].
-
 Lemma Npi2pi2_openP a : (a \in Npi2pi2_open) = (0 < cos a).
 Proof. by rewrite inE. Qed.
 
@@ -1636,6 +1739,13 @@ Lemma cosK a : a \in Opi_closed -> acos (cos a) = a.
 Proof.
 rewrite inE => adoml; rewrite /acos /cos /= expi_cos_sin /= -sin2cos2. 
 by rewrite sqrtr_sqr /= ger0_norm // -expi_cos_sin expiK.
+Qed.
+
+Lemma cosKN a : a \in piO_closed -> acos (cos a) = - a.
+Proof.
+rewrite inE => adoml; rewrite /acos /cos /= expi_cos_sin /= -sin2cos2.
+rewrite sqrtr_sqr /= ltr0_norm //.
+move: (expi_cos_sin (- a)); rewrite cosN sinN => <-; by rewrite expiK.
 Qed.
 
 (*cancel asin sin*)
@@ -2102,6 +2212,96 @@ Qed.
 
 End angle.
 
+Lemma norm2_cossin {R : rcfType} (v :'rV[R]_2) :
+  norm v = 1 -> exists a, v 0 0 = cos a /\ v 0 1 = sin a.
+Proof.
+move=> v1.
+have {v1}v1 : `| v 0 0 +i* v 0 1 | = 1 by rewrite normc_def /= -sqr_norm2 sqrtr_sqr v1 normr1.
+exists (arg (v 0 0 +i* v 0 1)); split.
+  rewrite /cos expi_arg //; last by rewrite -normr_eq0 v1 oner_neq0.
+  by rewrite v1 divr1.
+rewrite /sin expi_arg //; last by rewrite -normr_eq0 v1 oner_neq0.
+by rewrite v1 divr1.
+Qed.
+
+Definition RO {R : rcfType} (a : angle R) :=
+  double_prod_mat (row2 (cos a) (- sin a)) (row2 (sin a) (cos a)).
+
+Lemma tr_RO {R : rcfType} (a : angle R) : \tr (RO a) = (cos a) *+ 2.
+Proof. by rewrite /mxtrace sum2E !mxE /= mulr2n. Qed.
+
+Lemma RO_is_O {R : rcfType} (a : angle R) : RO a \is 'O_2[R].
+Proof.
+apply/orthogonalP => i j.
+case/boolP : (i == 0) => [/eqP ->|].
+  case/boolP : (j == 0) => [/eqP ->|].
+    by rewrite dotmulE sum2E !mxE /= mulrN mulNr opprK -2!expr2 cos2Dsin2.
+  rewrite ifnot01 => /eqP ->; by rewrite dotmulE sum2E !mxE /= mulNr mulrC subrr.
+rewrite ifnot01 => /eqP ->.
+case/boolP : (j == 0) => [/eqP ->|]; first by rewrite dotmulE sum2E !mxE /= mulrN mulrC subrr.
+rewrite ifnot01 => /eqP ->; by rewrite dotmulE sum2E !mxE /= addrC -2!expr2 cos2Dsin2.
+Qed.
+
+Lemma RO_is_SO {R : rcfType} (a : angle R) : RO a \is 'SO_2[R].
+Proof.
+by rewrite rotationE RO_is_O /= det_mx22 !mxE /= mulNr opprK -2!expr2 cos2Dsin2.
+Qed.
+
+Lemma rot2d {R : rcfType} (M : 'M[R]_2) : M \is 'SO_2[R] ->
+  exists a : angle R, M = RO a /\ (a \in piO_closed R \/ a \in Opi_closed R).
+Proof.
+move=> MSO.
+move: (MSO); rewrite rotationE => /andP[MO _].
+case: (norm2_cossin (norm_row_of_O MO 0)); rewrite !mxE => a [a1 a2].
+case: (norm2_cossin (norm_row_of_O MO 1)); rewrite !mxE => b [b1 b2].
+move/orthogonalP : (MO) => /(_ 0 1) /=.
+rewrite dotmulE sum2E !mxE a1 a2 b1 b2 -cosB.
+case/cos0_inv => abpi.
+  exfalso.
+  move/rotation_det : MSO.
+  rewrite det_mx22 a1 a2 b1 b2 mulrC -(mulrC (cos b)) -sinB => /esym/eqP.
+  rewrite -eqr_opp -sinN opprB abpi sin_pihalf -subr_eq0.
+  by rewrite -opprD eqr_oppLR oppr0 -(natrD _ 1 1) pnatr_eq0.
+have Hsinb : sin b = cos a.
+  by move/eqP : (abpi); rewrite subr_eq => /eqP ->; rewrite addrC cosBpihalf.
+have Hcosb : cos b = - sin a.
+  by move/eqP : (abpi); rewrite subr_eq => /eqP ->; rewrite addrC sinBpihalf opprK.
+rewrite {}Hsinb in b2.
+rewrite {}Hcosb {abpi b} in b1.
+case: (ltrP 0 (sin a)) => sa_ge0.
+  exists (- a); split; last first.
+    left; by rewrite inE sinN ltr_oppl oppr0.
+  apply/matrixP => i j.
+  rewrite !mxE /=.
+  case: ifPn => [/eqP ->|]; first rewrite !mxE /=.
+    case: ifPn => [/eqP ->|]; first by rewrite a1 cosN.
+    rewrite ifnot01 => /eqP -> /=; by rewrite a2 sinN opprK.
+  rewrite ifnot01 => /eqP -> /=; rewrite !mxE /=.
+  case: ifPn => [/eqP ->|]; first by rewrite b1 sinN.
+  rewrite ifnot01 => /eqP -> /=; by rewrite b2 cosN.
+exists (- a); split; last first.
+  right; by rewrite inE sinN lter_oppE.
+apply/matrixP => i j.
+rewrite !mxE /=.
+case: ifPn => [/eqP ->|]; first rewrite !mxE /=.
+  case: ifPn => [/eqP -> //|].
+  by rewrite cosN.
+  rewrite ifnot01 => /eqP -> /=.
+  by rewrite sinN opprK.
+rewrite ifnot01 => /eqP -> /=; rewrite !mxE /=.
+case: ifPn => [/eqP ->|].
+  by rewrite sinN.
+rewrite ifnot01 => /eqP -> /=.
+by rewrite cosN.
+Qed.
+
+Lemma tr_SO2 {R : rcfType} (P : 'M[R]_2) : P \is 'SO_2[R] -> `|\tr P| <= 2%:R.
+Proof.
+case/rot2d => a [PRO _]; move: (cos_max a) => ca.
+rewrite PRO tr_RO -(mulr_natr (cos a)) normrM normr_nat.
+by rewrite -[in X in _ <= X]mulr_natr ler_pmul.
+Qed.
+
 Section colinear.
 
 Variable R : rcfType.
@@ -2236,6 +2436,7 @@ Implicit Type u v : vector.
 
 Definition axialcomp v u := v *m (u^T *m u).
 
+(* normal component of v w.r.t. u *)
 Definition normalcomp v u := v *m (1 - u^T *m u).
 
 Lemma decomp v u : v = axialcomp v u + normalcomp v u.
@@ -2491,6 +2692,8 @@ End non_oriented_frame.
 Record pframe i j k := mkPFrame {
   oframe_of_pframe :> oframe i j k ;
   pframeP : frame_sgn oframe_of_pframe = 1}.
+
+Definition matrix_of_pframe i j k (f : pframe i j k) := triple_prod_mat i j k.
 
 Lemma icrossj i j k (f : pframe i j k) : k = i *v j.
 Proof. exact: (frame_pos_crossmul (pframeP f)). Qed.
@@ -3021,8 +3224,28 @@ Definition Rx (a : angle R) := triple_prod_mat
   (row3 0 (cos a) (- sin a))
   (row3 0 (sin a) (cos a)).
 
+Lemma Rx_RO (a : angle R) : Rx a = block_mx (1 : 'M_1) (0 : 'M_(1, 2)) (0 : 'M_(2, 1)) (RO a).
+Proof.
+rewrite -(@submxK _ 1 2 1 2 (Rx a)).
+rewrite (_ : ulsubmx _ = 1); last first.
+  apply/rowP => i; by rewrite (ord1 i) !mxE /=.
+rewrite (_ : ursubmx _ = 0); last first.
+  apply/rowP => i; rewrite !mxE /=; case: ifPn => //; by case: ifPn.
+rewrite (_ : dlsubmx _ = 0); last first.
+  apply/colP => i; rewrite !mxE /=.
+  case: ifPn; first by rewrite !mxE.
+  by case: ifPn; rewrite !mxE.
+rewrite (_ : drsubmx _ = RO a) //.
+apply/matrixP => i j; rewrite !mxE /=.
+case/boolP : (i == 0) => [/eqP -> /=|].
+  case/boolP : (j == 0) => [/eqP -> /=|]; first by rewrite !mxE.
+  rewrite ifnot01 => /eqP ->; by rewrite !mxE.
+rewrite ifnot01 => /eqP -> /=; by rewrite !mxE.
+Qed.
+
 Lemma Rx_is_SO a : Rx a \is 'SO_3[R].
 Proof.
+(* TODO: pove using RO_is_SO? *)
 apply matrix_is_rotation.
 - apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
   rewrite -dotmulvv dotmulE sum3E !mxE /=. by simp.
@@ -4815,21 +5038,34 @@ Definition angle_of_rotation (M : 'M[R]_3) := acos ((\tr M - 1) / 2%:R).
 Definition axis_of_rotation (M : 'M[R]_3) : 'rV[R]_3 := 
   let phi := angle_of_rotation M in 1 / (2%:R * sin phi) *: axial_vec M.
 
+Lemma angle_of_rotation_Rx (a : angle R) :
+  (a \in Opi_closed R -> angle_of_rotation (Rx a) = a) /\
+  (a \in piO_closed R -> angle_of_rotation (Rx a) = - a).
+Proof.
+split.
+  move=> Ha. rewrite /angle_of_rotation tr_Rx addrAC subrr add0r.
+  by rewrite -(mulr_natr (cos a)) -mulrA divrr ?unitfE ?pnatr_eq0 // mulr1 cosK.
+move=> Ha. rewrite /angle_of_rotation tr_Rx addrAC subrr add0r.
+rewrite -(mulr_natr (cos a)) -mulrA divrr ?unitfE ?pnatr_eq0 // mulr1.
+by rewrite cosKN.
+Qed.
+
 Lemma SO_is_around_axis_angle (M : 'M[R]_3) : M \is 'SO_3[R] ->
-  forall u a (u0 : u != 0), a \in Opi_closed R ->
+  forall u a, u != 0 -> a \in Opi_closed R ->
   is_around_axis u a (lin_of_mat M) -> a = angle_of_rotation M.
 Proof.
 move=> Hf u a u0 Ha.
 move/(tr_around_axis u0); rewrite /angle_of_rotation => ->.
-by rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divrr ?unitfE ?pnatr_eq0 // mulr1 cosK.
+rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divrr.
+  by rewrite mulr1 cosK.
+by rewrite unitfE pnatr_eq0.
 Qed.
 
 Lemma SO_is_around_axis_axis (M : 'M[R]_3) : M \is 'SO_3[R] ->
-  forall u (u1 : norm u = 1) (a : angle R),
-  a \in Opi_closed R ->
+  forall u (a : angle R), a \in Opi_closed R ->
   is_around_axis u a (lin_of_mat M) -> colinear u (axial_vec M).
 Proof.
-move=> Hf u u1 a Ha [/= H1 H2 H3]; apply is_eigenvector1_colinear => //.
+move=> Hf u a Ha [/= H1 H2 H3]; apply is_eigenvector1_colinear => //.
 apply/eigenspaceP; by rewrite H1 scale1r.
 Qed.
 
@@ -4839,6 +5075,79 @@ Proof. by rewrite /j_of_i colinear_refl. Qed.
 Lemma k_of_i_Vi : k_of_i (@V.i R) = V.k.
 Proof. by rewrite /k_of_i (normalizeI (V.normi _)) j_of_i_Vi V.icrossj. Qed.
 
+Lemma angle_of_rotation_SO_RO (M : 'M[R]_3) a :
+  M = block_mx (1 : 'M_1) 0 0 (RO a) ->
+  (a \in Opi_closed R -> angle_of_rotation M = a) /\
+  (a \in piO_closed R -> angle_of_rotation M = - a).
+Proof.
+move=> Ma.
+rewrite /angle_of_rotation Ma (mxtrace_block (1 : 'M_1)) tr_RO mxtrace1 addrAC.
+rewrite subrr add0r -(mulr_natr (cos a)) -mulrA divrr ?unitfE ?pnatr_eq0 // mulr1.
+split => Ha.
+  by rewrite cosK.
+by rewrite cosKN.
+Qed.
+
+Lemma rotation_is_Rx (M : 'M[R]_3) k (k0 : 0 < k ) : M \is 'SO_3[R] ->
+  axial_vec M = k *: V.i ->
+  angle_of_rotation M \in Opi_closed R /\ (
+(M = block_mx (1 : 'M_1) 0 0 (RO (- angle_of_rotation M)) /\ M = Rx (- angle_of_rotation M)) \/
+(M = block_mx (1 : 'M_1) 0 0 (RO (angle_of_rotation M)) /\ M = Rx (angle_of_rotation M))).
+Proof.
+move=> MSO axialVi.
+have [M02 M01] : M 0 2%:R = M 2%:R 0 /\ M 0 1 = M 1 0.
+  move/matrixP/(_ 0 1) : (axialVi).
+  rewrite !mxE /= mulr0 => /eqP; rewrite subr_eq add0r => /eqP ->.
+  move/matrixP/(_ 0 2%:R) : (axialVi).
+  by rewrite !mxE /= mulr0 => /eqP; rewrite subr_eq add0r => /eqP ->.
+have axial_eigen : axial_vec M *m M = axial_vec M.
+  move: (axial_vec_vec_eigenspace MSO) => /eigenspaceP; by rewrite scale1r.
+have [M010 [M020 M001]] : M 0 1 = 0 /\ M 0 2%:R = 0 /\ M 0 0 = 1.
+  move: axial_eigen.
+  rewrite axialVi -scalemxAl => /scalerI.
+  rewrite gtr_eqF // => /(_ isT) ViM.
+  have : V.i *m M = row 0 M.
+    rewrite rowE; congr (_ *m _); apply/rowP => i.
+    rewrite !mxE /=; case: ifPn => //. by rewrite ifnot0 => /orP [] /eqP ->.
+  rewrite {}ViM => ViM.
+  move/matrixP : (ViM) => /(_ 0 1); rewrite !mxE /= => <-.
+  move/matrixP : (ViM) => /(_ 0 2%:R); rewrite !mxE /= => <-.
+  by move/matrixP : (ViM) => /(_ 0 0); rewrite !mxE /= => <-.
+have [P MP] : exists P : 'M[R]_2, M = block_mx (1 : 'M_1) 0 0 P.
+  exists (@drsubmx _ 1 2 1 2 M).
+  rewrite -{1}(@submxK _ 1 2 1 2 M).
+  rewrite (_ : ulsubmx _ = 1); last first.
+    apply/matrixP => i j.
+    rewrite (ord1 i) (ord1 j) !mxE /= -M001 mulr1n; congr (M _ _); by apply val_inj.
+  rewrite (_ : ursubmx _ = 0); last first.
+    apply/rowP => i.
+    case/boolP : (i == 0) => [/eqP ->|].
+      rewrite !mxE -[RHS]M010; congr (M _ _); by apply val_inj.
+    rewrite ifnot01 => /eqP ->; rewrite !mxE -[RHS]M020; congr (M _ _); by apply val_inj.
+  rewrite (_ : dlsubmx _ = 0) //.
+  apply/colP => i.
+  case/boolP : (i == 0) => [/eqP ->|].
+    rewrite !mxE -[RHS]M010 M01; congr (M _ _); by apply val_inj.
+  rewrite ifnot01 => /eqP ->; rewrite !mxE -[RHS]M020 M02; congr (M _ _); by apply val_inj.
+have PSO : P \is 'SO_2[R] by rewrite -(SO_RO MP).
+move=> [: Hangle].
+split.
+  abstract: Hangle.
+  rewrite inE /angle_of_rotation MP (mxtrace_block (1 : 'M_1)) mxtrace1 addrAC.
+  rewrite subrr add0r sin_acos.
+    by rewrite sqrtr_ge0.
+  rewrite normrM normrV ?unitfE ?pnatr_eq0 // normr_nat ler_pdivr_mulr // mul1r.
+  exact: tr_SO2.
+case/rot2d : PSO => a [PRO [Ha|Ha]]; rewrite {}PRO in MP.
+  (* a \in piO_closed R *)
+  move: (proj2 (angle_of_rotation_SO_RO MP) Ha) => MHa.
+  left.
+  by rewrite MHa opprK MP Rx_RO.
+move: (proj1 (angle_of_rotation_SO_RO MP) Ha) => MHa.
+right.
+by rewrite MHa MP Rx_RO.
+Qed.
+
 Lemma SO_is_around_axis (M : 'M[R]_3) : M \is 'SO_3[R] ->
   exists u a, is_around_axis u a (lin_of_mat M).
 Proof.
@@ -4847,24 +5156,23 @@ exists (axial_vec M).
 exists (angle_of_rotation M).
 split => /=.
 - move/axial_vec_vec_eigenspace : MSO => /eigenspaceP ->; by rewrite scale1r.
-- rewrite /angle_of_rotation.
-  rewrite acosK; last by admit.
-  rewrite sin_acos; last by admit.
-  rewrite /j_of_i.
-  case: ifPn.
-    case/colinearP.
+- rewrite /j_of_i.
+  case: ifPn => axialVi.
+    (* axial vector colinear with j *)
+    case/colinearP : axialVi => [|[_ [k [Hk axialVi]]]].
+      by rewrite -norm_eq0 V.normi (negbTE (oner_neq0 _)).
+    case: (ltrP 0 k) => k0.
+      case: (rotation_is_Rx k0 MSO axialVi) => Hangle [[HM1 HM2]|[HM1 HM2]].
+        admit.
+      rewrite {1}HM2.
+      transitivity (row 1 (Rx (angle_of_rotation M))).
+        admit.
+      rewrite rowK /=.
       admit.
-    case=> _ [k [Hk axiali]].
-    rewrite axiali.
-    rewrite k_of_iZ; last 2 first.
-      admit.
-      admit.
-    rewrite k_of_i_Vi.
     admit.
+  (* axial vector not colinear with j *)
   admit.
-- rewrite /angle_of_rotation.
-  rewrite sin_acos; last by admit.
-  rewrite acosK; last by admit.
+- admit.
 Abort.
 
 Coercion rodrigues_mx r := 
