@@ -3980,51 +3980,35 @@ End derivative_map.
 
 Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
 
+Notation "''hM[' R ]" := ('M[R]_4) (at level 8, format "''hM[' R ]").
+Notation "''hrV[' R ]" := ('rV[R]_4) (at level 8, format "''hrV[' R ]").
+
 Module SE.
+(* definition of a general transform *)
 Record t (R : rcfType) : Type := mk {
   trans : 'rV[R]_3;
   rot : 'M[R]_3 ;
   rotP : rot \in 'SO[R]_3 }.
 
 Module h.
-Definition rot R (T : t R) : 'M[R]_4 :=
-  row_mx (col_mx (rot T) 0) (col_mx 0 1).
-Definition trans R (T : t R) : 'M[R]_4 :=
-  row_mx (col_mx 1 0) (col_mx (trans T)^T 1).
-End h.
-
-End SE.
-
-Notation "''SE_3[' R ]" := (SE.t R)
-  (at level 8, format "''SE_3[' R ]").
-
-Coercion hmx R (T : 'SE_3[R]) : 'M[R]_4 :=
-  row_mx (col_mx (SE.rot T) 0) (col_mx (SE.trans T)^T 1).
-
-Section homogeneous_transformation.
-
+Section homogeneous_coordinates.
 Variable R : rcfType.
-Let vector := 'rV[R]_3.
-Let coordinate := 'rV[R]_3.
 
-Lemma hmxE (T : 'SE_3[R]) : T = SE.h.trans T *m SE.h.rot T :> 'M_4.
+Definition rot (T : t R) : 'hM[R] := row_mx (col_mx (rot T) 0) (col_mx 0 1).
+
+Definition trans (T : t R) : 'hM[R] := row_mx (col_mx 1 0) (col_mx (trans T)^T 1).
+
+Definition inv_trans (T : t R) : 'hM[R] := row_mx (col_mx 1 0) (col_mx (- (SE.trans T)^T) 1).
+
+Lemma inv_transP (T : t R) : trans T *m inv_trans T = 1.
 Proof.
-rewrite /hmx /SE.h.trans /SE.h.rot.
-rewrite (mul_mx_row (row_mx (col_mx 1 0) (col_mx (SE.trans T)^T 1)) (col_mx (SE.rot T) 0)).
-rewrite mul_row_col mulmx0 addr0 mul_row_col mulmx0 add0r mulmx1.
-by rewrite mul_col_mx mul1mx mul0mx.
-Qed.
-
-Definition inv_htrans (T : 'SE_3[R]) := row_mx (col_mx 1 0) (col_mx (- (SE.trans T)^T) 1).
-
-Lemma inv_htransP T : SE.h.trans T *m inv_htrans T = 1.
-Proof.
-rewrite /SE.h.trans /inv_htrans mul_mx_row.
+rewrite /trans /inv_trans.
+rewrite (mul_mx_row (row_mx (col_mx 1 0) (col_mx (SE.trans T)^T 1)) (col_mx 1 0)).
 rewrite (mul_row_col (col_mx 1 0) (col_mx (SE.trans T)^T 1)) mulmx0 addr0 mulmx1.
 rewrite (mul_row_col (col_mx 1 0) (col_mx (SE.trans T)^T 1)) mulmx1.
 rewrite mul_col_mx mul1mx mul0mx add_col_mx addrC subrr add0r.
 rewrite -(block_mxEh (1 :'M_3) 0 0 1).
-rewrite -[in RHS](@submxK _ 3 1 3 1 (1 : 'M_4)).
+rewrite -[in RHS](@submxK _ 3 1 3 1 (1 : 'hM[R])).
 congr (@block_mx _ 3 1 3 1); apply/matrixP => i j.
 by rewrite !mxE -!val_eqE.
 rewrite !mxE -val_eqE /= (ord1 j) addn0.
@@ -4034,89 +4018,127 @@ by move: (ltn_ord j); rewrite ltn_neqAle eq_sym => /andP [] /negbTE ->.
 by rewrite !mxE -!val_eqE.
 Qed.
 
-Definition homogeneous := 'rV[R]_4.
+Coercion mx R (T : t R) : 'hM[R] := row_mx (col_mx (SE.rot T) 0) (col_mx (SE.trans T)^T 1).
 
-(*Definition hvect (x : vector) : homogeneous := row_mx x 0. *)
-Inductive hvect := HVec of vector.
-Coercion homogeneous_of_hvect (hv : hvect) : 'rV[R]_4 :=
-  let: HVec x := hv in row_mx x 0.
+Lemma mxE (T : t R) : T = trans T *m rot T :> 'hM[R].
+Proof.
+rewrite /mx /trans /rot.
+rewrite (mul_mx_row (row_mx (col_mx 1 0) (col_mx (SE.trans T)^T 1)) (col_mx (SE.rot T) 0)).
+rewrite mul_row_col mulmx0 addr0 mul_row_col mulmx0 add0r mulmx1 mul_col_mx.
+by rewrite mul1mx mul0mx.
+Qed.
 
-(*Definition hcoor (x : coordinate) : homogeneous := row_mx x 1.*)
-Inductive hcoor := HCor of coordinate.
-Coercion homogeneous_of_hcoor (hc : hcoor) : 'rV[R]_4 :=
-  let: HCor x := hc in row_mx x 1.
+Let coordinate := 'rV[R]_3.
 
-Definition coord_of_h (x : homogeneous) : coordinate := 
+Inductive coor := Cor of coordinate.
+
+Coercion from_coord (hc : coor) : 'hrV[R] := let: Cor x := hc in row_mx x 1.
+
+Definition coord_of (x : 'hrV[R]) : coordinate := 
   lsubmx (castmx (erefl, esym (addn1 3)) x).
 
-Lemma coord_of_hB a b : coord_of_h (a - b) = coord_of_h a - coord_of_h b.
+Definition ap_coor (T : t R) (x : coordinate) : 'hrV[R] :=
+  (T *m (Cor x)^T)^T.
+
+Let vector := 'rV[R]_3.
+
+Inductive vect := Vec of vector.
+
+Coercion from_vect (hv : vect) : 'hrV[R] :=
+  let: Vec x := hv in row_mx x 0.
+
+Definition ap_vect (T : t R) (x : vector) : 'hrV[R] := (T *m (Vec x)^T)^T.
+
+End homogeneous_coordinates.
+End h.
+
+Section se.
+Variable R : rcfType.
+
+Let coordinate := 'rV[R]_3.
+
+Definition ap_coor (T : t R) (x : coordinate) : coordinate :=
+  h.coord_of (h.ap_coor T x).
+
+Lemma ap_coorE u (T : t R) : ap_coor T u = 
+  lsubmx (castmx (erefl, esym (addn1 3)) (SE.h.ap_coor T u)).
+Proof.
+rewrite /h.ap_coor.
+apply/rowP => i; rewrite !mxE.
+by rewrite castmxE /= esymK cast_ord_id /SE.h.ap_coor !mxE.
+Qed.
+
+End se.
+
+End SE.
+
+Coercion hmx_coercion := SE.h.mx.
+Coercion homogeneous_of_hcoor_coercion := SE.h.from_coord.
+Coercion homogeneous_of_hvect_coercion := SE.h.from_vect.
+
+Notation "''SE_3[' R ]" := (SE.t R)
+  (at level 8, format "''SE_3[' R ]").
+
+Section homogeneous_transformation.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Let coordinate := 'rV[R]_3.
+Implicit Types u v : vector.
+
+Lemma coord_of_hB (a b : 'hrV[R]) : 
+  SE.h.coord_of (a - b) = SE.h.coord_of a - SE.h.coord_of b :> coordinate.
 Proof. apply/rowP => i; by rewrite !mxE !castmxE /= esymK !cast_ord_id !mxE. Qed.
 
-Lemma coord_of_hE (x : homogeneous) : coord_of_h x = \row_(i < 3) x 0 (inord i).
+Lemma coord_of_hE (x : 'hrV[R]) : SE.h.coord_of x = \row_(i < 3) x 0 (inord i).
 Proof.
 apply/rowP => i; rewrite !mxE castmxE /= esymK !cast_ord_id; congr (x 0 _).
 apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
 Qed.
 
-Definition htrans_of_vector (x : vector) (T : 'SE_3[R]) : homogeneous :=
-  (T *m (HVec x)^T)^T.
-
-Lemma htrans_of_vectorE a T : htrans_of_vector a T = a *m row_mx (SE.rot T)^T 0.
+Lemma htrans_of_vectorE u (T : 'SE_3[R]) : 
+  SE.h.ap_vect T u = u *m row_mx (SE.rot T)^T 0.
 Proof.
-rewrite /htrans_of_vector /hmx /hvect.
-rewrite (tr_row_mx a) (mul_row_col (col_mx (SE.rot T) 0)) linearD /= trmx_mul.
+rewrite /SE.h.ap_vect /SE.h.mx /SE.h.vect.
+rewrite (tr_row_mx u) (mul_row_col (col_mx (SE.rot T) 0)) linearD /= trmx_mul.
 by rewrite (tr_col_mx (SE.rot T)) trmx_mul !trmx0 !trmxK mul0mx addr0.
 Qed.
 
-Lemma linear_htrans_of_vector T : linear (htrans_of_vector^~ T).
+Lemma linear_htrans_of_vector (T : 'SE_3[R]) : linear (SE.h.ap_vect T).
 Proof. move=> ? ? ?; by rewrite 3!htrans_of_vectorE mulmxDl -scalemxAl. Qed.
 
-Definition htrans_of_coordinate (x : coordinate) (T : 'SE_3[R]) : homogeneous :=
-  (T *m (HCor x)^T)^T.
-
-Lemma htrans_of_coordinateB a b T :
-  htrans_of_coordinate a T - htrans_of_coordinate b T = htrans_of_vector (a - b) T.
+Lemma htrans_of_coordinateB u v (T : 'SE_3[R]) :
+  SE.h.ap_coor T u - SE.h.ap_coor T v = SE.h.ap_vect T (u - v).
 Proof.
-rewrite {1}/htrans_of_coordinate {1}/hmx.
-rewrite (tr_row_mx a) trmx1 (mul_row_col (col_mx (SE.rot T) 0)) linearD /=.
+rewrite {1}/SE.h.ap_coor /=.
+rewrite (tr_row_mx u) trmx1 (mul_row_col (col_mx (SE.rot T) 0)) linearD /=.
 rewrite mulmx1 trmx_mul trmxK (tr_col_mx (SE.rot T)) trmx0.
 rewrite (tr_col_mx (SE.trans T)^T) trmxK trmx1.
-rewrite {1}/htrans_of_coordinate {1}/hmx.
+rewrite {1}/SE.h.ap_coor.
 rewrite trmx_mul trmxK.
 rewrite (tr_row_mx (col_mx (SE.rot T) 0)) (tr_col_mx (SE.trans T)^T) trmxK trmx1.
-rewrite (tr_col_mx (SE.rot T)) trmx0 (mul_row_col b) mul1mx.
+rewrite (tr_col_mx (SE.rot T)) trmx0 (mul_row_col v) mul1mx.
 rewrite addrAC opprD -!addrA [in X in _ + (_ + X) = _]addrC subrr addr0.
-rewrite /htrans_of_vector /hmx /hvect.
-rewrite (tr_row_mx (a - b)) trmx0 trmx_mul.
-rewrite (tr_col_mx (a - b)^T) trmx0.
+rewrite /SE.h.ap_vect /hmx_coercion /SE.h.vect.
+rewrite (tr_row_mx (u - v)) trmx0 trmx_mul.
+rewrite (tr_col_mx (u - v)^T) trmx0.
 rewrite (tr_row_mx (col_mx (SE.rot T) 0)) trmxK.
-rewrite (mul_row_col (a - b)) mul0mx addr0.
+rewrite (mul_row_col (u - v)) mul0mx addr0.
 rewrite (tr_col_mx (SE.rot T)) trmx0.
 by rewrite mulmxBl.
 Qed.
 
-Definition homogeneous_ap (x : coordinate) (T : 'SE_3[R]) : coordinate :=
-  coord_of_h (htrans_of_coordinate x T).
-
-Lemma homogeneous_apE x T : homogeneous_ap x T = 
-  lsubmx (castmx (erefl, esym (addn1 3)) (htrans_of_coordinate x T)).
+Lemma htrans_of_vector_preserves_norm u (T : 'SE_3[R]) :
+  norm (SE.h.coord_of (SE.h.ap_vect T u)) = norm u.
 Proof.
-rewrite /homogeneous_ap.
-apply/rowP => i; rewrite !mxE.
-by rewrite castmxE /= esymK cast_ord_id /htrans_of_coordinate !mxE.
-Qed.
-
-Lemma htrans_of_vector_preserves_norm a T :
-  norm (coord_of_h (htrans_of_vector a T)) = norm a.
-Proof.
-rewrite htrans_of_vectorE /coord_of_h mul_mx_row mulmx0.
+rewrite htrans_of_vectorE /SE.h.coord_of mul_mx_row mulmx0.
 rewrite (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
-rewrite (cast_row_mx _ (a *m (SE.rot T)^T)) row_mxKl castmx_id.
+rewrite (cast_row_mx _ (u *m (SE.rot T)^T)) row_mxKl castmx_id.
 rewrite orth_preserves_norm // orthogonalV rotation_sub //; by case: T.
 Qed.
 
-Lemma coord_of_ht_htrans_of_vectorE u T :
-  coord_of_h (htrans_of_vector u T) = u *m (SE.rot T)^T.
+Lemma coord_of_ht_htrans_of_vectorE u (T : 'SE_3[R]) :
+  SE.h.coord_of (SE.h.ap_vect T u) = u *m (SE.rot T)^T.
 Proof.
 rewrite htrans_of_vectorE; apply/rowP => i.
 rewrite mxE castmxE /= esymK cast_ord_id mul_mx_row mulmx0.
@@ -4124,19 +4146,22 @@ rewrite (_ : cast_ord (addn1 3) _ = lshift 1 i); last by apply val_inj.
 by rewrite (row_mxEl (u *m (SE.rot T)^T)).
 Qed.
 
-Lemma hcoor_inv_htrans a t r (Hr : r \is 'SO[R]_3) :
-  (HCor a) *m (inv_htrans (SE.mk t Hr))^T = HCor (a - t) :> homogeneous.
+Lemma hcoor_inv_htrans u t M (Hr : M \is 'SO[R]_3) :
+  (SE.h.Cor u) *m (SE.h.inv_trans (SE.mk t Hr))^T = SE.h.Cor (u - t) :> 'hrV[R].
 Proof.
-rewrite /inv_htrans /= tr_row_mx 2!tr_col_mx !trmx1 trmx0.
-rewrite (mul_row_col a) mul1mx mul_mx_row mulmx1 mulmx0 add_row_mx add0r.
+rewrite /SE.h.inv_trans /=.
+rewrite (tr_row_mx (col_mx 1 0) (col_mx (- t^T) 1)).
+rewrite 2!tr_col_mx !trmx1 trmx0.
+rewrite (mul_row_col u) mul1mx (mul_mx_row u 1) mulmx1 mulmx0.
+rewrite (add_row_mx u) add0r.
 by rewrite linearN /= trmxK.
 Qed.
 
-Lemma hcoor_hrot_of_transform a t r (Hr : r \is 'SO[R]_3) :
-  (HCor a) *m (SE.h.rot (SE.mk t Hr))^T = HCor (a *m r^T) :> homogeneous.
+Lemma hcoor_hrot_of_transform u t r (Hr : r \is 'SO[R]_3) :
+  (SE.h.Cor u) *m (SE.h.rot (SE.mk t Hr))^T = SE.h.Cor (u *m r^T) :> 'hrV[R].
 Proof.
 rewrite /SE.h.rot /= (tr_row_mx (col_mx r 0)) !tr_col_mx !trmx0 trmx1.
-rewrite (mul_row_col a) mul1mx (mul_mx_row a r^T) mulmx0 (add_row_mx (a *m r^T)).
+rewrite (mul_row_col u) mul1mx (mul_mx_row u r^T) mulmx0 (add_row_mx (u *m r^T)).
 by rewrite addr0 add0r.
 Qed.
 
@@ -4154,71 +4179,69 @@ Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Let coordinate := 'rV[R]_3.
 
-Lemma direct_iso_is_htrans (to : 'DIso_3[R]) : 
-  exists T : 'SE_3[R], forall i, to i = homogeneous_ap i T.
+Lemma direct_iso_is_htrans (f : 'DIso_3[R]) : 
+  exists T : 'SE_3[R], f =1 SE.ap_coor T.
 Proof.
-case: to => /= to.
+case: f => /= f.
 rewrite /iso_sgn /ortho_of_iso.
-case: (trans_ortho_of_iso to) => t [r [rt0 - rt1]] /= r1.
+case: (trans_ortho_of_iso f) => t [r [rt0 - rt1]] /= r1.
 have Hr : r^T \is 'SO[R]_3.
   by rewrite rotationV rotationE (proj1 rt1).
 set T := SE.mk t Hr.
 exists T => i.
 (* goal at this point: to i = homogeneous_ap (from i) T *)
-rewrite homogeneous_apE /htrans_of_coordinate trmx_mul trmxK.
-rewrite hmxE trmx_mul mulmxA.
-set fromi' := (HCor (i)) *m _.
-suff <- : HCor (to i) = fromi' *m (SE.h.trans T)^T :> homogeneous R.
+rewrite SE.ap_coorE /SE.h.ap_coor trmx_mul trmxK.
+rewrite /hmx_coercion.
+rewrite SE.h.mxE trmx_mul mulmxA.
+set fromi' := (SE.h.Cor (i)) *m _.
+suff <- : SE.h.Cor (f i) = fromi' *m (SE.h.trans T)^T :> 'hrV[R].
   rewrite (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
-  by rewrite (cast_row_mx _ (to i)) row_mxKl castmx_id.
+  by rewrite (cast_row_mx _ (f i)) row_mxKl castmx_id.
 rewrite -[LHS]mulmx1 -trmx1.
-move: (inv_htransP T) => /(congr1 trmx) => <-.
+move: (SE.h.inv_transP T) => /(congr1 trmx) => <-.
 rewrite trmx_mul mulmxA; congr (_ *m _).
 rewrite {}/fromi'.
-suff : to i - t = i *m r.
+suff : f i - t = i *m r.
   rewrite hcoor_inv_htrans => ->.
   by rewrite hcoor_hrot_of_transform trmxK.
 move/eqP: (rt0 i) => ->.
 by rewrite addrK.
 Qed.
 
-Lemma htrans_preserves_length to (T : 'SE_3[R]) :
-  (forall i, to i = homogeneous_ap i T) ->
-  preserves_length to.
+Lemma SE_preserves_length f (T : 'SE_3[R]) :
+  f =1 SE.ap_coor T -> preserves_length f.
 Proof.
 move=> HT m0 m1.
 rewrite 2!HT -(htrans_of_vector_preserves_norm (m0 - m1) T).
 by rewrite -htrans_of_coordinateB coord_of_hB.
 Qed.
 
-Definition preserves_angle (to : coordinate -> coordinate) :=
+Definition preserves_angle (f : coordinate -> coordinate) :=
   forall i j k, vec_angle (j - i) (k - i) =
-                vec_angle (to j - to i) (to k - to i).
+                vec_angle (f j - f i) (f k - f i).
 
-Lemma htrans_preserves_angle to (T : 'SE_3[R]) :
-  (forall i, to i = homogeneous_ap i T) ->
-  preserves_angle to.
+Lemma SE_preserves_angle f (T : 'SE_3[R]) :
+  f =1 SE.ap_coor T -> preserves_angle f.
 Proof.
 move=> HT /= m0 m1 k.
-rewrite 3!HT /homogeneous_ap -2!coord_of_hB 2!htrans_of_coordinateB.
+rewrite 3!HT /SE.h.ap_coor -2!coord_of_hB 2!htrans_of_coordinateB.
 rewrite 2!coord_of_ht_htrans_of_vectorE -orth_preserves_vec_angle //.
 rewrite orthogonalV; apply rotation_sub; by case: T HT.
 Qed.
 
-Lemma det_ortho_htrans (to : coordinate -> coordinate) (T : 'SE_3[R]) 
-  (HT : (forall i, to i = homogeneous_ap i T)) :
-  ortho_of_iso (Iso.mk (htrans_preserves_length HT)) =
+Lemma det_ortho_htrans f (T : 'SE_3[R]) 
+  (HT : f =1 SE.ap_coor T) :
+  ortho_of_iso (Iso.mk (SE_preserves_length HT)) =
   (SE.rot T)^T.
 Proof.
 case: T HT => /= t r Hr HT.
-have H : preserves_length (fun x => homogeneous_ap x (SE.mk t Hr)).
+have H : preserves_length (SE.ap_coor (SE.mk t Hr)).
   move=> u v.
-  by rewrite /homogeneous_ap -coord_of_hB htrans_of_coordinateB htrans_of_vector_preserves_norm.
+  by rewrite /SE.h.ap_coor -coord_of_hB htrans_of_coordinateB htrans_of_vector_preserves_norm.
 set f1 := Iso.mk _.
 suff : forall x : 'rV[R]_3, x *m (ortho_of_iso (Iso.mk H)) = x *m r^T.
   move=> Hx.
-  apply/eqP/mulmxP.
-  move=> u.
+  apply/eqP/mulmxP => u.
   rewrite -Hx /f1 /=.
   congr (_ *m _).
   apply ortho_of_iso_eq => /= x.
@@ -4226,15 +4249,15 @@ suff : forall x : 'rV[R]_3, x *m (ortho_of_iso (Iso.mk H)) = x *m r^T.
 move=> x.
 rewrite ortho_of_iso_is_rot /=.
 rewrite trans_of_isoE /=.
-rewrite /homogeneous_ap.
+rewrite /SE.h.ap_coor.
 rewrite -coord_of_hB.
 rewrite htrans_of_coordinateB subr0.
 by rewrite coord_of_ht_htrans_of_vectorE /=.
 Qed.
 
-Lemma htrans_preserves_orientation (to : coordinate -> coordinate) (T : 'SE_3[R]) 
-  (HT : (forall i, to i = homogeneous_ap i T)) :
-  preserves_orientation (Iso.mk (htrans_preserves_length HT)).
+Lemma SE_preserves_orientation f (T : 'SE_3[R]) 
+  (HT : f =1 SE.ap_coor T) :
+  preserves_orientation (Iso.mk (SE_preserves_length HT)).
 Proof.
 move=> p u v.
 rewrite /= mulmxr_crossmulr /= ?ortho_of_iso_is_O //.
@@ -5544,14 +5567,14 @@ Lemma rodriguesE M u (HM : M^T \in 'SO[R]_3) :
   norm (axis_of_rotation M) = 1 ->
   sin (angle_of_rotation M) != 0 (* to avoid singularity *) ->
   rodrigues u (aangle (angle_axis_of_rotation M)) (aaxis (angle_axis_of_rotation M)) =
-  homogeneous_ap u (SE.mk 0 HM).
+  SE.ap_coor (SE.mk 0 HM) u.
 Proof.
 move=> norm1 sin0.
 transitivity (u *m M); last first.
   (* TODO: lemma? *)
-  rewrite homogeneous_apE /htrans_of_coordinate trmx_mul trmxK.
+  rewrite SE.ap_coorE /SE.h.ap_coor trmx_mul trmxK.
   rewrite (_ : (SE.mk 0 HM)^T = (SE.h.rot (SE.mk 0 HM))^T); last first.
-    by rewrite /SE.h.rot /= /hmx /= trmx0.
+    by rewrite /SE.h.rot /= /hmx_coercion /= /SE.h.mx /= trmx0.
   rewrite hcoor_hrot_of_transform /=.
   rewrite (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
   rewrite trmxK (@cast_row_mx _ _ _ _ _ _ (u *m M)) //.
