@@ -16,6 +16,13 @@ Import GRing.Theory.
 
 Local Open Scope ring_scope.
 
+Reserved Notation "u '``_' i"
+    (at level 3, i at level 2, left associativity, format "u '``_' i").
+Notation "u '``_' i" := (u (GRing.zero (Zp_zmodType O)) i) : ring_scope.
+Notation "''e_' i" := (delta_mx 0 i)
+ (format "''e_' i", at level 3) : ring_scope.
+Local Open Scope ring_scope.
+
 Section extra.
 
 Lemma row_mx_eq0 (M : zmodType) (m n1 n2 : nat)
@@ -36,10 +43,10 @@ Qed.
 (* courtesy of GG *)
 Lemma mxdirect_delta (F : fieldType) (T : finType) (n : nat) (P : pred T) f :
   {in P & , injective f} ->
-  mxdirect (\sum_(i | P i) <<delta_mx 0 (f i) : 'rV[F]_n>>)%MS.
+  mxdirect (\sum_(i | P i) <<'e_(f i) : 'rV[F]_n>>)%MS.
 Proof.
 pose fP := image f P => Uf; have UfP: uniq fP by apply/dinjectiveP.
-suffices /mxdirectP: mxdirect (\sum_i <<delta_mx 0 i : 'rV[F]_n>>).
+suffices /mxdirectP: mxdirect (\sum_i <<'e_i : 'rV[F]_n>>).
   rewrite /= !(bigID [mem fP] predT) -!big_uniq //= !big_map !big_filter.
   by move/mxdirectP; rewrite mxdirect_addsE => /andP[].
 apply/mxdirectP=> /=; transitivity (mxrank (1%:M : 'M[F]_n)).
@@ -48,6 +55,5 @@ apply/mxdirectP=> /=; transitivity (mxrank (1%:M : 'M[F]_n)).
 rewrite mxrank1 -[LHS]card_ord -sum1_card.
 by apply/eq_bigr=> i _; rewrite /= mxrank_gen mxrank_delta.
 Qed.
-
 
 End extra.
