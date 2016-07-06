@@ -2823,10 +2823,6 @@ case/boolP : (i == 0) => [/eqP ->|]; first by rewrite row0_frame /=.
 rewrite ifnot0 => /orP [] /eqP ->; by [rewrite row1_frame | rewrite row2_frame].
 Qed.
 
-(* TODO: useful? *)
-Lemma frame_is_rot (f : frame) : matrix_of_oframe f \in 'SO[R]_3.
-Proof. apply pframe_is_rot; by case: f. Qed.
-
 (* frame with an origin (tangent frame ?) *)
 CoInductive tframe (p : coordinate) (i j k : vector) :=
   TFrame : oframe i j k -> tframe p i j k.
@@ -2956,14 +2952,20 @@ End frame_of_vector.
 
 Module W := frame_of_vector.
 
-Lemma j_of_iZ {R : rcfType} (i : 'rV[R]_3) (i0 : i != 0) k (k0 : 0 < k) :
+Lemma j_of_i_Vi R : W.j (@V.i R) = V.j.
+Proof. by rewrite /W.j colinear_refl. Qed.
+
+Lemma k_of_i_Vi R : W.k (@V.i R) = V.k.
+Proof. by rewrite /W.k (normalizeI (V.normi _)) j_of_i_Vi -(icrossj (V.frame _)). Qed.
+
+Lemma j_of_iZ (R : rcfType) (i : 'rV[R]_3) (i0 : i != 0) k (k0 : 0 < k) :
   W.j (k *: i) = W.j i.
 Proof.
 rewrite /W.j; case: ifPn; rewrite colinearZv ?(gtr_eqF k0) /=; first by move->.
 by move/negPf->; rewrite normalizeZ.
 Qed.
 
-Lemma k_of_iZ {R : rcfType} (i : 'rV[R]_3) (i0 : i != 0) k (k0 : 0 < k) :
+Lemma k_of_iZ (R : rcfType) (i : 'rV[R]_3) (i0 : i != 0) k (k0 : 0 < k) :
   W.k (k *: i) = W.k i.
 Proof. by rewrite /W.k j_of_iZ // normalizeZ. Qed.
 
@@ -2997,7 +2999,7 @@ Definition vec_of {R} (f : frame R) (x : vec f) := let: Vec v := x in v.
 (* x *m f : *rotate* a vector in the canonical frame according to the frame
   (we obtain a new vector but still in the canonical frame after rotation)
  rotational operator *)
-Definition rotate_wrt_frame {R} (f : frame R) (x : vec (V.frame R)) : vec (V.frame R) :=
+Definition rotate_wrt_frame R (f : frame R) (x : vec (V.frame R)) : vec (V.frame R) :=
   Vec _ (vec_of x *m f).
 
 (* TODO: move *)
@@ -3027,16 +3029,16 @@ Lemma can_of_rel_coordK {R} (f : frame R) (x : vec f) :
   rel_of_can_coord _ (can_of_rel_coord x) = x.
 Proof.
 rewrite /rel_of_can_coord /can_of_rel_coord /=; case: x => x; congr Vec => /=.
-rewrite -mulmxA -(rotation_inv (frame_is_rot f)) mulmxV ?mulmx1 // unitmxE.
-by rewrite (rotation_det (frame_is_rot f)) unitr1.
+rewrite -mulmxA -(rotation_inv (pframe_is_rot f)) mulmxV ?mulmx1 // unitmxE.
+by rewrite (rotation_det (pframe_is_rot f)) unitr1.
 Qed.
 
 Lemma rel_of_can_coordK {R} (f : frame R) (x : vec _) :
   can_of_rel_coord (rel_of_can_coord f x) = x.
 Proof.
 rewrite /rel_of_can_coord /can_of_rel_coord /=; case: x => x; congr Vec => /=.
-rewrite -mulmxA -(rotation_inv (frame_is_rot f)) mulVmx ?mulmx1 // unitmxE.
-by rewrite (rotation_det (frame_is_rot f)) unitr1.
+rewrite -mulmxA -(rotation_inv (pframe_is_rot f)) mulVmx ?mulmx1 // unitmxE.
+by rewrite (rotation_det (pframe_is_rot f)) unitr1.
 Qed.
 
 (*Section about_frame.
@@ -3133,21 +3135,21 @@ Lemma FromToE R (A B : frame R) (M : A %> B) :
 Proof.
 case: M => /= M /eqP ->; apply/matrixP => i j.
 rewrite mxE dotmulE /= mxE; apply eq_bigr => /= k _.
-by rewrite mxE [row _ _ _ _]mxE mxE (rotation_inv (frame_is_rot A)) 2![_^T _ _]mxE.
+by rewrite mxE [row _ _ _ _]mxE mxE (rotation_inv (pframe_is_rot A)) 2![_^T _ _]mxE.
 Qed.
 
 Lemma FromToCan R (A : frame R) (M : A %> (V.frame R)) (x : vec A) :
   [fun x : 'rV_3 => x *m M] =1 [fun x => x *m A^T].
 Proof.
 move=> i /=.
-by rewrite (FromToE M) mulmxA mulmx_can_frame (rotation_inv (frame_is_rot A)).
+by rewrite (FromToE M) mulmxA mulmx_can_frame (rotation_inv (pframe_is_rot A)).
 Qed.
 
 
 Lemma FromToPi R (A B : frame R) (M : A %> B) : framei A *m M = framei B.
 Proof.
 rewrite (FromToE M) mulmxA (_ : (matrix_of_oframe A)^-1 = A^T); last first.
-  by apply/rotation_inv/frame_is_rot.
+  by apply/rotation_inv/(pframe_is_rot A).
 rewrite /matrix_of_oframe.
 rewrite col_mx3_mul dotmulvv (normi A) expr1n (idotj A) (idotk A).
 rewrite row3_row_mx col_mx3E.
@@ -3159,7 +3161,7 @@ Lemma FromTo_is_SO R (A B : frame R) (M : A %> B) : FromTo.M M \is 'SO[R]_3.
 Proof.
 move: (FromToE M).
 case: M => /= M _ ->.
-by rewrite rpredM // ?frame_is_rot // rotation_inv // ?frame_is_rot // rotationV // frame_is_rot.
+by rewrite rpredM // ?(pframe_is_rot B) // rotation_inv // ?rotationV // (pframe_is_rot A).
 Qed.
 
 Lemma FromToComp_proof R (A B C : frame R) (M1 : A %> B) (M2 : B %> C) :
@@ -3167,10 +3169,10 @@ Lemma FromToComp_proof R (A B C : frame R) (M1 : A %> B) (M2 : B %> C) :
 Proof.
 rewrite (FromToE M1) (FromToE M2) -mulmxA (mulmxA B).
 rewrite mulmxV; last first.
-  by rewrite unitmxE (rotation_det (frame_is_rot B)) unitr1.
+  by rewrite unitmxE (rotation_det (pframe_is_rot B)) unitr1.
 rewrite mul1mx; apply/eqP/matrixP => i j.
 rewrite !mxE dotmulE; apply/eq_bigr => k _.
-by rewrite 2![row _ _ _ _]mxE (rotation_inv (frame_is_rot A)) 2![_^T _ _]mxE mulrC.
+by rewrite 2![row _ _ _ _]mxE (rotation_inv (pframe_is_rot A)) 2![_^T _ _]mxE mulrC.
 Qed.
 
 Definition FromToComp R (A B C : frame R) (M1 : A %> B) (M2 : B %> C) : A %> C :=
@@ -3178,7 +3180,7 @@ Definition FromToComp R (A B C : frame R) (M1 : A %> B) (M2 : B %> C) : A %> C :
 
 Lemma FromToCompE R (A B : frame R) (M : A %> B) (u : 'rV[R]_3) :
   u *m M = u *m A^T *m B.
-Proof. by rewrite -mulmxA (FromToE M) (rotation_inv (frame_is_rot A)). Qed.
+Proof. by rewrite -mulmxA (FromToE M) (rotation_inv (pframe_is_rot A)). Qed.
 
 Module triad.
 Section triad.
@@ -5905,14 +5907,6 @@ move=> Hf u a [/= H1 H2 H3]; apply is_eigenvector1_colinear => //.
 apply/eigenspaceP; by rewrite H1 scale1r.
 Qed.
 
-(* TODO: move *)
-Lemma j_of_i_Vi : W.j (@V.i R) = V.j.
-Proof. by rewrite /W.j colinear_refl. Qed.
-
-(* TODO: move *)
-Lemma k_of_i_Vi : W.k (@V.i R) = V.k.
-Proof. by rewrite /W.k (normalizeI (V.normi _)) j_of_i_Vi -(icrossj (V.frame _)). Qed.
-
 Lemma angle_of_rotation_SO_RO (M : 'M[R]_3) a :
   M = block_mx (1 : 'M_1) 0 0 (RO a) ->
   (a \in Opi_closed R -> angle_of_rotation M = a) /\
@@ -6040,10 +6034,6 @@ rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r.
 rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r opprD addrAC addrA subrK.
 by rewrite mulrN opprK -mulr2n -mulrnAl mulrA div1r mulVr // mul1r.
 Qed.
-
-(* TODO: move *)
-Lemma i_cross_j_of_i (i : 'rV[R]_3) : norm i = 1 -> i *v W.j i = W.k i.
-Proof. move=> i1; by rewrite /W.k normalizeI. Qed.
 
 Lemma SO_is_around_axis_axis_new (M : 'M[R]_3) : M \is 'SO[R]_3 ->
   forall u (a : angle R), norm u = 1 ->
