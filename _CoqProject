@@ -2,5 +2,8 @@ robot.v
 aux.v
 exterior.v
 cross_product.v
+angle.v
+quaternion.v
+euclidean3.v
 
 -R . Robot
