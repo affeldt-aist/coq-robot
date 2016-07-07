@@ -152,26 +152,38 @@ rewrite ifnot01 => /eqP ->.
 case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
 Qed.
 
-Definition row3 {R : ringType} (a b c : R) : 'rV[R]_3 :=
+Definition row3 (R : ringType) (a b c : R) : 'rV[R]_3 :=
   \row_p [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
 
-Lemma row30 {R : ringType} : row3 0 0 0 = 0 :> 'rV[R]_3.
+Lemma row3N (R : ringType) (a b c : R) : - row3 a b c = row3 (- a) (- b) (- c).
+Proof.
+apply/rowP => i; rewrite !mxE /= ; case: ifPn; rewrite ?opprB // => ?.
+by case: ifPn; rewrite ?opprB // => ?; case: ifPn; rewrite ?opprB // oppr0.
+Qed.
+
+Lemma row3Z (R : ringType) (a b c : R) k : k *: row3 a b c = row3 (k * a) (k * b) (k * c).
+Proof.
+apply/rowP => i; rewrite !mxE /=.
+case: ifPn => // ?; case: ifPn => // ?; case: ifPn => // ?; by Simp.r.
+Qed.
+
+Lemma row30 (R : ringType) : row3 0 0 0 = 0 :> 'rV[R]_3.
 Proof. by apply/rowP => a; rewrite !mxE /=; do 3 case: ifPn => //. Qed.
 
-Lemma row3E {R : ringType} (u : 'rV[R]_3) :
-  u = row3 (u``_0) 0 0 + row3 0 (u``_1) 0+ row3 0 0 (u``_2%:R).
+Lemma row3E (R : ringType) (u : 'rV[R]_3) :
+  u = row3 (u``_0) 0 0 + row3 0 (u``_1) 0 + row3 0 0 (u``_2%:R).
 Proof.
 apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP ->|]; first by Simp.r.
 rewrite ifnot0 => /orP [] /eqP -> /=; by Simp.r.
 Qed.
 
-Lemma vec3E {R : ringType} (u : 'rV[R]_3) :
+Lemma vec3E (R : ringType) (u : 'rV[R]_3) :
   u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
 Proof.
 by apply/rowP => - [[|[|[|?]]] ?] //; rewrite !mxE /=; Simp.r; Simp.ord.
 Qed.
 
-Lemma row3_row_mx {R : ringType} (a b c : R) : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
+Lemma row3_row_mx (R : ringType) (a b c : R) : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
 Proof.
 rewrite (row_mx_col (row3 a b c)) (_ : col _ _ = a%:M); last first.
   by apply/rowP => i; rewrite (ord1 i) !mxE /= mulr1n.
@@ -194,7 +206,7 @@ rewrite ifnot0 => /orP [] /eqP ->;
   case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot0 => /orP [] /eqP ->.
 Qed.
 
-Lemma det_mx11 {T : comRingType }(A : 'M[T]_1) : \det A = A 0 0.
+Lemma det_mx11 (T : comRingType) (A : 'M[T]_1) : \det A = A 0 0.
 Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
 
 Lemma cofactor_mx22 {T : comRingType} (A : 'M[T]_2) i j :
@@ -1232,6 +1244,9 @@ Proof. by rewrite /colinear crossmulZv scaler_eq0. Qed.
 Lemma colinearvZ u v k : colinear u (k *: v) = (k == 0) || colinear u v.
 Proof. by rewrite /colinear crossmulvZ scaler_eq0. Qed.
 
+Lemma colinearNv u v : colinear (- u) v = colinear u v.
+Proof. by rewrite /colinear crossmulNv eqr_oppLR oppr0. Qed.
+
 End colinear.
 
 Section normalize.
@@ -1239,16 +1254,18 @@ Section normalize.
 Variables (R : rcfType) (n : nat).
 Implicit Type u v : 'rV[R]_3.
 
-Definition normalize v := 1 / norm v *: v.
+Definition normalize v := (norm v)^-1 *: v.
+
+Lemma normalizeN u : normalize (- u) = - normalize u.
+Proof. by rewrite /normalize normN scalerN. Qed.
 
 Lemma normalizeI v : norm v = 1 -> normalize v = v.
-Proof. move=> v1; by rewrite /normalize v1 divrr ?scale1r // unitr1. Qed.
+Proof. by move=> v1; rewrite /normalize v1 invr1 scale1r. Qed.
 
 Lemma norm_normalize v : v != 0 -> norm (normalize v) = 1.
 Proof.
-move=> v0; rewrite /normalize normZ ger0_norm; last first.
-  by rewrite divr_ge0 // ?ler01 // norm_ge0.
-by rewrite div1r mulVr // unitf_gt0 // ltr_neqAle norm_ge0 andbT eq_sym norm_eq0.
+move=> v0; rewrite normZ ger0_norm; last by rewrite invr_ge0 // norm_ge0.
+by rewrite mulVr // unitfE norm_eq0.
 Qed.
 
 Lemma normalize_eq0 v : (normalize v == 0) = (v == 0).
@@ -1261,14 +1278,14 @@ Qed.
 Lemma norm_scale_normalize u : norm u *: normalize u = u.
 Proof.
 case/boolP : (u == 0) => [/eqP -> {u}|u0]; first by rewrite norm0 scale0r.
-by rewrite /normalize scalerA div1r divrr ?scale1r // unitfE norm_eq0.
+by rewrite /normalize scalerA divrr ?scale1r // unitfE norm_eq0.
 Qed.
 
 Lemma normalizeZ u (u0 : u != 0) k (k0 : 0 < k) : normalize (k *: u) = normalize u.
 Proof.
-rewrite /normalize normZ gtr0_norm // div1r invrM ?unitfE ?gtr_eqF //; last first.
-  by rewrite ltr_neqAle norm_ge0 eq_sym norm_eq0 u0.
-by rewrite scalerA -mulrA mulVr ?mulr1 ?unitfE ?gtr_eqF // div1r.
+rewrite {1}/normalize normZ gtr0_norm // invrM ?unitfE ?gtr_eqF //; last first.
+  by rewrite ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
+by rewrite scalerA -mulrA mulVr ?mulr1 ?unitfE ?gtr_eqF.
 Qed.
 
 (* NB: not used *)
@@ -1284,7 +1301,7 @@ Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite /normalize scaler0.
 apply/idP/idP.
   rewrite /normalize dotmulZv mulf_eq0 => /orP [|//].
-  by rewrite div1r invr_eq0 norm_eq0 (negbTE u0).
+  by rewrite invr_eq0 norm_eq0 (negbTE u0).
 rewrite /normalize dotmulZv => /eqP ->; by rewrite mulr0.
 Qed.
 
@@ -1301,6 +1318,9 @@ Definition axialcomp v u := u *d v *: u.
 (* normal component of v w.r.t. u *)
 Definition normalcomp v u := v - u *d v *: u.
 
+Lemma normalcompvN u v : normalcomp u (- v)  = normalcomp u v.
+Proof. by rewrite /normalcomp dotmulNv scaleNr scalerN opprK. Qed.
+
 Lemma decomp v u : v = axialcomp v u + normalcomp v u.
 Proof. by rewrite /axialcomp /normalcomp addrC subrK. Qed.
 
@@ -1314,9 +1334,9 @@ Qed.
 Lemma normalcompP u v : u *d normalcomp v (normalize u) = 0.
 Proof.
 rewrite /normalcomp /normalize dotmulBr !(dotmulZv, dotmulvZ).
-rewrite mulrACA mulrA mulrACA !mul1r -invfM dotmulvv mulrAC.
-have [->|u_neq0] := eqVneq u 0; first by rewrite dotmul0v mulr0 subrr.
-by rewrite mulVf ?mul1r ?subrr // mulf_neq0 // norm_eq0.
+rewrite mulrACA -invfM -expr2 dotmulvv mulrCA.
+have [->|u_neq0] := eqVneq u 0; first by rewrite dotmul0v mul0r subrr.
+by rewrite mulVr ?mulr1 ?subrr // unitfE sqrf_eq0 norm_eq0.
 Qed.
 
 Lemma axialnormal v e : norm e = 1 -> axialcomp v e *d normalcomp v e = 0.
