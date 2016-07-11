@@ -155,6 +155,24 @@ Qed.
 Definition row3 (R : ringType) (a b c : R) : 'rV[R]_3 :=
   \row_p [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
 
+Lemma e0row (R : ringType) : ('e_0 : 'rV[R]_3) = row3 1 0 0.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => // _.
+case: ifPn => //; by case: ifPn.
+Qed.
+
+Lemma e1row (R : ringType) : ('e_1 : 'rV[R]_3) = row3 0 1 0.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
+by case: ifPn => // _; case: ifPn.
+Qed.
+
+Lemma e2row (R : ringType) : ('e_2%:R : 'rV[R]_3) = row3 0 0 1.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
+by case: ifPn => [/eqP -> //| _]; case: ifPn.
+Qed.
+
 Lemma row3N (R : ringType) (a b c : R) : - row3 a b c = row3 (- a) (- b) (- c).
 Proof.
 apply/rowP => i; rewrite !mxE /= ; case: ifPn; rewrite ?opprB // => ?.
