@@ -38,6 +38,14 @@ Proof.
 by rewrite -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx0 tr_col_mx row_mx_eq0.
 Qed.
 
+Lemma col_mx_row_mx (T : ringType) (m1 n1 : nat) (A : 'M[T]_(m1, n1)) n2 m2 :
+  col_mx (row_mx A (0 : 'M_(m1, n2))) (0 : 'M_(m2, n1 + n2)) = row_mx (col_mx A 0) 0.
+Proof.
+set a : 'M_(m2, _ + n2) := 0.
+have -> : a = row_mx (0 : 'M_(m2, n1)) 0 by rewrite row_mx0.
+by rewrite -block_mxEv block_mxEh col_mx0.
+Qed.
+
 (* courtesy of GG *)
 Lemma mxdirect_delta (F : fieldType) (T : finType) (n : nat) (P : pred T) f :
   {in P & , injective f} ->

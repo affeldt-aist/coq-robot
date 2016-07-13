@@ -1710,9 +1710,9 @@ Qed.
 
 Definition skew_mx (w : vector) : 'M[R]_3 := - \matrix_i (w *v 'e_i).
 
-Local Notation "\^ w" := (skew_mx w) (at level 3).
+Local Notation "\^ w" := (skew_mx w) (at level 3, format "\^ w").
 
-Lemma skew_mx0 : \^ 0 = 0.
+Lemma skew_mx0 : \^0 = 0.
 Proof.
 by apply/matrixP => i j; rewrite /skew_mx 2!mxE crossmul0v 2!mxE oppr0.
 Qed.
@@ -2229,7 +2229,7 @@ End axial_vector.
 
 End skew.
 
-Notation "\^ w" := (skew_mx w) (at level 3).
+Notation "\^ w" := (skew_mx w) (at level 3, format "\^ w").
 
 Section exponential_map_rot.
 
@@ -2299,7 +2299,7 @@ by rewrite aM subrr.
 Qed.
 
 Lemma trace_exp_rot_skew_mx a u : norm u = 1 ->
-  \tr `e^(a, \^ u) = 1 + 2%:R * cos a.
+  \tr `e^(a, \^u) = 1 + 2%:R * cos a.
 Proof.
 move=> w1.
 rewrite 2!mxtraceD !mxtraceZ /= mxtrace1.
@@ -2358,7 +2358,7 @@ move=> w1 va ca sa; apply/matrix3P.
   by rewrite /va opprB addrC subrK.
 Qed.
 
-Lemma exp_rot_is_ortho a u : norm u = 1 -> `e^(a, \^ u) \is 'O[R]_3.
+Lemma exp_rot_is_ortho a u : norm u = 1 -> `e^(a, \^u) \is 'O[R]_3.
 Proof.
 move=> w1.
 rewrite orthogonalE tr_exp_rot.
@@ -2400,7 +2400,7 @@ Proof.
 move=> w1.
 Abort.*)
 
-Lemma Rz_exp_rot a : Rz a = `e^(a, \^ 'e_2%:R).
+Lemma Rz_exp_rot a : Rz a = `e^(a, \^'e_2%:R).
 Proof.
 rewrite /Rz exp_rot_skew_mxE ?norm_delta_mx //.
 rewrite !mxE /= expr0n /=. Simp.r. by rewrite expr1n mul1r subrK -e2row.
@@ -2971,6 +2971,22 @@ End derivative_map.
 
 Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
 
+Section SE_notation.
+
+Variable R : rcfType.
+
+Definition SE3 := [qualify M : 'M[R]_4 |
+  [&& (@usubmx _ 3 1 3 (@lsubmx _ _ 3 1 M) \is 'SO[R]_3),
+  (@dsubmx _ 3 1 3 (@lsubmx _ _ 3 1 M) == 0) &
+  (M 3%:R 3%:R == 1)] ].
+Fact SE3_key : pred_key SE3. Proof. by []. Qed.
+Canonical SE3_keyed := KeyedQualifier SE3_key.
+
+End SE_notation.
+
+Notation "''SE3[' R ]" := (SE3 R)
+  (at level 8, format "''SE3[' R ]") : ring_scope.
+
 Notation "''H[' R ]" := ('M[R]_4) (at level 8, format "''H[' R ]").
 Notation "''hV[' R ]" := ('rV[R]_4) (at level 8, format "''hV[' R ]").
 
@@ -2989,6 +3005,18 @@ Definition rot (T : t R) : 'H[R] := row_mx (col_mx (rot T) 0) (col_mx 0 1).
 Definition trans (T : t R) : 'H[R] := row_mx (col_mx 1 0) (col_mx (trans T)^T 1).
 
 Coercion mx R (T : t R) : 'H[R] := row_mx (col_mx (SE.rot T) 0) (col_mx (SE.trans T)^T 1).
+
+Lemma mxSE_in_SE3 (T : t R) : mx T \is 'SE3[R].
+Proof.
+rewrite /mx.
+case: T => t r rSO /=; apply/and3P; split.
+- by rewrite row_mxKl col_mxKu.
+- by rewrite row_mxKl col_mxKd.
+- rewrite [X in _ _ X == _](_ : _ = rshift 3 0); last by apply val_inj.
+  rewrite (row_mxEr (col_mx r 0)).
+  rewrite [X in _ X _ == _](_ : _ = rshift 3 0); last by apply val_inj.
+  by rewrite col_mxEd mxE eqxx.
+Qed.
 
 Lemma tE (T : t R) : T = trans T *m rot T :> 'H[R].
 Proof.
@@ -3103,9 +3131,6 @@ Coercion hmx_coercion := SE.h.mx.
 Coercion homogeneous_of_hcoor_coercion := SE.h.from_coor.
 Coercion homogeneous_of_hvect_coercion := SE.h.from_vect.
 
-Notation "''SE_3[' R ]" := (SE.t R)
-  (at level 8, format "''SE_3[' R ]").
-
 Section homogeneous_transformation.
 
 Variable R : rcfType.
@@ -3119,7 +3144,7 @@ apply/rowP => i; rewrite !mxE castmxE /= esymK !cast_ord_id; congr (x 0 _).
 apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
 Qed.
 
-Lemma hcoor_inv_htrans u (T : 'SE_3[R]) :
+Lemma hcoor_inv_htrans u (T : SE.t R) :
   SE.h.Cor u *m (SE.h.inv_trans T)^T = SE.h.Cor (u - (SE.trans T)) :> 'hV[R].
 Proof.
 rewrite /SE.h.inv_trans /= (tr_row_mx (col_mx 1 0) (col_mx (- (SE.trans T)^T) 1)).
@@ -3127,7 +3152,7 @@ rewrite 2!tr_col_mx !trmx1 trmx0 (mul_row_col u) mul1mx (mul_mx_row u 1).
 by rewrite mulmx1 mulmx0 (add_row_mx u) add0r linearN /= trmxK.
 Qed.
 
-Lemma hcoor_hrot_of_transform u (T : 'SE_3[R]) :
+Lemma hcoor_hrot_of_transform u (T : SE.t R) :
   (SE.h.Cor u) *m (SE.h.rot T)^T = SE.h.Cor (u *m (SE.rot T)^T) :> 'hV[R].
 Proof.
 rewrite /SE.h.rot /= (tr_row_mx (col_mx (SE.rot T) 0)) !tr_col_mx !trmx0 trmx1.
@@ -3150,7 +3175,7 @@ Let vector := 'rV[R]_3.
 Let coordinate := 'rV[R]_3.
 
 Lemma direct_iso_is_SE (f : 'DIso_3[R]) :
-  exists T : 'SE_3[R], f =1 SE.ap_coor T.
+  exists T : SE.t R, f =1 SE.ap_coor T.
 Proof.
 case: f => /= f r1.
 rewrite /iso_sgn /ortho_of_iso.
@@ -3176,11 +3201,11 @@ suff : f i - t = i *m r.
 by rewrite (trans_ortho_of_isoE f i).
 Qed.
 
-Lemma SE_preserves_length f (T : 'SE_3[R]) :
+Lemma SE_preserves_length f (T : SE.t R) :
   f =1 SE.ap_coor T -> {mono f : a b / norm (a - b)}.
 Proof. move=> fT m0 m1; by rewrite 2!fT SE.ap_coorB SE.ap_vect_preserves_norm. Qed.
 
-Lemma ortho_of_isoE f (T : 'SE_3[R]) (fT : f =1 SE.ap_coor T) :
+Lemma ortho_of_isoE f (T : SE.t R) (fT : f =1 SE.ap_coor T) :
   ortho_of_iso (Iso.mk (SE_preserves_length fT)) = (SE.rot T)^T.
 Proof.
 have H : {mono (SE.ap_coor T) : a b / norm (a - b)}.
@@ -3198,7 +3223,7 @@ Definition preserves_angle (f : coordinate -> coordinate) :=
   forall i j k, vec_angle (j - i) (k - i) =
                 vec_angle (f j - f i) (f k - f i).
 
-Lemma SE_preserves_angle f (T : 'SE_3[R]) :
+Lemma SE_preserves_angle f (T : SE.t R) :
   f =1 SE.ap_coor T -> preserves_angle f.
 Proof.
 move=> fT /= m0 m1 k.
@@ -3206,7 +3231,7 @@ rewrite 3!fT 2!SE.ap_coorB 2!SE.ap_vectE orth_preserves_vec_angle //.
 by rewrite orthogonalV rotation_sub // SE.rotP.
 Qed.
 
-Lemma SE_preserves_orientation f (T : 'SE_3[R])
+Lemma SE_preserves_orientation f (T : SE.t R)
   (fT : f =1 SE.ap_coor T) :
   preserves_orientation (Iso.mk (SE_preserves_length fT)).
 Proof.
@@ -3766,7 +3791,7 @@ Variable R : rcfType.
 Let vector := 'rV[R]_3.
 
 Definition twist (w v : vector) : 'M[R]_4 :=
-  row_mx (col_mx (\^ w) 0) (col_mx v^T 0).
+  row_mx (col_mx (\^w) 0) (col_mx v^T 0).
 
 (* TODO: notation 'se_3[R] for the set of twists? *)
 
@@ -3774,7 +3799,7 @@ Lemma expr_twist0v (v : vector) n : (twist 0 v) ^+ n.+2 = 0.
 Proof.
 elim: n => [|n ih]; last by rewrite exprS ih mulr0.
 apply/eqP; rewrite expr2 /twist.
-set a := col_mx (\^ _) _. rewrite -mulmxE (mul_mx_row (row_mx a _) a) {}/a.
+set a := col_mx (\^_) _. rewrite -mulmxE (mul_mx_row (row_mx a _) a) {}/a.
 set b := _ *m _. rewrite (row_mx_eq0 b) {}/b. apply/andP; split;
   by rewrite mul_row_col mulmx0 addr0 mul_col_mx skew_mx0 !(mul0mx,mulmx0) col_mx0.
 Qed.
@@ -3809,6 +3834,15 @@ rewrite 2!mulmx1 mulmx0 addr0 mul_col_mx mul0mx mul1mx.
 by rewrite add_col_mx crossmulNv linearN subrr add0r -block_mxEh -scalar_mx_block.
 Qed.
 
+Lemma rigid_transV w v : rigid_trans w v * inv_rigid_trans w v = 1.
+Proof.
+rewrite /inv_rigid_trans /rigid_trans.
+rewrite -[in X in _ * X = _]block_mxEh.
+rewrite -mulmxE (mul_row_block (col_mx 1 0) (col_mx (w *v v)^T 1) 1).
+rewrite 2!mulmx1 mulmx0 addr0 mul_col_mx mul0mx mul1mx.
+by rewrite add_col_mx crossmulNv linearN /= addrC subrr add0r -block_mxEh -scalar_mx_block.
+Qed.
+
 Lemma rigid_trans_unitmx w v : rigid_trans w v \in unitmx.
 Proof.
 by rewrite unitmxE /rigid_trans -block_mxEh (det_ublock 1 (w *v v)^T) 2!det1 mulr1 unitr1.
@@ -3820,23 +3854,28 @@ rewrite -[LHS]mul1mx -[X in X *m _ = _](Vrigid_trans w v) -mulmxA.
 by rewrite mulmxV ?rigid_trans_unitmx // mulmx1.
 Qed.
 
+Lemma rigid_trans_unit w v : rigid_trans w v \is a GRing.unit.
+Proof.
+apply/unitrP; exists (inv_rigid_trans w v); by rewrite Vrigid_trans rigid_transV.
+Qed.
+
 Lemma p41eq234 w v : norm w = 1 ->
   let e' := (rigid_trans w v)^-1 *m twist w v *m rigid_trans w v in
   let h := w *d v in
-  e' = col_mx (row_mx (\^ w) (h *: w^T)) 0.
+  e' = col_mx (row_mx (\^w) (h *: w^T)) 0.
 Proof.
 move=> w1 e'; rewrite /e'.
 rewrite inv_rigid_transE /inv_rigid_trans /rigid_trans /twist.
 rewrite -[in X in _ *m X *m _ = _]block_mxEh.
-rewrite (mul_row_block (col_mx 1 0) (col_mx (- w *v v)^T 1) (\^ w)) 2!mulmx0 2!addr0.
+rewrite (mul_row_block (col_mx 1 0) (col_mx (- w *v v)^T 1) (\^w)) 2!mulmx0 2!addr0.
 rewrite mul_col_mx mul1mx mul0mx mul_col_mx mul0mx mul1mx.
 rewrite -[in X in _ *m X = _]block_mxEh.
-rewrite (mul_row_col (col_mx (\^ w) 0) (col_mx v^T 0)).
+rewrite (mul_row_col (col_mx (\^w) 0) (col_mx v^T 0)).
 rewrite mul_col_mx mul0mx mul_col_mx mul0mx add_col_mx addr0.
-rewrite (mul_mx_row (\^ w) 1) mulmx1.
+rewrite (mul_mx_row (\^w) 1) mulmx1.
 rewrite (@mul_mx_row _ _ _ 3 1 v^T 0 1) mulmx0 mulmx1.
-rewrite (add_row_mx (\^ w)) addr0.
-rewrite -{2}(trmxK (\^ w)) -trmx_mul.
+rewrite (add_row_mx (\^w)) addr0.
+rewrite -{2}(trmxK (\^w)) -trmx_mul.
 move: (anti_skew w); rewrite antiE -eqr_oppLR => /eqP <-.
 rewrite mulmxN skew_mxE crossmulC opprK double_crossmul.
 by rewrite dotmulvv w1 expr1n scale1r linearD /= linearN /= subrK linearZ /=.
@@ -3845,12 +3884,17 @@ Qed.
 Lemma p42eq235 (w v : vector) k : norm w = 1 ->
   let g := rigid_trans w v in
   let e' := (rigid_trans w v)^-1 *m twist w v *m rigid_trans w v in
-  expmx (twist w v) k = g *m expmx e' k *m g^-1.
-Admitted.
+  expmx (twist w v) k = g * expmx e' k * g^-1.
+Proof.
+move=> w1 g e'.
+rewrite -expmx_mulmulV ?rigid_trans_unitmx //; congr (expmx _ _).
+rewrite /e' mulmxE -/g !mulrA divrr ?rigid_trans_unit // mul1r -mulrA.
+by rewrite divrr ?mulr1 // rigid_trans_unit.
+Qed.
 
 Lemma p42eq2 w v : norm w = 1 ->
   let e' := (rigid_trans w v)^-1 *m twist w v *m rigid_trans w v in
-  forall k, e' ^+ k.+2 = col_mx (row_mx ((\^ w) ^+ k.+2) 0) (0 : 'rV_4).
+  forall k, e' ^+ k.+2 = col_mx (row_mx ((\^w) ^+ k.+2) 0) (0 : 'rV_4).
 Proof.
 move=> w1 e' k.
 rewrite /e' (p41eq234 _ w1).
@@ -3907,63 +3951,98 @@ Lemma p42eq3 (w v : vector) : norm w = 1 ->
   let g := rigid_trans w v in
   let h := w *d v in
   forall k, 
-  expmx (g^-1 *m (twist w v) *m g) k.+1 =
-  row_mx (col_mx (expmx (\^ w) k.+1) 0) (col_mx (h *: w^T) 1).
+  expmx (g^-1 *m (twist w v) *m g) k.+2 =
+  row_mx (col_mx (expmx (\^w) k.+2) 0) (col_mx (h *: w^T) 1).
 Proof.
 move=> w1 g h.
-elim.
-Admitted.
+elim => [|k ih].
+  rewrite -{2}(invrK g) expmx_mulmulV ?unitrV ?rigid_trans_unit //.
+  rewrite expmx2_twist // !mulmxE !mulrA mulVr ?rigid_trans_unit // mul1r.
+  by rewrite -!mulrA divrr ?unitrV ?rigid_trans_unit // mulr1.
+rewrite expmxS ih p42eq2 //.
+rewrite (scale_col_mx (k.+2)`!%:R^-1 (row_mx (\^w ^+ k.+2) 0)) scaler0.
+rewrite scale_row_mx scaler0.
+set A : 'M_3 := _^-1 *: _.
+rewrite col_mx_row_mx (add_row_mx _ _ (col_mx A 0) 0) addr0.
+by rewrite add_col_mx addr0 [in RHS]expmxS -/A.
+Qed.
 
-(* see p.42 on math. foundations, p.17 of springer's handbook *)
-(* closed expression for the exponential of a twist with w != 0 *)
-Definition exp_twist (w v : vector) (a : angle R) k : 'M_4 :=
+Definition expmx_twist (w v : vector) (a' : R) k : 'M_4 :=
+  let w' := a' *: w in
   row_mx
-  (col_mx (expmx (\^ w) k) 0)
-  (col_mx ((w *v v) *m (1 - (expmx (\^ w) k)^T) + v *m (w^T *m w))^T 1).
+  (col_mx (expmx (\^w') k) 0)
+  (col_mx ((w' *v v) *m (1 - (expmx (\^w') k)^T) + v *m (w'^T *m w'))^T 1).
 
-Lemma p42eq236 (w v : vector) (a : angle R) k : norm w = 1 ->
-  expmx (twist w v) k.+1 = exp_twist w v a k.+1.
+Lemma expmx_twistE (w v : vector) a' k : norm (a' *: w) = 1 ->
+  expmx (twist (a' *: w) v) k.+2 = expmx_twist w v a' k.+2.
 Proof.
+set w' := a' *: w.
 move=> w1.
-rewrite /exp_twist.
+rewrite /expmx_twist.
 rewrite p42eq235 //.
 rewrite p42eq3 //.
-rewrite (mul_mx_row (rigid_trans w v) (col_mx (expmx \^w _) 0)).
+rewrite -mulmxE.
+rewrite (mul_mx_row (rigid_trans w' v) (col_mx (expmx \^w' _) 0)).
 
 rewrite {1}/rigid_trans.
-rewrite (mul_row_col (col_mx 1 0) (col_mx (w *v v)^T 1)).
+rewrite (mul_row_col (col_mx 1 0) (col_mx (w' *v v)^T 1)).
 rewrite mulmx0 addr0.
 rewrite mul_col_mx mul1mx mul0mx.
 
 rewrite {1}/rigid_trans.
-rewrite (mul_row_col (col_mx 1 0) (col_mx (w *v v)^T 1)).
+rewrite (mul_row_col (col_mx 1 0) (col_mx (w' *v v)^T 1)).
 rewrite mulmx1.
 rewrite mul_col_mx mul0mx mul1mx.
 rewrite add_col_mx add0r.
 
 rewrite inv_rigid_transE /inv_rigid_trans.
-set b := row_mx _ _.
+set b := row_mx (col_mx (expmx \^w' k.+2) 0) (col_mx ((w' *d v) *: w'^T + (w' *v v)^T) 1).
 rewrite (mul_mx_row b (col_mx 1 0)) {}/b.
 rewrite mul_row_col mulmx1 mulmx0 addr0.
 rewrite mul_row_col mulmx1.
 
-congr (row_mx (col_mx (expmx \^w _) 0) _).
+congr (row_mx (col_mx (expmx \^w' _) 0) _).
 
-rewrite (mul_col_mx (expmx \^w _)) mul0mx.
-rewrite (add_col_mx (expmx \^ w _ *m (- w *v v)^T) 0 _ 1) add0r.
+rewrite (mul_col_mx (expmx \^w' _)) mul0mx.
+rewrite (add_col_mx (expmx \^w' _ *m (- w' *v v)^T) 0 _ 1) add0r.
 
 congr (col_mx _ 1).
-rewrite -linearZ /= -linearD /=.
-rewrite -{1}(trmxK (expmx \^w _)).
-rewrite -trmx_mul -linearD /=.
-
-congr trmx.
+rewrite -linearZ /= -linearD /= -{1}(trmxK (expmx \^w' _)) -trmx_mul -linearD /=; congr trmx.
+rewrite -/w'.
+rewrite mulmxA (mx11_scalar (v *m w'^T)) -/(v *d w') mul_scalar_mx dotmulC.
 rewrite mulmxBr mulmx1 addrA addrC -addrA; congr (_ + _).
-rewrite crossmulNv -mulNmx; congr (_ + _).
-rewrite mulmxA.
-rewrite (mx11_scalar (v *m w^T)).
-rewrite dotmulC -/(v *d w).
-by rewrite mul_scalar_mx.
+by rewrite crossmulNv -mulNmx.
+Qed.
+
+Lemma expmx_exp_rot (w : vector) a' (a : angle R) k : norm w = 1 ->
+  expmx (\^(a' *: w)) k.+3 = `e^(a, \^ w) .
+Proof.
+move=> w1.
+elim: k => [|k ih].
+  rewrite /expmx big_ord_recr /= 2!factS fact0 2!muln1.
+  rewrite /expmx big_ord_recr /= expr1 factS fact0 mul1n invr1 scale1r.
+  rewrite big_ord_recr /= big_ord0 add0r fact0 invr1 scale1r expr0.
+  rewrite /exp_rot -[in LHS]addrA -[in RHS]addrA.
+  rewrite skew_mxZ exprZn scalerA.
+Abort.
+
+Lemma expmx_is_SO (w : vector) (a' : R) k : expmx (\^(a' *: w)) k.+2 \is 'SO[R]_3.
+Proof.
+rewrite /expmx.
+Admitted.
+
+Lemma expmx_twist_SE3 (w v : vector) a' k : norm (a' *: w) = 1 ->
+  expmx (twist (a' *: w) v) k.+2 \is 'SE3[R].
+Proof.
+move=> w1; rewrite expmx_twistE //; apply/and3P; split.
+- rewrite row_mxKl col_mxKu.
+  by rewrite expmx_is_SO.
+- by rewrite row_mxKl col_mxKd.
+- rewrite [X in _ _ X == _](_ : _ = rshift 3 0); last by apply val_inj.
+  rewrite /expmx_twist.
+  rewrite (row_mxEr (col_mx (expmx \^(_ *: _) _) 0)).
+  rewrite [X in _ X _ == _](_ : _ = rshift 3 0); last by apply val_inj.
+  by rewrite col_mxEd mxE eqxx.
 Qed.
 
 End exponential_coordinates_rigid.
