@@ -2971,24 +2971,35 @@ End derivative_map.
 
 Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
 
-Section SE_notation.
+Notation "''H[' R ]" := ('M[R]_4) (at level 8, format "''H[' R ]").
+Notation "''hV[' R ]" := ('rV[R]_4) (at level 8, format "''hV[' R ]").
+
+Section SE3.
 
 Variable R : rcfType.
 
-Definition SE3 := [qualify M : 'M[R]_4 |
-  [&& (@usubmx _ 3 1 3 (@lsubmx _ _ 3 1 M) \is 'SO[R]_3),
-  (@dsubmx _ 3 1 3 (@lsubmx _ _ 3 1 M) == 0) &
-  (M 3%:R 3%:R == 1)] ].
+Definition rot_of_hom (M : 'H[R]) : 'M[R]_3 := @ulsubmx _ 3 1 3 1 M.
+
+Lemma rot_of_homN (M : 'H[R]) : rot_of_hom (- M) = - rot_of_hom M.
+Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
+
+Definition trans_of_hom (M : 'H[R]) : 'rV[R]_3 := (@ursubmx _ 3 1 3 1 M)^T.
+  
+Definition SE3 := [qualify M : 'H[R] |
+  [&& rot_of_hom M \is 'SO[R]_3,
+      @dlsubmx _ 3 1 3 1 M == 0 &
+      @drsubmx _ 3 1 3 1 M == 1%:M] ].
 Fact SE3_key : pred_key SE3. Proof. by []. Qed.
 Canonical SE3_keyed := KeyedQualifier SE3_key.
 
-End SE_notation.
+End SE3.
 
 Notation "''SE3[' R ]" := (SE3 R)
   (at level 8, format "''SE3[' R ]") : ring_scope.
 
-Notation "''H[' R ]" := ('M[R]_4) (at level 8, format "''H[' R ]").
-Notation "''hV[' R ]" := ('rV[R]_4) (at level 8, format "''hV[' R ]").
+Lemma rot_of_hom_SO (R : rcfType) (M : 'H[R]) : M \is 'SE3[R] -> 
+  rot_of_hom M \is 'SO[R]_3.
+Proof. by case/and3P. Qed.
 
 Module SE.
 Record t (R : rcfType) : Type := mk {
@@ -3005,18 +3016,6 @@ Definition rot (T : t R) : 'H[R] := row_mx (col_mx (rot T) 0) (col_mx 0 1).
 Definition trans (T : t R) : 'H[R] := row_mx (col_mx 1 0) (col_mx (trans T)^T 1).
 
 Coercion mx R (T : t R) : 'H[R] := row_mx (col_mx (SE.rot T) 0) (col_mx (SE.trans T)^T 1).
-
-Lemma mxSE_in_SE3 (T : t R) : mx T \is 'SE3[R].
-Proof.
-rewrite /mx.
-case: T => t r rSO /=; apply/and3P; split.
-- by rewrite row_mxKl col_mxKu.
-- by rewrite row_mxKl col_mxKd.
-- rewrite [X in _ _ X == _](_ : _ = rshift 3 0); last by apply val_inj.
-  rewrite (row_mxEr (col_mx r 0)).
-  rewrite [X in _ X _ == _](_ : _ = rshift 3 0); last by apply val_inj.
-  by rewrite col_mxEd mxE eqxx.
-Qed.
 
 Lemma tE (T : t R) : T = trans T *m rot T :> 'H[R].
 Proof.
@@ -3045,6 +3044,54 @@ rewrite !mxE -val_eqE /= (ord1 i) addn0.
 by move: (ltn_ord j); rewrite ltn_neqAle eq_sym => /andP [] /negbTE ->.
 by rewrite !mxE -!val_eqE.
 Qed.
+
+Lemma mxSE_in_SE3 (T : t R) : mx T \is 'SE3[R].
+Proof.
+rewrite /mx.
+case: T => t r rSO /=; apply/and3P; split.
+- by rewrite /rot_of_hom -block_mxEh block_mxKul.
+- by rewrite -block_mxEh block_mxKdl.
+- by rewrite -block_mxEh block_mxKdr.
+Qed.
+
+Lemma SE31 : 1 \is 'SE3[R].
+Proof.
+apply/and3P; split.
+- rewrite /rot_of_hom (_ : ulsubmx _ = 1) ?rotation1 //.
+  apply/matrixP => i j; by rewrite !mxE -val_eqE.
+- apply/eqP/matrixP => i j; rewrite !mxE -val_eqE /= {i}(ord1 i) addn0.
+  by case: j => -[] // [] // [].
+- by apply/eqP/rowP => i; rewrite {i}(ord1 i) !mxE -val_eqE.
+Qed.
+
+Lemma mxSE_of_SE3 (T : 'H[R]) (TSE3 : T \is 'SE3[R]) : 
+  T = mx (mk (trans_of_hom T) (rot_of_hom_SO TSE3)).
+Proof.
+case/and3P : (TSE3) => /= T1 T2 T3.
+rewrite /mx /= -[LHS](@submxK _ 3 1 3 1) -block_mxEh.
+by rewrite /rot_of_hom /trans_of_hom trmxK (eqP T2) (eqP T3).
+Qed.
+
+Lemma SE3_mulr_closed : mulr_closed 'SE3[R].
+Proof.
+split; first exact: SE31.
+move=> /= A B HA HB.
+rewrite (mxSE_of_SE3 HA) (mxSE_of_SE3 HB) /mx /=. 
+rewrite -mulmxE (mul_mx_row _ (col_mx (rot_of_hom B) 0)).
+apply/and3P; split ;
+  rewrite /rot_of_hom !mul_row_col mulmx0 mulmx1 addr0 ;
+  set a := (X in col_mx X _) ;
+  rewrite (mul_col_mx a 0) mul0mx (mul_col_mx a 0) mul0mx ;
+  rewrite (add_col_mx (a *m _) 0 _ 1) add0r -(block_mxEh (a *m _)).
+- rewrite block_mxKul rpredM //. by case/and3P : HA. by case/and3P : HB.
+- by rewrite block_mxKdl.
+- by rewrite block_mxKdr.
+Qed.
+
+Canonical SE3_is_mulr_closed := MulrPred SE3_mulr_closed.
+
+Lemma SE3_invr_closed : invr_closed 'SE3[R].
+Abort.
 
 Let coordinate := 'rV[R]_3.
 Inductive coor := Cor of coordinate.
@@ -4048,14 +4095,10 @@ Lemma expmx_twist_SE3 w v a k : norm (a *: w) = 1 ->
   expmx (a *: twist w v) k.+2 \is 'SE3[R].
 Proof.
 move=> w1; rewrite expmx_twistE //; apply/and3P; split.
-- rewrite row_mxKl col_mxKu.
+- rewrite /rot_of_hom /expmx_twist -block_mxEh block_mxKul.
   admit.
-- by rewrite row_mxKl col_mxKd.
-- rewrite [X in _ _ X == _](_ : _ = rshift 3 0); last by apply val_inj.
-  rewrite /expmx_twist.
-  rewrite (row_mxEr (col_mx (expmx \^(_ *: _) _) 0)).
-  rewrite [X in _ X _ == _](_ : _ = rshift 3 0); last by apply val_inj.
-  by rewrite col_mxEd mxE eqxx.
+- by rewrite /expmx_twist -block_mxEh block_mxKdl.
+- by rewrite /expmx_twist -block_mxEh block_mxKdr.
 Admitted.
 
 End exponential_coordinates_rigid.
