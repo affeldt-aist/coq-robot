@@ -2974,17 +2974,15 @@ Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
 Notation "''H[' R ]" := ('M[R]_4) (at level 8, format "''H[' R ]").
 Notation "''hV[' R ]" := ('rV[R]_4) (at level 8, format "''hV[' R ]").
 
-Section SE3.
+Section SE3_def.
 
 Variable R : rcfType.
 
+Definition hom (r : 'M[R]_3) (t : 'rV[R]_3) : 'H[R] :=
+  block_mx r t^T 0 1.
+
 Definition rot_of_hom (M : 'H[R]) : 'M[R]_3 := @ulsubmx _ 3 1 3 1 M.
 
-Lemma rot_of_homN (M : 'H[R]) : rot_of_hom (- M) = - rot_of_hom M.
-Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
-
-Definition trans_of_hom (M : 'H[R]) : 'rV[R]_3 := (@ursubmx _ 3 1 3 1 M)^T.
-  
 Definition SE3 := [qualify M : 'H[R] |
   [&& rot_of_hom M \is 'SO[R]_3,
       @dlsubmx _ 3 1 3 1 M == 0 &
@@ -2992,66 +2990,36 @@ Definition SE3 := [qualify M : 'H[R] |
 Fact SE3_key : pred_key SE3. Proof. by []. Qed.
 Canonical SE3_keyed := KeyedQualifier SE3_key.
 
-End SE3.
+End SE3_def.
 
 Notation "''SE3[' R ]" := (SE3 R)
   (at level 8, format "''SE3[' R ]") : ring_scope.
 
-Lemma rot_of_hom_SO (R : rcfType) (M : 'H[R]) : M \is 'SE3[R] -> 
+Section SE3_prop.
+
+Variable R : rcfType.
+
+Lemma rot_of_hom_SO (M : 'H[R]) : M \is 'SE3[R] ->
   rot_of_hom M \is 'SO[R]_3.
 Proof. by case/and3P. Qed.
 
-Module SE.
-Record t (R : rcfType) : Type := mk {
-  trans : 'rV[R]_3;
-  rot : 'M[R]_3 ;
-  rotP : rot \in 'SO[R]_3 }.
+Lemma rot_of_hom_hom r t : rot_of_hom (hom r t) = r :> 'M[R]_3.
+Proof. by rewrite /rot_of_hom /hom block_mxKul. Qed.
 
-Module h.
-Section homogeneous_coordinates.
-Variable R : rcfType.
+Lemma rot_of_homN (M : 'H[R]) : rot_of_hom (- M) = - rot_of_hom M.
+Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
 
-Definition rot (T : t R) : 'H[R] := row_mx (col_mx (rot T) 0) (col_mx 0 1).
+Definition trans_of_hom (M : 'H[R]) : 'rV[R]_3 := (@ursubmx _ 3 1 3 1 M)^T.
 
-Definition trans (T : t R) : 'H[R] := row_mx (col_mx 1 0) (col_mx (trans T)^T 1).
+Lemma trans_of_hom_hom r t : trans_of_hom (hom r t) = t.
+Proof. by rewrite /trans_of_hom /hom block_mxKur trmxK. Qed.
 
-Coercion mx R (T : t R) : 'H[R] := row_mx (col_mx (SE.rot T) 0) (col_mx (SE.trans T)^T 1).
-
-Lemma tE (T : t R) : T = trans T *m rot T :> 'H[R].
+Lemma SE3E (T : 'H[R]) : T \is 'SE3[R] ->
+  T = hom (rot_of_hom T) (trans_of_hom T).
 Proof.
-rewrite /mx /trans /rot.
-rewrite (mul_mx_row (row_mx (col_mx 1 0) (col_mx (SE.trans T)^T 1)) (col_mx (SE.rot T) 0)).
-rewrite mul_row_col mulmx0 addr0 mul_row_col mulmx0 add0r mulmx1 mul_col_mx.
-by rewrite mul1mx mul0mx.
-Qed.
-
-Definition inv_trans (T : t R) : 'H[R] := row_mx (col_mx 1 0) (col_mx (- (SE.trans T)^T) 1).
-
-Lemma inv_transP (T : t R) : trans T *m inv_trans T = 1.
-Proof.
-rewrite /trans /inv_trans.
-rewrite (mul_mx_row (row_mx (col_mx 1 0) (col_mx (SE.trans T)^T 1)) (col_mx 1 0)).
-rewrite (mul_row_col (col_mx 1 0) (col_mx (SE.trans T)^T 1)) mulmx0 addr0 mulmx1.
-rewrite (mul_row_col (col_mx 1 0) (col_mx (SE.trans T)^T 1)) mulmx1.
-rewrite mul_col_mx mul1mx mul0mx add_col_mx addrC subrr add0r.
-rewrite -(block_mxEh 1 0 0 1).
-rewrite -[in RHS](@submxK _ 3 1 3 1 (1 : 'H[R])).
-congr (@block_mx _ 3 1 3 1); apply/matrixP => i j.
-by rewrite !mxE -!val_eqE.
-rewrite !mxE -val_eqE /= (ord1 j) addn0.
-move: (ltn_ord i); by rewrite ltn_neqAle => /andP [] /negbTE ->.
-rewrite !mxE -val_eqE /= (ord1 i) addn0.
-by move: (ltn_ord j); rewrite ltn_neqAle eq_sym => /andP [] /negbTE ->.
-by rewrite !mxE -!val_eqE.
-Qed.
-
-Lemma mxSE_in_SE3 (T : t R) : mx T \is 'SE3[R].
-Proof.
-rewrite /mx.
-case: T => t r rSO /=; apply/and3P; split.
-- by rewrite /rot_of_hom -block_mxEh block_mxKul.
-- by rewrite -block_mxEh block_mxKdl.
-- by rewrite -block_mxEh block_mxKdr.
+move=> HT.
+case/and3P : HT => T1 /eqP T2 /eqP T3.
+by rewrite /hom -[in LHS](@submxK _ 3 1 3 1 T) T2 T3 /rot_of_hom /trans_of_hom trmxK.
 Qed.
 
 Lemma SE31 : 1 \is 'SE3[R].
@@ -3064,34 +3032,143 @@ apply/and3P; split.
 - by apply/eqP/rowP => i; rewrite {i}(ord1 i) !mxE -val_eqE.
 Qed.
 
-Lemma mxSE_of_SE3 (T : 'H[R]) (TSE3 : T \is 'SE3[R]) : 
-  T = mx (mk (trans_of_hom T) (rot_of_hom_SO TSE3)).
+Lemma det_hom (r : 'M[R]_3) t : \det (hom r t) = \det r.
+Proof. by rewrite /hom (det_ublock r) det1 mulr1. Qed.
+
+Lemma SE3_is_unitmx (M : 'H[R]) : M \is 'SE3[R] -> M \in unitmx.
 Proof.
-case/and3P : (TSE3) => /= T1 T2 T3.
-rewrite /mx /= -[LHS](@submxK _ 3 1 3 1) -block_mxEh.
-by rewrite /rot_of_hom /trans_of_hom trmxK (eqP T2) (eqP T3).
+move=> HM.
+by rewrite (SE3E HM) unitmxE /= det_hom rotation_det // ?unitr1 // ?rot_of_hom_SO.
+Qed.
+
+Lemma hom10 : hom 1 0 = 1 :> 'H[R].
+Proof.
+rewrite /hom trmx0 -[in RHS](@submxK _ 3 1 3 1 1).
+congr (@block_mx _ 3 1 3 1); apply/matrixP => i j; rewrite !mxE -val_eqE //.
+rewrite {j}(ord1 j) /= addn0; by case: i => -[] // [] // [].
+rewrite {i}(ord1 i) /= addn0; by case: j => -[] // [] // [].
+Qed.
+
+Definition inv_hom (M : 'H[R]) :=
+  hom (rot_of_hom M)^T (- trans_of_hom M *m rot_of_hom M).
+
+Lemma homM r r' t t' : hom r t * hom r' t' = hom (r * r') (t' *m r^T + t) :> 'H[R].
+Proof.
+rewrite /hom -mulmxE (mulmx_block r _ _ _ r') !(mulmx0,mul0mx,addr0,add0r,mulmx1).
+by rewrite mulmxE linearD /= trmx_mul trmxK.
+Qed.
+
+Lemma trmx_hom (r : 'M[R]_3) t : (hom r t)^T = block_mx r^T (0 : 'cV_3) t 1.
+Proof. by rewrite /hom (tr_block_mx r) trmxK trmx1 trmx0. Qed.
+
+Lemma homV (T : 'H[R]) : T \is 'SE3[R] -> T * inv_hom T = 1.
+Proof.
+move=> HT.
+rewrite (SE3E HT) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
+rewrite homM -rotation_inv ?rot_of_hom_SO // divrr; last first.
+  by apply/orthogonal_unit/rotation_sub/rot_of_hom_SO.
+rewrite -mulmxA mulmxE divrr; last first.
+  by apply/orthogonal_unit/rotation_sub/rot_of_hom_SO.
+by rewrite mulmx1 addrC subrr hom10.
+Qed.
+
+Lemma Vhom (T : 'H[R]) : T \is 'SE3[R] -> inv_hom T * T = 1.
+Proof.
+move=> HT.
+rewrite (SE3E HT) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
+rewrite homM -rotation_inv ?rot_of_hom_SO // mulVr; last first.
+  by apply/orthogonal_unit/rotation_sub/rot_of_hom_SO.
+by rewrite rotation_inv ?rot_of_hom_SO // trmxK mulNmx subrr hom10.
+Qed.
+
+Lemma SE3_inv (M : 'H[R]) (HM : M \is 'SE3[R]) : M^-1 = inv_hom M.
+Proof.
+rewrite -[LHS]mul1mx -[X in X *m _ = _](Vhom HM) -mulmxA.
+by rewrite mulmxV ?mulmx1 // SE3_is_unitmx.
+Qed.
+
+Lemma SE3_invr_closed : invr_closed 'SE3[R].
+Proof.
+move=> M HM.
+rewrite SE3_inv //.
+case/and3P : HM => M1 M2 M3.
+apply/and3P; split.
+- by rewrite /inv_hom rot_of_hom_hom rotationV.
+- by rewrite /inv_hom /hom block_mxKdl.
+- by rewrite /inv_hom /hom block_mxKdr.
 Qed.
 
 Lemma SE3_mulr_closed : mulr_closed 'SE3[R].
 Proof.
 split; first exact: SE31.
 move=> /= A B HA HB.
-rewrite (mxSE_of_SE3 HA) (mxSE_of_SE3 HB) /mx /=. 
-rewrite -mulmxE (mul_mx_row _ (col_mx (rot_of_hom B) 0)).
-apply/and3P; split ;
-  rewrite /rot_of_hom !mul_row_col mulmx0 mulmx1 addr0 ;
-  set a := (X in col_mx X _) ;
-  rewrite (mul_col_mx a 0) mul0mx (mul_col_mx a 0) mul0mx ;
-  rewrite (add_col_mx (a *m _) 0 _ 1) add0r -(block_mxEh (a *m _)).
-- rewrite block_mxKul rpredM //. by case/and3P : HA. by case/and3P : HB.
-- by rewrite block_mxKdl.
-- by rewrite block_mxKdr.
+rewrite (SE3E HA) (SE3E HB) /= homM.
+apply/and3P; split.
+- rewrite /rot_of_hom /hom block_mxKul.
+  case/and3P : HA; rewrite /rot_of_hom => HA _ _.
+  case/and3P : HB; rewrite /rot_of_hom => HB _ _.
+  by rewrite rpredM.
+- by rewrite /hom block_mxKdl.
+- by rewrite /hom block_mxKdr.
 Qed.
 
 Canonical SE3_is_mulr_closed := MulrPred SE3_mulr_closed.
 
-Lemma SE3_invr_closed : invr_closed 'SE3[R].
-Abort.
+Lemma SE3_divr_closed : divr_closed 'SE3[R].
+Proof.
+split; first by rewrite SE31.
+move=> A B HA HB.
+by rewrite rpredM // SE3_invr_closed.
+Qed.
+
+Canonical SE3_is_divr_closed := DivrPred SE3_divr_closed.
+
+End SE3_prop.
+
+Module SE.
+Record t (R : rcfType) : Type := mk {
+  trans : 'rV[R]_3;
+  rot : 'M[R]_3 ;
+  rotP : rot \in 'SO[R]_3 }.
+
+Module h.
+Section homogeneous_coordinates.
+Variable R : rcfType.
+
+Definition rot (T : t R) := hom (rot T) 0.
+
+Definition trans (T : t R) := hom 1 (trans T).
+
+Coercion mx (R : rcfType) (T : t R) := hom (SE.rot T) (SE.trans T).
+
+Lemma tE (T : t R) : T = trans T *m rot T :> 'H[R].
+Proof. by rewrite /mx /trans /rot mulmxE homM mul1r mul0mx add0r. Qed.
+
+Lemma mxSE_in_SE3 (T : t R) : mx T \is 'SE3[R].
+Proof.
+rewrite /mx.
+case: T => t r rSO /=; apply/and3P; split.
+- by rewrite /rot_of_hom /hom block_mxKul.
+- by rewrite /hom block_mxKdl.
+- by rewrite /hom block_mxKdr.
+Qed.
+
+Definition inv (T : t R) := hom (SE.rot T)^T (- SE.trans T *m SE.rot T).
+
+Lemma invP (T : t R) : T *m inv T = 1.
+Proof.
+rewrite /mx /inv mulmxE homM -rotation_inv; last by case: T.
+rewrite divrr; last by apply orthogonal_unit, rotation_sub; case: T.
+rewrite -mulmxA mulmxE divrr; last by apply orthogonal_unit, rotation_sub; case: T.
+by rewrite mulmx1 addrC subrr hom10.
+Qed.
+
+Definition inv_trans (T : t R) := hom 1 (- SE.trans T).
+
+Lemma inv_transP (T : t R) : trans T *m inv_trans T = 1.
+Proof.
+by rewrite /trans /inv_trans mulmxE homM mulr1 trmx1 mulmx1 addrC subrr hom10.
+Qed.
 
 Let coordinate := 'rV[R]_3.
 Inductive coor := Cor of coordinate.
@@ -3106,8 +3183,8 @@ Definition ap_coor (T : t R) (x : coordinate) : 'hV[R] := Cor x *m T^T.
 Lemma ap_coorE (p : coordinate) (T : t R) :
   ap_coor T p = p *m row_mx (SE.rot T)^T 0 + row_mx (SE.trans T) 1.
 Proof.
-rewrite /ap_coor /mx /= (tr_row_mx (col_mx (SE.rot T) 0)) (mul_row_col p 1).
-by rewrite mul1mx tr_col_mx trmx0 tr_col_mx trmx1 trmxK.
+rewrite /ap_coor /mx /= /hom (tr_block_mx (SE.rot T)) trmx0 trmx1.
+by rewrite trmxK (mul_row_col p 1) mul1mx.
 Qed.
 
 Let vector := 'rV[R]_3.
@@ -3120,8 +3197,8 @@ Definition ap_vect (T : t R) (x : vector) : 'hV[R] := Vec x *m T^T.
 
 Lemma ap_vectE (u : vector) (T : t R) : ap_vect T u = u *m row_mx (SE.rot T)^T 0.
 Proof.
-rewrite /ap_vect /mx /= (tr_row_mx (col_mx (SE.rot T) 0)).
-by rewrite (mul_row_col u 0) mul0mx addr0 tr_col_mx trmx0.
+rewrite /ap_vect /mx /= /hom (tr_block_mx (SE.rot T)) trmx0 trmxK trmx1.
+by rewrite (mul_row_block u 0 (SE.rot T)^T) mulmx0 !mul0mx !addr0 mul_mx_row mulmx0.
 Qed.
 
 Lemma linear_ap_vect (T : t R) : linear (ap_vect T).
@@ -3194,15 +3271,14 @@ Qed.
 Lemma hcoor_inv_htrans u (T : SE.t R) :
   SE.h.Cor u *m (SE.h.inv_trans T)^T = SE.h.Cor (u - (SE.trans T)) :> 'hV[R].
 Proof.
-rewrite /SE.h.inv_trans /= (tr_row_mx (col_mx 1 0) (col_mx (- (SE.trans T)^T) 1)).
-rewrite 2!tr_col_mx !trmx1 trmx0 (mul_row_col u) mul1mx (mul_mx_row u 1).
-by rewrite mulmx1 mulmx0 (add_row_mx u) add0r linearN /= trmxK.
+rewrite /SE.h.inv_trans /=.
+by rewrite trmx_hom trmx1 (mul_row_block u 1 1%:M) mulmx0 mulmx1 add0r mulmx1 mul1mx.
 Qed.
 
 Lemma hcoor_hrot_of_transform u (T : SE.t R) :
   (SE.h.Cor u) *m (SE.h.rot T)^T = SE.h.Cor (u *m (SE.rot T)^T) :> 'hV[R].
 Proof.
-rewrite /SE.h.rot /= (tr_row_mx (col_mx (SE.rot T) 0)) !tr_col_mx !trmx0 trmx1.
+rewrite /SE.h.rot /= /hom (tr_block_mx (SE.rot T)) !trmx0 trmx1.
 rewrite (mul_row_col u) mul1mx (mul_mx_row u (SE.rot T)^T) mulmx0 (add_row_mx (u *m (SE.rot T)^T)).
 by rewrite addr0 add0r.
 Qed.
@@ -3643,7 +3719,7 @@ transitivity (u *m M); last first.
   (* TODO: lemma? *)
   rewrite SE.ap_coorE /SE.h.ap_coor.
   rewrite (_ : (SE.mk 0 HM)^T = (SE.h.rot (SE.mk 0 HM))^T); last first.
-    by rewrite /SE.h.rot /= /hmx_coercion /= /SE.h.mx /= trmx0.
+    by rewrite /SE.h.rot /= /hmx_coercion /= /SE.h.mx /=.
   rewrite hcoor_hrot_of_transform /=.
   rewrite (_ : esym (addn1 3) = erefl (3 + 1)%N); last by apply eq_irrelevance.
   rewrite trmxK (@cast_row_mx _ _ _ _ _ _ (u *m M)) //.
