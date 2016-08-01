@@ -13,9 +13,16 @@ Require Import finset fingroup perm.
 Require Import aux angle euclidean3 quaternion.
 
 (*
+main references:
+[murray] Murray, Li, Shankar Sastry: A Mathematical Introduction to Robotic Manipulation
+[springer] Siciliano, Khatib (Eds.): Springer Handbook of Robotics
+[angeles] Angeles: Fundamentals of Robotic Mechanical Systems
+[oneill] O'Neill: Elementary Differential Geometry
+*)
+
+(*
  OUTLINE:
  1. section angle
-
     definition of vec_angle (restricted to [0,pi])
     (sample lemma: multiplication by a O_3[R] matrix preserves vec_angle)
  2. section colinear
@@ -69,12 +76,12 @@ Require Import aux angle euclidean3 quaternion.
        any rotation matrix M around an axis has angle acos (tr M - 1)/2
        any rotation matrix M around an axis has axis antip_vec
      (sample lemmas: specialized exponential map <-> Rodrigues' formula)
- 21. section kinematics chains
- 22. section exponential_map
-     tentative definition of e^M (as a series up to k)
- 23. section exponential_coordinates_rigid
-     tentative definition of a twist
-     (NB: in progress)
+ 21. section kinematic_chain
+ 22. sections twist, taylor expansion of the exponential map, 
+     exponential coordinates for rbt using taylor expansion, 
+     exponential coordinates for rbt using exponential coordinates for rotation (def. only)
+ 23. section screw, equivalence screw motion <-> exponential coordinates for rbt
+ 24. section chasles
 *)
 
 Set Implicit Arguments.
@@ -603,7 +610,7 @@ case: f => ? y1 ? K *.
 by rewrite dotmulvv y1 expr1n scale1r dotmulC K scale0r subr0.
 Qed.
 
-(* lemma 3.5, p.110, o'neill *)
+(* [oneill] lemma 3.5, p.110 *)
 Lemma crossmul_oframe_sgn (f : oframe) v v1 v2 v3 w w1 w2 w3 :
   v = v1 *: i + v2 *: j + v3 *: k ->
   w = w1 *: i + w2 *: j + w3 *: k ->
@@ -2790,7 +2797,7 @@ Section derivative_map.
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 
-(* theorem 2.1, p. 104, o'neill *)
+(* [oneill] theorem 2.1, p. 104 *)
 Definition dmap (f : 'Iso[R]_3) p (v : p.-vec) :=
   let C := ortho_of_iso f in
   TVec (f p) (v *m C).
@@ -3011,6 +3018,13 @@ Proof. by case/and3P. Qed.
 
 Lemma rot_of_hom_hom r t : rot_of_hom (hom r t) = r :> 'M[R]_3.
 Proof. by rewrite /rot_of_hom /hom block_mxKul. Qed.
+
+Lemma hom_is_SE r t : r \is 'SO[R]_3 -> hom r t \is 'SE3[R].
+Proof.
+move=> Hr; apply/and3P; rewrite rot_of_hom_hom Hr; split => //.
+- by rewrite /hom block_mxKur.
+- by rewrite /hom block_mxKdr.
+Qed.
 
 Lemma rot_of_homN (M : 'H[R]) : rot_of_hom (- M) = - rot_of_hom M.
 Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
@@ -3667,111 +3681,7 @@ Qed.
 
 End angle_axis.
 
-Section chasles.
-
-Variable R : rcfType.
-Let vector := 'rV[R]_3.
-Let point := 'rV[R]_3.
-
-Variable f : 'DIso_3[R].
-Let Q : 'M[R]_3 := ortho_of_iso f.
-Let T : vector := trans_of_iso f.
-Variable e : vector.
-Hypothesis ne : norm e = 1.
-Variable phi : angle R.
-Hypothesis Maxis : is_around_axis e phi (mx_lin1 Q).
-
-Lemma is_around_axis_axis : e *m Q = e.
-Proof. by case: Maxis. Qed.
-
-(* p.91 *)
-(* the displacements of all the points of B have the same component along e *)
-Lemma thm321 (a p : point) :
-  let da := f a - a in let dp := f p - p in
-  da *d e = dp *d e.
-Proof.
-move=> da dp.
-have eq34 : dp = da + (p - a) *m (Q - 1).
-  rewrite /da mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA subrK.
-  rewrite /dp; congr (_ - _).
-  apply/eqP; rewrite addrC -subr_eq.
-  by rewrite img_vec_iso.
-have : dp *m e^T = da *m e^T + (p - a) *m (Q - 1) *m e^T.
-  by rewrite -mulmxDl -eq34.
-rewrite -mulmxA (mulmxBl Q 1 e^T) mul1mx.
-have -> : Q *m e^T = e^T.
-  rewrite -{1}(is_around_axis_axis) trmx_mul mulmxA mulmxE.
-  have : Q \is 'O[R]_3 by rewrite /Q ortho_of_iso_is_O.
-  rewrite orthogonalE => /eqP ->; by rewrite mul1mx.
-rewrite subrr mulmx0 addr0 /dotmul; by move=> ->.
-Qed.
-
-Definition d0 := (f 0 - 0) *d e.
-
-Lemma d0_is_a_lb_of_a_displacement p : (d0 ^+ 2 <= norm (f p - p) ^+ 2).
-Proof.
-set dp := f p - p.
-rewrite /d0 (thm321 0 p) -/dp.
-move: (Frame.pframe (norm1_neq0 ne)) => F.
-have -> : norm dp = norm (dp *m (col_mx3 (normalize e) (Frame.j e) (Frame.k e))^T).
-  rewrite orth_preserves_norm // orthogonalV.
-  move: (pframe_is_rot F).
-  by rewrite rotationE => /andP [].
-rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
-  by rewrite normalizeI.
-by rewrite addr_ge0 // sqr_ge0.
-Qed.
-
-Definition parpart (p : point) :=  axialcomp (f p - p) e.
-
-Lemma parpartP (p : vector) : parpart p = d0 *: e.
-Proof. by rewrite /parpart /axialcomp dotmulC (thm321 _ 0). Qed.
-
-Definition perppart (p : point) := normalcomp (f p - p) e.
-
-Lemma perpart_colinear (p : point) :
-  let dp := f p - p in
-  (perppart p == 0) = (colinear dp e).
-Proof.
-move=> dp; apply/idP/idP => [/eqP|/colinearP].
-  by apply: normalcomp_colinear.
-rewrite -norm_eq0 ne -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
-rewrite /perppart /normalcomp -/dp Hk2.
-by rewrite dotmulvZ dotmulvv ne expr1n mulr1 subrr.
-Qed.
-
-(* d0 is the minimal norm of a displacement, all such points are along a line parallel
-   to e *)
-Lemma MozziChasles1 p : let dp := f p - p in
-  norm dp = d0 -> colinear dp e.
-Proof.
-move=> dp H.
-have Hp : forall p : point, let dp := f p - p in
-    norm dp ^+ 2 = norm (d0 *: e) ^+2 + norm (perppart p) ^+ 2.
-  move=> p' dp'.
-  rewrite /dp' (decomp (f p' - p') e).
-  rewrite normD -dotmul_cos.
-  rewrite axialnormal // mul0rn addr0 sqr_sqrtr; last first.
-    by rewrite addr_ge0 // ?sqr_ge0.
-  by rewrite /perppart -/(parpart p') parpartP.
-move: {Hp}(Hp p) => Hp.
-rewrite -perpart_colinear.
-rewrite -norm_eq0.
-suff : norm dp ^+2 <= norm (d0 *: e) ^+ 2.
-  by rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 //= norm_eq0.
-rewrite 2!expr2.
-by rewrite ler_pmul // ?norm_ge0 // H normZ ne mulr1 ler_norm.
-Qed.
-
-Definition p0 (a : point) :=
-  let a':= f a in
-  1 / (2%:R * (1 - cos phi)) *: (a *m Q - a') *m (Q - 1)^T.
-
-(* TODO *)
-
-End chasles.
-
-Section chains.
+Section kinematic_chain.
 
 Variable R : rcfType.
 Let frame := frame R.
@@ -3801,10 +3711,71 @@ Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
 Definition common_normal_xz (i : 'I_n) :=
   (framej (frames i.-1)) _|_ (framek (frames i)), (framei (frames i.-1)).
 
-End chains.
+End kinematic_chain.
 
-(* more generic definition of the exponential map, in progress *)
-Section exponential_map.
+Module Twist.
+Section Twist.
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Record t := mkT {
+  w : vector ;
+  v : vector }.
+
+Coercion mx (wv : t) : 'M_4 := 
+  block_mx (\^(Twist.w wv)) 0 (Twist.v wv) 0.
+
+Lemma Z a (wv : t) : a *: (wv : 'M_4) = mkT (a *: w wv) (a *: v wv).
+Proof.
+by rewrite /mx (scale_block_mx a \^(Twist.w wv)) skew_mxZ 2!scaler0.
+Qed.
+
+End Twist.
+End Twist.
+
+Coercion Twistmx (R : rcfType) (wv : Twist.t R) : 'M_4 := Twist.mx wv.
+(*Definition twist w v : 'M_4 := block_mx (\^w) 0 v 0.*)
+(* TODO: v = - w *v q for q a point on the axis? *)
+(* TODO: notation 'se[R]_3 for the set of twists? *)
+
+Section sample_rigid_transformation.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Implicit Types w v : vector.
+
+Definition rigid_trans w v := hom 1 (w *v v).
+
+Definition inv_rigid_trans w v := hom 1 (- w *v v).
+
+Lemma Vrigid_trans w v : inv_rigid_trans w v * rigid_trans w v = 1.
+Proof.
+by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 addrC crossmulNv subrr hom10.
+Qed.
+
+Lemma rigid_transV w v : rigid_trans w v * inv_rigid_trans w v = 1.
+Proof.
+by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 crossmulNv subrr hom10.
+Qed.
+
+Lemma rigid_trans_unitmx w v : rigid_trans w v \in unitmx.
+Proof.
+by rewrite unitmxE /rigid_trans (det_lblock 1 (w *v v)) 2!det1 mulr1 unitr1.
+Qed.
+
+Lemma inv_rigid_transE w v : (rigid_trans w v)^-1 = inv_rigid_trans w v.
+Proof.
+rewrite -[LHS]mul1mx -[X in X *m _ = _](Vrigid_trans w v) -mulmxA.
+by rewrite mulmxV ?rigid_trans_unitmx // mulmx1.
+Qed.
+
+Lemma rigid_trans_unit w v : rigid_trans w v \is a GRing.unit.
+Proof.
+apply/unitrP; exists (inv_rigid_trans w v); by rewrite Vrigid_trans rigid_transV.
+Qed.
+
+End sample_rigid_transformation.
+
+Section taylor_exponential.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
@@ -3862,89 +3833,32 @@ move=> Hg; rewrite /expmx big_distrr /= big_distrl /=.
 apply/eq_bigr => i _; by rewrite expt_mulmulV.
 Qed.
 
-End exponential_map.
+End taylor_exponential.
 
-Section sample_rigid_transformation.
-
-Variable R : rcfType.
-Let vector := 'rV[R]_3.
-Implicit Types w v : vector.
-
-Definition rigid_trans w v := hom 1 (w *v v).
-
-Definition inv_rigid_trans w v := hom 1 (- w *v v).
-
-Lemma Vrigid_trans w v : inv_rigid_trans w v * rigid_trans w v = 1.
-Proof.
-by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 addrC crossmulNv subrr hom10.
-Qed.
-
-Lemma rigid_transV w v : rigid_trans w v * inv_rigid_trans w v = 1.
-Proof.
-by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 crossmulNv subrr hom10.
-Qed.
-
-Lemma rigid_trans_unitmx w v : rigid_trans w v \in unitmx.
-Proof.
-by rewrite unitmxE /rigid_trans (det_lblock 1 (w *v v)) 2!det1 mulr1 unitr1.
-Qed.
-
-Lemma inv_rigid_transE w v : (rigid_trans w v)^-1 = inv_rigid_trans w v.
-Proof.
-rewrite -[LHS]mul1mx -[X in X *m _ = _](Vrigid_trans w v) -mulmxA.
-by rewrite mulmxV ?rigid_trans_unitmx // mulmx1.
-Qed.
-
-Lemma rigid_trans_unit w v : rigid_trans w v \is a GRing.unit.
-Proof.
-apply/unitrP; exists (inv_rigid_trans w v); by rewrite Vrigid_trans rigid_transV.
-Qed.
-
-End sample_rigid_transformation.
-
-Module Twist.
-Section Twist.
-Variable R : rcfType.
-Let vector := 'rV[R]_3.
-Record t := mkT {
-  w : vector ;
-  v : vector }.
-End Twist.
-End Twist.
-Coercion Twistmx (R : rcfType) (wv : Twist.t R) : 'M_4 := 
-  block_mx (\^(Twist.w wv)) 0 (Twist.v wv) 0.
-(*Definition twist w v : 'M_4 := block_mx (\^w) 0 v 0.*)
-(* TODO: v = - w *v q for q a point on the axis? *)
-(* TODO: notation 'se[R]_3 for the set of twists? *)
-
-(* exponential coordinates for rigid motion and twists *)
-Section exponential_coordinates_rigid.
+(* exponential coordinates for rigid motion using taylor expansion of the exponential map *)
+(* proposition 2.8 pages 41-42 *)
+Section exponential_coordinates_rigid_using_taylor.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Implicit Types w v : vector.
-
-Lemma twistZ a (wv : Twist.t R) : a *: (wv : 'M_4) = Twist.mkT (a *: Twist.w wv) (a *: Twist.v wv).
-Proof.
-by rewrite /Twistmx (scale_block_mx a \^(Twist.w wv)) skew_mxZ 2!scaler0.
-Qed.
 
 Lemma exp_twist0v v n : ((Twist.mkT 0 v) : 'M_4) ^+ n.+2 = 0.
 Proof.
 elim: n => [|n ih]; last by rewrite exprS ih mulr0.
-rewrite expr2 /Twistmx skew_mx0 -mulmxE.
+rewrite expr2 /Twistmx /Twist.mx skew_mx0 -mulmxE.
 set a := 0. set b := 0.
 by rewrite (mulmx_block a b v _ a b v _) /a /b !(mulmx0,addr0,mul0mx) block_mx0.
 Qed.
 
 Definition expmx_twist0 v : 'M_4 := hom 1 v.
 
-(* eqn 2.32, p.41 *)
+(* [murray] eqn 2.32, p.41 *)
 Lemma expmx_twist0E v k : expmx (Twist.mkT 0 v) k.+2 = expmx_twist0 v.
 Proof.
 rewrite /expmx 2!big_ord_recl big1 ?addr0; last first.
   move=> /= i _; by rewrite exptE exp_twist0v scaler0.
-rewrite liftE0 eqxx /expt factS fact0 expr0 expr1 invr1 2!scale1r /Twistmx skew_mx0.
+rewrite liftE0 eqxx /expt factS fact0 expr0 expr1 invr1 2!scale1r /Twistmx /Twist.mx skew_mx0.
 rewrite /expmx_twist0 -idmxE (@scalar_mx_block _ 3 1 1).
 by rewrite (add_block_mx 1 0 0 1 0 _ v) !(addr0,add0r).
 Qed.
@@ -4024,17 +3938,17 @@ rewrite (scale_block_mx ((k.+2)`!%:R^-1) (\^w ^+ k.+2)) !scaler0.
 by rewrite (add_block_mx (expmx \^w k.+2)) !(addr0) -expmxS.
 Qed.
 
-(* eqn 2.36, p.42 *)
+(* [murray] eqn 2.36, p.42 *)
 Definition expmx_twist w v a k : 'M_4 :=
   let w' := a *: w in
   hom (expmx \^w' k) ((v *v w) *m (1 - expmx \^w' k) + (a *: v) *m (w^T *m w)).
 
-(* eqn 2.36, p.42 *)
+(* [murray] eqn 2.36, p.42 *)
 Lemma expmx_twistE w v a k : norm (a *: w) = 1 ->
   expmx (a *: (Twist.mkT w v : 'M_4)) k.+2 = expmx_twist w (a^+2 *: v) a k.+2.
 Proof.
 set w' : 'rV_3 := a *: w => w1.
-rewrite twistZ p42eq235 // p42eq3 // -mulmxE.
+rewrite Twist.Z p42eq235 // p42eq3 // -mulmxE.
 rewrite {1}/rigid_trans mulmxE homM mul1r.
 rewrite inv_rigid_transE /inv_rigid_trans homM mulr1 mulmx1.
 rewrite /expmx_twist; congr (block_mx (expmx \^w' k.+2) 0 _ 1).
@@ -4062,9 +3976,31 @@ move=> w1 expmx_SO; rewrite expmx_twistE //; apply/and3P; split.
 - by rewrite /expmx_twist block_mxKdr.
 Qed.
 
+End exponential_coordinates_rigid_using_taylor.
+
+Section exponential_coordinates_rigid.
+
+Variable R : rcfType.
+
+(* TODO *)
+Axiom R_of_angle : angle R -> R.
+
+(* NB: same definition as expmx_twist but using exp_rot instead of the taylor expansion of
+   the exponential  *)
+(* eqn 1.27, page 17 in Springer's handbook, closed expression for the exponential of a twist *)
+Definition exprot_twist (t : Twist.t R) (a : angle R) : 'M_4 :=
+  let w := Twist.w t in
+  let v := Twist.v t in
+  hom (`e^(a, \^w)) ((w *v v) *m (1 - `e^(a, \^w)) + ((R_of_angle a *: v) *m (w^T *m w))).
+
+Lemma exprot_twist_is_SE t a : 
+  norm (Twist.w t) = 1 -> exprot_twist t a \in 'SE3[R]. 
+Proof. move=> w1; by rewrite hom_is_SE // exp_rot_is_SO. Qed.
+(* NB: converse? *)
+
 End exponential_coordinates_rigid.
 
-(* scews: a geometric description of twists *)
+(* screws: a geometric description of twists *)
 
 Module Screw.
 Section Screw.
@@ -4079,22 +4015,17 @@ Record t := mkT {
 End Screw.
 End Screw.
 
-Section screw.
+Section screw_motion.
 
 Variable R : rcfType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
-
-Section screw_motion.
 
 Variable s : Screw.t R.
 Let q := Screw.p s.
 Let w := Screw.w s.
 Let a := Screw.a s.
 Let h := Screw.h s.
-
-(* TODO *)
-Axiom R_of_angle : angle R -> R.
 
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
 Definition screw_motion (p : point) := 
@@ -4119,12 +4050,6 @@ rewrite mxE [in RHS]mxE; congr (_ + _).
 rewrite mulmxBr mulmx1 addrCA mxE [in RHS]mxE; congr (_ + _).
 by rewrite mulmxBl.
 Qed.
-
-(* NB: same definition as expmx_twist but using exp_rot instead of expmx ... k *)
-Definition exprot_twist (wv : Twist.t R) (a : angle R) : 'M_4 :=
-  let w := Twist.w wv in
-  let v := Twist.v wv in
-  hom (`e^(a, \^w)) ((w *v v) *m (1 - `e^(a, \^w)) + ((R_of_angle a *: v) *m (w^T *m w))).
 
 (* the rbt given by a screw (SE_screw_motion)
    has the same form as the exponential of a twist *)
@@ -4170,20 +4095,133 @@ End screw_motion.
 
 Section screw_coordinates_of_a_twist.
 
-Variables (w v : vector).
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
+Variable t : Twist.t R.
+Let w := Twist.w t.
+Let v := Twist.v t.
 
-Definition pitch : R := (norm w)^-2 *: v *d w.
-
-Definition axis_point : point :=
+Definition axis_point : point := (* [murray] 2.43, p.47 *)
   if w == 0 then 0 else (norm w)^-2 *: (w *v v).
 
-Definition axis : point * vector := (axis_point, if w == 0 then v else w).
+Definition axis : vector := if w == 0 then v else w. (* [murray] 2.43, p.47 *)
 
-Definition magnitude : R := if w == 0 then norm v else norm w.
+Definition pitch : R := (norm w)^-2 *: v *d w. (* [murray] 2.42, p.47 *)
+
+Definition magnitude : R := if w == 0 then norm v else norm w. (* [murray] 2.44, p.48 *)
+
+Axiom angle_of_R : R -> angle R.
+
+Definition ScrewTwist := Screw.mkT
+  axis_point axis (angle_of_R pitch) magnitude.
 
 End screw_coordinates_of_a_twist.
 
-End screw.
+Section chasles.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Let point := 'rV[R]_3.
+
+Variable f : 'DIso_3[R].
+Let Q : 'M[R]_3 := ortho_of_iso f.
+Let T : vector := trans_of_iso f.
+Variable e : vector.
+Hypothesis ne : norm e = 1.
+Variable phi : angle R.
+Hypothesis Maxis : is_around_axis e phi (mx_lin1 Q).
+
+Lemma is_around_axis_axis : e *m Q = e.
+Proof. by case: Maxis. Qed.
+
+(* [angeles] theorem 3.2.1, p.97: 
+   the displacements of all the points of B have the same component along e *)
+Lemma thm321 (a p : point) :
+  let da := f a - a in let dp := f p - p in
+  da *d e = dp *d e.
+Proof.
+move=> da dp.
+have eq34 : dp = da + (p - a) *m (Q - 1).
+  rewrite /da mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA subrK.
+  rewrite /dp; congr (_ - _).
+  apply/eqP; rewrite addrC -subr_eq.
+  by rewrite img_vec_iso.
+have : dp *m e^T = da *m e^T + (p - a) *m (Q - 1) *m e^T.
+  by rewrite -mulmxDl -eq34.
+rewrite -mulmxA (mulmxBl Q 1 e^T) mul1mx.
+have -> : Q *m e^T = e^T.
+  rewrite -{1}(is_around_axis_axis) trmx_mul mulmxA mulmxE.
+  have : Q \is 'O[R]_3 by rewrite /Q ortho_of_iso_is_O.
+  rewrite orthogonalE => /eqP ->; by rewrite mul1mx.
+rewrite subrr mulmx0 addr0 /dotmul; by move=> ->.
+Qed.
+
+Definition d0 := (f 0 - 0) *d e.
+
+Lemma d0_is_a_lb_of_a_displacement p : (d0 ^+ 2 <= norm (f p - p) ^+ 2).
+Proof.
+set dp := f p - p.
+rewrite /d0 (thm321 0 p) -/dp.
+move: (Frame.pframe (norm1_neq0 ne)) => F.
+have -> : norm dp = norm (dp *m (col_mx3 (normalize e) (Frame.j e) (Frame.k e))^T).
+  rewrite orth_preserves_norm // orthogonalV.
+  move: (pframe_is_rot F).
+  by rewrite rotationE => /andP [].
+rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
+  by rewrite normalizeI.
+by rewrite addr_ge0 // sqr_ge0.
+Qed.
+
+Definition parpart (p : point) :=  axialcomp (f p - p) e.
+
+Lemma parpartP (p : vector) : parpart p = d0 *: e.
+Proof. by rewrite /parpart /axialcomp dotmulC (thm321 _ 0). Qed.
+
+Definition perppart (p : point) := normalcomp (f p - p) e.
+
+Lemma perpart_colinear (p : point) :
+  let dp := f p - p in
+  (perppart p == 0) = (colinear dp e).
+Proof.
+move=> dp; apply/idP/idP => [/eqP|/colinearP].
+  by apply: normalcomp_colinear.
+rewrite -norm_eq0 ne -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
+rewrite /perppart /normalcomp -/dp Hk2.
+by rewrite dotmulvZ dotmulvv ne expr1n mulr1 subrr.
+Qed.
+
+(* [angeles] theorem 3.2.2, p.97*)
+(* d0 is the minimal norm of a displacement, all such points are along a line parallel
+   to e *)
+Lemma MozziChasles1 p : let dp := f p - p in
+  norm dp = d0 -> colinear dp e.
+Proof.
+move=> dp H.
+have Hp : forall p : point, let dp := f p - p in
+    norm dp ^+ 2 = norm (d0 *: e) ^+2 + norm (perppart p) ^+ 2.
+  move=> p' dp'.
+  rewrite /dp' (decomp (f p' - p') e).
+  rewrite normD -dotmul_cos.
+  rewrite axialnormal // mul0rn addr0 sqr_sqrtr; last first.
+    by rewrite addr_ge0 // ?sqr_ge0.
+  by rewrite /perppart -/(parpart p') parpartP.
+move: {Hp}(Hp p) => Hp.
+rewrite -perpart_colinear.
+rewrite -norm_eq0.
+suff : norm dp ^+2 <= norm (d0 *: e) ^+ 2.
+  by rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 //= norm_eq0.
+rewrite 2!expr2.
+by rewrite ler_pmul // ?norm_ge0 // H normZ ne mulr1 ler_norm.
+Qed.
+
+Definition p0 (a : point) :=
+  let a':= f a in
+  1 / (2%:R * (1 - cos phi)) *: (a *m Q - a') *m (Q - 1)^T.
+
+(* TODO *)
+
+End chasles.
 
 (*
 
@@ -4229,3 +4267,7 @@ length (links i) = distance from (z_vec (frames i.-1)) to (z_vec (frames i)) alo
 
 
  *)
+
+
+
+
