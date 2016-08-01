@@ -3307,20 +3307,21 @@ rewrite (_ : esym _ = erefl (3 + 1)%N); last by apply eq_irrelevance.
 by rewrite (cast_row_mx (erefl 1%N) (i *m r + t) 1) row_mxKl castmx_id.
 Qed.
 
-Lemma SE_preserves_length f (T : SE.t R) :
-  f =1 SE.ap_point T -> {mono f : a b / norm (a - b)}.
-Proof. move=> fT m0 m1; by rewrite 2!fT SE.ap_pointB SE.ap_vector_preserves_norm. Qed.
+Lemma SE_preserves_length (T : SE.t R) :
+  {mono (SE.ap_point T) : a b / norm (a - b)}.
+Proof. move=> m0 m1; by rewrite SE.ap_pointB SE.ap_vector_preserves_norm. Qed.
 
-Lemma ortho_of_isoE f (T : SE.t R) (fT : f =1 SE.ap_point T) :
-  ortho_of_iso (Iso.mk (SE_preserves_length fT)) = SE.rot T.
+(*Lemma SE_preserves_length (T : SE.t R) :
+  f =1 SE.ap_point T -> {mono f : a b / norm (a - b)}.
+Proof. move=> fT m0 m1; by rewrite 2!fT SE.ap_pointB SE.ap_vector_preserves_norm. Qed.*)
+
+Lemma ortho_of_isoE (T : SE.t R) :
+  ortho_of_iso (Iso.mk (SE_preserves_length T)) = SE.rot T.
 Proof.
-have H : {mono (SE.ap_point T) : a b / norm (a - b)}.
-  move=> u v /=; by rewrite SE.ap_pointB SE.ap_vector_preserves_norm.
-suff : forall x : 'rV[R]_3, x *m ortho_of_iso (Iso.mk H) = x *m SE.rot T.
+suff : forall x : 'rV[R]_3, x *m ortho_of_iso (Iso.mk (SE_preserves_length T)) = x *m SE.rot T.
   move=> Hx.
   apply/eqP/mulmxP => u.
-  rewrite -Hx /=; congr (_ *m _).
-  by apply ortho_of_iso_eq.
+  by rewrite -Hx.
 move=> x.
 by rewrite trans_ortho_of_isoE /= trans_of_isoE /= SE.ap_pointB subr0 SE.ap_vectorE.
 Qed.
@@ -3329,21 +3330,19 @@ Definition preserves_angle (f : point -> point) :=
   forall i j k, vec_angle (j - i) (k - i) =
                 vec_angle (f j - f i) (f k - f i).
 
-Lemma SE_preserves_angle f (T : SE.t R) :
-  f =1 SE.ap_point T -> preserves_angle f.
+Lemma SE_preserves_angle (T : SE.t R) : preserves_angle (SE.ap_point T).
 Proof.
-move=> fT /= m0 m1 k.
-rewrite 3!fT 2!SE.ap_pointB 2!SE.ap_vectorE orth_preserves_vec_angle //.
+move=> /= m0 m1 k.
+rewrite 2!SE.ap_pointB 2!SE.ap_vectorE orth_preserves_vec_angle //.
 by rewrite rotation_sub // SE.rotP.
 Qed.
 
-Lemma SE_preserves_orientation f (T : SE.t R)
-  (fT : f =1 SE.ap_point T) :
-  preserves_orientation (Iso.mk (SE_preserves_length fT)).
+Lemma SE_preserves_orientation (T : SE.t R) :
+  preserves_orientation (Iso.mk (SE_preserves_length T)).
 Proof.
 move=> p u v /=.
 rewrite mulmxr_crossmulr ?ortho_of_iso_is_O // ortho_of_isoE.
-rewrite rotation_det ?scale1r //; by case: T fT.
+rewrite rotation_det ?scale1r //; by case: T.
 Qed.
 
 End rigid_transformation_is_homogeneous_transformation.
@@ -4267,7 +4266,3 @@ length (links i) = distance from (z_vec (frames i.-1)) to (z_vec (frames i)) alo
 
 
  *)
-
-
-
-
