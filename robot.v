@@ -1112,7 +1112,6 @@ move=> i /=.
 by rewrite (FromToE M) mulmxA mulmx_can_frame (rotation_inv (pframe_is_rot A)).
 Qed.
 
-
 Lemma FromToPi R (A B : frame R) (M : A %> B) : framei A *m M = framei B.
 Proof.
 rewrite (FromToE M) mulmxA (_ : (matrix_of_oframe A)^-1 = A^T); last first.
@@ -3977,12 +3976,51 @@ Qed.
 
 End exponential_coordinates_rigid_using_taylor.
 
+Module AngleR.
+Section angler.
+Variable R : rcfType.
+
+(* fonction de conversion proportionnelle positive non-nulle *)
+Variable conv : angle R -> R.
+Hypothesis conv_pos : forall a, 0 <= conv a.
+Hypothesis conv0 : conv 0 = 0.
+Hypotheses convpi : 0 < conv pi.
+Hypothesis conv_propor : forall k a, conv (a *+ k) = conv a *+ k.
+
+(* modulo *)
+Variable representative : R -> R.
+Hypothesis representative_codomain :  forall r, 0 <= representative r < (conv pi) *+ 2.
+Definition representativeP r := 
+  [pred k | ((0 <= r) ==> (r == representative r + (conv pi) *+ 2 *+ k)) && 
+            ((r < 0) ==> (r == representative r + (conv pi) *+ 2 *- k))].
+Axiom exists_representativeP : forall r, { k | representativeP r k }.
+
+Definition f : angle R -> R := representative \o conv.
+
+Lemma f2pi : f (pi *+ 2) = 0%:R.
+Proof.
+rewrite /f /= conv_propor.
+case: (exists_representativeP (conv pi *+ 2)) => k /=.
+rewrite ltrNge mulrn_wge0 // implyTb implyFb andbT.
+case: k.
+  rewrite mulr0n addr0 => abs.
+  move: (representative_codomain ((conv pi) *+ 2)).
+  by rewrite -(eqP abs) ltrr andbF.
+case=> [|k]; last first.
+  rewrite (mulrS _ k.+1) addrCA addrC -subr_eq subrr eq_sym addr_eq0 => abs.
+  move: (representative_codomain ((conv pi) *+ 2)).
+  rewrite lerNgt (eqP abs) -lerNgt mulrS => /andP[].
+  by rewrite oppr_ge0 lerNgt addrC ltr_paddl // ?pmulrn_rgt0 // mulrn_wge0 // mulrn_wge0 // ltrW.
+by rewrite mulr1n -subr_eq subrr => /eqP.
+Qed.
+End angler.
+End AngleR.
+
 Section exponential_coordinates_rigid.
 
 Variable R : rcfType.
 
-(* TODO *)
-Axiom R_of_angle : angle R -> R.
+Axiom radian : angle R -> R.
 
 (* NB: same definition as expmx_twist but using exp_rot instead of the taylor expansion of
    the exponential  *)
@@ -3990,7 +4028,7 @@ Axiom R_of_angle : angle R -> R.
 Definition exprot_twist (t : Twist.t R) (a : angle R) : 'M_4 :=
   let w := Twist.w t in
   let v := Twist.v t in
-  hom (`e^(a, \^w)) ((w *v v) *m (1 - `e^(a, \^w)) + ((R_of_angle a *: v) *m (w^T *m w))).
+  hom (`e^(a, \^w)) ((w *v v) *m (1 - `e^(a, \^w)) + ((radian a *: v) *m (w^T *m w))).
 
 Lemma exprot_twist_is_SE t a : 
   norm (Twist.w t) = 1 -> exprot_twist t a \in 'SE3[R]. 
@@ -4028,13 +4066,13 @@ Let h := Screw.h s.
 
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
 Definition screw_motion (p : point) := 
-  q + (p - q) *m `e^(a, \^w) + (h * R_of_angle a) *: w.
+  q + (p - q) *m `e^(a, \^w) + (h * radian a) *: w.
 
 Hypothesis w1 : norm w = 1.
 
 (* the rbt given by a screw *)
 Definition SE_screw_motion : SE.t R := SE.mk
-  (q *m (1 - `e^(a, \^w)) + (h * R_of_angle a) *: w)
+  (q *m (1 - `e^(a, \^w)) + (h * radian a) *: w)
   (exp_rot_is_SO a w1).
 (* NB: take v = - w * q + h * w, then the twist (v, w) generates the screw motion
    assuming |w| = 1 and a != 0 *)
@@ -4054,7 +4092,7 @@ Qed.
    has the same form as the exponential of a twist *)
 (* propostion 2.10? given a screw motion, there is a twist that geneates it (?) *)
 Lemma SE_screw_motion_exprot_twist :
-  R_of_angle (Screw.a s) != 0 ->
+  radian (Screw.a s) != 0 ->
   let v := - Screw.w s *v Screw.p s + Screw.h s *: Screw.w s in
   let wv := Twist.mkT (Screw.w s) v in 
   SE.mx (SE_screw_motion) = exprot_twist wv (Screw.a s).
@@ -4110,10 +4148,10 @@ Definition pitch : R := (norm w)^-2 *: v *d w. (* [murray] 2.42, p.47 *)
 
 Definition magnitude : R := if w == 0 then norm v else norm w. (* [murray] 2.44, p.48 *)
 
-Axiom angle_of_R : R -> angle R.
+Axiom angle_of_radian : R -> angle R.
 
 Definition ScrewTwist := Screw.mkT
-  axis_point axis (angle_of_R pitch) magnitude.
+  axis_point axis (angle_of_radian pitch) magnitude.
 
 End screw_coordinates_of_a_twist.
 
