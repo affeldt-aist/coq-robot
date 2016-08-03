@@ -3003,7 +3003,7 @@ End derivative_map.
 
 Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
 
-Section homogeneous_point_vector.
+Section homogeneous_points_and_vectors.
 
 Variable R : rcfType.
 
@@ -3018,19 +3018,19 @@ Definition hvector := [qualify u : 'rV[R]_4 | u``_3%:R == 0].
 Fact hvector_key : pred_key hvector. Proof. by []. Qed.
 Canonical hvector_keyed := KeyedQualifier hvector_key.
 
-Lemma hvectE p : (p \in hvector) = (p``_3%:R == 0).
+Lemma hvectorE p : (p \in hvector) = (p``_3%:R == 0).
 Proof. by []. Qed.
 
 Definition from_h (x : 'rV[R]_4) : 'rV[R]_3 := @lsubmx _ 1 3 1 x.
 
-Definition to_hP (p : 'rV[R]_3) : 'rV[R]_4 := row_mx p 1.
+Definition to_hpoint (p : 'rV[R]_3) : 'rV[R]_4 := row_mx p 1.
 
-Definition to_hV (v : 'rV[R]_3) : 'rV[R]_4 := row_mx v 0.
+Definition to_hvector (v : 'rV[R]_3) : 'rV[R]_4 := row_mx v 0.
 
-Lemma to_hPK p : from_h (to_hP p) = p.
+Lemma to_hpointK p : from_h (to_hpoint p) = p.
 Proof. by rewrite /from_h row_mxKl. Qed.
 
-Lemma to_hVK v : from_h (to_hV v) = v.
+Lemma to_hvectorK v : from_h (to_hvector v) = v.
 Proof. by rewrite /from_h row_mxKl. Qed.
 
 Lemma from_hB (a b : 'rV[R]_4) : from_h (a - b) = from_h a - from_h b.
@@ -3042,40 +3042,43 @@ apply/rowP => i; rewrite !mxE; congr (x 0 _).
 apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
 Qed.
 
-Lemma rsubmx_coor3 (p : 'rV[R]_4) : @rsubmx _ 1 3 1 p = p``_3%:R%:M.
+Lemma rsubmx_coor3 (x : 'rV[R]_4) : @rsubmx _ 1 3 1 x = x``_3%:R%:M.
 Proof.
 apply/rowP => i; rewrite {i}(ord1 i) !mxE eqxx.
 rewrite (_ : (rshift _ _) = 3%:R :> 'I_(3 + 1) ) //; by apply val_inj.
 Qed.
 
-Lemma hPE p : (p \is hpoint) = (p == row_mx (from_h p) 1).
+Lemma hpoint_from_h p : (p \is hpoint) = (p == row_mx (from_h p) 1).
 Proof.
-rewrite /from_h -{2}(@hsubmxK _ 1 3 1 p) rsubmx_coor3.
-apply/idP/idP => [/eqP -> //| /eqP/(@eq_row_mx _ 1 3 1) [_ /rowP/(_ ord0)]].
+rewrite hpointE -{2}(@hsubmxK _ 1 3 1 p) rsubmx_coor3.
+apply/idP/idP => [/eqP -> // | /eqP/(@eq_row_mx _ 1 3 1) [_ /rowP/(_ ord0)]].
 by rewrite !mxE eqxx /= => /eqP.
 Qed.
 
-Lemma to_hP_is_hP p : to_hP p \in hpoint.
-Proof. by rewrite hPE /to_hP /from_h row_mxKl. Qed.
+Lemma to_hpointP p : to_hpoint p \in hpoint.
+Proof. by rewrite hpoint_from_h to_hpointK. Qed.
 
-Lemma hVE p : (p \is hvector) = (p == row_mx (from_h p) 0).
+Lemma hvector_from_h p : (p \is hvector) = (p == row_mx (from_h p) 0).
 Proof.
-rewrite /from_h -{2}(@hsubmxK _ 1 3 1 p) rsubmx_coor3.
+rewrite hvectorE -{2}(@hsubmxK _ 1 3 1 p) rsubmx_coor3.
 apply/idP/idP => [/eqP -> //| /eqP/(@eq_row_mx _ 1 3 1) [_ /rowP/(_ ord0)]].
 by rewrite (_ : 0%:M = 0) //; apply/rowP => i; rewrite {i}(ord1 i) !mxE eqxx.
 by rewrite !mxE eqxx /= => /eqP.
 Qed.
 
-Lemma to_hV_is_hV v : to_hV v \in hvector.
-Proof. by rewrite hVE /to_hV /from_h row_mxKl. Qed.
+Lemma to_hvectorP v : to_hvector v \in hvector.
+Proof. by rewrite hvector_from_h to_hvectorK. Qed.
 
-Lemma hVB p q :  p \in hpoint -> q \in hpoint -> p - q \in hvector.
+Lemma hpointB p q : p \in hpoint -> q \in hpoint -> p - q \in hvector.
 Proof.
-rewrite 2!hPE hVE => /eqP Hp /eqP Hq.
-by rewrite /from_h {1}Hp {1}Hq (opp_row_mx (from_h q)) (add_row_mx (from_h p)) subrr -from_hB.
+rewrite 2!hpoint_from_h hvector_from_h => /eqP Hp /eqP Hq.
+by rewrite {1}Hp {1}Hq (opp_row_mx (from_h q)) (add_row_mx (from_h p)) subrr -from_hB.
 Qed.
 
-End homogeneous_point_vector.
+Lemma to_hpointB p q : to_hpoint p - to_hpoint q = to_hvector (p - q).
+Proof. by rewrite /to_hpoint (opp_row_mx q) (add_row_mx p) subrr. Qed.
+
+End homogeneous_points_and_vectors.
 
 Notation "''hP[' R ]" := (hpoint R) (at level 8, format "''hP[' R ]").
 Notation "''hV[' R ]" := (hvector R) (at level 8, format "''hV[' R ]").
@@ -3275,8 +3278,6 @@ Proof.
 rewrite /mx /inv mulmxE homM -rotation_inv; last by case: T.
 rewrite divrr; last by apply orthogonal_unit, rotation_sub; case: T.
 by rewrite mulNmx subrr hom10.
-(*rewrite -mulmxA mulmxE divrr; last by apply orthogonal_unit, rotation_sub; case: T.
-by rewrite mulmx1 addrC subrr hom10.*)
 Qed.
 
 (* NB: not used, does not seem interesting *)
@@ -3286,40 +3287,30 @@ Proof.
 by rewrite /trans /inv_trans mulmxE homM mulr1 trmx1 mulmx1 addrC subrr hom10.
 Qed.*)
 
-(*Inductive hpoint := HPoint of point.
-Coercion from_hpoint (p : hpoint) : 'rV[R]_4 := let: HPoint x := p in row_mx x 1.*)
-(*Definition point_of (x : 'hV[R]) : point :=
-  lsubmx (castmx (erefl, esym (addn1 3)) x).*)
+Definition hom_ap (T : t) x : 'rV[R]_4 := x *m T.
 
-Definition hom_ap (T : t) (x : 'rV[R]_4) : 'rV[R]_4 := x *m T.
-
-Lemma ap_hpointE (p : 'rV[R]_4(*point*)) (T : t) :
-  p \is 'hP[R] ->
+Lemma hom_ap_point (p : 'rV[R]_4) (T : t) : p \is 'hP[R] ->
   hom_ap T p = from_h p *m row_mx (rot T) 0 + row_mx (trans T) 1.
 Proof.
-move=> Hp.
-rewrite /hom_ap /= /mx.
-rewrite {1}(_ : p = row_mx (from_h p) 1); last by rewrite hPE in Hp; apply/eqP.
-rewrite (mul_row_block (from_h p) 1 (rot T)).
+rewrite hpoint_from_h => /eqP Hp.
+rewrite /hom_ap /= /mx {1}Hp (mul_row_block (from_h p) 1 (rot T)).
 by rewrite mulmx0 mulmx1 -add_row_mx mul1mx mul_mx_row mulmx0.
 Qed.
 
-(*Inductive hvect := HVec of vector.
-Coercion from_hvect (v : hvect) : 'rV[R]_4 := let: HVec x := v in row_mx x 0.*)
-(*Definition vect_of (x : 'hV[R]) : vector :=
-  lsubmx (castmx (erefl, esym (addn1 3)) x).*)
-
-(*Definition ap_hvect (T : t) (x : 'rV[R]_4) : 'rV[R]_4 := x *m T.*)
-
-Lemma ap_hvectE (u : 'rV[R]_4(*vector*)) (T : t) :
-  u \is 'hV[R] ->
+Lemma hom_ap_vector (u : 'rV[R]_4) (T : t) : u \is 'hV[R] ->
   hom_ap T u = from_h u *m row_mx (rot T) 0.
 Proof.
-move=> Hu.
-rewrite /hom_ap /mx /= /hom.
-rewrite {1}(_ : u = row_mx (from_h u) 0); last by rewrite hVE in Hu; apply /eqP.
-rewrite (mul_row_block (from_h u) 0 (rot T)).
+rewrite hvector_from_h => /eqP Hu.
+rewrite /hom_ap /mx /= /hom {1}Hu (mul_row_block (from_h u) 0 (rot T)).
 by rewrite mulmx0 mulmx1 -add_row_mx mul0mx mul_mx_row mulmx0 row_mx0 addr0.
+Qed.
+
+Lemma hom_apB p q (T : t) : p \is 'hP[R] -> q \is 'hP[R] ->
+  hom_ap T p - hom_ap T q = hom_ap T (p - q).
+Proof.
+move=> Hu Hv.
+rewrite hom_ap_point // hom_ap_point // opprD -addrCA -addrA subrr addr0 addrC.
+by rewrite hom_ap_vector ?hpointB // from_hB mulmxBl.
 Qed.
 
 (* TODO: cannot be total anymore
@@ -3327,43 +3318,24 @@ Lemma linear_ap_hvect (T : t) : linear (ap_hvect T).
 Proof. move=> k u v; rewrite 3!ap_hvectE mulmxDl scalemxAl. Qed.
 *)
 
-Lemma ap_hpointB p q (T : t) : p \is 'hP[R] -> q \is 'hP[R] ->
-  hom_ap T p - hom_ap T q = hom_ap T (p - q).
-Proof.
-move=> Hu Hv.
-do 2 rewrite ap_hpointE //.
-rewrite opprD -addrCA -addrA subrr addr0 addrC ap_hvectE; last by rewrite hVB.
-by rewrite from_hB mulmxBl.
-Qed.
+Definition ap_point T p := from_h (hom_ap T (to_hpoint p)).
 
-Definition ap_point (T : t) (x : point) : point := from_h (hom_ap T (to_hP x)).
+Lemma ap_pointE u T : ap_point T u = from_h (u *m row_mx (rot T) 0 + row_mx (trans T) 1).
+Proof. by rewrite /ap_point hom_ap_point ?to_hpointP // to_hpointK. Qed.
 
-Lemma ap_pointE u (T : t) :
-  ap_point T u = from_h (u *m row_mx (rot T) 0 + row_mx (trans T) 1).
-Proof. by rewrite /ap_point ap_hpointE ?to_hP_is_hP // to_hPK. Qed.
-
-Definition ap_vector (T : t) (u : vector) : vector := from_h (hom_ap T (to_hV u)).
+Definition ap_vector T v := from_h (hom_ap T (to_hvector v)).
 
 Lemma ap_vectorE u (T : t) : ap_vector T u = u *m rot T.
 Proof.
-by rewrite /ap_vector ap_hvectE ?to_hV_is_hV // to_hVK mul_mx_row mulmx0 /from_h row_mxKl.
+by rewrite /ap_vector hom_ap_vector ?to_hvectorP // to_hvectorK mul_mx_row mulmx0 to_hvectorK.
 Qed.
 
 Lemma ap_pointB u v (T : t) : ap_point T u - ap_point T v = ap_vector T (u - v).
-Proof.
-rewrite ap_vectorE.
-rewrite /ap_point ap_hpointE ?to_hP_is_hP // to_hPK.
-rewrite /ap_point ap_hpointE ?to_hP_is_hP // to_hPK.
-rewrite -from_hB opprD addrCA addrK addrC.
-do 2 rewrite mul_mx_row mulmx0.
-by rewrite (opp_row_mx (v *m rot T)) (add_row_mx (u *m rot T)) subrr /from_h row_mxKl mulmxBl.
-Qed.
+Proof. by rewrite /ap_point -from_hB hom_apB ?to_hpointP // to_hpointB. Qed.
 
 Lemma ap_vector_preserves_norm (T : t) : {mono (ap_vector T) : u / norm u}.
 Proof.
-move=> u.
-rewrite /ap_vector ap_hvectE ?to_hV_is_hV // /from_h mul_mx_row mulmx0.
-rewrite 2!row_mxKl orth_preserves_norm // rotation_sub //; by case: T.
+move=> ?; rewrite ap_vectorE orth_preserves_norm // rotation_sub //; by case: T.
 Qed.
 
 End se.
@@ -3371,8 +3343,6 @@ End se.
 End SE.
 
 Coercion hmx_coercion := SE.mx.
-(*Coercion homogeneous_of_hpoint_coercion := SE.from_hpoint.
-Coercion homogeneous_of_hvect_coercion := SE.from_hvect.*)
 
 Section rigid_transformation_is_homogeneous_transformation.
 
@@ -3399,7 +3369,7 @@ exists T => i.
 rewrite SE.ap_pointE /=.
 move: (trans_ortho_of_isoE f i); rewrite -/r -/t => /eqP.
 rewrite eq_sym subr_eq => /eqP ->.
-by rewrite mul_mx_row mulmx0 add_row_mx add0r /from_h row_mxKl.
+by rewrite mul_mx_row mulmx0 add_row_mx add0r to_hpointK.
 Qed.
 
 Lemma SE_preserves_length (T : SE.t R) :
@@ -3414,9 +3384,7 @@ Lemma ortho_of_isoE (T : SE.t R) :
   ortho_of_iso (Iso.mk (SE_preserves_length T)) = SE.rot T.
 Proof.
 suff : forall x : 'rV[R]_3, x *m ortho_of_iso (Iso.mk (SE_preserves_length T)) = x *m SE.rot T.
-  move=> Hx.
-  apply/eqP/mulmxP => u.
-  by rewrite -Hx.
+  move=> Hx;   apply/eqP/mulmxP => u; by rewrite -Hx.
 move=> x.
 by rewrite trans_ortho_of_isoE /= trans_of_isoE /= SE.ap_pointB subr0 SE.ap_vectorE.
 Qed.
@@ -3764,8 +3732,7 @@ Proof.
 move=> axis0 sin0.
 transitivity (u *m M); last first.
   (* TODO: lemma? *)
-  rewrite SE.ap_pointE /= /=.
-  by rewrite (mul_mx_row u _ 0) mulmx0 add_row_mx addr0 add0r /from_h row_mxKl.
+  by rewrite SE.ap_pointE /= (mul_mx_row u) mulmx0 add_row_mx addr0 add0r to_hpointK.
 have w1 : norm w = 1 by rewrite /w aaxis_of // norm_normalize.
 rewrite rodriguesP //; congr (_ *m _) => {u}.
 by rewrite (angle_axis_exp_rot HM).
@@ -4173,7 +4140,7 @@ Definition SE_screw_motion : SE.t R := SE.mk
 
 Lemma SE_screw_motionE (p : point) : SE.ap_point SE_screw_motion p = screw_motion p.
 Proof.
-rewrite SE.ap_pointE mul_mx_row add_row_mx mulmx0 add0r /from_h row_mxKl.
+rewrite SE.ap_pointE mul_mx_row add_row_mx mulmx0 add0r to_hpointK.
 rewrite addrA /SE_screw_motion /=; apply/rowP => i.
 rewrite mxE [in RHS]mxE; congr (_ + _).
 rewrite mulmxBr mulmx1 addrCA mxE [in RHS]mxE; congr (_ + _).
