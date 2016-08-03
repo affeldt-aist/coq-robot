@@ -1373,6 +1373,10 @@ Section properties_of_is_around_axis.
 
 Variable u : 'rV[R]_3.
 
+Lemma is_around_axis_axis a (Q : 'M[R]_3) :
+  is_around_axis u a (mx_lin1 Q) -> u *m Q = u.
+Proof. by case. Qed.
+
 Lemma is_around_axis1 : is_around_axis u 0 (mx_lin1 1).
 Proof.
 split => /=; first by rewrite mulmx1.
@@ -2623,7 +2627,7 @@ Notation "''CIso[' R ]_ n" := (CIso.t R n)
 Definition cisometry_coercion := CIso.f.
 Coercion cisometry_coercion : CIso.t >-> Iso.t.
 
-Section isometry_def.
+Section central_isometry_n.
 
 Variable (R : rcfType) (n : nat).
 
@@ -2645,13 +2649,11 @@ rewrite -mulr_natr -[in X in _ == X -> _]mulr_natr 2!mulNr eqr_opp.
 by move/eqP/mulIr => -> //; rewrite unitfE pnatr_eq0.
 Qed.
 
-End isometry_def.
+End central_isometry_n.
 
-Section sign_of_isometry.
+Section central_isometry_3.
 
 Variable R : rcfType.
-Let vector := 'rV[R]_3.
-Let point := 'rV[R]_3.
 
 Lemma frame_central_iso (f : 'CIso[R]_3) i j k :
   oframe i j k -> oframe (f i) (f j) (f k).
@@ -2676,6 +2678,14 @@ rewrite addrC -!addrA; congr (_ + _).
 rewrite addrC -!addrA; congr (_ + _).
 by rewrite addrC -!addrA.
 Qed.
+
+End central_isometry_3.
+
+Section isometry_prop.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Let point := 'rV[R]_3.
 
 Definition lin1_mx' n (f : 'rV[R]_n -> 'rV[R]_n) : linear f ->
   {M : {linear 'rV[R]_n -> 'rV[R]_n} & forall x, f x = M x}.
@@ -2732,14 +2742,6 @@ case: (trans_ortho_of_iso _) => T [C [H1 [H2 H3]]] /=.
 move: (H1 u) => /eqP ->; by rewrite addrK.
 Qed.
 
-Lemma img_vec_iso (f : 'Iso[R]_3) (a b : point) :
-  f b - f a = (b - a) *m ortho_of_iso f.
-Proof.
-move/esym/eqP: (trans_ortho_of_isoE f a).
-move/esym/eqP: (trans_ortho_of_isoE f b).
-rewrite mulmxBl => /eqP <- /eqP <-; by rewrite opprB addrA subrK.
-Qed.
-
 Lemma ortho_of_iso_eq (f1 f2 : 'Iso[R]_3) :
   (forall i, Iso.f f1 i = Iso.f f2 i) ->
   ortho_of_iso f1 = ortho_of_iso f2.
@@ -2753,7 +2755,25 @@ Qed.
 
 Definition iso_sgn (f : 'Iso[R]_3) : R := \det (ortho_of_iso f).
 
-End sign_of_isometry.
+Lemma img_vec_iso (f : 'Iso[R]_3) (a b : point) :
+  f b - f a = (b - a) *m ortho_of_iso f.
+Proof.
+move/esym/eqP: (trans_ortho_of_isoE f a).
+move/esym/eqP: (trans_ortho_of_isoE f b).
+rewrite mulmxBl => /eqP <- /eqP <-; by rewrite opprB addrA subrK.
+Qed.
+
+Definition displacement (f : 'Iso[R]_3) p := f p - p.
+
+Lemma displacement_iso (f : 'Iso[R]_3) p a :
+  displacement f p = displacement f a + (p - a) *m (ortho_of_iso f - 1).
+Proof.
+rewrite mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA subrK.
+congr (_ - _).
+apply/eqP; by rewrite addrC -subr_eq img_vec_iso.
+Qed.
+
+End isometry_prop.
 
 Module DIso.
 Section direct_isometry.
@@ -2983,19 +3003,19 @@ End derivative_map.
 
 Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
 
-Notation "''H[' R ]" := ('M[R]_4) (at level 8, format "''H[' R ]").
+(*Notation "''H[' R ]" := ('M[R]_4) (at level 8, format "''H[' R ]").*)
 Notation "''hV[' R ]" := ('rV[R]_4) (at level 8, format "''hV[' R ]").
 
 Section SE3_def.
 
 Variable R : rcfType.
 
-Definition hom (r : 'M[R]_3) (t : 'rV[R]_3) : 'H[R] :=
+Definition hom (r : 'M[R]_3) (t : 'rV[R]_3) : 'M[R]_4 :=
   block_mx r 0 t 1.
 
-Definition rot_of_hom (M : 'H[R]) : 'M[R]_3 := @ulsubmx _ 3 1 3 1 M.
+Definition rot_of_hom (M : 'M[R]_4) : 'M[R]_3 := @ulsubmx _ 3 1 3 1 M.
 
-Definition SE3 := [qualify M : 'H[R] |
+Definition SE3 := [qualify M : 'M[R]_4 |
   [&& rot_of_hom M \is 'SO[R]_3,
       @ursubmx _ 3 1 3 1 M == 0 &
       @drsubmx _ 3 1 3 1 M == 1%:M] ].
@@ -3011,7 +3031,7 @@ Section SE3_prop.
 
 Variable R : rcfType.
 
-Lemma rot_of_hom_SO (M : 'H[R]) : M \is 'SE3[R] ->
+Lemma rot_of_hom_SO (M : 'M[R]_4) : M \is 'SE3[R] ->
   rot_of_hom M \is 'SO[R]_3.
 Proof. by case/and3P. Qed.
 
@@ -3025,10 +3045,10 @@ move=> Hr; apply/and3P; rewrite rot_of_hom_hom Hr; split => //.
 - by rewrite /hom block_mxKdr.
 Qed.
 
-Lemma rot_of_homN (M : 'H[R]) : rot_of_hom (- M) = - rot_of_hom M.
+Lemma rot_of_homN (M : 'M[R]_4) : rot_of_hom (- M) = - rot_of_hom M.
 Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
 
-Definition trans_of_hom (M : 'H[R]) : 'rV[R]_3 := @dlsubmx _ 3 1 3 1 M.
+Definition trans_of_hom (M : 'M[R]_4) : 'rV[R]_3 := @dlsubmx _ 3 1 3 1 M.
 
 Lemma trans_of_hom_hom r t : trans_of_hom (hom r t) = t.
 Proof. by rewrite /trans_of_hom /hom block_mxKdl. Qed.
@@ -3053,13 +3073,13 @@ Qed.
 Lemma det_hom (r : 'M[R]_3) t : \det (hom r t) = \det r.
 Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
 
-Lemma SE3_is_unitmx (M : 'H[R]) : M \is 'SE3[R] -> M \in unitmx.
+Lemma SE3_is_unitmx (M : 'M[R]_4) : M \is 'SE3[R] -> M \in unitmx.
 Proof.
 move=> HM.
 by rewrite (SE3E HM) unitmxE /= det_hom rotation_det // ?unitr1 // ?rot_of_hom_SO.
 Qed.
 
-Lemma hom10 : hom 1 0 = 1 :> 'H[R].
+Lemma hom10 : hom 1 0 = 1 :> 'M[R]_4.
 Proof.
 rewrite /hom -[in RHS](@submxK _ 3 1 3 1 1).
 congr (@block_mx _ 3 1 3 1); apply/matrixP => i j; rewrite !mxE -val_eqE //.
@@ -3067,19 +3087,19 @@ rewrite {j}(ord1 j) /= addn0; by case: i => -[] // [] // [].
 rewrite {i}(ord1 i) /= addn0; by case: j => -[] // [] // [].
 Qed.
 
-Lemma homM r r' t t' : hom r t * hom r' t' = hom (r * r') (t *m r' + t') :> 'H[R].
+Lemma homM r r' t t' : hom r t * hom r' t' = hom (r * r') (t *m r' + t') :> 'M[R]_4.
 Proof.
 rewrite /hom -mulmxE (mulmx_block r _ _ _ r') !(mulmx0,mul0mx,addr0,add0r,mulmx1).
 by rewrite mulmxE mul1mx.
 Qed.
 
-Definition inv_hom (M : 'H[R]) :=
+Definition inv_hom (M : 'M[R]_4) :=
   hom (rot_of_hom M)^T (- trans_of_hom M *m (rot_of_hom M)^T).
 
 Lemma trmx_hom (r : 'M[R]_3) t : (hom r t)^T = block_mx r^T t^T (0 : 'rV_3) 1.
 Proof. by rewrite /hom (tr_block_mx r) trmx1 trmx0. Qed.
 
-Lemma homV (T : 'H[R]) : T \is 'SE3[R] -> T * inv_hom T = 1.
+Lemma homV (T : 'M[R]_4) : T \is 'SE3[R] -> T * inv_hom T = 1.
 Proof.
 move=> HT.
 rewrite (SE3E HT) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
@@ -3088,7 +3108,7 @@ rewrite homM -rotation_inv ?rot_of_hom_SO // divrr; last first.
 by rewrite mulNmx subrr hom10.
 Qed.
 
-Lemma Vhom (T : 'H[R]) : T \is 'SE3[R] -> inv_hom T * T = 1.
+Lemma Vhom (T : 'M[R]_4) : T \is 'SE3[R] -> inv_hom T * T = 1.
 Proof.
 move=> HT.
 rewrite (SE3E HT) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
@@ -3098,7 +3118,7 @@ rewrite -mulmxA mulVmx ?mulmx1 1?addrC ?subrr ?hom10 // .
 by rewrite unitmxE unitfE rotation_det ?oner_eq0 // rot_of_hom_SO.
 Qed.
 
-Lemma SE3_inv (M : 'H[R]) (HM : M \is 'SE3[R]) : M^-1 = inv_hom M.
+Lemma SE3_inv (M : 'M[R]_4) (HM : M \is 'SE3[R]) : M^-1 = inv_hom M.
 Proof.
 rewrite -[LHS]mul1mx -[X in X *m _ = _](Vhom HM) -mulmxA.
 by rewrite mulmxV ?mulmx1 // SE3_is_unitmx.
@@ -3161,7 +3181,7 @@ Definition hrot (T : t) := hom (rot T) 0.
 
 Definition htrans (T : t) := hom 1 (trans T).
 
-Lemma tE (T : t) : T = hrot T *m htrans T :> 'H[R].
+Lemma tE (T : t) : T = hrot T *m htrans T :> 'M[R]_4.
 Proof. by rewrite /mx /trans /rot mulmxE homM mulr1 mul0mx add0r. Qed.
 
 Lemma mxSE_in_SE3 (T : t) : mx T \is 'SE3[R].
@@ -4169,39 +4189,30 @@ Hypothesis ne : norm e = 1.
 Variable phi : angle R.
 Hypothesis Maxis : is_around_axis e phi (mx_lin1 Q).
 
-Lemma is_around_axis_axis : e *m Q = e.
-Proof. by case: Maxis. Qed.
-
 (* [angeles] theorem 3.2.1, p.97: 
    the displacements of all the points of B have the same component along e *)
+
 Lemma thm321 (a p : point) :
-  let da := f a - a in let dp := f p - p in
-  da *d e = dp *d e.
+  displacement f a *d e = displacement f p *d e.
 Proof.
-move=> da dp.
-have eq34 : dp = da + (p - a) *m (Q - 1).
-  rewrite /da mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA subrK.
-  rewrite /dp; congr (_ - _).
-  apply/eqP; rewrite addrC -subr_eq.
-  by rewrite img_vec_iso.
-have : dp *m e^T = da *m e^T + (p - a) *m (Q - 1) *m e^T.
-  by rewrite -mulmxDl -eq34.
+have : displacement f p *m e^T = displacement f a *m e^T + (p - a) *m (Q - 1) *m e^T.
+  by rewrite -mulmxDl -displacement_iso.
 rewrite -mulmxA (mulmxBl Q 1 e^T) mul1mx.
 have -> : Q *m e^T = e^T.
-  rewrite -{1}(is_around_axis_axis) trmx_mul mulmxA mulmxE.
+  rewrite -{1}(is_around_axis_axis Maxis) trmx_mul mulmxA mulmxE.
   have : Q \is 'O[R]_3 by rewrite /Q ortho_of_iso_is_O.
   rewrite orthogonalE => /eqP ->; by rewrite mul1mx.
 rewrite subrr mulmx0 addr0 /dotmul; by move=> ->.
 Qed.
 
-Definition d0 := (f 0 - 0) *d e.
+Definition d0 := displacement f 0 *d e.
 
-Lemma d0_is_a_lb_of_a_displacement p : (d0 ^+ 2 <= norm (f p - p) ^+ 2).
+Lemma d0_is_a_lb_of_a_displacement p : (d0 ^+ 2 <= norm (displacement f p) ^+ 2).
 Proof.
-set dp := f p - p.
-rewrite /d0 (thm321 0 p) -/dp.
+rewrite /d0 (thm321 0 p).
 move: (Frame.pframe (norm1_neq0 ne)) => F.
-have -> : norm dp = norm (dp *m (col_mx3 (normalize e) (Frame.j e) (Frame.k e))^T).
+have -> : norm (displacement f p) =
+          norm (displacement f p *m (col_mx3 (normalize e) (Frame.j e) (Frame.k e))^T).
   rewrite orth_preserves_norm // orthogonalV.
   move: (pframe_is_rot F).
   by rewrite rotationE => /andP [].
@@ -4210,35 +4221,34 @@ rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
 by rewrite addr_ge0 // sqr_ge0.
 Qed.
 
-Definition parpart (p : point) :=  axialcomp (f p - p) e.
+Definition parpart (p : point) :=  axialcomp (displacement f p) e.
 
 Lemma parpartP (p : vector) : parpart p = d0 *: e.
 Proof. by rewrite /parpart /axialcomp dotmulC (thm321 _ 0). Qed.
 
-Definition perppart (p : point) := normalcomp (f p - p) e.
+Definition perppart (p : point) := normalcomp (displacement f p) e.
 
 Lemma perpart_colinear (p : point) :
-  let dp := f p - p in
-  (perppart p == 0) = (colinear dp e).
+  (perppart p == 0) = (colinear (displacement f p) e).
 Proof.
-move=> dp; apply/idP/idP => [/eqP|/colinearP].
+apply/idP/idP => [/eqP|/colinearP].
   by apply: normalcomp_colinear.
 rewrite -norm_eq0 ne -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
-rewrite /perppart /normalcomp -/dp Hk2.
+rewrite /perppart /normalcomp Hk2.
 by rewrite dotmulvZ dotmulvv ne expr1n mulr1 subrr.
 Qed.
 
-(* [angeles] theorem 3.2.2, p.97*)
+(* [angeles] theorem 3.2.2, p.97 *)
 (* d0 is the minimal norm of a displacement, all such points are along a line parallel
    to e *)
-Lemma MozziChasles1 p : let dp := f p - p in
-  norm dp = d0 -> colinear dp e.
+Lemma MozziChasles1 p :
+  norm (displacement f p) = d0 -> colinear (displacement f p) e.
 Proof.
-move=> dp H.
-have Hp : forall p : point, let dp := f p - p in
-    norm dp ^+ 2 = norm (d0 *: e) ^+2 + norm (perppart p) ^+ 2.
-  move=> p' dp'.
-  rewrite /dp' (decomp (f p' - p') e).
+move=> H.
+have Hp : forall p : point,
+    norm (displacement f p) ^+ 2 = norm (d0 *: e) ^+2 + norm (perppart p) ^+ 2.
+  move=> p'.
+  rewrite (decomp (displacement f p') e).
   rewrite normD -dotmul_cos.
   rewrite axialnormal // mul0rn addr0 sqr_sqrtr; last first.
     by rewrite addr_ge0 // ?sqr_ge0.
@@ -4246,7 +4256,7 @@ have Hp : forall p : point, let dp := f p - p in
 move: {Hp}(Hp p) => Hp.
 rewrite -perpart_colinear.
 rewrite -norm_eq0.
-suff : norm dp ^+2 <= norm (d0 *: e) ^+ 2.
+suff : norm (displacement f p) ^+2 <= norm (d0 *: e) ^+ 2.
   by rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 //= norm_eq0.
 rewrite 2!expr2.
 by rewrite ler_pmul // ?norm_ge0 // H normZ ne mulr1 ler_norm.
