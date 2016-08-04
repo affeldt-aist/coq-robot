@@ -4305,13 +4305,6 @@ Qed.
 
 Definition d0 := displacement f 0 *d e.
 
-Definition parpart (p : point) :=  axialcomp (displacement f p) e.
-
-Lemma parpartP p : parpart p = d0 *: (e : 'rV[R]_3).
-Proof. by rewrite /parpart /axialcomp dotmulC (thm321 _ 0). Qed.
-
-Definition perppart (p : point) := normalcomp (displacement f p) e.
-
 Lemma d0_is_a_lb_of_a_displacement p : d0 ^+ 2 <= norm (displacement f p) ^+ 2.
 Proof.
 rewrite /d0 (thm321 0 p).
@@ -4323,6 +4316,13 @@ rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
   rewrite normalizeI //; by case: e.
 by rewrite addr_ge0 // sqr_ge0.
 Qed.
+
+Definition parpart (p : point) := axialcomp (displacement f p) e.
+
+Lemma parpartP p : parpart p = d0 *: (e : 'rV[R]_3).
+Proof. by rewrite /parpart /axialcomp dotmulC (thm321 _ 0). Qed.
+
+Definition perppart (p : point) := normalcomp (displacement f p) e.
 
 (* [angeles] theorem 3.2.2, p.97 *)
 (* d0 is the minimal norm of a displacement, all such points are along a line parallel
@@ -4348,38 +4348,80 @@ Qed.
 
 Definition pitch_new := d0 / radian phi.
 
-Definition p0_expression (a : point) :=
+Definition screw_axis_point (a : point) :=
   let a':= f a in
   1 / (2%:R * (1 - cos phi)) *: (a *m Q - a') *m (Q - 1)^T.
 
 (* [angeles] Sect. 3.2.1 (the screw of a rigid-body motion) *)
-Lemma coucou p0 (* a point on the screw axis, results of the displacement from 0? *) a : 
-  p0 *d e = 0 ->
-  p0 = p0_expression a.
+Lemma screw_axis_pointE p0 (* a point on the screw axis *) a :
+  p0 *d e = 0 (* p0 is the closed point to the origin *) ->
+  normalcomp (displacement f p0) e = 0 ->
+  p0 = screw_axis_point a.
 Proof.
-move=> p0e0.
+move=> p0e0 fp0e0.
 have step1 : displacement f p0 *m (Q - 1) = 0.
-  admit.
+  have : colinear (displacement f p0) e.
+    rewrite (decomp (displacement f p0) e).
+    rewrite -/(parpart p0).
+    rewrite parpartP.
+    by rewrite fp0e0 addr0 colinearZv colinear_refl orbC.
+  rewrite -normalcomp_colinear // => /eqP H1.
+  rewrite (decomp (displacement f p0) e) H1 addr0.
+  rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
+  by case: Maxis => /= -> _ _; rewrite subrr scaler0.
 move: (displacement_iso f p0 a) => step2.
-have step3 : displacement f a + relative_displacement f p0 a = displacement f a *m (e^T *m e).
-  admit.
+have {step2}step3 : displacement f a + relative_displacement f p0 a = displacement f a *m (e^T *m e).
+  transitivity (displacement f p0 *m e^T *m e).
+    rewrite -step2.
+    rewrite {1}(decomp (displacement f p0) e) fp0e0 addr0.
+    by rewrite axialcompE.
+  rewrite (mx11_scalar (displacement f p0 *m e^T)) -/(dotmul _ _) (thm321 p0 a).
+  by rewrite mulmxA (mx11_scalar (displacement f a *m e^T)) -/(dotmul _ _).
 have step4 : p0 *m (Q - 1) = a *m (Q - 1) - displacement f a *m (1 - e^T *m e).
-  admit.
+  rewrite [in X in _ = _ - X]mulmxBr mulmx1 -{}step3.
+  rewrite (opprD (displacement f a)) opprK addrCA addrA subrr add0r.
+  by rewrite /relative_displacement -/Q mulmxBl addrCA subrr addr0.
 set A := row_mx (Q - 1) e^T.
 set b : 'rV[R]_4 := row_mx (a *m (Q - 1) - displacement f a *m (1 - e^T *m e)) 0.
 have step5 : p0 *m A = b.
-  rewrite /A mul_mx_row /b step4.
-  admit.
+  rewrite /A mul_mx_row /b {}step4; congr row_mx.
+  rewrite (mx11_scalar (_ *m _)) -/(dotmul p0 e) p0e0.
+  by apply/rowP => i; rewrite (ord1 i) !mxE eqxx mulr1n.
 move/(congr1 (fun x => x *m A^T)) in step5.
 move: (lem249 ne Maxis) => step6.
-have step7 : A *m A^T = (2%:R * (1 - cos phi)) *: 1 - (1 - 2%:R * cos phi) *: e^T *m e.
-  admit.
+have step7 : A *m A^T = ((1 - cos phi) *+ 2) *: 1 - (1 - cos phi *+ 2) *: e^T *m e.
+  rewrite /A tr_row_mx mul_row_col trmxK linearD /= linearN /= trmx1.
+  rewrite mulmxBr mulmx1 opprB mulmxBl mul1mx.
+  move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE mulmxE => /eqP ->.
+  rewrite addrA (addrC (1 - _)) addrA.
+  rewrite (_ : 1 + 1 = 2%:R) //.
+  rewrite mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
+    rewrite scalemx1.
+    by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
+  rewrite addrA.
+  rewrite {1}step6.
+  rewrite -(addrA (e^T *m e)).
+  rewrite linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
+  rewrite linearD /= linearZ /= linearN /= opprB linearZ /= linearD /= trmx1.
+  rewrite step6 opprD opprK !addrA addrC !addrA tr_skew.
+  rewrite (scalerN (sin phi) \^e) subrr add0r.
+  rewrite linearN /= trmx_mul trmxK opprD addrA addrAC.
+  rewrite -scaleNr.
+  rewrite -mulr2n.
+  rewrite -scalemxAl scalerBl scale1r opprB.
+  rewrite addrA; congr (_ - _).
+  rewrite scalerMnl scalerBr scalemx1.
+  rewrite -scaleNr.
+  rewrite -mulNrn opprK; congr (_ + _).
+  rewrite -linearN /= scalerN scalemx1.
+  rewrite mulNrn.
+  by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // oppr0.
 have step8 : (A *m A^T)^-1 = 
   ((2%:R * (1 - cos phi)))^-1 *: 1 + (1 - 2%:R * cos phi) / (2%:R * (1 - cos phi)) *: e^T *m e.
   admit.
 have step9 : b *m A^T = (a *m (Q - 1) - displacement f a) *m (Q - 1)^T.
   admit.
-rewrite /p0_expression.
+rewrite /screw_axis_point.
 Admitted.
 
 End chasles.
