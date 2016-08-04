@@ -454,6 +454,7 @@ Section colinear.
 Variable R : rcfType.
 Implicit Type u v : 'rV[R]_3.
 
+(* NB: should be improved and move to euclidean3.v ? *)
 Lemma colinearP u v :
   reflect (v == 0 \/
            (v != 0 /\ exists k, `| k | = norm u / norm v /\ u = k *: v))
@@ -479,6 +480,13 @@ case => [ /(vec_angle0_inv u0 v0) | /(vec_anglepi_inv u0 v0)] ukv.
   by rewrite ger0_norm // divr_ge0 // norm_ge0.
 exists (- (norm u / norm v)); split => //.
 by rewrite normrN ger0_norm // divr_ge0 // norm_ge0.
+Qed.
+
+Lemma normalcomp_colinear u v (v1 : norm v = 1) : (normalcomp u v == 0) = colinear u v.
+Proof.
+apply/idP/idP => [/eqP|/colinearP]; first by apply: normalcomp_colinear_helper.
+rewrite -norm_eq0 v1 -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
+by rewrite /normalcomp Hk2 dotmulvZ dotmulvv v1 expr1n mulr1 subrr.
 Qed.
 
 End colinear.
@@ -873,8 +881,8 @@ Proof. by rewrite /k dotmul_crossmulCA crossmulvv dotmulv0. Qed.
 Lemma normj : norm j = 1.
 Proof.
 rewrite /j; case: ifPn => iVi; first by rewrite norm_delta_mx.
-rewrite norm_normalize //; apply: contra iVi => /eqP/normalcomp_colinear.
-by rewrite /normalize colinear_sym.
+rewrite norm_normalize //; apply: contra iVi.
+by rewrite normalcomp_colinear // colinear_sym.
 Qed.
 
 Lemma normk : norm k = 1.
@@ -910,7 +918,7 @@ Variable u : 'rV[R]_3.
 Hypothesis u0 : u != 0.
 
 Lemma jN : j (- u) = j u.
-Proof. by rewrite /j colinearNv normalcompvN. Qed.
+Proof. by rewrite /j colinearNv normalcompN. Qed.
 
 Lemma kN : k (- u) = - k u.
 Proof. by rewrite /k jN crossmulNv. Qed.
@@ -1176,10 +1184,9 @@ Proof. by rewrite -norm_eq0 normi oner_neq0. Qed.
 
 Lemma normj : norm j = 1.
 Proof.
-rewrite /j norm_normalize //.
-apply/eqP => /normalcomp_colinear; apply/negP; rewrite /i /normalize.
-apply: contra (abc); rewrite colinear_sym colinearZv.
-by rewrite invr_eq0 norm_eq0 subr_eq0 eq_sym (negPf ab).
+rewrite /j norm_normalize // normalcomp_colinear ?normi //.
+apply: contra (abc); rewrite colinear_sym colinearZv invr_eq0 norm_eq0.
+by rewrite subr_eq0 eq_sym (negPf ab).
 Qed.
 
 Lemma j_neq0 : j != 0.
@@ -1290,6 +1297,9 @@ Qed.
 
 Definition mx_lin1 (R : ringType) (M : 'M[R]_3) : {linear 'rV[R]_3 -> 'rV[R]_3} :=
   mulmxr_linear 1 M.
+
+Lemma mx_lin1K (R : ringType) (Q : 'M[R]__) : lin1_mx (mx_lin1 Q) = Q.
+Proof. by apply/matrix3P; rewrite !mxE sum3E !mxE !eqxx /=; Simp.r. Qed.
 
 Section rot_axis_definition.
 
@@ -2159,6 +2169,54 @@ rewrite -mulrA invrK (mulrBr Q) mulr1 divrr; last by rewrite -unitrV.
 rewrite mulrA.
 Abort.
 
+(* [angeles] p.42, eqn 2.49 *)
+Lemma lem249 phi Q e : norm e = 1 -> is_around_axis e phi (mx_lin1 Q) -> 
+  Q = e^T *m e + cos phi *: (1 - e^T *m e) - sin phi *: skew_mx e.
+Proof.
+move=> e1 Maxis.
+apply/eqP/mulmxP => p.
+have QO : Q \is 'O[R]_3.
+  have : e != 0 by rewrite -norm_eq0 e1 oner_eq0.
+  by move/is_around_axis_SO => /(_ _ _ Maxis); rewrite mx_lin1K rotationE => /andP[].
+rewrite (decomp (p *m Q) e).
+have -> : axialcomp (p *m Q) e = axialcomp p e.
+  rewrite axialcompE.
+  case: (Maxis) => /= H2 _ _.
+  rewrite -{1}H2 trmx_mul mulmxA -(mulmxA p).
+  move: QO; rewrite orthogonalE mulmxE => /eqP ->.
+  by rewrite mulmx1 axialcompE.
+rewrite -[in RHS]addrA mulmxDr axialcompE mulmxA; congr (_ + _).
+have H1 : normalcomp (p *m Q) e = cos phi *: normalcomp p e - sin phi *: (p *v e).
+  transitivity (normalcomp p e *m Q).
+    (* lemma? *)
+    rewrite /normalcomp mulmxBl; congr (_ - _).
+    case: Maxis => /= H1 _ _.
+    rewrite -scalemxAl H1 -{1}H1; congr (_ *: _).
+    by rewrite (proj2 (orth_preserves_dotmul Q) QO e).
+  case: Maxis => /= H1 H2 H3.
+  have : oframe e (Frame.j e) (Frame.k e).
+    move: (Frame1.pframe e1); rewrite /Frame.j /Frame.k /Frame.i /=.
+    rewrite normalizeI //; by case.
+  move/orthogonal_expansion => /(_ (normalcomp p e)) Hp.
+  rewrite dotmul_normalcomp // scale0r add0r in Hp.
+  rewrite Hp mulmxDl -2!scalemxAl H2 H3.
+  rewrite (scalerDr (normalcomp p e *d Frame.j e)) scalerA mulrC -scalerA.
+  rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
+  rewrite (scalerDr (normalcomp p e *d Frame.k e)) addrA addrC.
+  rewrite scalerA mulrC -scalerA; congr (_ + _).
+  rewrite scalerA mulrC -scalerA addrC scalerA mulrC -scalerA addrC.
+  rewrite -{1}(opprK (sin phi)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
+  rewrite -double_crossmul.
+  move: (jcrossk (Frame1.pframe e1)).
+  rewrite /Frame.j /Frame.k /Frame.i (normalizeI e1) => ->.
+  rewrite {2}(decomp p e) [in RHS]crossmulC linearD /=.
+  by rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
+rewrite {}H1 /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
+rewrite scalerBr -2!addrA; congr (_ + _).
+rewrite mulmxN -scalemxAr -skew_mxE; congr (- (_ *: _) - _).
+by rewrite dotmulC mulmxA (mx11_scalar (p *m _)) mul_scalar_mx.
+Qed.
+
 Section axial_vector.
 
 Definition axial_vec (M : 'M[R]_3) : 'rV[R]_3 :=
@@ -2765,11 +2823,15 @@ Qed.
 
 Definition displacement (f : 'Iso[R]_3) p := f p - p.
 
+Definition relative_displacement (f : 'Iso[R]_3) (p a : point) := 
+  (p - a) *m (ortho_of_iso f - 1).
+
+(* NB: caused only by rotation *)
 Lemma displacement_iso (f : 'Iso[R]_3) p a :
-  displacement f p = displacement f a + (p - a) *m (ortho_of_iso f - 1).
+  displacement f p = displacement f a + relative_displacement f p a.
 Proof.
-rewrite mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA subrK.
-congr (_ - _).
+rewrite /relative_displacement mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA.
+rewrite subrK; congr (_ - _).
 apply/eqP; by rewrite addrC -subr_eq img_vec_iso.
 Qed.
 
@@ -4229,52 +4291,37 @@ Variable phi : angle R.
 Hypothesis Maxis : is_around_axis e phi (mx_lin1 Q).
 
 (* [angeles] theorem 3.2.1, p.97: 
-   the displacements of all the points of B have the same component along e *)
+   the displacements of all the points of the body have the same projection onto e *)
 
-Lemma thm321 (a p : point) :
-  displacement f a *d e = displacement f p *d e.
+Lemma thm321 (a p : point) : displacement f a *d e = displacement f p *d e.
 Proof.
-have : displacement f p *m e^T = displacement f a *m e^T + (p - a) *m (Q - 1) *m e^T.
-  by rewrite -mulmxDl -displacement_iso.
-rewrite -mulmxA (mulmxBl Q 1 e^T) mul1mx.
-have -> : Q *m e^T = e^T.
-  rewrite -{1}(is_around_axis_axis Maxis) trmx_mul mulmxA mulmxE.
-  have : Q \is 'O[R]_3 by rewrite /Q ortho_of_iso_is_O.
-  rewrite orthogonalE => /eqP ->; by rewrite mul1mx.
-rewrite subrr mulmx0 addr0 /dotmul; by move=> ->.
+rewrite /dotmul; congr (fun_of_matrix _ 0 0).
+rewrite (displacement_iso f p a) [in RHS]mulmxDl -[LHS](addr0); congr (_ + _).
+rewrite -mulmxA (mulmxBl Q) mul1mx.
+suff -> : Q *m e^T = e^T by rewrite subrr mulmx0.
+rewrite -{1}(is_around_axis_axis Maxis) trmx_mul mulmxA mulmxE.
+move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE => /eqP ->; by rewrite mul1mx.
 Qed.
 
 Definition d0 := displacement f 0 *d e.
 
-Lemma d0_is_a_lb_of_a_displacement p : (d0 ^+ 2 <= norm (displacement f p) ^+ 2).
+Definition parpart (p : point) :=  axialcomp (displacement f p) e.
+
+Lemma parpartP p : parpart p = d0 *: (e : 'rV[R]_3).
+Proof. by rewrite /parpart /axialcomp dotmulC (thm321 _ 0). Qed.
+
+Definition perppart (p : point) := normalcomp (displacement f p) e.
+
+Lemma d0_is_a_lb_of_a_displacement p : d0 ^+ 2 <= norm (displacement f p) ^+ 2.
 Proof.
 rewrite /d0 (thm321 0 p).
 move: (Frame.pframe (norm1_neq0 ne)) => F.
 have -> : norm (displacement f p) =
           norm (displacement f p *m (col_mx3 (normalize e) (Frame.j e) (Frame.k e))^T).
-  rewrite orth_preserves_norm // orthogonalV.
-  move: (pframe_is_rot F).
-  by rewrite rotationE => /andP [].
+  rewrite orth_preserves_norm // orthogonalV rotation_sub //; exact: (pframe_is_rot F).
 rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
-  by rewrite normalizeI.
+  rewrite normalizeI //; by case: e.
 by rewrite addr_ge0 // sqr_ge0.
-Qed.
-
-Definition parpart (p : point) :=  axialcomp (displacement f p) e.
-
-Lemma parpartP (p : vector) : parpart p = d0 *: e.
-Proof. by rewrite /parpart /axialcomp dotmulC (thm321 _ 0). Qed.
-
-Definition perppart (p : point) := normalcomp (displacement f p) e.
-
-Lemma perpart_colinear (p : point) :
-  (perppart p == 0) = (colinear (displacement f p) e).
-Proof.
-apply/idP/idP => [/eqP|/colinearP].
-  by apply: normalcomp_colinear.
-rewrite -norm_eq0 ne -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
-rewrite /perppart /normalcomp Hk2.
-by rewrite dotmulvZ dotmulvv ne expr1n mulr1 subrr.
 Qed.
 
 (* [angeles] theorem 3.2.2, p.97 *)
@@ -4285,27 +4332,55 @@ Lemma MozziChasles1 p :
 Proof.
 move=> H.
 have Hp : forall p : point,
-    norm (displacement f p) ^+ 2 = norm (d0 *: e) ^+2 + norm (perppart p) ^+ 2.
+    norm (displacement f p) ^+ 2 = norm (d0 *: (e : 'rV[R]_3)) ^+2 + norm (perppart p) ^+ 2.
   move=> p'.
-  rewrite (decomp (displacement f p') e).
-  rewrite normD -dotmul_cos.
-  rewrite axialnormal // mul0rn addr0 sqr_sqrtr; last first.
+  rewrite (decomp (displacement f p') e) normD -dotmul_cos.
+  rewrite axialnormal // ?neq // mul0rn addr0 sqr_sqrtr; last first.
     by rewrite addr_ge0 // ?sqr_ge0.
   by rewrite /perppart -/(parpart p') parpartP.
 move: {Hp}(Hp p) => Hp.
-rewrite -perpart_colinear.
-rewrite -norm_eq0.
-suff : norm (displacement f p) ^+2 <= norm (d0 *: e) ^+ 2.
+rewrite -normalcomp_colinear ?ne // -norm_eq0.
+suff : norm (displacement f p) ^+2 <= norm (d0 *: (e : 'rV[R]_3)) ^+ 2.
   by rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 //= norm_eq0.
 rewrite 2!expr2.
 by rewrite ler_pmul // ?norm_ge0 // H normZ ne mulr1 ler_norm.
 Qed.
 
-Definition p0 (a : point) :=
+Definition pitch_new := d0 / radian phi.
+
+Definition p0_expression (a : point) :=
   let a':= f a in
   1 / (2%:R * (1 - cos phi)) *: (a *m Q - a') *m (Q - 1)^T.
 
-(* TODO *)
+(* [angeles] Sect. 3.2.1 (the screw of a rigid-body motion) *)
+Lemma coucou p0 (* a point on the screw axis, results of the displacement from 0? *) a : 
+  p0 *d e = 0 ->
+  p0 = p0_expression a.
+Proof.
+move=> p0e0.
+have step1 : displacement f p0 *m (Q - 1) = 0.
+  admit.
+move: (displacement_iso f p0 a) => step2.
+have step3 : displacement f a + relative_displacement f p0 a = displacement f a *m (e^T *m e).
+  admit.
+have step4 : p0 *m (Q - 1) = a *m (Q - 1) - displacement f a *m (1 - e^T *m e).
+  admit.
+set A := row_mx (Q - 1) e^T.
+set b : 'rV[R]_4 := row_mx (a *m (Q - 1) - displacement f a *m (1 - e^T *m e)) 0.
+have step5 : p0 *m A = b.
+  rewrite /A mul_mx_row /b step4.
+  admit.
+move/(congr1 (fun x => x *m A^T)) in step5.
+move: (lem249 ne Maxis) => step6.
+have step7 : A *m A^T = (2%:R * (1 - cos phi)) *: 1 - (1 - 2%:R * cos phi) *: e^T *m e.
+  admit.
+have step8 : (A *m A^T)^-1 = 
+  ((2%:R * (1 - cos phi)))^-1 *: 1 + (1 - 2%:R * cos phi) / (2%:R * (1 - cos phi)) *: e^T *m e.
+  admit.
+have step9 : b *m A^T = (a *m (Q - 1) - displacement f a) *m (Q - 1)^T.
+  admit.
+rewrite /p0_expression.
+Admitted.
 
 End chasles.
 

@@ -1336,20 +1336,23 @@ Definition axialcomp v u := u *d v *: u.
 (* normal component of v w.r.t. u *)
 Definition normalcomp v u := v - u *d v *: u.
 
-Lemma normalcompvN u v : normalcomp u (- v)  = normalcomp u v.
+Lemma normalcompN u v : normalcomp u (- v)  = normalcomp u v.
 Proof. by rewrite /normalcomp dotmulNv scaleNr scalerN opprK. Qed.
+
+Lemma normalcomp_colinear_helper v u : normalcomp v u = 0 -> colinear v u.
+Proof.
+by move/eqP; rewrite subr_eq0 => /eqP ->; rewrite colinearZv ?colinear_refl orbT.
+Qed.
+
+Lemma ortho_normalcomp u v : u *d v = 0 -> normalcomp u v = u.
+Proof. by move=> uv0; rewrite /normalcomp dotmulC uv0 scale0r subr0. Qed.
 
 Lemma decomp v u : v = axialcomp v u + normalcomp v u.
 Proof. by rewrite /axialcomp /normalcomp addrC subrK. Qed.
 
 Definition orthogonalize v u := normalcomp v (normalize u).
 
-Lemma normalcomp_colinear v u : normalcomp v u = 0 -> colinear v u.
-Proof.
-by move/eqP; rewrite subr_eq0 => /eqP ->; rewrite colinearZv ?colinear_refl orbT.
-Qed.
-
-Lemma normalcompP u v : u *d normalcomp v (normalize u) = 0.
+Lemma normalcompP u v : u *d orthogonalize v u = 0.
 Proof.
 rewrite /normalcomp /normalize dotmulBr !(dotmulZv, dotmulvZ).
 rewrite mulrACA -invfM -expr2 dotmulvv mulrCA.
@@ -1362,6 +1365,20 @@ Proof.
 move=> ne1; rewrite !(dotmulZv, dotmulvZ, dotmulBr) dotmulvv ne1.
 by rewrite expr1n mulr1 subrr mulr0.
 Qed.
+
+Lemma axialcompE (v u : 'rV[R]_3) : axialcomp v u = v *m u^T *m u.
+Proof.
+by rewrite /axialcomp dotmulC /dotmul (mx11_scalar (v *m _)) mul_scalar_mx mxE eqxx mulr1n.
+Qed.
+
+Lemma dotmul_normalcomp e p : norm e = 1 -> normalcomp p e *d e = 0.
+Proof.
+move=> e1.
+by rewrite /normalcomp dotmulBl dotmulZv dotmulvv e1 expr1n mulr1 dotmulC subrr.
+Qed.
+
+Lemma crossmul_axialcomp e p : e *v axialcomp p e = 0.
+Proof. apply/eqP; by rewrite /axialcomp linearZ /= crossmulvv scaler0. Qed.
 
 Lemma coorE (p : 'rV[R]_3) i : p``_i = p *d 'e_i.
 Proof. by rewrite dotmul_delta_mx. Qed.
@@ -1386,8 +1403,5 @@ Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 
 Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[R]__.
 Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
-
-Lemma ortho_normalcomp u v : u *d v = 0 -> normalcomp u v = u.
-Proof. by move=> uv0; rewrite /normalcomp dotmulC uv0 scale0r subr0. Qed.
 
 End axial_normal_decomposition.
