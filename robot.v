@@ -47,8 +47,8 @@ main references:
      sample lemmas:
        all rotations around an axis of angle a have trace "1 + 2 * cos a"
        equivalence SO[R]_3 <-> is_around_axis
- 11. section skew_old
-     definition of axial_vec and proof that this vector is stable by rotation (like the axis)
+ 11. section axial_vec
+     definition of the axial vector proof that this vector is stable by rotation (like the axis)
  12. section exponential_map_rot
      specialized exponential map
      (sample lemmas: inverse of the exponential map,
@@ -1275,6 +1275,7 @@ Proof. by rewrite FromToCompE /rot3 ?trmx_mul mulmxA. Qed.
 
 End transformation_given_three_points.
 
+(* TODO: go to euclidean3.v? *)
 Lemma basis_change (R : rcfType) (M : 'M[R]_3) i j k (f : oframe i j k) (A : 'M[R]_3) :
   i *m M = A 0 0 *: i + A 0 1 *: j + A 0 2%:R *: k ->
   j *m M = A 1 0 *: i + A 1 1 *: j + A 1 2%:R *: k ->
@@ -1530,6 +1531,60 @@ Qed.
 
 End properties_of_is_around_axis.
 
+
+(* expression alternative de exp_rot *)
+Definition Rot (e : 'rV[R]_3) (a : angle R) :=
+ e^T *m e + (cos a) *: (1 - e^T *m e) + (sin a) *: \S( e ).
+
+(* [angeles] p.42, eqn 2.49 *)
+Lemma lem249 phi Q u : norm u = 1 -> is_around_axis u phi (mx_lin1 Q) -> 
+  Q = Rot u (- phi).
+Proof.
+move=> e1 Maxis.
+apply/eqP/mulmxP => p.
+have QO : Q \is 'O[R]_3.
+  have : u != 0 by rewrite -norm_eq0 e1 oner_eq0.
+  by move/is_around_axis_SO => /(_ _ _ Maxis); rewrite mx_lin1K rotationE => /andP[].
+rewrite (decomp (p *m Q) u).
+have -> : axialcomp (p *m Q) u = axialcomp p u.
+  rewrite axialcompE.
+  case: (Maxis) => /= H2 _ _.
+  rewrite -{1}H2 trmx_mul mulmxA -(mulmxA p).
+  move: QO; rewrite orthogonalE mulmxE => /eqP ->.
+  by rewrite mulmx1 axialcompE.
+rewrite /Rot.
+rewrite -[in RHS]addrA mulmxDr axialcompE mulmxA; congr (_ + _).
+have H1 : normalcomp (p *m Q) u = cos phi *: normalcomp p u - sin phi *: (p *v u).
+  transitivity (normalcomp p u *m Q).
+    (* lemma? *)
+    rewrite /normalcomp mulmxBl; congr (_ - _).
+    case: Maxis => /= H1 _ _.
+    rewrite -scalemxAl H1 -{1}H1; congr (_ *: _).
+    by rewrite (proj2 (orth_preserves_dotmul Q) QO u).
+  case: Maxis => /= H1 H2 H3.
+  have : oframe u (Frame.j u) (Frame.k u).
+    move: (Frame1.pframe e1); rewrite /Frame.j /Frame.k /Frame.i /=.
+    rewrite normalizeI //; by case.
+  move/orthogonal_expansion => /(_ (normalcomp p u)) Hp.
+  rewrite dotmul_normalcomp // scale0r add0r in Hp.
+  rewrite Hp mulmxDl -2!scalemxAl H2 H3.
+  rewrite (scalerDr (normalcomp p u *d Frame.j u)) scalerA mulrC -scalerA.
+  rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
+  rewrite (scalerDr (normalcomp p u *d Frame.k u)) addrA addrC.
+  rewrite scalerA mulrC -scalerA; congr (_ + _).
+  rewrite scalerA mulrC -scalerA addrC scalerA mulrC -scalerA addrC.
+  rewrite -{1}(opprK (sin phi)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
+  rewrite -double_crossmul.
+  move: (jcrossk (Frame1.pframe e1)).
+  rewrite /Frame.j /Frame.k /Frame.i (normalizeI e1) => ->.
+  rewrite {2}(decomp p u) [in RHS]crossmulC linearD /=.
+  by rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
+rewrite {}H1 /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
+rewrite scalerBr -2!addrA cosN sinN; congr (_ + _).
+rewrite scaleNr mulmxN -scalemxAr -skew_mxE; congr (- (_ *: _) - _).
+by rewrite dotmulC mulmxA (mx11_scalar (p *m _)) mul_scalar_mx.
+Qed.
+
 Lemma SO_is_around_axis M : M \is 'SO[R]_3 ->
   exists u a, norm u = 1 /\ is_around_axis u a (mx_lin1 M).
 Proof.
@@ -1603,65 +1658,10 @@ Qed.
 
 End rot_axis_definition.
 
-Section old_skew.
+Section axial_vector.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
-
-(* expression alternative de exp_rot *)
-Definition Rot (e : vector) (a : angle R) :=
- e^T *m e + (cos a) *: (1 - e^T *m e) + (sin a) *: \S( e ).
-
-(* [angeles] p.42, eqn 2.49 *)
-Lemma lem249 phi Q e : norm e = 1 -> is_around_axis e phi (mx_lin1 Q) -> 
-  Q = Rot e (- phi).
-Proof.
-move=> e1 Maxis.
-apply/eqP/mulmxP => p.
-have QO : Q \is 'O[R]_3.
-  have : e != 0 by rewrite -norm_eq0 e1 oner_eq0.
-  by move/is_around_axis_SO => /(_ _ _ Maxis); rewrite mx_lin1K rotationE => /andP[].
-rewrite (decomp (p *m Q) e).
-have -> : axialcomp (p *m Q) e = axialcomp p e.
-  rewrite axialcompE.
-  case: (Maxis) => /= H2 _ _.
-  rewrite -{1}H2 trmx_mul mulmxA -(mulmxA p).
-  move: QO; rewrite orthogonalE mulmxE => /eqP ->.
-  by rewrite mulmx1 axialcompE.
-rewrite /Rot.
-rewrite -[in RHS]addrA mulmxDr axialcompE mulmxA; congr (_ + _).
-have H1 : normalcomp (p *m Q) e = cos phi *: normalcomp p e - sin phi *: (p *v e).
-  transitivity (normalcomp p e *m Q).
-    (* lemma? *)
-    rewrite /normalcomp mulmxBl; congr (_ - _).
-    case: Maxis => /= H1 _ _.
-    rewrite -scalemxAl H1 -{1}H1; congr (_ *: _).
-    by rewrite (proj2 (orth_preserves_dotmul Q) QO e).
-  case: Maxis => /= H1 H2 H3.
-  have : oframe e (Frame.j e) (Frame.k e).
-    move: (Frame1.pframe e1); rewrite /Frame.j /Frame.k /Frame.i /=.
-    rewrite normalizeI //; by case.
-  move/orthogonal_expansion => /(_ (normalcomp p e)) Hp.
-  rewrite dotmul_normalcomp // scale0r add0r in Hp.
-  rewrite Hp mulmxDl -2!scalemxAl H2 H3.
-  rewrite (scalerDr (normalcomp p e *d Frame.j e)) scalerA mulrC -scalerA.
-  rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
-  rewrite (scalerDr (normalcomp p e *d Frame.k e)) addrA addrC.
-  rewrite scalerA mulrC -scalerA; congr (_ + _).
-  rewrite scalerA mulrC -scalerA addrC scalerA mulrC -scalerA addrC.
-  rewrite -{1}(opprK (sin phi)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
-  rewrite -double_crossmul.
-  move: (jcrossk (Frame1.pframe e1)).
-  rewrite /Frame.j /Frame.k /Frame.i (normalizeI e1) => ->.
-  rewrite {2}(decomp p e) [in RHS]crossmulC linearD /=.
-  by rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
-rewrite {}H1 /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
-rewrite scalerBr -2!addrA cosN sinN; congr (_ + _).
-rewrite scaleNr mulmxN -scalemxAr -skew_mxE; congr (- (_ *: _) - _).
-by rewrite dotmulC mulmxA (mx11_scalar (p *m _)) mul_scalar_mx.
-Qed.
-
-Section axial_vector.
 
 Definition axial_vec (M : 'M[R]_3) : 'rV[R]_3 :=
   row3 (M 2%:R 1 - M 1 2%:R) (M 0 2%:R - M 2%:R 0) (M 1 0 - M 0 1).
@@ -1745,8 +1745,6 @@ Qed.
 
 End axial_vector.
 
-End old_skew.
-
 Section exponential_map_rot.
 
 Variable R : rcfType.
@@ -1819,7 +1817,7 @@ Lemma trace_exp_rot_skew_mx a u : norm u = 1 ->
 Proof.
 move=> w1.
 rewrite 2!mxtraceD !mxtraceZ /= mxtrace1.
-rewrite (trace_anti (anti_skew _)) mulr0 addr0 mxtrace_sqr_skew_mx w1.
+rewrite (trace_anti (anti_skew _)) mulr0 addr0 mxtrace_skew_mx2 w1.
 rewrite (_ : - _ = - 2%:R); last by rewrite expr1n mulr1.
 by rewrite mulrDl addrA mul1r -natrB // mulrC mulrN -mulNr opprK.
 Qed.
@@ -1840,33 +1838,33 @@ Lemma exp_rot_skew_mxE a u : norm u = 1 ->
 Proof.
 move=> w1 va ca sa; apply/matrix3P.
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  rewrite sqr_skewE !mxE /=.
+  rewrite skew_mx2' !mxE /=.
   rewrite (_ : - _ - _ = u``_0 ^+ 2 - 1); last first.
     rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
   by rewrite !opprD !addrA subrr add0r addrC.
 - rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
   by rewrite /va opprB addrC subrK.
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  by rewrite sqr_skewE !mxE /= addrC mulrC (mulrC sa).
+  by rewrite skew_mx2' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  by rewrite sqr_skewE !mxE /= addrC mulrC (mulrC sa).
+  by rewrite skew_mx2' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  by rewrite sqr_skewE !mxE /= addrC mulrC (mulrC sa).
+  by rewrite skew_mx2' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  rewrite sqr_skewE !mxE /=.
+  rewrite skew_mx2' !mxE /=.
   rewrite (_ : - _ - _ = u``_1 ^+ 2 - 1); last first.
     rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
     by rewrite 2!opprD addrCA addrA subrK addrC.
   rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
   by rewrite /va opprB addrC subrK.
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  by rewrite sqr_skewE !mxE /= addrC mulrC (mulrC sa).
+  by rewrite skew_mx2' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  by rewrite sqr_skewE !mxE /= addrC mulrC (mulrC sa).
+  by rewrite skew_mx2' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  by rewrite sqr_skewE !mxE /= addrC mulrC (mulrC sa).
+  by rewrite skew_mx2' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
-  rewrite sqr_skewE !mxE /=.
+  rewrite skew_mx2' !mxE /=.
   rewrite (_ : - _ - _ = u``_2%:R ^+ 2 - 1); last first.
     rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
     by rewrite 2!opprD [in RHS]addrC subrK addrC.
@@ -2968,17 +2966,17 @@ congr pair.
 apply/rowP => i.
 rewrite 2!mxE /= Hphi => [:twosphi].
 case: ifPn => [/eqP ->|].
-  rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r.
-  rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r opprD addrAC addrA subrK.
+  rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
+  rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
   rewrite mulrN opprK -mulr2n -mulrnAl div1r mulrA mulVr ?mul1r //.
   abstract: twosphi.
   by rewrite unitfE mulrn_eq0 negb_or.
 rewrite ifnot0 => /orP [] /eqP -> /=.
-  rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r.
-  rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r opprD addrAC addrA subrK.
+  rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
+  rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
   by rewrite mulrN opprK -mulr2n -mulrnAl mulrA div1r mulVr // mul1r.
-rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r.
-rewrite 4!mxE /= skewij mxE sqr_skewE 2!mxE /= add0r opprD addrAC addrA subrK.
+rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
+rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
 by rewrite mulrN opprK -mulr2n -mulrnAl mulrA div1r mulVr // mul1r.
 Qed.
 

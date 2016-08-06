@@ -202,12 +202,12 @@ rewrite double_crossmul dotmulvv w1 expr1n scale1r subrK.
 by rewrite (mulmx_block \S( w ) 0 _ 0 1 0) !(mulmx0,addr0,mul0mx,mul1mx,mulmx1).
 Qed.
 
-Lemma p42eq235 w v k : norm w = 1 ->
+Lemma p42eq235 w v k : 
   let g := rigid_trans w v in
   let e' := g^-1 *m \T(w, v) *m g in
   expmx \T(w, v) k = g * expmx e' k * g^-1.
 Proof.
-move=> w1 g e'.
+move=> g e'.
 rewrite -expmx_mulmulV ?rigid_trans_unitmx //; congr (expmx _ _).
 rewrite /e' mulmxE -/g !mulrA divrr ?rigid_trans_unit // mul1r -mulrA.
 by rewrite divrr ?mulr1 // rigid_trans_unit.
@@ -270,15 +270,15 @@ Definition hom_twist t a e : 'M[R]_4 :=
 (* [murray] eqn 2.36, p.42 *)
 Definition expmx_twist t a k : 'M_4 :=
   let: \T(w, v) := t in
-  let w' := a *: w in
-  hom_twist t (- a) (expmx \S( w' ) k).
+  hom_twist t (- a) (expmx \S( a *: w ) k).
 
 (* [murray] eqn 2.36, p.42 *)
 Lemma expmx_twistE w v a k : norm (a *: w) = 1 ->
-  expmx (a *: (\T(w, v) : 'M_4)) k.+2 = expmx_twist \T(w, - a^+2 *: v) a k.+2.
+  expmx (a *: Twist.mx \T(w, v)) k.+2 = 
+  expmx_twist \T(w, - a^+2 *: v) a k.+2.
 Proof.
 set w' : 'rV_3 := a *: w => w1.
-rewrite Twist.Z p42eq235 // p42eq3 // -mulmxE.
+rewrite Twist.Z /= p42eq235 // p42eq3 // -mulmxE.
 rewrite {1}/rigid_trans mulmxE homM mul1r.
 rewrite inv_rigid_transE /inv_rigid_trans homM mulr1 mulmx1.
 rewrite /expmx_twist; congr (block_mx (expmx \S( w' ) k.+2) 0 _ 1).
@@ -378,9 +378,9 @@ Section Screw.
 Variable R : rcfType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
-Record t := mkT {
-  p : point ; (* axis *)
-  w : vector ;
+Record t := mk {
+  p : point ; (* axis point *)
+  w : vector ; (* axis vector *)
   a : angle R ; (* magnitude *)
   h : R (* pitch *) }.
 End Screw.
@@ -392,26 +392,19 @@ Variable R : rcfType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 
-Variable s : Screw.t R.
-Let q := Screw.p s.
-Let w := Screw.w s.
-Let a := Screw.a s.
-Let h := Screw.h s.
-
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
-Definition screw_motion (p : point) := 
+Definition screw_motion q w a h (p : point) := 
   q + (p - q) *m `e^(a, \S( w )) + (h * radian a) *: w.
 
-Hypothesis w1 : norm w = 1.
-
 (* the rbt given by a screw *)
-Definition SE_screw_motion : SE.t R := SE.mk
+Definition SE_screw_motion q w a h (w1 : norm w = 1) : SE.t R := SE.mk
   (q *m (1 - `e^(a, \S( w ))) + (h * radian a) *: w)
   (exp_rot_is_SO a w1).
 (* NB: take v = - w * q + h * w, then the twist (v, w) generates the screw motion
    assuming |w| = 1 and a != 0 *)
 
-Lemma SE_screw_motionE (p : point) : SE.ap_point SE_screw_motion p = screw_motion p.
+Lemma SE_screw_motionE q w a h (w1 : norm w = 1) (p : point) : 
+  SE.ap_point (SE_screw_motion q a h w1) p = screw_motion q w a h p.
 Proof.
 rewrite SE.ap_pointE mul_mx_row add_row_mx mulmx0 add0r to_hpointK.
 rewrite addrA /SE_screw_motion /=; apply/rowP => i.
@@ -424,15 +417,16 @@ Qed.
    has the same form as the exponential of a twist *)
 (* [murray] propostion 2.10, p.48? 
    given a screw motion, there is a twist that generates it (?) *)
-Lemma SE_screw_motion_exprot_twist :
-  radian (Screw.a s) != 0 ->
-  let v := - Screw.w s *v Screw.p s + Screw.h s *: Screw.w s in
-  let wv := \T(Screw.w s, v) in 
-  SE.mx (SE_screw_motion) = exprot_twist wv (Screw.a s).
+Lemma SE_screw_motion_exprot_twist s :
+  let: Screw.mk q w a h := s in
+  forall (w1 : norm w = 1),
+  radian a != 0 ->
+  let v := - w *v q + h *: w in
+  SE_screw_motion q a h w1 = exprot_twist \T(w, v) a :> 'M_4.
 Proof.
-move=> a0 v.
+case: s => p w a h w1=> a0 v.
 rewrite /exprot_twist /SE.mx; congr hom => /=.
-rewrite /v -/w -/a -/q -/h.
+rewrite /v.
 rewrite [w *v _]linearD /= mulmxDl crossmulNv crossmulvN.
 rewrite double_crossmul dotmulvv w1 expr1n scale1r.
 rewrite mulNmx mulmxBl opprB -2!addrA; congr (_ + _).
@@ -483,7 +477,7 @@ Definition magnitude : R := if w == 0 then norm v else norm w. (* [murray] 2.44,
 
 Axiom angle_of_radian : R -> angle R.
 
-Definition ScrewTwist := Screw.mkT
+Definition ScrewTwist := Screw.mk
   axis_point axis (angle_of_radian pitch) magnitude.
 
 End screw_coordinates_of_a_twist.
