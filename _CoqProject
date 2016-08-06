@@ -6,5 +6,6 @@ angle.v
 quaternion.v
 euclidean3.v
 screw.v
+skew.v
 
 -R . Robot
