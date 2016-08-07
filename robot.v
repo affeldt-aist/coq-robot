@@ -1874,7 +1874,8 @@ Qed.
 
 Lemma exp_rot_is_ortho a u : norm u = 1 -> `e^(a, \S( u )) \is 'O[R]_3.
 Proof.
-move=> w1; by rewrite orthogonalE tr_exp_rot tr_skew inv_exp_rot // skew_mx4.
+move=> u1.
+by rewrite orthogonalE tr_exp_rot tr_skew inv_exp_rot // skew_mx4 u1 expr1n scaleN1r.
 Qed.
 
 Lemma rank_exp_rot a v : norm v = 1 -> \rank `e^(a, \S( v )) = 3.
@@ -1882,15 +1883,14 @@ Proof.
 move=> w1; by rewrite mxrank_unit // orthogonal_unit // exp_rot_is_ortho.
 Qed.
 
-Lemma det_exp_rot0 w : norm w = 1 -> \det `e^(0, \S( w )) = 1.
-Proof. move=> w1; by rewrite /exp_rot sin0 cos0 subrr 2!scale0r 2!addr0 det1. Qed.
+(*Lemma det_exp_rot0 w : norm w = 1 -> \det `e^(0, \S( w )) = 1.
+Proof. move=> w1; by rewrite /exp_rot sin0 cos0 subrr 2!scale0r 2!addr0 det1. Qed.*)
 
 Lemma det_exp_rot a w : norm w = 1 -> \det `e^(a, \S( w )) = 1.
 Proof.
 move=> w1.
-move: (exp_rot_is_ortho (half_angle a) w1).
-move/orthogonal_det/eqP.
-rewrite -(@eqr_expn2 _ 2%N) // expr1n sqr_normr expr2 -det_mulmx.
+move/orthogonal_det/eqP : (exp_rot_is_ortho (half_angle a) w1).
+rewrite -(@eqr_expn2 _ 2) // expr1n sqr_normr expr2 -det_mulmx.
 rewrite mulmxE mul_exp_rot; last by rewrite skew_mx3 w1 expr1n scaleN1r.
 move/eqP; by rewrite halfP.
 Qed.

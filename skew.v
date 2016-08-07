@@ -44,7 +44,7 @@ Canonical sym_keyed := KeyedQualifier sym_key.
 
 End anti_sym_def.
 
-Local Notation "''so[' R ]_ n" := (anti n R)
+Notation "''so[' R ]_ n" := (anti n R)
   (at level 8, n at level 2, format "''so[' R ]_ n").
 
 Section symmetric_and_antisymmetric_matrices.
@@ -369,8 +369,10 @@ rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij; Simp.r => /=.
 by rewrite -mulrA mulrCA -mulrA -mulrDr addrC mulNr subrr mulr0.
 Qed.
 
-Lemma skew_mx4 u : norm u = 1 -> \S( u ) ^+ 4 = - \S( u ) ^+ 2.
-Proof. move=> w1; by rewrite exprS skew_mx3 // w1 expr1n scaleN1r mulrN -expr2. Qed.
+Lemma skew_mx4 u : \S( u ) ^+ 4 = - norm u ^+2 *: \S( u ) ^+ 2.
+Proof.
+by rewrite exprS skew_mx3 scaleNr mulrN -scalerCA -scalerAl -expr2 scaleNr.
+Qed.
 
 Lemma mxtrace_skew_mx2 u : \tr (\S( u ) ^+ 2) = - (2%:R * (norm u) ^+ 2).
 Proof.
@@ -489,12 +491,11 @@ suff : (char_poly M)`_1 = Z by move=> ->.
 by rewrite char_poly3_coef1.
 Qed.
 
-Lemma char_poly_skew_mx u : norm u = 1 -> char_poly \S( u ) = 'X^3 + 'X.
+Lemma char_poly_skew_mx u : char_poly \S( u ) = 'X^3 + norm u ^+2 *: 'X.
 Proof.
-move=> u1.
 rewrite char_poly3 det_skew_mx subr0 trace_anti ?anti_skew //.
 rewrite scale0r subr0 expr0n add0r mulrN mxtrace_skew_mx2 mulrN opprK.
-by rewrite u1 expr1n mulr1 div1r mulVr ?unitfE ?pnatr_eq0 // scale1r.
+by rewrite mulrA div1r mulVr ?unitfE ?pnatr_eq0 // mul1r.
 Qed.
 
 Definition skew_mx_eigenvalues : seq R[i] := [:: 0; 'i; 0 -i* 1].
@@ -507,7 +508,7 @@ Lemma eigenvalue_skew_mx u : norm u = 1 ->
   eigenvalue (map_mx (fun x => x%:C) \S( u)) =1 [pred k | k \in skew_mx_eigenvalues].
 Proof.
 move=> u1 /= k.
-rewrite inE eigenvalue_root_char -map_char_poly (char_poly_skew_mx u1).
+rewrite inE eigenvalue_root_char -map_char_poly char_poly_skew_mx u1 expr1n scale1r.
 apply/rootP.
 case: ifPn => [|Hk].
   rewrite inE => /orP [/eqP ->|]; first by rewrite /= horner_map !hornerE.
@@ -540,10 +541,8 @@ Proof.
 set a := skew_mx u.
 rewrite det_mx33 [a]lock !mxE /=. Simp.r.
 rewrite -lock /a !skewij subr0. Simp.r.
-rewrite mulrDr mulrBr opprB.
-rewrite addrAC !addrA mulrCA subrK.
-rewrite -!addrA addrC !addrA.
-by rewrite -sqr_norm addrC.
+rewrite mulrDr mulrBr opprB addrAC !addrA mulrCA subrK.
+by rewrite -!addrA addrC !addrA -sqr_norm addrC.
 Qed.
 
 Lemma skew_mx_inv u : 1 - \S( u ) \is a GRing.unit.
@@ -576,7 +575,7 @@ Qed.
 Lemma cayley_of_skew_is_SO u : cayley_of_skew u \is 'SO[R]_3.
 Proof. by rewrite rotationE cayley_of_skew_is_O det_caley eqxx. Qed.
 
-Definition skew_of_ortho (Q : 'M[R]_3) := (Q - 1) * (Q + 1)^-1.
+Definition skew_of_ortho (M : 'M[R]_3) := (M - 1) * (M + 1)^-1.
 
 Lemma skew_of_ortho_is_skew Q : Q \is 'O[R]_3 -> skew_of_ortho Q \is 'so[R]_3.
 Proof.
@@ -598,4 +597,3 @@ Abort.
 End skew.
 
 Notation "'\S(' w ')'" := (skew_mx w) (at level 3, format "'\S(' w ')'").
-
