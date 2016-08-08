@@ -52,6 +52,19 @@ Proof.
 by rewrite /mx (scale_block_mx a \S( Twist.ang x )) skew_mxZ 2!scaler0.
 Qed.
 
+Definition lie_bracket (t1 t2 : t) := t1 *m t2 - t2 *m t1.
+
+Local Notation "[ t1 , t2 ]" := (lie_bracket t1 t2).
+
+Local Notation "'\T(' w , v ')'" := (mk w v).
+
+Lemma lie_bracketE t1 t2 :
+  let: \T(w1, v1) := t1 in
+  let: \T(w2, v2) := t2 in
+  [ t1 , t2 ] = block_mx \S( w1 *v w2 ) 0 (w1 *v w2 - w2 *v w1) 0.
+Proof.
+Abort.
+
 End Twist.
 End Twist.
 
@@ -125,8 +138,9 @@ Section taylor_exponential.
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Variable n : nat.
+Implicit Type M : 'M[R]_n.+1.
 
-Lemma expr_mulmulV (M : 'M[R]_n.+1) i (g : 'M[R]_n.+1) : g \in unitmx ->
+Lemma expr_mulmulV M i (g : 'M[R]_n.+1) : g \in unitmx ->
   (g * M * g^-1)^+i = g * M ^+i * g^-1.
 Proof.
 move=> Hg; elim: i => [|i ih]; first by rewrite 2!expr0 mulr1 divrr.
@@ -134,45 +148,45 @@ rewrite exprS ih -!mulrA exprS -mulrA; congr (_ * (_ * _)).
 by rewrite mulrA mulVr // mul1r.
 Qed.
 
-Definition expt (M : 'M[R]_n.+1) i := i`!%:R^-1 *: M ^+ i.
+Definition expt M i := i`!%:R^-1 *: M ^+ i.
 
-Lemma exptE (M : 'M[R]_n.+1) i : expt M i = i`!%:R^-1 *: M ^+ i.
+Lemma exptE M i : expt M i = i`!%:R^-1 *: M ^+ i.
 Proof. by []. Qed.
 
-Lemma expt0 (M : 'M[R]_n.+1) : expt M 0 = 1.
+Lemma expt0 M : expt M 0 = 1.
 Proof. by rewrite exptE expr0 fact0 invr1 scale1r. Qed.
 
-Lemma exptS (M : 'M[R]_n.+1) i : expt M i.+1 = i.+1%:R^-1 *: M * expt M i.
+Lemma exptS M i : expt M i.+1 = i.+1%:R^-1 *: M * expt M i.
 Proof.
 rewrite /expt -scalerAr -scalerAl -exprS scalerA; congr (_ *: _).
 by rewrite factS natrM invrM // unitfE pnatr_eq0 // -lt0n fact_gt0.
 Qed.
 
-Lemma expt1 (M : 'M_n.+1) : expt M 1 = M.
+Lemma expt1 M : expt M 1 = M.
 Proof. by rewrite exptS expt0 mulr1 invr1 scale1r. Qed.
 
-Lemma expt_mulmulV (M : 'M[R]_n.+1) (g : 'M[R]_n.+1) i : g \in unitmx ->
+Lemma expt_mulmulV M (g : 'M[R]_n.+1) i : g \in unitmx ->
   expt (g * M * g^-1) i = g * expt M i * g^-1.
 Proof. move=> Hg; by rewrite /expt expr_mulmulV // -scalerAr scalerAl. Qed.
 
-Definition expmx (M : 'M[R]_n.+1) k := \sum_(i < k) expt M i.
+Definition expmx M k := \sum_(i < k) expt M i.
 
-Lemma expmx0 (M : 'M[R]_n.+1) : expmx M 0 = 0.
+Lemma expmx0 M : expmx M 0 = 0.
 Proof. by rewrite /expmx big_ord0. Qed.
 
-Lemma expmxS (M : 'M[R]_n.+1) k : expmx M k.+1 = expmx M k + expt M k.
+Lemma expmxS M k : expmx M k.+1 = expmx M k + expt M k.
 Proof. by rewrite /expmx big_ord_recr. Qed.
 
-Lemma expSmx (M : 'M_n.+1) k : expmx M k.+1 = expt M 0 + \sum_(i < k) expt M i.+1.
+Lemma expSmx M k : expmx M k.+1 = expt M 0 + \sum_(i < k) expt M i.+1.
 Proof. by rewrite /expmx big_ord_recl. Qed.
 
-Lemma expmx1 (M : 'M[R]_n.+1) : expmx M 1 = 1.
+Lemma expmx1 M : expmx M 1 = 1.
 Proof. by rewrite expmxS expmx0 add0r expt0. Qed.
 
-Lemma expmx2 (M : 'M[R]_n.+1) : expmx M 2 = 1 + M.
+Lemma expmx2 M : expmx M 2 = 1 + M.
 Proof. by rewrite expmxS expmx1 expt1. Qed.
 
-Lemma expmx_mulmulV (M : 'M[R]_n.+1) k (g : 'M[R]_n.+1) : g \in unitmx ->
+Lemma expmx_mulmulV M k (g : 'M[R]_n.+1) : g \in unitmx ->
   expmx (g * M * g^-1) k = g * expmx M k * g^-1.
 Proof.
 move=> Hg; rewrite /expmx big_distrr /= big_distrl /=.
@@ -197,16 +211,13 @@ set a := 0. set b := 0.
 by rewrite (mulmx_block a b v _ a b v _) /a /b !(mulmx0,addr0,mul0mx) block_mx0.
 Qed.
 
-Definition expmx_twist0 v : 'M_4 := hom 1 v.
-
 (* [murray] eqn 2.32, p.41 *)
 Lemma expmx_twist0E v k : expmx \T(0, v) k.+2 = hom 1 v.
 Proof.
 rewrite /expmx 2!big_ord_recl big1 ?addr0; last first.
   move=> /= i _; by rewrite exptE exp_twist0v scaler0.
 rewrite liftE0 eqxx /expt factS fact0 expr0 expr1 invr1 2!scale1r /Twistmx /Twist.mx skew_mx0.
-rewrite /expmx_twist0 -idmxE (@scalar_mx_block _ 3 1 1).
-by rewrite (add_block_mx 1 0 0 1 0 _ v) !(addr0,add0r).
+by rewrite -idmxE (@scalar_mx_block _ 3 1 1) (add_block_mx 1 0 0 1 0 _ v) !(addr0,add0r).
 Qed.
 
 Lemma p41eq234 w v : norm w = 1 ->
@@ -297,17 +308,17 @@ Qed.
 
 Definition hom_twist t a e : 'M[R]_4 :=
   let: \T(w, v) := t in
-  hom e ((w *v v) *m (1 - e) + (a *: v) *m (w^T *m w)).
+  hom e ((v *v w) *m (1 - e) + (a *: v) *m (w^T *m w)).
 
 (* [murray] eqn 2.36, p.42 *)
 Definition expmx_twist t a k : 'M_4 :=
   let: \T(w, _) := t in
-  hom_twist t (- a) (expmx \S( a *: w ) k).
+  hom_twist t a (expmx \S( a *: w ) k).
 
 (* [murray] eqn 2.36, p.42 *)
 Lemma expmx_twistE w v a k : norm w = 1 ->
   expmx (a *: (\T(w, v) : 'M__)) k.+2 =
-  expmx_twist \T(w, - v) a k.+2.
+  expmx_twist \T(w, v) a k.+2.
 Proof.
 set w' : 'rV_3 := a *: w => w1.
 rewrite p42eq235 // p42eq3 // -mulmxE.
@@ -316,11 +327,11 @@ rewrite inv_rigid_transE /inv_rigid_trans homM mulr1 mulmx1.
 rewrite /expmx_twist /hom_twist skew_mxZ; congr hom.
 rewrite -/w' /= [in X in _ = X + _]mulmxBr mulmx1.
 rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
-- by rewrite crossmulvN mulNmx opprK.
-- rewrite scalerN mulNmx scaleNr mulNmx opprK.
-  rewrite -scalemxAl mulmxA scalemxAr -/w'.
-  by rewrite (mx11_scalar (v *m _ ^T)) -/(v *d w) mul_scalar_mx dotmulC.
-- by rewrite crossmulvN crossmulNv.
+- by rewrite crossmulC mulNmx.
+- rewrite -scalemxAl mulmxA.
+  rewrite (mx11_scalar (v *m _ ^T)) -/(v *d w) mul_scalar_mx dotmulC.
+  by rewrite scalerA mulrC -scalerA -/w'.
+- by rewrite crossmulC crossmulvN opprK.
 Qed.
 
 (* [murray] proposition 2.8, p. 41 *)
@@ -381,21 +392,34 @@ Section exponential_coordinates_rigid.
 Variable R : rcfType.
 
 Axiom radian : angle R -> R.
+Axiom angle_of_radian : R -> angle R.
 
-(* NB: same definition as expmx_twist but using exp_rot instead of the taylor expansion of
-   the exponential  *)
+(* NB: same definition as exp_twist but using exp_mat instead of the taylor expansion of
+   the exponential *)
 (* [springer] eqn 1.27, p. 17, closed expression for the exponential of a twist *)
-Definition exprot_twist (t : Twist.t R) a :=
+Definition exp_twist (t : Twist.t R) a :=
   let w := ang_of_twist t in
   hom_twist t (radian a) (`e^(a, \S( w ))).
 
-Lemma exprot_twist_is_SE (t : Twist.t R) a :
-  norm (ang_of_twist t) = 1 -> exprot_twist t a \in 'SE3[R].
+Lemma exp_twist_is_SE (t : Twist.t R) a :
+  norm (ang_of_twist t) = 1 -> exp_twist t a \in 'SE3[R].
 Proof. 
 move=> w1.
-rewrite /exprot_twist /hom_twist; case: t => /= w v in w1 *.
-by rewrite hom_is_SE // exp_rot_is_SO. 
+rewrite /exp_twist /hom_twist; case: t => /= w v in w1 *.
+by rewrite hom_is_SE // exp_skew_is_SO.
 Qed.
+
+Lemma exp_twist_is_onto_SE (f : 'M[R]_4) : f \is 'SE3[R] ->
+  exists (t : Twist.t R) (a : R), f = exp_twist t (angle_of_radian a).
+Proof.
+case/boolP: (rot_of_hom f == 1) => rotf fSE.
+  set p := trans_of_hom f.
+  exists \T(0, normalize p), (norm p).
+  rewrite /exp_twist /hom_twist.
+  rewrite crossmulv0 mul0mx add0r mulmx0 mulmx0.
+  rewrite /ang_of_twist block_mxKul /= skew_mxK skew_mx0 exp_mat0.
+  rewrite (SE3E fSE) (eqP rotf).
+Abort.
 
 End exponential_coordinates_rigid.
 
@@ -421,46 +445,45 @@ Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
-Definition screw_motion q w a h (p : point) := 
+Definition screw q w a h (p : point) :=
   q + (p - q) *m `e^(a, \S( w )) + (h * radian a) *: w.
 
 (* the rbt given by a screw *)
-Definition SE_screw_motion q w a h (w1 : norm w = 1) : SE.t R := SE.mk
+Definition hom_screw q w a h (w1 : norm w = 1) : SE.t R := SE.mk
   (q *m (1 - `e^(a, \S( w ))) + (h * radian a) *: w)
-  (exp_rot_is_SO a w1).
-(* NB: take v = - w * q + h * w, then the twist (v, w) generates the screw motion
-   assuming |w| = 1 and a != 0 *)
+  (exp_skew_is_SO a w1).
 
-Lemma SE_screw_motionE q w a h (w1 : norm w = 1) (p : point) : 
-  SE.ap_point (SE_screw_motion q a h w1) p = screw_motion q w a h p.
+Lemma hom_screwE q w a h (w1 : norm w = 1) (p : point) :
+  SE.ap_point (hom_screw q a h w1) p = screw q w a h p.
 Proof.
 rewrite SE.ap_pointE mul_mx_row add_row_mx mulmx0 add0r to_hpointK.
-rewrite addrA /SE_screw_motion /=; apply/rowP => i.
+rewrite addrA /hom_screw /=; apply/rowP => i.
 rewrite mxE [in RHS]mxE; congr (_ + _).
 rewrite mulmxBr mulmx1 addrCA mxE [in RHS]mxE; congr (_ + _).
 by rewrite mulmxBl.
 Qed.
 
-(* the rbt given by a screw (SE_screw_motion)
-   has the same form as the exponential of a twist *)
-(* [murray] propostion 2.10, p.48? 
-   given a screw motion, there is a twist that generates it (?) *)
-Lemma SE_screw_motion_exprot_twist s :
+(* take a screw with v = - w * q + h * w: it has the same form as the exponential of a twist
+   (v,w), assuming |w| = 1 and a != 0 *)
+(* [murray] propostion 2.10, p.48 *)
+Lemma hom_screw_exp_twist s :
   let: Screw.mk q w a h := s in
   forall (w1 : norm w = 1),
   radian a != 0 ->
-  let v := - w *v q + h *: w in
-  SE_screw_motion q a h w1 = exprot_twist \T(w, v) a :> 'M_4.
+  let v := w *v q + h *: w in
+  hom_screw q a h w1 = exp_twist \T(w, v) a :> 'M_4.
 Proof.
 case: s => p w a h w1 a0 v.
-rewrite /exprot_twist /SE_screw_motion.
+rewrite /exp_twist /hom_screw.
 rewrite unskewK block_mxKul /= ?anti_skew //.
 congr hom.
 rewrite /v.
-rewrite [w *v _]linearD /= mulmxDl crossmulNv crossmulvN.
+rewrite crossmulC.
+rewrite [w *v _]linearD /=.
+rewrite crossmulvZ crossmulvv scaler0 addr0.
+(*rewrite {1}crossmulNv {1}crossmulvN opprK.*)
 rewrite double_crossmul dotmulvv w1 expr1n scale1r.
-rewrite mulNmx mulmxBl opprB -2!addrA; congr (_ + _).
-rewrite crossmulvZ crossmulvv scaler0 mul0mx add0r.
+rewrite mulNmx mulmxBl opprB -addrA; congr (_ + _).
 
 rewrite -[in X in _ = _ + X]scalemxAl.
 rewrite mulmxDl.
@@ -479,10 +502,8 @@ rewrite mulrBl mul1r scalerBl addrCA.
 rewrite scalerA subrr addr0.
 
 rewrite subrr oppr0 add0r.
-rewrite mulNmx scalerN.
-rewrite crossmulC mulNmx scalerN opprK.
-apply/eqP; rewrite eq_sym scaler_eq0 (negPf a0) /=.
-by rewrite -skew_mxE -mulmxA (mulmxA \S( w )) skew_mxT mul0mx mulmx0.
+rewrite crossmulC mulNmx scalerN.
+by rewrite -skew_mxE -mulmxA (mulmxA \S( w )) skew_mxT mul0mx mulmx0 scaler0 oppr0.
 Qed.
 
 End screw_motion.
@@ -504,8 +525,6 @@ Definition axis : vector := if w == 0 then v else w. (* [murray] 2.43, p.47 *)
 Definition pitch : R := (norm w)^-2 *: v *d w. (* [murray] 2.42, p.47 *)
 
 Definition magnitude : R := if w == 0 then norm v else norm w. (* [murray] 2.44, p.48 *)
-
-Axiom angle_of_radian : R -> angle R.
 
 Definition ScrewTwist := Screw.mk
   axis_point axis (angle_of_radian pitch) magnitude.
@@ -625,7 +644,7 @@ have step5 : p0 *m A = b.
   rewrite (mx11_scalar (_ *m _)) -/(dotmul p0 e) p0e0.
   by apply/rowP => i; rewrite (ord1 i) !mxE eqxx mulr1n.
 move/(congr1 (fun x => x *m A^T)) in step5.
-move: (lem249 ne Maxis) => step6.
+move: (is_around_axis_exp_skew'_new ne Maxis) => step6.
 set x := (1 - cos phi) *+ 2.
 have Hx : x \is a GRing.unit.
   rewrite unitfE /x mulrn_eq0 negb_or /= subr_eq0 eq_sym.
@@ -643,7 +662,7 @@ have step7 : A *m A^T = x *: 1 - y *: e^T *m e.
     rewrite scalemx1.
     by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
   rewrite addrA.
-  rewrite {1}step6 /Rot cosN sinN scaleNr.
+  rewrite {1}step6 /exp_skew' cosN sinN scaleNr.
   rewrite -(addrA (e^T *m e)).
   rewrite linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
   rewrite linearD /= linearZ /= linearN /= opprB linearZ /= linearD /= trmx1.
@@ -691,7 +710,7 @@ have H3 : A *m A^T \is a GRing.unit.
   by apply/unitrP; exists AATinv; rewrite AATinv_1 AATinv_2.
 have step8 : (A *m A^T)^-1 = AATinv by rewrite -[LHS]mul1r -AATinv_1 mulrK // unitmxE.
 have Htmp2 : (Q - 1)^T *m (e^T *m e) = 0.
-  rewrite (lem249 ne Maxis).
+  rewrite (is_around_axis_exp_skew'_new ne Maxis).
   rewrite linearD /=.
   rewrite mulmxDl.
   rewrite [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
@@ -717,10 +736,10 @@ have step9 : b *m A^T = (a *m (Q - 1) - displacement f a) *m (Q - 1)^T.
   rewrite (mulmxBr (displacement f a)) mulmx1 opprB addrA addrAC.
   rewrite mulmxDl -mulmxA.
   have Htmp3 : (e^T *m e) *m (Q - 1)^T = 0.
-    rewrite (lem249 ne Maxis).
+    rewrite (is_around_axis_exp_skew'_new ne Maxis).
     rewrite linearD /=.
     rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
-    rewrite mulmxBr mulmx1 /Rot cosN sinN scaleNr.
+    rewrite mulmxBr mulmx1 /exp_skew' cosN sinN scaleNr.
     rewrite -addrA.
     rewrite linearD /=.
     rewrite mulmxDr.
