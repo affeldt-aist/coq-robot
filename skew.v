@@ -233,6 +233,9 @@ Qed.
 
 Definition unskew (M : 'M[R]_3) := row3 (- M 1 2%:R) (M 0 2%:R) (- M 0 1).
 
+Lemma unskew0 : unskew 0 = 0 :> 'rV[R]_3.
+Proof. by rewrite /unskew !mxE oppr0 row30. Qed.
+
 Lemma skew_mxK u : unskew \S( u ) = u.
 Proof.
 apply/rowP => i; rewrite 3!mxE /=.
@@ -592,6 +595,14 @@ rewrite -unitrV in Qinv.
 rewrite -{4}(divrr Qinv).
 rewrite -mulrA invrK (mulrBr Q) mulr1 divrr; last by rewrite -unitrV.
 rewrite mulrA.
+Abort.
+
+Definition lie_bracket w1 w2 := \S( w1 ) * \S( w2) - \S( w2 ) * \S( w1 ).
+
+Local Notation "[ w1 , w2 ]" := (lie_bracket w1 w2).
+
+Lemma lie_bracketE w1 w2 : [ w1 , w2 ] = \S( w1 *v w2 ).
+Proof.
 Abort.
 
 End skew.

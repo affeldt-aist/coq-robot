@@ -1756,8 +1756,11 @@ Definition exp_mat a (M : 'M[R]_3) : 'M_3 :=
 
 Local Notation "'`e^(' a ',' M ')'" := (exp_mat a M) (format "'`e^(' a ','  M ')'").
 
-Lemma exp_mat0 a : exp_mat a 0 = 1.
+Lemma exp_mata0 a : `e^(a, 0) = 1.
 Proof. by rewrite /exp_mat expr0n /= 2!scaler0 2!addr0. Qed.
+
+Lemma exp_mat0v (M : 'M[R]_3) : `e^(0, M) = 1.
+Proof. by rewrite /exp_mat sin0 cos0 subrr 2!scale0r 2!addr0. Qed.
 
 Lemma exp_matM a b M : M ^+ 3 = - M -> `e^(a, M) * `e^(b, M) = `e^(a + b, M).
 Proof.
