@@ -330,12 +330,18 @@ Definition hom_twist t a e : 'M[R]_4 :=
   if w == 0 then
     hom 1 (a *: v)
   else
-    hom e ((v *v w) *m (1 - e) + (a *: v) *m (w^T *m w)).
+    hom e ((norm w)^-2 *: ((v *v w) *m (1 - e) + (a *: v) *m (w^T *m w))).
 
 (* [murray] eqn 2.36, p.42 *)
 Definition expmx_twist t a k : 'M_4 :=
   let: \T(w, _) := t in
   hom_twist t a (expmx \S( a *: w ) k).
+
+Lemma TwistZ (a : R) w v : a *: (\T(w, v) : 'M_4) =
+\T((a *: w), (a *: v)).
+Proof.
+by rewrite Twist.Z /=.
+Qed.
 
 (* [murray] eqn 2.36, p.42 *)
 Lemma expmx_twistE w v a k :
@@ -344,29 +350,35 @@ Lemma expmx_twistE w v a k :
 Proof.
 case/boolP : (w == 0) => [/eqP ->|w0].
   by rewrite Twist.Z /= scaler0 expmx_twist0E eqxx.
-wlog {w0}w1 : w v a / norm w = 1.
-  move=> Hwlog.
-  move: {Hwlog}(Hwlog (normalize w) ((norm w)^-1 *: v) (a * norm w)).
-  rewrite (norm_normalize w0) => /(_ erefl).
-  rewrite -scalerA Twist.Z [Twist.ang _]/= [Twist.lin _]/=.
-  rewrite norm_scale_normalize scalerA divrr; last by rewrite unitfE norm_eq0.
-  rewrite scale1r => ->.
-  rewrite /expmx_twist /hom_twist normalize_eq0 (negbTE w0).
-  rewrite -scalerA norm_scale_normalize; congr hom.
-  admit.
 set w' : 'rV_3 := a *: w.
-rewrite p42eq235 // p42eq3 // -mulmxE.
+rewrite -(norm_scale_normalize w) (_ : v = (norm w) *: ((norm w)^-1 *: v)); last first.
+  by rewrite scalerA divrr ?scale1r // unitfE norm_eq0.
+rewrite -(TwistZ (norm w) (normalize w) ((norm w)^-1 *: v)).
+rewrite scalerA p42eq235 p42eq3; last by rewrite norm_normalize.
+rewrite -mulmxE.
 rewrite {1}/rigid_trans mulmxE homM mul1r.
 rewrite inv_rigid_transE /inv_rigid_trans homM mulr1 mulmx1.
-rewrite /expmx_twist /hom_twist skew_mxZ (negbTE (norm1_neq0 w1)); congr hom.
+rewrite -scalerA -skew_mxZ norm_scale_normalize.
+rewrite -scalerA norm_scale_normalize.
+rewrite [in RHS]scalerA divrr ?scale1r; last by rewrite unitfE norm_eq0.
+
+rewrite /expmx_twist /hom_twist.
+rewrite (negbTE w0).
+rewrite skew_mxZ; congr hom.
+
+rewrite crossmulZv crossmulvZ scalerA.
+rewrite dotmulZv dotmulvZ !mulrA -[in X in _ + X + _]scalerA.
+rewrite crossmulvZ crossmulNv [in X in _ + _ + X = _]scalerN crossmulZv [in X in _ + _ + X]scalerA.
+rewrite -scalemxAl -scalerDr -scalerBr; congr (_ *: _).
+  by rewrite -invrM ?unitfE ?norm_eq0.
 rewrite -/w' /= [in X in _ = X + _]mulmxBr mulmx1.
 rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
 - by rewrite crossmulC mulNmx.
 - rewrite -scalemxAl mulmxA.
   rewrite (mx11_scalar (v *m _ ^T)) -/(v *d w) mul_scalar_mx dotmulC.
   by rewrite scalerA mulrC -scalerA -/w'.
-- by rewrite crossmulC crossmulvN opprK.
-Admitted.
+- by rewrite crossmulC opprK.
+Qed.
 
 (*Lemma expmx_twistE w v a k : w = 0 \/ norm w = 1 ->
   expmx (a *: (\T(w, v) : 'M__)) k.+2 =
@@ -496,19 +508,24 @@ case/boolP: (rot_of_hom f == 1) => rotf fSE.
   by rewrite (SE3E fSE) (eqP rotf).
 case: (exp_skew_is_onto_SO (rot_of_hom_SO fSE)) => a [w fexp_skew].
 set A := \S(w) *m (1 - rot_of_hom f) + radian a *: (w^T *m w).
-suff [v Hv] : exists v, trans_of_hom f = v *m A.
-  exists \T(w, v), (radian a).
+suff [v Hv] : exists v, trans_of_hom f = (norm w)^-2 *: (v *m A).
+  exists (\T(w, v)), (radian a).
   rewrite (SE3E fSE) /exp_twist /hom_twist.
   rewrite ang_of_twistE.
   have /negbTE -> : w != 0.
     apply: contra rotf; rewrite fexp_skew => /eqP ->.
     by rewrite skew_mx0 exp_mata0.
-  rewrite radianK -fexp_skew Hv; congr hom.
-  by rewrite /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl.
+  rewrite radianK fexp_skew Hv; congr hom.
+  congr (_ *: _).
+  rewrite /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl.
+  by rewrite fexp_skew.
 suff : exists A', A' * A = 1.
   case => A' AA'.
-  exists ((trans_of_hom f) *m A').
-  by rewrite -mulmxA mulmxE AA' mulmx1.
+  exists ((norm w) ^+2 *: (trans_of_hom f) *m A').
+  rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
+  rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= norm_eq0.
+  apply: contra rotf; rewrite fexp_skew => /eqP ->.
+  by rewrite skew_mx0 exp_mata0.
 (*have v : 'rV[R]_3.
   admit.
 exists v.
@@ -588,7 +605,7 @@ rewrite crossmulC.
 rewrite [w *v _]linearD /=.
 rewrite crossmulvZ crossmulvv scaler0 addr0.
 (*rewrite {1}crossmulNv {1}crossmulvN opprK.*)
-rewrite double_crossmul dotmulvv w1 expr1n scale1r.
+rewrite double_crossmul dotmulvv w1 expr1n scale1r invr1 scale1r.
 rewrite mulNmx mulmxBl opprB -addrA; congr (_ + _).
 
 rewrite -[in X in _ = _ + X]scalemxAl.
