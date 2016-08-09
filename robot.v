@@ -487,6 +487,15 @@ rewrite -norm_eq0 v1 -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
 by rewrite /normalcomp Hk2 dotmulvZ dotmulvv v1 expr1n mulr1 subrr.
 Qed.
 
+(* [murray] second half of exercise 9(a), p. 75 *)
+Lemma kernel_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
+Proof.
+apply/andP; split; last by apply/sub_kermxP; rewrite skew_mxE crossmulvv.
+apply/rV_subP => v /sub_kermxP.
+rewrite skew_mxE => /eqP/colinearP[|[_[k [Hk1 Hk2]]]]; first by rewrite (negbTE w0).
+apply/sub_rVP; by exists k.
+Qed.
+
 End colinear.
 
 Section non_oriented_frame.
