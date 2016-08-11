@@ -469,6 +469,27 @@ apply hom_is_SE.
 by rewrite exp_skew_is_SO.
 Qed.
 
+Lemma sin0_inv (a : angle R) : sin a = 0 -> a = 0 \/ a = pi.
+Proof.
+move=> sa0.
+move/eqP : (cos2Dsin2 a).
+rewrite {}sa0 expr0n addr0 sqrf_eq1; case/orP => /eqP.
+move/cos1_angle0; by auto.
+move/cosN1_angle0; by auto.
+Qed.
+
+Lemma sinpi : sin (@pi R) = 0.
+Proof. by rewrite /sin /pi argK /= ?oppr0 // normrN normr1. Qed.
+
+Lemma cospi : cos (@pi R) = -1.
+Proof. by rewrite /cos /pi argK //= normrN normr1. Qed.
+
+Lemma tanpi : tan (@pi R) = 0.
+Proof. by rewrite /tan sinpi mul0r. Qed.
+
+Lemma secpi : sec (@pi R) = -1.
+Proof. by rewrite /sec cospi invrN invr1. Qed.
+
 Lemma exp_twist_is_onto_SE (f : 'M[R]_4) : f \is 'SE3[R] ->
   exists (t : Twist.t R) (a : R), f = exp_twist (angle_of_radian a) t.
 Proof.
@@ -479,6 +500,9 @@ case/boolP: (rot_of_hom f == 1) => rotf fSE.
   rewrite angle_of_radianK norm_scale_normalize.
   by rewrite (SE3E fSE) (eqP rotf).
 case: (exp_skew_is_onto_SO (rot_of_hom_SO fSE)) => a [w [w1 fexp_skew]].
+have a0 : a != 0.
+  apply: contra rotf => /eqP.
+  rewrite fexp_skew => ->; by rewrite exp_mat0v.
 set A := \S(w) *m (1 - rot_of_hom f) + radian a *: (w^T *m w).
 suff [v Hv] : exists v, trans_of_hom f = (norm w)^-2 *: (v *m A).
   exists (\T(v, w)), (radian a).
@@ -491,14 +515,6 @@ suff [v Hv] : exists v, trans_of_hom f = (norm w)^-2 *: (v *m A).
   congr (_ *: _).
   rewrite /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl.
   by rewrite fexp_skew.
-suff : exists A' : 'M_3 , A' * A = 1.
-  case => A' AA'.
-  exists ((norm w) ^+2 *: (trans_of_hom f) *m A').
-  rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
-  rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= norm_eq0.
-  apply: contra rotf; rewrite fexp_skew => /eqP ->.
-  by rewrite skew_mx0 exp_mata0.
-(* NB: corresponds to [murray], exercise 9, p.75 *)
 have HA : A = (radian a * norm w ^+ 2)%:A + ((1 - cos a) * norm w ^+2) *: \S(w) + (radian a - sin a) *: \S(w)^+2.
   rewrite /A.
   rewrite fexp_skew /exp_mat.
@@ -516,27 +532,98 @@ have HA : A = (radian a * norm w ^+ 2)%:A + ((1 - cos a) * norm w ^+2) *: \S(w) 
   rewrite !scalemx1 scalar_mxM.
   rewrite mul_scalar_mx subrK.
   by rewrite scaleNr scalerN opprK scalerA.
-(* NB: there is the inverse of the matrix A according to
-   [A First Course in Robot Mechanics, F.C. Park, Mar. 2006]
-   exercise 4.1, p.81 *)
-set AT := 1 - (radian a / 2%:R) *: \S(w) +
-          (1 - (radian a / 2%:R) * (sec a + cot a)) *: \S(w) ^+ 2.
+suff : exists A' : 'M_3 , A' * A = 1.
+  case => A' AA'.
+  exists ((norm w) ^+2 *: (trans_of_hom f) *m A').
+  rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
+  rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= norm_eq0.
+  apply: contra rotf; rewrite fexp_skew => /eqP ->.
+  by rewrite skew_mx0 exp_mata0.
+(* NB: corresponds to [murray], exercise 9, p.75 *)
+(* NB: formula for the inverse matrix in
+   [Introduction to Robotics: Mechanics, Planning, and Control,
+    F.C. Park, K. Lynch, Mar. 14 2012]
+ *)
+set AT := (radian a)^-1%:M - 2%:R^-1 *: \S(w) +
+          ((radian a)^-1 - 2%:R^-1 * cot (half_angle a)) *: \S(w) ^+ 2.
 exists AT.
 rewrite /AT HA.
+set ra := radian a.
 rewrite w1 expr1n !mulr1.
-rewrite !mulrDr.
 rewrite !mulrDl.
-rewrite !mul1r.
-rewrite !mulNr.
-rewrite !scalemx1.
+rewrite 6!mulrDr.
+rewrite {1}scalemx1 -{1}mulmxE -scalar_mxM mulVr; last by rewrite unitfE radian0.
+rewrite -[RHS]addr0 -!addrA; congr (_ + _); rewrite !addrA.
+
 rewrite -!mulmxE.
-rewrite !mul_mx_scalar.
-rewrite !scalerA.
-rewrite -!scalemxAr.
-rewrite !mulmxE.
-rewrite -!scalerAl -expr2 -exprS -exprSr -exprD skew_mx3 skew_mx4.
-rewrite w1 expr1n !scaleN1r.
-Admitted.
+rewrite !mul_scalar_mx scalemx1 !mul_mx_scalar.
+rewrite -!scalemxAl -!scalemxAr.
+rewrite 2!mulNmx.
+rewrite (scalerN (1 - cos a) (_ *m _)).
+rewrite (scalerN (ra - sin a) (_ *m _)).
+rewrite -!scalemxAl mulmxE -expr2 -exprSr -exprS -exprD.
+rewrite skew_mx3 skew_mx4.
+rewrite w1 expr1n 2!scaleN1r.
+rewrite !(scalerN _ \S(w)) !(scalerN _ (\S(w) ^+ 2)).
+
+rewrite (scalerN (ra - sin a)) opprK.
+rewrite (scalerBl ra (sin a) (_ *: _)).
+rewrite -!addrA.
+rewrite (addrCA (ra *: - _)).
+rewrite !addrA.
+rewrite (scalerN ra) subrK.
+
+rewrite (scalerBl (ra^-1) _ (- (_ *: \S(w) ^+ 2))).
+rewrite (scalerN (ra^-1)).
+rewrite (addrC (- (_))) !addrA addrC.
+rewrite -!addrA.
+rewrite addrCA.
+rewrite !addrA subrK.
+
+rewrite (scalerBl (ra^-1) _ (- (_ *: \S(w)))).
+rewrite addrAC.
+rewrite (addrC (ra^-1 *: - _)) addrA addrC.
+rewrite scalerN !addrA.
+rewrite (addrC (- _)) subrr add0r.
+
+rewrite (scalerA ra).
+rewrite mulrBr divrr; last by rewrite unitfE radian0.
+rewrite scalerBl scale1r.
+
+rewrite (scalerN (2%:R^-1 * _)) opprK.
+rewrite (scalerA (2%:R^-1 * _)).
+rewrite mulrBr scalerBl !addrA.
+rewrite mulrCA (mulrC ra) mulrA.
+rewrite subrK.
+
+have H1 : cot (half_angle a) = sin a / (1 - cos a).
+  admit.
+have H2 : cot (half_angle a) = (1 + cos a) / sin a.
+  admit.
+
+rewrite {1}H2 -!mulrA mulVr ?mulr1; last first.
+  rewrite unitfE.
+  admit.
+rewrite H1.
+rewrite (scalerN (2%:R^-1 * _)) opprK.
+rewrite (scalerA (2%:R^-1 * _)).
+rewrite -!mulrA mulVr ?mulr1; last first.
+  rewrite unitfE subr_eq0.
+  admit.
+rewrite (addrC (- _)) addrC !addrA.
+rewrite scalerA mulrC subrr add0r.
+
+rewrite (mulrC 2%:R^-1).
+rewrite -scalerA.
+rewrite scalerBl scale1r opprB.
+rewrite scalerDl scale1r opprD !addrA addrC !addrA.
+rewrite (addrC (- (cos a *: _))) subrr add0r.
+rewrite addrAC.
+rewrite -scaleNr -scalerDl.
+rewrite -opprD -mulr2n -mulr_natl divrr; last first.
+  by rewrite unitfE pnatr_eq0.
+by rewrite scaleN1r addrC subrr.
+Abort.
 
 Lemma image_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (\S(w) == w^C)%MS.
 Proof.
