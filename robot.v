@@ -2041,10 +2041,10 @@ by rewrite unskewD skew_mxK unskewN tr_skew unskewN skew_mxK opprK mulr2n.
 Qed.
 
 Lemma exp_skew_is_onto_SO M : M \is 'SO[R]_3 ->
-  exists a u, M = `e^(a, \S( u )).
+  exists a u, norm u = 1 /\ M = `e^(a, \S( u )).
 Proof.
 case/SO_is_around_axis => u [a [u1 au]].
-exists (- a), u.
+exists (- a), u; split => //.
 move: (is_around_axis_exp_skew (- a) u1).
 rewrite opprK => au'.
 apply (@same_rot _ u (norm1_neq0 u1) _ _ u 1 ltr01 _ (esym (scale1r _)) au au').

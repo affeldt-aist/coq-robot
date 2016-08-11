@@ -478,7 +478,7 @@ case/boolP: (rot_of_hom f == 1) => rotf fSE.
   rewrite /exp_twist /hom_twist ang_of_twistE eqxx /=.
   rewrite angle_of_radianK norm_scale_normalize.
   by rewrite (SE3E fSE) (eqP rotf).
-case: (exp_skew_is_onto_SO (rot_of_hom_SO fSE)) => a [w fexp_skew].
+case: (exp_skew_is_onto_SO (rot_of_hom_SO fSE)) => a [w [w1 fexp_skew]].
 set A := \S(w) *m (1 - rot_of_hom f) + radian a *: (w^T *m w).
 suff [v Hv] : exists v, trans_of_hom f = (norm w)^-2 *: (v *m A).
   exists (\T(v, w)), (radian a).
@@ -499,6 +499,44 @@ suff : exists A' : 'M_3 , A' * A = 1.
   apply: contra rotf; rewrite fexp_skew => /eqP ->.
   by rewrite skew_mx0 exp_mata0.
 (* NB: corresponds to [murray], exercise 9, p.75 *)
+have HA : A = (radian a * norm w ^+ 2)%:A + ((1 - cos a) * norm w ^+2) *: \S(w) + (radian a - sin a) *: \S(w)^+2.
+  rewrite /A.
+  rewrite fexp_skew /exp_mat.
+  rewrite mulmxBr mulmx1 -(addrA 1) mulmxDr mulmx1 -!addrA opprD !addrA subrr add0r.
+  rewrite mulmxDr.
+  rewrite -scalemxAr mulmxE -expr2 opprD.
+  rewrite [in X in _ = _ + X]scalerBl.
+  rewrite ![in RHS]addrA [in RHS]addrC.
+  rewrite -addrA; congr (_ + _).
+  rewrite -scalerAr.
+  rewrite -exprS skew_mx3.
+  rewrite skew_mx2.
+  rewrite scalerBr.
+  rewrite -![in RHS]addrA [in RHS]addrC ![in RHS]addrA.
+  rewrite !scalemx1 scalar_mxM.
+  rewrite mul_scalar_mx subrK.
+  by rewrite scaleNr scalerN opprK scalerA.
+(* NB: there is the inverse of the matrix A according to
+   [A First Course in Robot Mechanics, F.C. Park, Mar. 2006]
+   exercise 4.1, p.81 *)
+set AT := 1 - (radian a / 2%:R) *: \S(w) +
+          (1 - (radian a / 2%:R) * (sec a + cot a)) *: \S(w) ^+ 2.
+exists AT.
+rewrite /AT HA.
+rewrite w1 expr1n !mulr1.
+rewrite !mulrDr.
+rewrite !mulrDl.
+rewrite !mul1r.
+rewrite !mulNr.
+rewrite !scalemx1.
+rewrite -!mulmxE.
+rewrite !mul_mx_scalar.
+rewrite !scalerA.
+rewrite -!scalemxAr.
+rewrite !mulmxE.
+rewrite -!scalerAl -expr2 -exprS -exprSr -exprD skew_mx3 skew_mx4.
+rewrite w1 expr1n !scaleN1r.
+Admitted.
 
 Lemma image_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (\S(w) == w^C)%MS.
 Proof.
@@ -510,8 +548,6 @@ have rank_skew : \rank \S(w) = 2%N.
   rewrite -(eqn_add2r (\rank \S(w))) subnK; last by rewrite rank_leq_row.
   rewrite add1n => /eqP[] <-; by apply/eqP.
 move: (kernel_skew_mx w0) => H.
-Abort.
-
 Abort.
 
 End exponential_coordinates_rigid.

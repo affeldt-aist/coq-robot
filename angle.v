@@ -681,6 +681,10 @@ rewrite -(@eqr_expn2 _ 2%N) //; last 2 first.
 by rewrite -sin2cos2 sqrrN sqr_sqrtr // sqr_ge0.
 Qed.
 
+Definition sec (a : angle) := (cos a)^-1.
+
+Definition cot (a : angle) := (tan a)^-1.
+
 End angle.
 
 Arguments pi {R}.
