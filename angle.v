@@ -807,6 +807,9 @@ Qed.
 
 Definition cot (a : angle) := (tan a)^-1.
 
+Lemma cot_pihalf : cot pihalf = 0.
+Proof. by rewrite /cot tan_pihalf invr0. Qed.
+
 Lemma cot_half_angle a : cot (half_angle a) = sin a / (1 - cos a).
 Proof. by rewrite /cot tan_half_angle invf_div. Qed.
 
