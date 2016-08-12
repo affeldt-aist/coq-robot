@@ -469,27 +469,6 @@ apply hom_is_SE.
 by rewrite exp_skew_is_SO.
 Qed.
 
-Lemma sin0_inv (a : angle R) : sin a = 0 -> a = 0 \/ a = pi.
-Proof.
-move=> sa0.
-move/eqP : (cos2Dsin2 a).
-rewrite {}sa0 expr0n addr0 sqrf_eq1; case/orP => /eqP.
-move/cos1_angle0; by auto.
-move/cosN1_angle0; by auto.
-Qed.
-
-Lemma sinpi : sin (@pi R) = 0.
-Proof. by rewrite /sin /pi argK /= ?oppr0 // normrN normr1. Qed.
-
-Lemma cospi : cos (@pi R) = -1.
-Proof. by rewrite /cos /pi argK //= normrN normr1. Qed.
-
-Lemma tanpi : tan (@pi R) = 0.
-Proof. by rewrite /tan sinpi mul0r. Qed.
-
-Lemma secpi : sec (@pi R) = -1.
-Proof. by rewrite /sec cospi invrN invr1. Qed.
-
 Lemma exp_twist_is_onto_SE (f : 'M[R]_4) : f \is 'SE3[R] ->
   exists (t : Twist.t R) (a : R), f = exp_twist (angle_of_radian a) t.
 Proof.
@@ -596,15 +575,10 @@ rewrite mulrBr scalerBl !addrA.
 rewrite mulrCA (mulrC ra) mulrA.
 rewrite subrK.
 
-have H1 : cot (half_angle a) = sin a / (1 - cos a).
-  admit.
-have H2 : cot (half_angle a) = (1 + cos a) / sin a.
-  admit.
-
-rewrite {1}H2 -!mulrA mulVr ?mulr1; last first.
+rewrite {1}cot_half_angle' -!mulrA mulVr ?mulr1; last first.
   rewrite unitfE.
   admit.
-rewrite H1.
+rewrite cot_half_angle.
 rewrite (scalerN (2%:R^-1 * _)) opprK.
 rewrite (scalerA (2%:R^-1 * _)).
 rewrite -!mulrA mulVr ?mulr1; last first.
