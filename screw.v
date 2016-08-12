@@ -464,69 +464,23 @@ move=> w1.
 rewrite /exp_twist /hom_twist.
 case: t w1 => w v.
 rewrite ang_of_twistE => w1.
-rewrite (negbTE (norm1_neq0 w1)).
-apply hom_is_SE.
-by rewrite exp_skew_is_SO.
+by rewrite (negbTE (norm1_neq0 w1)) hom_is_SE // exp_skew_is_SO.
 Qed.
 
-Lemma exp_twist_is_onto_SE (f : 'M[R]_4) : f \is 'SE3[R] ->
-  exists (t : Twist.t R) (a : angle R), f = exp_twist a t.
+Definition exp_twist_is_onto_SE_mat a w :=
+  (radian a * norm w ^+ 2)%:A
+    + ((1 - cos a) * norm w ^+2) *: \S(w)
+      + (radian a - sin a) *: \S(w)^+2.
+
+Definition exp_twist_is_onto_SE_mat_inv a w :=
+  (radian a)^-1%:M
+   - 2%:R^-1 *: \S(w)
+     + ((radian a)^-1 - 2%:R^-1 * cot (half_angle a)) *: \S(w) ^+ 2.
+
+Lemma exp_twist_is_onto_SE_matP a w (a0 : a != 0) (w1 : norm w = 1) :
+  exp_twist_is_onto_SE_mat_inv a w * exp_twist_is_onto_SE_mat a w = 1.
 Proof.
-case/boolP: (rot_of_hom f == 1) => rotf fSE.
-  set p := trans_of_hom f.
-  exists \T(normalize p, xxx), (norm p).
-  rewrite /exp_twist /hom_twist ang_of_twistE eqxx /=.
-  rewrite angle_of_radianK norm_scale_normalize.
-  by rewrite (SE3E fSE) (eqP rotf).
-case: (exp_skew_is_onto_SO (rot_of_hom_SO fSE)) => a [w [w1 fexp_skew]].
-have a0 : a != 0.
-  apply: contra rotf => /eqP.
-  rewrite fexp_skew => ->; by rewrite exp_mat0v.
-set A := \S(w) *m (1 - rot_of_hom f) + radian a *: (w^T *m w).
-suff [v Hv] : exists v, trans_of_hom f = (norm w)^-2 *: (v *m A).
-  exists (\T(v, w)), (radian a).
-  rewrite (SE3E fSE) /exp_twist /hom_twist.
-  rewrite ang_of_twistE.
-  have /negbTE -> : w != 0.
-    apply: contra rotf; rewrite fexp_skew => /eqP ->.
-    by rewrite skew_mx0 exp_mata0.
-  rewrite radianK fexp_skew Hv; congr hom.
-  congr (_ *: _).
-  rewrite /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl.
-  by rewrite fexp_skew.
-have HA : A = (radian a * norm w ^+ 2)%:A + ((1 - cos a) * norm w ^+2) *: \S(w) + (radian a - sin a) *: \S(w)^+2.
-  rewrite /A.
-  rewrite fexp_skew /exp_mat.
-  rewrite mulmxBr mulmx1 -(addrA 1) mulmxDr mulmx1 -!addrA opprD !addrA subrr add0r.
-  rewrite mulmxDr.
-  rewrite -scalemxAr mulmxE -expr2 opprD.
-  rewrite [in X in _ = _ + X]scalerBl.
-  rewrite ![in RHS]addrA [in RHS]addrC.
-  rewrite -addrA; congr (_ + _).
-  rewrite -scalerAr.
-  rewrite -exprS skew_mx3.
-  rewrite skew_mx2.
-  rewrite scalerBr.
-  rewrite -![in RHS]addrA [in RHS]addrC ![in RHS]addrA.
-  rewrite !scalemx1 scalar_mxM.
-  rewrite mul_scalar_mx subrK.
-  by rewrite scaleNr scalerN opprK scalerA.
-suff : exists A' : 'M_3 , A' * A = 1.
-  case => A' AA'.
-  exists ((norm w) ^+2 *: (trans_of_hom f) *m A').
-  rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
-  rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= norm_eq0.
-  apply: contra rotf; rewrite fexp_skew => /eqP ->.
-  by rewrite skew_mx0 exp_mata0.
-(* NB: corresponds to [murray], exercise 9, p.75 *)
-(* NB: formula for the inverse matrix in
-   [Introduction to Robotics: Mechanics, Planning, and Control,
-    F.C. Park, K. Lynch, Mar. 14 2012]
- *)
-set AT := (radian a)^-1%:M - 2%:R^-1 *: \S(w) +
-          ((radian a)^-1 - 2%:R^-1 * cot (half_angle a)) *: \S(w) ^+ 2.
-exists AT.
-rewrite /AT HA.
+rewrite /exp_twist_is_onto_SE_mat /exp_twist_is_onto_SE_mat_inv.
 set ra := radian a.
 rewrite w1 expr1n !mulr1.
 rewrite !mulrDl.
@@ -602,7 +556,63 @@ rewrite -scaleNr -scalerDl.
 rewrite -opprD -mulr2n -mulr_natl divrr; last first.
   by rewrite unitfE pnatr_eq0.
 by rewrite scaleN1r addrC subrr.
-Abort.
+Qed.
+
+Lemma exp_twist_is_onto_SE (f : 'M[R]_4) : f \is 'SE3[R] ->
+  exists t a, f = exp_twist (angle_of_radian a) t.
+Proof.
+case/boolP: (rot_of_hom f == 1) => rotf fSE.
+  set p := trans_of_hom f.
+  exists \T(normalize p, 0), (norm p).
+  rewrite /exp_twist /hom_twist ang_of_twistE eqxx /=.
+  rewrite angle_of_radianK norm_scale_normalize.
+  by rewrite (SE3E fSE) (eqP rotf).
+case: (exp_skew_is_onto_SO (rot_of_hom_SO fSE)) => a [w [w1 fexp_skew]].
+have a0 : a != 0.
+  apply: contra rotf => /eqP.
+  rewrite fexp_skew => ->; by rewrite exp_mat0v.
+set A := \S(w) *m (1 - rot_of_hom f) + radian a *: (w^T *m w).
+suff [v Hv] : exists v, trans_of_hom f = (norm w)^-2 *: (v *m A).
+  exists \T(v, w), (radian a).
+  rewrite (SE3E fSE) /exp_twist /hom_twist ang_of_twistE.
+  have /negbTE -> : w != 0.
+    apply: contra rotf; rewrite fexp_skew => /eqP ->.
+    by rewrite skew_mx0 exp_mata0.
+  rewrite radianK fexp_skew Hv; congr (hom _ (_ *: _)).
+  by rewrite /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl fexp_skew.
+have HA : A = exp_twist_is_onto_SE_mat a w.
+  rewrite /A /exp_twist_is_onto_SE_mat.
+  rewrite fexp_skew /exp_mat.
+  rewrite mulmxBr mulmx1 -(addrA 1) mulmxDr mulmx1 -!addrA opprD !addrA subrr add0r.
+  rewrite mulmxDr.
+  rewrite -scalemxAr mulmxE -expr2 opprD.
+  rewrite [in X in _ = _ + X]scalerBl.
+  rewrite ![in RHS]addrA [in RHS]addrC.
+  rewrite -addrA; congr (_ + _).
+  rewrite -scalerAr.
+  rewrite -exprS skew_mx3.
+  rewrite skew_mx2.
+  rewrite scalerBr.
+  rewrite -![in RHS]addrA [in RHS]addrC ![in RHS]addrA.
+  rewrite !scalemx1 scalar_mxM.
+  rewrite mul_scalar_mx subrK.
+  by rewrite scaleNr scalerN opprK scalerA.
+suff : exists A' : 'M_3 , A' * A = 1.
+  case => A' AA'.
+  exists ((norm w) ^+2 *: (trans_of_hom f) *m A').
+  rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
+  rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= norm_eq0.
+  apply: contra rotf; rewrite fexp_skew => /eqP ->.
+  by rewrite skew_mx0 exp_mata0.
+(* NB: corresponds to [murray], exercise 9, p.75 *)
+(* NB: formula for the inverse matrix in
+   [Introduction to Robotics: Mechanics, Planning, and Control,
+    F.C. Park, K. Lynch, Mar. 14 2012]
+ *)
+exists (exp_twist_is_onto_SE_mat_inv a w).
+rewrite HA.
+exact: (exp_twist_is_onto_SE_matP a0 w1).
+Qed.
 
 Lemma image_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (\S(w) == w^C)%MS.
 Proof.
@@ -825,7 +835,7 @@ Qed.
 
 End screw_motion_utwist.
 
-Section chasles.
+Section screw_axis.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
@@ -897,170 +907,195 @@ Qed.
 
 Definition pitch_new := d0 / radian a.
 
-Definition screw_axis_point (q : point) :=
-  let a' := f q in
-  1 / ((1 - cos a) *+ 2) *: (q *m Q - a') *m (Q - 1)^T.
+Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
+Proof.
+rewrite (is_around_axis_exp_skew'_new w1 Maxis) linearD /=.
+rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
+rewrite mulmxBr mulmx1 /exp_skew' cosN sinN scaleNr.
+rewrite -addrA linearD /= mulmxDr trmx_mul trmxK.
+rewrite mulmxE -expr2 mulmx_tr_uvect //.
+rewrite addrC addrA (addrC (- _)) subrr add0r.
+rewrite linearD /= linearN /= 2!linearZ /= tr_skew scalerN opprK.
+rewrite mulrDr -scalerAr linearD /= trmx1 linearN /= trmx_mul trmxK mulrBr.
+rewrite mulr1 -expr2 mulmx_tr_uvect // subrr scaler0 add0r.
+by rewrite -scalerAr -mulmxE -mulmxA skew_mxE crossmulvv mulmx0 scaler0.
+Qed.
+
+Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
+Proof.
+rewrite (is_around_axis_exp_skew'_new w1 Maxis) linearD /=.
+rewrite mulmxDl [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
+rewrite linearD /= cosN sinN scaleNr linearN /=.
+rewrite linearZ /= tr_skew scalerN opprK mulmxDl.
+rewrite -scalemxAl !mulmxA skew_mxT mul0mx scaler0 addr0.
+rewrite linearD /= trmx_mul trmxK.
+rewrite -mulmxA mulmxDl mulmxE -expr2 mulmx_tr_uvect //.
+rewrite addrC addrA (addrC (- _)) subrr add0r.
+rewrite linearZ /= -mulmxE -scalemxAl.
+rewrite linearD /= trmx1 linearN /= trmx_mul trmxK mulmxBl.
+rewrite mul1mx mulmxE -expr2 mulmx_tr_uvect //.
+by rewrite subrr scaler0.
+Qed.
+
+Definition Ncos2 := (1 - cos a) *+ 2.
+Definition N2cos := 1 - cos a *+ 2.
+
+Lemma unitNcos2 (a0 : a != 0) : Ncos2 \is a GRing.unit.
+Proof.
+rewrite unitfE /Ncos2 mulrn_eq0 negb_or /= subr_eq0 eq_sym.
+apply/eqP => /cos1_angle0; by apply/eqP.
+Qed.
+
+Lemma N2cosNcos2 (a0 : a != 0) : N2cos - Ncos2^-1 * N2cos - N2cos / Ncos2 * N2cos = 0.
+Proof.
+rewrite (mulrC N2cos) -mulrA -{1}(mulKr (unitNcos2 a0) N2cos) -2!mulrBr; apply/eqP.
+rewrite mulf_eq0 invr_eq0.
+move: (unitNcos2 a0); rewrite unitfE => /negPf -> /=.
+rewrite -{2}(mul1r N2cos) -2!mulrBl mulf_eq0.
+rewrite -addrA -opprB opprK subr_eq0.
+by rewrite /Ncos2 {1}/N2cos mulrnBl addrAC eqxx.
+Qed.
+
+Lemma Ncos2V (a0 : a != 0) : (Ncos2^-1)%:M *m Ncos2%:M = 1 :> 'M_3.
+Proof. by rewrite -scalar_mxM mulVr // unitNcos2. Qed.
+
+Definition screw_axis_point (x : point) : point :=
+  1 / Ncos2 *: (x *m Q - f x) *m (Q - 1)^T.
+
+Definition screw_axis_point_mat :=
+  let A := row_mx (Q - 1) w^T in A *m A^T.
+
+Definition screw_axis_point_mat_inv : 'M_3 :=
+  Ncos2^-1 *: 1 + N2cos / Ncos2 *: w^T *m w.
+
+Lemma screw_axis_point_matE : let A := row_mx (Q - 1) w^T in
+  A *m A^T = Ncos2 *: 1 - N2cos *: w^T *m w.
+Proof.
+move=>A.
+rewrite /A tr_row_mx mul_row_col trmxK linearD /= linearN /= trmx1.
+rewrite mulmxBr mulmx1 opprB mulmxBl mul1mx.
+move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE mulmxE => /eqP ->.
+rewrite addrA (addrC (1 - _)) addrA.
+rewrite (_ : 1 + 1 = 2%:R) //.
+rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
+  rewrite scalemx1.
+  by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
+rewrite addrA.
+rewrite {1}(is_around_axis_exp_skew'_new w1 Maxis).
+rewrite /exp_skew' cosN sinN scaleNr.
+rewrite -(addrA (w^T *m w)).
+rewrite linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
+rewrite linearD /= linearZ /= linearN /= opprB linearZ /= linearD /= trmx1.
+rewrite (is_around_axis_exp_skew'_new w1 Maxis).
+rewrite opprD sinN scaleNr opprK !addrA addrC !addrA tr_skew.
+rewrite (scalerN (sin a) \S( w )) subrr add0r cosN.
+rewrite linearN /= trmx_mul trmxK opprD addrA addrAC -scaleNr -scalerDl.
+rewrite -mulr2n scalerBr scalemx1 scalemx1 -addrA; congr (_ + _).
+  apply/matrix3P; by rewrite !mxE ?eqxx ?mulr1n ?mulr0n // ?oppr0 // mulNrn.
+rewrite -scalemxAl /N2cos [in RHS]scalerBl scale1r opprB; congr (_ + _).
+by rewrite mulNrn scaleNr opprK.
+Qed.
+
+Lemma screw_axis_point_Vmat (a0 : a != 0) :
+  screw_axis_point_mat_inv * screw_axis_point_mat = 1.
+Proof.
+rewrite /screw_axis_point_mat /screw_axis_point_mat_inv screw_axis_point_matE !scalemx1 -!mulmxE.
+rewrite mulmxBr mulmxDl Ncos2V // -[RHS]addr0 -addrA; congr (_ + _).
+rewrite mul_mx_scalar -{1}scalemxAl {1}(mulrC N2cos) scalerA mulrA mulrV ?unitNcos2 // mul1r.
+rewrite mulmxDl.
+rewrite opprD addrA mul_scalar_mx -[in X in X - _ = 0]scalemxAl scalerA.
+rewrite -scalerBl.
+rewrite -3![in X in _ - X = 0]scalemxAl.
+rewrite -[in X in _ - X = 0]scalemxAr.
+rewrite [in X in _ - X = 0]scalerA.
+rewrite mulmxE -expr2 mulmx_tr_uvect // -scalerBl.
+by apply/eqP; rewrite scaler_eq0 (N2cosNcos2 a0) eqxx.
+Qed.
+
+Lemma screw_axis_point_matV (a0 : a != 0) :
+  screw_axis_point_mat * screw_axis_point_mat_inv = 1.
+Proof.
+rewrite /screw_axis_point_mat /screw_axis_point_mat_inv screw_axis_point_matE !scalemx1 -!mulmxE.
+rewrite mulmxBl mulmxDr {1}mulmxE (scalar_mx_comm (Ncos2^-1)) -{1}mulmxE Ncos2V //.
+rewrite -[RHS]addr0 -addrA; congr (_ + _).
+rewrite mul_scalar_mx -{1}scalemxAl scalerA mulrC -mulrA mulVr ?unitNcos2 // mulr1.
+rewrite mulmxDr.
+rewrite opprD addrA mul_mx_scalar -[in X in X - _ = 0]scalemxAl scalerA.
+rewrite -scalerBl.
+rewrite -3![in X in _ - X = 0]scalemxAl.
+rewrite -[in X in _ - X = 0]scalemxAr.
+rewrite [in X in _ - X = 0]scalerA.
+rewrite mulmxE -expr2 mulmx_tr_uvect // -scalerBl.
+by apply/eqP; rewrite scaler_eq0 (mulrC N2cos) N2cosNcos2 // eqxx.
+Qed.
+
+Lemma screw_axis_point_mat_unit (a0 : a != 0) :
+  screw_axis_point_mat \is a GRing.unit.
+Proof.
+apply/unitrP; exists screw_axis_point_mat_inv.
+by rewrite screw_axis_point_Vmat // screw_axis_point_matV.
+Qed.
+
+Lemma screw_axis_point_mat_invE (a0 : a != 0) :
+  let A := row_mx (Q - 1) w^T in
+  (A *m A^T)^-1 = screw_axis_point_mat_inv.
+Proof.
+move=> A.
+by rewrite -[LHS]mul1r -screw_axis_point_Vmat // mulrK // screw_axis_point_mat_unit.
+Qed.
 
 (* [angeles] Sect. 3.2.1 (the screw of a rigid-body motion) *)
-Lemma screw_axis_pointE p0 (* a point on the screw axis *) q :
-  a != 0 ->
+Lemma screw_axis_pointE p0 (* a point on the screw axis *) q (a0 : a != 0) :
   p0 *d w = 0 (* p0 is the closed point to the origin *) ->
   normalcomp (displacement f p0) w = 0 ->
   p0 = screw_axis_point q.
 Proof.
-move=> phi0 p0e0 fp0e0.
-have step1 : displacement f p0 *m (Q - 1) = 0.
+move=> p0e0 fp0e0.
+have _(*?*) : displacement f p0 *m (Q - 1) = 0.
   have : colinear (displacement f p0) w.
-    rewrite (decomp (displacement f p0) w).
-    rewrite -/(parpart p0).
-    rewrite parpartP.
+    rewrite (decomp (displacement f p0) w) -/(parpart p0) parpartP.
     by rewrite fp0e0 addr0 colinearZv colinear_refl orbC.
   rewrite -normalcomp_colinear // => /eqP H1.
   rewrite (decomp (displacement f p0) w) H1 addr0.
   rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
   by case: Maxis => /= -> _ _; rewrite subrr scaler0.
-move: (displacement_iso f p0 q) => step2.
-have {step2}step3 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
+have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).
-    rewrite -step2.
-    rewrite {1}(decomp (displacement f p0) w) fp0e0 addr0.
-    by rewrite axialcompE.
-  rewrite (mx11_scalar (displacement f p0 *m w^T)) -/(dotmul _ _) (thm321 p0 q).
+    rewrite -(displacement_iso f p0 q) {1}(decomp (displacement f p0) w).
+    by rewrite fp0e0 addr0 axialcompE.
+  rewrite (mx11_scalar (displacement f p0 *m w^T)) -/(dotmul _ _) (displacement_proj p0 q).
   by rewrite mulmxA (mx11_scalar (displacement f q *m w^T)) -/(dotmul _ _).
-have step4 : p0 *m (Q - 1) = q *m (Q - 1) - displacement f q *m (1 - w^T *m w).
-  rewrite [in X in _ = _ - X]mulmxBr mulmx1 -{}step3.
+have {step2}step2 : p0 *m (Q - 1) = q *m (Q - 1) - displacement f q *m (1 - w^T *m w).
+  rewrite [in X in _ = _ - X]mulmxBr mulmx1 -{}step2.
   rewrite (opprD (displacement f q)) opprK addrCA addrA subrr add0r.
   by rewrite /relative_displacement -/Q mulmxBl addrCA subrr addr0.
 set A := row_mx (Q - 1) w^T.
 set b : 'rV[R]_4 := row_mx (q *m (Q - 1) - displacement f q *m (1 - w^T *m w)) 0.
-have step5 : p0 *m A = b.
-  rewrite /A mul_mx_row /b {}step4; congr row_mx.
-  rewrite (mx11_scalar (_ *m _)) -/(dotmul p0 w) p0e0.
-  by apply/rowP => i; rewrite (ord1 i) !mxE eqxx mulr1n.
-move/(congr1 (fun x => x *m A^T)) in step5.
-move: (is_around_axis_exp_skew'_new w1 Maxis) => step6.
-set x := (1 - cos a) *+ 2.
-have Hx : x \is a GRing.unit.
-  rewrite unitfE /x mulrn_eq0 negb_or /= subr_eq0 eq_sym.
-  by apply/eqP => /cos1_angle0; apply/eqP.
-have Hx1 : (x^-1)%:M *m x%:M = 1 :> 'M_3.
-  by rewrite -scalar_mxM mulVr // mul_mx_scalar.
-set y := (1 - cos a *+ 2).
-have step7 : A *m A^T = x *: 1 - y *: w^T *m w.
-  rewrite /A tr_row_mx mul_row_col trmxK linearD /= linearN /= trmx1.
-  rewrite mulmxBr mulmx1 opprB mulmxBl mul1mx.
-  move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE mulmxE => /eqP ->.
-  rewrite addrA (addrC (1 - _)) addrA.
-  rewrite (_ : 1 + 1 = 2%:R) //.
-  rewrite /x mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
-    rewrite scalemx1.
-    by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
-  rewrite addrA.
-  rewrite {1}step6 /exp_skew' cosN sinN scaleNr.
-  rewrite -(addrA (w^T *m w)).
-  rewrite linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
-  rewrite linearD /= linearZ /= linearN /= opprB linearZ /= linearD /= trmx1.
-  rewrite step6 opprD sinN scaleNr opprK !addrA addrC !addrA tr_skew.
-  rewrite (scalerN (sin a) \S( w )) subrr add0r cosN.
-  rewrite linearN /= trmx_mul trmxK opprD addrA addrAC -scaleNr -scalerDl.
-  rewrite -mulr2n scalerBr scalemx1 scalemx1 -addrA; congr (_ + _).
-    apply/matrix3P; by rewrite !mxE ?eqxx ?mulr1n ?mulr0n // ?oppr0 // mulNrn.
-  rewrite -scalemxAl /y [in RHS]scalerBl scale1r opprB; congr (_ + _).
-  by rewrite mulNrn scaleNr opprK.
-set AATinv : 'M_3 := x^-1 *: 1 + y / x *: w^T *m w.
-have Htmp : y - x^-1 * y - y / x * y = 0.
-  rewrite (mulrC y) -mulrA -{1}(mulKr Hx y) -2!mulrBr; apply/eqP.
-  rewrite mulf_eq0 invr_eq0.
-  move: Hx; rewrite unitfE => /negPf -> /=.
-  rewrite -{2}(mul1r y) -2!mulrBl mulf_eq0.
-  rewrite -addrA -opprB opprK subr_eq0.
-  by rewrite /x {1}/y mulrnBl addrAC eqxx.
-have AATinv_1 : AATinv * (A *m A^T) = 1.
-  rewrite /AATinv step7 -/x -/y !scalemx1 -!mulmxE.
-  rewrite mulmxBr mulmxDl Hx1 -[RHS]addr0 -addrA; congr (_ + _).
-  rewrite mul_mx_scalar -{1}scalemxAl {1}(mulrC y) scalerA mulrA mulrV // mul1r.
-  rewrite mulmxDl.
-  rewrite opprD addrA mul_scalar_mx -[in X in X - _ = 0]scalemxAl scalerA.
-  rewrite -scalerBl.
-  rewrite -3![in X in _ - X = 0]scalemxAl.
-  rewrite -[in X in _ - X = 0]scalemxAr.
-  rewrite [in X in _ - X = 0]scalerA.
-  rewrite mulmxE -expr2 mulmx_tr_uvect // -scalerBl.
-  by apply/eqP; rewrite scaler_eq0 Htmp eqxx.
-have AATinv_2 : (A *m A^T) * AATinv = 1.
-  rewrite /AATinv step7 -/x -/y !scalemx1 -!mulmxE.
-  rewrite mulmxBl mulmxDr {1}mulmxE (scalar_mx_comm (x^-1)) -{1}mulmxE Hx1.
-  rewrite -[RHS]addr0 -addrA; congr (_ + _).
-  rewrite mul_scalar_mx -{1}scalemxAl scalerA mulrC -mulrA mulVr // mulr1.
-  rewrite mulmxDr.
-  rewrite opprD addrA mul_mx_scalar -[in X in X - _ = 0]scalemxAl scalerA.
-  rewrite -scalerBl.
-  rewrite -3![in X in _ - X = 0]scalemxAl.
-  rewrite -[in X in _ - X = 0]scalemxAr.
-  rewrite [in X in _ - X = 0]scalerA.
-  rewrite mulmxE -expr2 mulmx_tr_uvect // -scalerBl.
-  by apply/eqP; rewrite scaler_eq0 (mulrC y) Htmp eqxx.
-have H3 : A *m A^T \is a GRing.unit.
-  by apply/unitrP; exists AATinv; rewrite AATinv_1 AATinv_2.
-have step8 : (A *m A^T)^-1 = AATinv by rewrite -[LHS]mul1r -AATinv_1 mulrK // unitmxE.
-have Htmp2 : (Q - 1)^T *m (w^T *m w) = 0.
-  rewrite (is_around_axis_exp_skew'_new w1 Maxis).
-  rewrite linearD /=.
-  rewrite mulmxDl.
-  rewrite [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
-  rewrite linearD /=.
-  rewrite cosN sinN scaleNr.
-  rewrite linearN /=.
-  rewrite linearZ /=.
-  rewrite tr_skew.
-  rewrite scalerN.
-  rewrite opprK.
-  rewrite mulmxDl.
-  rewrite -scalemxAl !mulmxA skew_mxT mul0mx scaler0 addr0.
-  rewrite linearD /= trmx_mul trmxK.
-  rewrite -mulmxA mulmxDl mulmxE -expr2 mulmx_tr_uvect //.
-  rewrite addrC addrA (addrC (- _)) subrr add0r.
-  rewrite linearZ /= -mulmxE -scalemxAl.
-  rewrite linearD /= trmx1 linearN /= trmx_mul trmxK mulmxBl.
-  rewrite mul1mx mulmxE -expr2 mulmx_tr_uvect //.
-  by rewrite subrr scaler0.
-have step9 : b *m A^T = (q *m (Q - 1) - displacement f q) *m (Q - 1)^T.
+have step3 : b *m A^T = (q *m (Q - 1) - displacement f q) *m (Q - 1)^T.
   rewrite /A tr_row_mx trmxK.
   rewrite /b (mul_row_col (q *m (Q - 1) - _)) mul0mx addr0.
   rewrite (mulmxBr (displacement f q)) mulmx1 opprB addrA addrAC.
   rewrite mulmxDl -mulmxA.
-  have Htmp3 : (w^T *m w) *m (Q - 1)^T = 0.
-    rewrite (is_around_axis_exp_skew'_new w1 Maxis).
-    rewrite linearD /=.
-    rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
-    rewrite mulmxBr mulmx1 /exp_skew' cosN sinN scaleNr.
-    rewrite -addrA.
-    rewrite linearD /=.
-    rewrite mulmxDr.
-    rewrite trmx_mul trmxK.
-    rewrite mulmxE -expr2 mulmx_tr_uvect //.
-    rewrite addrC addrA (addrC (- _)) subrr add0r.
-    rewrite linearD /=.
-    rewrite linearN /= 2!linearZ /= tr_skew scalerN opprK.
-    rewrite mulrDr.
-    rewrite -scalerAr.
-    rewrite linearD /= trmx1 linearN /= trmx_mul trmxK mulrBr.
-    rewrite mulr1 -expr2 mulmx_tr_uvect // subrr scaler0 add0r.
-    by rewrite -scalerAr -mulmxE -mulmxA skew_mxE crossmulvv mulmx0 scaler0.
-  by rewrite Htmp3 mulmx0 addr0.
-rewrite /screw_axis_point -/x.
-move/(congr1 (fun x => x *m AATinv)) : step5.
-rewrite -2!mulmxA -step8 mulmxV // mulmx1.
-rewrite step9 step8.
+  rewrite wTwQN1.
+  by rewrite mulmx0 addr0.
+have {step2} : p0 *m A = b.
+  rewrite /A mul_mx_row /b {}step2; congr row_mx.
+  rewrite (mx11_scalar (_ *m _)) -/(dotmul p0 w) p0e0.
+  by apply/rowP => i; rewrite (ord1 i) !mxE eqxx mulr1n.
+move/(congr1 (fun x => x *m A^T)).
+move/(congr1 (fun x => x *m screw_axis_point_mat_inv)).
+rewrite /screw_axis_point.
+rewrite -2!mulmxA.
+rewrite -screw_axis_point_mat_invE // mulmxV; last by rewrite screw_axis_point_mat_unit.
+rewrite mulmx1 screw_axis_point_mat_invE //.
+rewrite step3.
 rewrite mulmxBr mulmx1 /displacement opprB addrA subrK.
-rewrite /AATinv.
-rewrite mulmxDr.
+rewrite /screw_axis_point_mat_inv mulmxDr.
 rewrite -[in X in _ = _ + X -> _]mulmxA.
 rewrite -[in X in _ = _ + X -> _]scalemxAl.
 rewrite -[in X in _ = _ + X -> _]scalemxAr.
-rewrite Htmp2.
-rewrite scaler0 mulmx0 addr0.
+rewrite QN1wTw scaler0 mulmx0 addr0.
 by rewrite scalemx1 mul_mx_scalar div1r scalemxAl.
 Qed.
 
-End chasles.
+End screw_axis.
