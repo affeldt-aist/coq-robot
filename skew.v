@@ -10,7 +10,7 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux euclidean3.
+Require Import aux euclidean3 vec_angle.
 
 (*
  OUTLINE:
@@ -604,6 +604,15 @@ Local Notation "[ w1 , w2 ]" := (lie_bracket w1 w2).
 Lemma lie_bracketE w1 w2 : [ w1 , w2 ] = \S( w1 *v w2 ).
 Proof.
 Abort.
+
+(* [murray] second half of exercise 9(a), p. 75 *)
+Lemma kernel_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
+Proof.
+apply/andP; split; last by apply/sub_kermxP; rewrite skew_mxE crossmulvv.
+apply/rV_subP => v /sub_kermxP.
+rewrite skew_mxE => /eqP/colinearP[|[_[k [Hk1 Hk2]]]]; first by rewrite (negbTE w0).
+apply/sub_rVP; by exists k.
+Qed.
 
 End skew.
 

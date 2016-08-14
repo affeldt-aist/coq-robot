@@ -1,4 +1,4 @@
-robot.v
+rigid.v
 aux.v
 exterior.v
 cross_product.v
@@ -7,5 +7,7 @@ quaternion.v
 euclidean3.v
 screw.v
 skew.v
+rot.v
+frame.v
 
 -R . Robot

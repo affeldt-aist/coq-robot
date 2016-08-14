@@ -10,7 +10,7 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux euclidean3 angle.
+Require Import aux euclidean3 angle vec_angle rot frame.
 
 (*************************************************************************)
 (*  section quaternion                                                   *)
@@ -633,6 +633,44 @@ rewrite mulrA divrr ?unitfE // mul1r -2!expr2 sqr_sqrtr; last first.
 have /divrr <- : q`0 ^+ 2 \is a GRing.unit by rewrite unitrX // unitfE.
 rewrite uquatE' /sqrq in q_is_uquat.
 by rewrite exprMn exprVn -mulrDl (eqP q_is_uquat) -exprVn mul1r -exprVn invrK.
+Qed.
+
+Lemma quat_rot_is_Rot (q : quat) : q \is uquat -> ~~ pureq q ->
+  let: (u, a) := polar_of_quat q in
+  u != 0 ->
+  is_around_axis u (a *+ 2) (Linear (quat_rot_is_linear q)).
+Proof.
+move=> q_isuqat. rewrite /pureq => q00 u0.
+rewrite normalize_eq0 in u0.
+set a := atan _.
+split.
+- set u : 'rV_3 := normalize q`1.
+  by rewrite quat_rot_is_linearE quat_rot_axis.
+- rewrite /normalize Frame.jZ //; last first.
+    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
+  rewrite /normalize Frame.kZ //; last first.
+    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
+  move: (Frame.pframe u0).
+  rewrite -/(Frame.j q`1) -/(Frame.k q`1) => f.
+  rewrite quat_rot_is_linearE quat_rotE /= (Frame.udotj u0) scale0r mul0rn addr0.
+  rewrite (_ : q`1 *v Frame.j q`1 = norm q`1 *: Frame.k q`1); last first.
+    by rewrite (icrossj f) -crossmulZv norm_scale_normalize crossmulC.
+  rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
+  by rewrite polar_of_uquat_prop.
+  by rewrite mulrnAl polar_of_uquat_prop2.
+- rewrite /normalize Frame.jZ //; last first.
+    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
+  rewrite /normalize Frame.kZ //; last first.
+    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
+  move: (Frame.pframe u0).
+  rewrite -/(Frame.j q`1) -/(Frame.k q`1) => f.
+  rewrite quat_rot_is_linearE quat_rotE /= (Frame.udotk u0) scale0r mul0rn addr0.
+  rewrite (_ : q`1 *v Frame.k q`1 = - norm q`1 *: Frame.j q`1); last first.
+    by rewrite scaleNr -scalerN -(icrossk f) -crossmulZv norm_scale_normalize.
+ rewrite addrC; congr (_ + _ *: _); last first.
+    by rewrite -polar_of_uquat_prop.
+  rewrite scaleNr scalerN scalerA mulNrn scalerMnl -scaleNr; congr (_ *: _).
+  by rewrite polar_of_uquat_prop2.
 Qed.
 
 End quaternion.
