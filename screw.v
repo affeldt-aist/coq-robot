@@ -563,8 +563,8 @@ Qed.
 Lemma etwist_is_onto_SE (f : 'M[R]_4) : f \is 'SE3[R] ->
   exists t a, f = `e$(angle_of_radian a, t).
 Proof.
+set p := trans_of_hom f.
 case/boolP: (rot_of_hom f == 1) => rotf fSE.
-  set p := trans_of_hom f.
   exists \T(normalize p, 0), (norm p).
   rewrite /etwist /hom_twist ang_of_twistE eqxx /=.
   rewrite angle_of_radianK norm_scale_normalize.
@@ -573,14 +573,14 @@ case: (eskew_is_onto_SO (rot_of_hom_SO fSE)) => a [w [w1 fexp_skew]].
 have a0 : a != 0.
   apply: contra rotf => /eqP.
   rewrite fexp_skew => ->; by rewrite emx30M.
-set A := \S(w) *m (1 - rot_of_hom f) + radian a *: (w^T *m w).
-suff [v Hv] : exists v, trans_of_hom f = (norm w)^-2 *: (v *m A).
+set A : 'M_3 := \S(w) *m (1 - rot_of_hom f) + radian a *: (w^T *m w).
+suff [v Hv] : exists v, p = (norm w)^-2 *: (v *m A).
   exists \T(v, w), (radian a).
   rewrite (SE3E fSE) /etwist /hom_twist ang_of_twistE.
   have /negbTE -> : w != 0.
     apply: contra rotf; rewrite fexp_skew => /eqP ->.
     by rewrite skew_mx0 emx3a0.
-  rewrite radianK fexp_skew Hv; congr (hom _ (_ *: _)).
+  rewrite radianK fexp_skew -/p Hv; congr (hom _ (_ *: _)).
   by rewrite /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl fexp_skew.
 have HA : A = etwist_is_onto_SE_mat a w.
   rewrite /A /etwist_is_onto_SE_mat.
@@ -601,7 +601,7 @@ have HA : A = etwist_is_onto_SE_mat a w.
   by rewrite scaleNr scalerN opprK scalerA.
 suff : exists A' : 'M_3 , A' * A = 1.
   case => A' AA'.
-  exists ((norm w) ^+2 *: (trans_of_hom f) *m A').
+  exists ((norm w) ^+2 *: p *m A').
   rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
   rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= norm_eq0.
   apply: contra rotf; rewrite fexp_skew => /eqP ->.
@@ -631,6 +631,94 @@ Abort.
 End exponential_coordinates_rigid.
 
 Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'").
+
+(* TODO: move *)
+Lemma row3D (R : rcfType) (a b c a' b' c' : R) : 
+  row3 a b c + row3 a' b' c' = row3 (a + a') (b + b') (c + c').
+Proof.
+rewrite 3!row3_row_mx (add_row_mx a%:M) (add_row_mx b%:M).
+rewrite -(scalemx1 _ a) -(scalemx1 _ a') -(scalemx1 _ b) -(scalemx1 _ b').
+rewrite -(scalemx1 _ c) -(scalemx1 _ c').
+by do 3! rewrite -scalerDl scalemx1.
+Qed.
+
+Module Example.
+Section example.
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
+Variables l1 l2 : R.
+Variable a : angle R.
+Hypothesis a0 : a != 0.
+
+Definition RAB := col_mx3
+  (row3 (cos a) (- sin a) 0)
+  (row3 (sin a) (cos a) 0)
+  'e_2%:R.
+
+Definition TAB := row3 (- l2 * sin a) (-l1 - l2 * cos a) 0.
+Definition gab := hom RAB TAB.
+
+Definition w : vector := 'e_2%:R.
+
+Let A_inv := etwist_is_onto_SE_mat_inv a w.
+
+Definition v := ((norm w)^+2 *: TAB) *m A_inv.
+
+Lemma vP : v = row3 ((l1 - l2) / 2%:R) ((- l1 - l2) * sin a / (2%:R * (1 - cos a))) 0 :> vector. 
+Proof.
+rewrite /v normeE expr1n scale1r /TAB.
+rewrite /A_inv /etwist_is_onto_SE_mat_inv.
+rewrite mulmxDr mulmxBr.
+rewrite mul_mx_scalar row3Z mulr0.
+rewrite -scalemxAr scalemxAl row3Z mulr0 skew_mxE crossmulE !mxE /=. Simp.r. rewrite /=.
+rewrite -scaleN1r row3Z !mulN1r opprK oppr0 row3D addr0.
+rewrite -scalemxAr scalemxAl expr2 -mulmxE mulmxA -scalemxAl.
+rewrite (skew_mxE (row3 _ _ _)) crossmulE !mxE /=. Simp.r.
+rewrite -scalemxAl skew_mxE crossmulE !mxE /=. Simp.r.
+rewrite row3Z mulr0 row3D addr0.
+case/boolP : (a == pi) => [/eqP ->|api].
+  rewrite cot_half_angle sinpi cospi !(mulr0,addr0,subr0,oppr0,add0r,mul0r,mulrN1).
+  rewrite opprK.
+  rewrite mulrN subrr.
+  rewrite -mulrN opprD opprK.
+  by rewrite mulrC.
+congr row3.
+  rewrite mulrCA mulrBl -(mulrA 2%:R^-1 _ (sin a)) cot_half_angle'.
+  rewrite -(mulrA (1 + cos a)) mulVr ?mulr1; last first.
+    rewrite unitfE; apply: contra a0 => /eqP/sin0_inv[-> //|/eqP].
+    by rewrite (negbTE api).
+  rewrite mulrBr addrCA !addrA mulrCA mulrA subrr add0r.
+  rewrite 3!mulrDr mulr1 2!opprD.
+  rewrite addrCA.
+  rewrite mulrN opprK mulrN opprK.
+  rewrite mulrCA addrK.
+  by rewrite (mulrC _ l1) addrC -mulrBl.
+rewrite opprB opprK -(opprD l1 (l2 * _)) mulrN.
+rewrite mulrBl addrCA !addrA (addrC _ l1) subrr add0r.
+rewrite -mulrA -mulrN -(mulrA _ (cot _)) -mulrBr.
+rewrite -mulf_div -[in RHS]mulrA -[in RHS]mulrCA; congr (_ * _).
+rewrite -cot_half_angle mulrDr opprD.
+rewrite [in RHS]mulrDl addrCA (mulrC _ l1).
+rewrite -(mulNr l1); congr (_ + _).
+rewrite mulrCA.
+rewrite -mulrN. 
+rewrite -mulrBr.
+rewrite [in RHS]mulNr -mulrN.
+congr (_ * _).
+rewrite cot_half_angle'.
+rewrite mulrAC.
+rewrite -mulNr.
+rewrite (mulrDl 1 (cos a) (cos a)) mul1r -expr2.
+rewrite cos2sin2 addrA.
+rewrite mulNr mulrBl opprD opprK addrCA expr2 -mulrA divrr; last first.
+  rewrite unitfE; apply: contra a0 => /eqP/sin0_inv[-> //|/eqP].
+  by rewrite (negbTE api).
+by rewrite mulr1 (addrC (- sin a)) subrr addr0 addrC.
+Qed.
+
+End example.
+End Example.
 
 (* screws: a geometric description of twists *)
 

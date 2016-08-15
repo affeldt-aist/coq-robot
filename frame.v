@@ -366,6 +366,13 @@ Definition oframe_of_tframe p i j k (f : tframe p i j k) :=
 Lemma tframe_trans p i j k (f : tframe p i j k) t : tframe (p + t) i j k.
 Proof. by case: f => -[] x1 y1 z1 xy yz xz. Qed.
 
+Record Tframe := mkTFrame {
+  torig : point ;
+  tframei : vector ;
+  tframej : vector ;
+  tframek : vector ;
+  tframeP :> tframe torig tframei tframej tframek }.
+
 End orthonormal_frame.
 
 Section canonical_frame.
