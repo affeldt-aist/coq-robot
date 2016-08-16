@@ -651,21 +651,22 @@ Variables l1 l2 : R.
 Variable a : angle R.
 Hypothesis a0 : a != 0.
 
-Definition RAB := col_mx3
+Definition RAB := Rz a
+(*col_mx3
   (row3 (cos a) (- sin a) 0)
   (row3 (sin a) (cos a) 0)
-  'e_2%:R.
+  'e_2%:R*).
 
-Definition TAB := row3 (- l2 * sin a) (-l1 - l2 * cos a) 0.
+Definition TAB := row3 (- l2 * sin a) (l1 + l2 * cos a) 0.
 Definition gab := hom RAB TAB.
 
 Definition w : vector := 'e_2%:R.
 
-Let A_inv := etwist_is_onto_SE_mat_inv a w.
+Let A_inv := etwist_is_onto_SE_mat_inv (- a) w.
 
 Definition v := ((norm w)^+2 *: TAB) *m A_inv.
 
-Lemma vP : v = row3 ((l1 - l2) / 2%:R) ((- l1 - l2) * sin a / (2%:R * (1 - cos a))) 0 :> vector. 
+Lemma vP : v = row3 ((l2 - l1) / 2%:R) ((- l1 - l2) * sin a / (2%:R * (1 - cos a))) 0 :> vector. 
 Proof.
 rewrite /v normeE expr1n scale1r /TAB.
 rewrite /A_inv /etwist_is_onto_SE_mat_inv.
@@ -678,43 +679,32 @@ rewrite (skew_mxE (row3 _ _ _)) crossmulE !mxE /=. Simp.r.
 rewrite -scalemxAl skew_mxE crossmulE !mxE /=. Simp.r.
 rewrite row3Z mulr0 row3D addr0.
 case/boolP : (a == pi) => [/eqP ->|api].
-  rewrite cot_half_angle sinpi cospi !(mulr0,addr0,subr0,oppr0,add0r,mul0r,mulrN1).
-  rewrite opprK.
+  rewrite cot_half_angle cosN sinN sinpi cospi !(mulr0,addr0,subr0,oppr0,add0r,mul0r,mulrN1).
   rewrite mulrN subrr.
   rewrite -mulrN opprD opprK.
-  by rewrite mulrC.
+  by rewrite mulrC addrC.
 congr row3.
   rewrite mulrCA mulrBl -(mulrA 2%:R^-1 _ (sin a)) cot_half_angle'.
+  rewrite cosN sinN invrN mulrN mulNr mulrN opprK.
   rewrite -(mulrA (1 + cos a)) mulVr ?mulr1; last first.
     rewrite unitfE; apply: contra a0 => /eqP/sin0_inv[-> //|/eqP].
     by rewrite (negbTE api).
-  rewrite mulrBr addrCA !addrA mulrCA mulrA subrr add0r.
-  rewrite 3!mulrDr mulr1 2!opprD.
-  rewrite addrCA.
-  rewrite mulrN opprK mulrN opprK.
-  rewrite mulrCA addrK.
-  by rewrite (mulrC _ l1) addrC -mulrBl.
-rewrite opprB opprK -(opprD l1 (l2 * _)) mulrN.
-rewrite mulrBl addrCA !addrA (addrC _ l1) subrr add0r.
-rewrite -mulrA -mulrN -(mulrA _ (cot _)) -mulrBr.
-rewrite -mulf_div -[in RHS]mulrA -[in RHS]mulrCA; congr (_ * _).
-rewrite -cot_half_angle mulrDr opprD.
-rewrite [in RHS]mulrDl addrCA (mulrC _ l1).
-rewrite -(mulNr l1); congr (_ + _).
-rewrite mulrCA.
-rewrite -mulrN. 
-rewrite -mulrBr.
-rewrite [in RHS]mulNr -mulrN.
-congr (_ * _).
-rewrite cot_half_angle'.
-rewrite mulrAC.
-rewrite -mulNr.
-rewrite (mulrDl 1 (cos a) (cos a)) mul1r -expr2.
-rewrite cos2sin2 addrA.
-rewrite mulNr mulrBl opprD opprK addrCA expr2 -mulrA divrr; last first.
-  rewrite unitfE; apply: contra a0 => /eqP/sin0_inv[-> //|/eqP].
-  by rewrite (negbTE api).
-by rewrite mulr1 (addrC (- sin a)) subrr addr0 addrC.
+  rewrite mulrDr addrCA !addrA mulrCA mulrA subrr add0r.
+  rewrite 3!mulrDr mulr1.
+  rewrite addrCA opprD mulrCA addrAC addrK.
+  by rewrite -mulrC -mulrBr mulrC.
+rewrite cot_half_angle sinN cosN mulNr -cot_half_angle.
+rewrite -mulf_div -cot_half_angle (mulrN 2%:R^-1) opprK.
+rewrite mulrN mulrDl opprD addrCA !addrA (addrC (- ( _ * _))) subrr add0r.
+rewrite mulrDr -[in RHS]mulrA mulrBl opprD addrCA (mulrC _ l1); congr (_ + _).
+  by rewrite mulNr.
+rewrite [in RHS]mulrCA -[in RHS]mulrN -2!mulrA -mulrN -mulrBr; congr (_ * _).
+rewrite mulrCA -mulrN -mulrBr -[in RHS]mulrN; congr (_ * _).
+rewrite cot_half_angle.
+rewrite mulrAC -{1}(mulr1 (sin a)) -{1}(@divrr _ (1 - cos a)); last first.
+  by rewrite unitfE subr_eq0; apply: contra a0 => /eqP/esym/cos1_angle0 ->.
+rewrite mulrA -mulNr -mulrBl -[in RHS]mulNr; congr (_ / _).
+by rewrite mulrBr mulr1 opprB addrAC subrr add0r.
 Qed.
 
 End example.

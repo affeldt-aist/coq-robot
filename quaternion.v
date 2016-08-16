@@ -246,7 +246,7 @@ apply/eqP; rewrite eq_quat //=; Simp.r.
 by rewrite {1}[a`1]vec3E -!scalerDr.
 Qed.
 
-Definition conjq (Q : quat) := mkQuat (Q`0) (- Q`1).
+Definition conjq (a : quat) := mkQuat (a`0) (- a`1).
 Notation "x '^*q'" := (conjq x) (at level 2, format "x '^*q'").
 
 Lemma conjqI a : (a^*q)^*q = a.
@@ -560,9 +560,9 @@ Definition pureq (q : quat) : bool := q`0 == 0.
 Lemma quat_rot_is_vector a v : pureq (quat_rot a v).
 Proof. by rewrite quat_rotE /pureq /=. Qed.
 
-Lemma quat_rot_is_linear q : linear (fun v => (quat_rot q v)`1).
+Lemma quat_rot_is_linear a : linear (fun v => (quat_rot a v)`1).
 Proof.
-move=> k a b.
+move=> k x y.
 rewrite !quat_rotE /= scalerDr scalerA (mulrC _ k) -scalerA.
 rewrite 2![in RHS]scalerDr -2![in LHS]addrA -3![in RHS]addrA; congr (_ + _).
 rewrite [in RHS]addrA [in RHS]addrCA -[in RHS]addrA; congr (_ + _).

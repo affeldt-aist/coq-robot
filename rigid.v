@@ -224,7 +224,7 @@ Module DIso.
 Section direct_isometry.
 Variable (R : rcfType).
 Record t := mk {
-  f : 'Iso[R]_3 ;
+  f :> 'Iso[R]_3 ;
   P : iso_sgn f == 1 }.
 End direct_isometry.
 End DIso.
@@ -420,26 +420,23 @@ Proof. move=> p u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P f)) scale1r
 Lemma preserves_crossmul_is_direct_iso p (u v : p.-vec) (f : 'Iso[R]_3) :
   ~~ colinear u v ->
   f`* (TVec p (u *v v)) = TVec (f p) ((f`* u) *v (f`* v)) :> vector ->
-  iso_sgn f == 1.
+  iso_sgn f = 1.
 Proof.
 move=> uv0.
 rewrite dmap_preserves_crossmul /iso_sgn => H.
-apply/eqP.
 move: (orthogonal_det (ortho_of_iso_is_O f)).
 case: (lerP 0 (\det (ortho_of_iso f))) => K; first by rewrite ger0_norm.
 rewrite ltr0_norm // => /eqP.
-rewrite eqr_oppLR => /eqP K1.
-rewrite K1 scaleN1r /= in H.
+rewrite eqr_oppLR => /eqP {K}K.
+rewrite K scaleN1r /= in H.
 move/esym/opp_self : H.
 move: (mulmxr_crossmulr (vtvec u) (vtvec v) (ortho_of_iso_is_O f)).
-rewrite K1 scaleN1r.
-move/esym/eqP.
+rewrite K scaleN1r => /esym/eqP.
 rewrite eqr_oppLR => /eqP -> /eqP.
 rewrite oppr_eq0 mul_mx_rowfree_eq0; last first.
   apply/row_freeP.
   exists (ortho_of_iso f)^T.
-  apply/eqP.
-  by rewrite -orthogonalE ortho_of_iso_is_O.
+  apply/eqP; by rewrite -orthogonalE ortho_of_iso_is_O.
 move: uv0.
 rewrite /colinear; by move/negbTE => ->.
 Qed.

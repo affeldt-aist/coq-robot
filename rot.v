@@ -226,14 +226,14 @@ Qed.
 
 (* TODO *)
 Definition Ry a := col_mx3
-  (row3 (cos a) 0 (sin a))
+  (row3 (cos a) 0 (- sin a))
   'e_1
-  (row3 (- sin a) 0 (cos a)).
+  (row3 (sin a) 0 (cos a)).
 
 (* TODO *)
 Definition Rz a := col_mx3
-  (row3 (cos a) (- sin a) 0)
-  (row3 (sin a) (cos a) 0)
+  (row3 (cos a) (sin a) 0)
+  (row3 (- sin a) (cos a) 0)
   'e_2%:R.
 
 CoInductive is_around_axis (u : 'rV[R]_3)
@@ -242,9 +242,9 @@ CoInductive is_around_axis (u : 'rV[R]_3)
   mkIsAroundAxis of
   f u = u &
   let: j := Frame.j u in let: k := Frame.k u in
-  f j = (cos a) *: j + (sin a) *: k &
+  f j = cos a *: j + sin a *: k &
   let: j := Frame.j u in let: k := Frame.k u in
-  f k = (-sin a) *: j + (cos a) *: k.
+  f k = - sin a *: j + cos a *: k.
 
 Section properties_of_is_around_axis.
 
@@ -786,10 +786,11 @@ Proof.
 move=> w1.
 Abort.*)
 
-Lemma Rz_eskew a : Rz a = `e^(a, 'e_2%:R).
+Lemma Rz_eskew a : Rz a = `e^(- a, 'e_2%:R).
 Proof.
 rewrite /Rz eskewE ?norm_delta_mx //.
-rewrite !mxE /= expr0n /=. Simp.r. by rewrite expr1n mul1r subrK -e2row.
+rewrite !mxE /= expr0n /= sinN cosN. Simp.r.
+by rewrite expr1n mul1r subrK -e2row.
 Qed.
 
 (* the w vector of e(phi,w) is an axis *)
