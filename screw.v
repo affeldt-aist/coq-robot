@@ -454,8 +454,8 @@ Axiom radian0 : forall a, (radian a == 0) = (a == 0).
    the exponential *)
 (* [springer] eqn 1.27, p. 17, closed expression for the exponential of a twist *)
 Definition etwist a (t : Twist.t R) :=
-  let u := ang_of_twist t in
-  hom_twist t (radian a) (`e^(a, u)).
+  let w := ang_of_twist t in
+  hom_twist t (radian a) (`e^(a, w)).
 
 Local Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'").
 

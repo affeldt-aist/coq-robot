@@ -878,64 +878,113 @@ Let vector := 'rV[R]_3.
 Definition line (p1 p2 : point) : pred point :=
   [pred p : point | colinear (p2 - p1) (p - p1)].
 
-(* skew = no intersection, not parallel = p1 p2 p3 p4 not coplanar *) 
-Definition skew (p1 p2 p3 p4 : point) : bool :=
-  (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) != 0.
+Definition coplanar (p1 p2 p3 p4 : point) : bool :=
+  (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
 
 Definition intersects (p1 p2 p3 p4 : point) :=
-  ~~ skew p1 p2 p3 p3 && ~~ colinear (p2 - p1) (p4 - p3).
+  coplanar p1 p2 p3 p3 && ~~ colinear (p2 - p1) (p4 - p3).
   
 End plucker.
-
-Section kinematic_chain.
-
-Variable R : rcfType.
-Let vector := 'rV[R]_3.
-
-Record joint := mkJoint {
-  offset : R ;
-  joint_angle : angle R }.
-
-Record link := mkLink {
-  length : R ;
-  link_angle : angle R }.
-
-Let frame := Tframe R.
-
-Variable n' : nat.
-Let n := n'.+1.
-(* Denavit and Hartenberg *)
-(* links: 0, 1, ..., n; at least two links: the manipulator base and the end-effector
-   n + 1 frames numbered F_1, F_2, ..., F_n+1 (F_1 attached to link 0)
-   n joints, zi = axis of joint i *)
-
-Record chain := mkChain {
-  links : {ffun 'I_n.+1 -> link} ;
-  frames : {ffun 'I_n.+1 -> frame} ;
-  joints : {ffun 'I_n -> joint}
-}.
-
-Definition joint_axis c (i : 'I_n) : vector :=
-  tframek (frames c (Ordinal (leq_trans (ltn_ord i) (leqnSn _)))).
 
 Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
 Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
  (A at next level, at level 8,
  format "u  _|_  A , B ").
 
-(* [angeles] p.141 *)
-Definition definition_x (c : chain) (i : 'I_n.+1) : bool :=
-  let frame_predi := frames c (Ordinal (leq_ltn_trans (leq_pred _) (ltn_ord i))) in
-  let frame_i := frames c i in
-  let: (o_predi, z_predi) := (torig frame_predi, tframek frame_predi) in
-  let: (o_i, z_i) := (torig frame_i, tframek frame_i)  in
-  let x_i := tframei frame_i in
+(* TODO: in progress, [angeles] p.141-142 *)
+Section open_chain.
+
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
+Let frame := Tframe R (* NB: positive frame with an origin *).
+
+Record joint := mkJoint {
+  joint_axis : vector ;
+  norm_joint_axis : norm joint_axis = 1 ;                  
+  joint_angle : angle R (*  *) }.
+
+Record link := mkLink {
+  link_length : R ; (* a_i = distance Zi <-> Zi.+1 (mutually perpendicular segment) *)
+  link_offset : R ; (* *)
+  link_twist : angle R (*  *) }.
+
+(* NB: link_offset, joint_angle, link_length, link_twist are called 
+   Denavit-Hartenberg parameters *)
+
+(* n + 1 links numberes 0,..., n (at least two links: the manipulator base and the end-effector)
+   n + 1 frames numbered F_1, F_2, ..., F_n+1 (F_i attached to link i-1)
+   n joints *)
+
+Variable n' : nat.
+Let n := n'.+1.
+
+(* Zi is the axis of the ith joint *)
+Definition Z_joint_axis (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
+  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _))(* NB: i < n.+1 *) in 
+  joint_axis (joints i) == tframek (frames i').
+
+Definition X_Z (frames : frame ^ n.+1) (i : 'I_n.+1) : bool :=
+  let predi := Ordinal (leq_ltn_trans (leq_pred _) (ltn_ord i)) (* NB: i-1 < n.+1 *) in 
+  let: (o_predi, z_predi) := let f := frames predi in (torig f, tframek f) in
+  let: (o_i, x_i, z_i) := let f := frames i in (torig f, tframei f, tframek f) in
   if intersects o_predi z_predi o_i z_i then
-    x_i == z_predi *v z_i
+    x_i == z_predi *v z_i (* special case *)
   else if colinear z_predi z_i then
-    o_predi \in line o_i (o_i + x_i)
+    o_predi \in line o_i (o_i + x_i) (* special case *)
   else
-    x_i _|_ z_predi, z_i.
+    x_i _|_ z_predi, z_i. (* common perpendicular to Zi-1 and Zi *)
+
+Axiom distance_between_lines : point -> vector -> point -> vector -> R.
+
+Definition link_length_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=
+  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
+  let: (o_i, z_i) := let f := frames i' in (torig f, tframek f) in 
+  let: (o_succi, z_succi) := let f := frames succi in (torig f, tframek f) in 
+  link_length (links i') = distance_between_lines o_i z_i o_succi z_succi.
+
+(* TODO *)
+Axiom intersection : point -> vector -> point -> vector -> point.
+
+Definition link_offset_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
+  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
+  let: (o_succi, x_succi) := let f := frames succi in (torig f, tframei f) in 
+  let: (o_i, x_i, z_i) := let f := frames i' in (torig f, tframei f, tframek f) in 
+  let: o'_i := intersection o_i z_i o_succi x_succi in
+  (norm (o'_i - o_i) == link_offset (links i')) &&
+  (`| link_offset (links i') | == distance_between_lines o_i x_i o_succi x_succi).
+
+(* TODO *)
+Axiom angle_between_lines : point -> vector -> point -> vector -> vector (*direction*) -> angle R.
+
+Definition link_twist_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
+  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
+  let: (o_succi, x_succi, z_succi) := let f := frames succi in (torig f, tframei f, tframek f) in 
+  let: (o_i, z_i) := let f := frames i' in (torig f, tframek f) in 
+  link_twist (links i') == angle_between_lines o_i z_i o_succi z_succi z_succi.
+
+Definition joint_angle_prop (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
+  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
+  let: (o_succi, x_succi) := let f := frames succi in (torig f, tframei f) in 
+  let: (o_i, x_i, z_i) := let f := frames i' in (torig f, tframei f, tframek f) in 
+  joint_angle (joints i) = angle_between_lines o_i x_i o_succi x_succi z_i.
+
+Record chain := mkChain {
+  links : {ffun 'I_n.+1 -> link} ;
+  frames : {ffun 'I_n.+1 -> frame} ;
+  joints : {ffun 'I_n -> joint} ;
+  (* the six conditions [angeles] p.141-142 *)
+  _ : forall i : 'I_n, Z_joint_axis joints frames i ;
+  _ : forall i : 'I_n.+1, X_Z frames i ;
+  _ : forall i : 'I_n, link_length_prop links frames i ;
+  _ : forall i : 'I_n, link_offset_prop links frames i ;
+  _ : forall i : 'I_n, link_twist_prop links frames i ;
+  _ : forall i : 'I_n, joint_angle_prop joints frames i }.
+(* this leaves the frame n.+1 indefined (?) *)
 
 (*Variable R : rcfType.
 Let frame := frame R.
@@ -964,7 +1013,7 @@ Definition common_normal_xz (i : 'I_n) :=
   (framej (frames i.-1)) _|_ (framek (frames i)), (framei (frames i.-1)).
  *)
 
-End kinematic_chain.
+End open_chain.
 
 (*
   option ('rV[R]_3 (* point *) * 'rV[R]_3 (* vec *) ).
