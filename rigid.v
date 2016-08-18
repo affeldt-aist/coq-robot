@@ -550,12 +550,26 @@ Section SE3_prop.
 
 Variable R : rcfType.
 
+Lemma rot_of_hom_hom r t : rot_of_hom (hom r t) = r :> 'M[R]_3.
+Proof. by rewrite /rot_of_hom /hom block_mxKul. Qed.
+
+Lemma rot_of_homN (M : 'M[R]_4) : rot_of_hom (- M) = - rot_of_hom M.
+Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
+
+Lemma tr_rot_of_hom (M : 'M[R]__) : (rot_of_hom M)^T = rot_of_hom M^T.
+Proof. by rewrite /rot_of_hom trmx_ulsub. Qed.
+
 Lemma rot_of_hom_SO (M : 'M[R]_4) : M \is 'SE3[R] ->
   rot_of_hom M \is 'SO[R]_3.
 Proof. by case/and3P. Qed.
 
-Lemma rot_of_hom_hom r t : rot_of_hom (hom r t) = r :> 'M[R]_3.
-Proof. by rewrite /rot_of_hom /hom block_mxKul. Qed.
+Definition trans_of_hom (M : 'M[R]_4) : 'rV[R]_3 := @dlsubmx _ 3 1 3 1 M.
+
+Lemma trans_of_hom_hom r t : trans_of_hom (hom r t) = t.
+Proof. by rewrite /trans_of_hom /hom block_mxKdl. Qed.
+
+Lemma det_hom (r : 'M[R]_3) t : \det (hom r t) = \det r.
+Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
 
 Lemma hom_is_SE r t : r \is 'SO[R]_3 -> hom r t \is 'SE3[R].
 Proof.
@@ -563,14 +577,6 @@ move=> Hr; apply/and3P; rewrite rot_of_hom_hom Hr; split => //.
 - by rewrite /hom block_mxKur.
 - by rewrite /hom block_mxKdr.
 Qed.
-
-Lemma rot_of_homN (M : 'M[R]_4) : rot_of_hom (- M) = - rot_of_hom M.
-Proof. apply/matrixP => i j; by rewrite !mxE. Qed.
-
-Definition trans_of_hom (M : 'M[R]_4) : 'rV[R]_3 := @dlsubmx _ 3 1 3 1 M.
-
-Lemma trans_of_hom_hom r t : trans_of_hom (hom r t) = t.
-Proof. by rewrite /trans_of_hom /hom block_mxKdl. Qed.
 
 Lemma SE3E T : T \is 'SE3[R] -> T = hom (rot_of_hom T) (trans_of_hom T).
 Proof.
@@ -588,9 +594,6 @@ apply/and3P; split.
   by case: i => -[] // [] // [].
 - by apply/eqP/rowP => i; rewrite {i}(ord1 i) !mxE -val_eqE.
 Qed.
-
-Lemma det_hom (r : 'M[R]_3) t : \det (hom r t) = \det r.
-Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
 
 Lemma SE3_is_unitmx (M : 'M[R]_4) : M \is 'SE3[R] -> M \in unitmx.
 Proof.

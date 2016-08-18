@@ -93,7 +93,7 @@ Fact se3_key : pred_key se3. Proof. by []. Qed.
 Canonical se3_keyed := KeyedQualifier se3_key.
 
 Lemma se3E (M : 'M[R]_4) :
-  (M \is se3) = (M == \T(@dlsubmx _ 3 1 3 1 M, unskew (@ulsubmx _ 3 1 3 1 M))).
+  (M \is se3) = (M == \T(lin_of_twist M, ang_of_twist M)).
 Proof.
 apply/idP/idP => [|/eqP ->].
   rewrite qualifE => /and3P[].
@@ -198,6 +198,14 @@ Qed.
 Lemma ecoef1 M : ecoef M 1 = M.
 Proof. by rewrite ecoefS ecoefM0 mulr1 invr1 scale1r. Qed.
 
+Lemma tr_ecoef M k : (ecoef M k)^T = ecoef M^T k.
+Proof.
+elim: k => [|k ih]; first by rewrite 2!ecoefM0 trmx1.
+rewrite ecoefS -mulmxE -scalemxAl linearZ /= trmx_mul ih ecoefS.
+rewrite -mulmxE -scalemxAl; congr (_ *: _).
+by rewrite /ecoef -scalemxAr -scalemxAl !mulmxE -exprSr -exprS.
+Qed.                                      
+
 Lemma ecoef_mulmulV M (g : 'M[R]_n.+1) i : g \in unitmx ->
   ecoef (g * M * g^-1) i = g * ecoef M i * g^-1.
 Proof. move=> Hg; by rewrite /ecoef expr_mulmulV // -scalerAr scalerAl. Qed.
@@ -224,6 +232,15 @@ Proof. by rewrite emxS emxM0 add0r ecoefM0. Qed.
 
 Lemma emx2 M : emx M 2 = 1 + M.
 Proof. by rewrite emxS emx1 ecoef1. Qed.
+
+Lemma tr_emx M k : (emx M k)^T = emx M^T k.
+Proof.
+rewrite /emx.
+have H : {morph @trmx R n.+1 n.+1 : x y / x + y >-> x + y}.
+  move=> x y; by rewrite linearD.
+rewrite (@big_morph _ _ _ 0 _ 0 _ H) ?trmx0 //; apply eq_bigr => i _.
+by rewrite tr_ecoef.
+Qed.
 
 Lemma emx_mulmulV M k (g : 'M[R]_n.+1) : g \in unitmx ->
   emx (g * M * g^-1) k = g * emx M k * g^-1.
@@ -632,16 +649,6 @@ End exponential_coordinates_rigid.
 
 Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'").
 
-(* TODO: move *)
-Lemma row3D (R : rcfType) (a b c a' b' c' : R) : 
-  row3 a b c + row3 a' b' c' = row3 (a + a') (b + b') (c + c').
-Proof.
-rewrite 3!row3_row_mx (add_row_mx a%:M) (add_row_mx b%:M).
-rewrite -(scalemx1 _ a) -(scalemx1 _ a') -(scalemx1 _ b) -(scalemx1 _ b').
-rewrite -(scalemx1 _ c) -(scalemx1 _ c').
-by do 3! rewrite -scalerDl scalemx1.
-Qed.
-
 Module Example.
 Section example.
 Variable R : rcfType.
@@ -651,14 +658,7 @@ Variables l1 l2 : R.
 Variable a : angle R.
 Hypothesis a0 : a != 0.
 
-Definition RAB := Rz a
-(*col_mx3
-  (row3 (cos a) (- sin a) 0)
-  (row3 (sin a) (cos a) 0)
-  'e_2%:R*).
-
 Definition TAB := row3 (- l2 * sin a) (l1 + l2 * cos a) 0.
-Definition gab := hom RAB TAB.
 
 Definition w : vector := 'e_2%:R.
 

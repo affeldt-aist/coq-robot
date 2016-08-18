@@ -152,56 +152,15 @@ rewrite ifnot01 => /eqP ->.
 case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
 Qed.
 
-Definition row3 (R : ringType) (a b c : R) : 'rV[R]_3 :=
+Section row3.
+
+Variable R : ringType.
+Implicit Types a b c : R.
+
+Definition row3 a b c : 'rV[R]_3 :=
   \row_p [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
 
-Lemma e0row (R : ringType) : ('e_0 : 'rV[R]_3) = row3 1 0 0.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => // _.
-case: ifPn => //; by case: ifPn.
-Qed.
-
-Lemma e1row (R : ringType) : ('e_1 : 'rV[R]_3) = row3 0 1 0.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
-by case: ifPn => // _; case: ifPn.
-Qed.
-
-Lemma e2row (R : ringType) : ('e_2%:R : 'rV[R]_3) = row3 0 0 1.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
-by case: ifPn => [/eqP -> //| _]; case: ifPn.
-Qed.
-
-Lemma row3N (R : ringType) (a b c : R) : - row3 a b c = row3 (- a) (- b) (- c).
-Proof.
-apply/rowP => i; rewrite !mxE /= ; case: ifPn; rewrite ?opprB // => ?.
-by case: ifPn; rewrite ?opprB // => ?; case: ifPn; rewrite ?opprB // oppr0.
-Qed.
-
-Lemma row3Z (R : ringType) (a b c : R) k : k *: row3 a b c = row3 (k * a) (k * b) (k * c).
-Proof.
-apply/rowP => i; rewrite !mxE /=.
-case: ifPn => // ?; case: ifPn => // ?; case: ifPn => // ?; by Simp.r.
-Qed.
-
-Lemma row30 (R : ringType) : row3 0 0 0 = 0 :> 'rV[R]_3.
-Proof. by apply/rowP => a; rewrite !mxE /=; do 3 case: ifPn => //. Qed.
-
-Lemma row3E (R : ringType) (u : 'rV[R]_3) :
-  u = row3 (u``_0) 0 0 + row3 0 (u``_1) 0 + row3 0 0 (u``_2%:R).
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP ->|]; first by Simp.r.
-rewrite ifnot0 => /orP [] /eqP -> /=; by Simp.r.
-Qed.
-
-Lemma vec3E (R : ringType) (u : 'rV[R]_3) :
-  u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
-Proof.
-by apply/rowP => - [[|[|[|?]]] ?] //; rewrite !mxE /=; Simp.r; Simp.ord.
-Qed.
-
-Lemma row3_row_mx (R : ringType) (a b c : R) : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
+Lemma row3_row_mx a b c : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
 Proof.
 rewrite (row_mx_col (row3 a b c)) (_ : col _ _ = a%:M); last first.
   by apply/rowP => i; rewrite (ord1 i) !mxE /= mulr1n.
@@ -209,6 +168,63 @@ rewrite (_ : col _ _ = b%:M); last first.
   by apply/rowP => i; rewrite (ord1 i) !mxE /= mulr1n.
 rewrite (_ : col _ _ = c%:M) //.
 by apply/rowP => i; rewrite (ord1 i) !mxE /= mulr1n.
+Qed.
+
+Lemma row3N a b c : - row3 a b c = row3 (- a) (- b) (- c).
+Proof.
+apply/rowP => i; rewrite !mxE /= ; case: ifPn; rewrite ?opprB // => ?.
+by case: ifPn; rewrite ?opprB // => ?; case: ifPn; rewrite ?opprB // oppr0.
+Qed.
+
+Lemma row3Z a b c k : k *: row3 a b c = row3 (k * a) (k * b) (k * c).
+Proof.
+apply/rowP => i; rewrite !mxE /=.
+case: ifPn => // ?; case: ifPn => // ?; case: ifPn => // ?; by Simp.r.
+Qed.
+
+Lemma row3D a b c a' b' c' : 
+  row3 a b c + row3 a' b' c' = row3 (a + a') (b + b') (c + c').
+Proof.
+rewrite 3!row3_row_mx (add_row_mx a%:M) (add_row_mx b%:M).
+rewrite -(scalemx1 _ a) -(scalemx1 _ a') -(scalemx1 _ b) -(scalemx1 _ b').
+rewrite -(scalemx1 _ c) -(scalemx1 _ c').
+by do 3! rewrite -scalerDl scalemx1.
+Qed.
+
+Lemma row30 : row3 0 0 0 = 0 :> 'rV[R]_3.
+Proof. by apply/rowP => a; rewrite !mxE /=; do 3 case: ifPn => //. Qed.
+
+Lemma row3E (u : 'rV[R]_3) :
+  u = row3 (u``_0) 0 0 + row3 0 (u``_1) 0 + row3 0 0 (u``_2%:R).
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP ->|]; first by Simp.r.
+rewrite ifnot0 => /orP [] /eqP -> /=; by Simp.r.
+Qed.
+
+Lemma e0row : ('e_0 : 'rV[R]_3) = row3 1 0 0.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => // _.
+case: ifPn => //; by case: ifPn.
+Qed.
+
+Lemma e1row : ('e_1 : 'rV[R]_3) = row3 0 1 0.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
+by case: ifPn => // _; case: ifPn.
+Qed.
+
+Lemma e2row : ('e_2%:R : 'rV[R]_3) = row3 0 0 1.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
+by case: ifPn => [/eqP -> //| _]; case: ifPn.
+Qed.
+
+End row3.
+
+Lemma vec3E (R : ringType) (u : 'rV[R]_3) :
+  u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
+Proof.
+by apply/rowP => - [[|[|[|?]]] ?] //; rewrite !mxE /=; Simp.r; Simp.ord.
 Qed.
 
 Lemma matrix3P (T : Type) (A B : 'M[T]_3) :
@@ -1219,6 +1235,7 @@ by rewrite ni expr1n scale1r dotmulvv nj expr1n.
 Qed.
 
 Section tmp.
+
 Variable R : rcfType.
 
 Lemma coorE (p : 'rV[R]_3) i : p``_i = p *d 'e_i.
