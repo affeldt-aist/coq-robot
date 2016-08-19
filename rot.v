@@ -351,7 +351,7 @@ Proof.
 move=> Hf H.
 case: H => [/= H1 H2 H3].
 have K1 : normalize u *m M = normalize u by rewrite /normalize -scalemxAl H1.
-move: (@basis_change _ M (noframe_of_frame (Base.frame u0)) (Rx (- a))).
+move: (@basis_change _ M (Base.frame u0) (Rx (- a))).
 rewrite !mxE /= K1 !scale0r 2!add0r !addr0 -H2 -H3 scale1r => /(_ erefl erefl erefl).
 move=> fRx.
 have HfRx : M^-1 = (col_mx3 (normalize u) (Base.j u) (Base.k u))^T *m
@@ -451,7 +451,7 @@ have H1 : normalcomp (p *m Q) u = cos phi *: normalcomp p u - sin phi *: (p *v u
   rewrite -{1}(opprK (sin phi)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
   rewrite -double_crossmul.
   (* TODO: shouldn't be using Base1... *)
-  move: (jcrossk (Base1.frame e1)).
+  move: (Frame.jcrossk (Base1.frame e1)).
   rewrite /Base.j /Base.k /Base.i (normalizeI e1) => ->.
   rewrite {2}(decomp p u) [in RHS]crossmulC linearD /=.
   by rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
@@ -529,7 +529,7 @@ rewrite !mxE /= !(addr0,add0r,scale0r,scale1r) -/i -/j -/k.
 rewrite -ab iMi -cd => /(_ erefl erefl erefl) => HM.
 move: (rotation_det MSO).
 rewrite HM 2!det_mulmx det_Rx' detV -crossmul_triple.
-move: (frameP f); rewrite /frame_sgn -/j -/k => -> /eqP.
+move: (Frame.P f); rewrite /frame_sgn -/j -/k => -> /eqP.
 by rewrite invr1 mulr1 mul1r -subr_eq0 -opprD eqr_oppLR oppr0 -(natrD _ 1 1) pnatr_eq0.
 Qed.
 
@@ -861,14 +861,13 @@ split => /=.
   move: (NOFrame.idotj f) => /=.
   rewrite {1 2}/Base.i {1}(normalizeI w1) => ->.
   rewrite mulr0 scale0r addr0 crossmulC.
-  move: (icrossj f) => /=.
-  rewrite -/(Base.k w) => ->.
+  rewrite (Base.icrossj (norm1_neq0 w1)).
   by rewrite {1}/Base.i {1}normalizeI // crossmulC opprK.
 - rewrite -rodriguesP // /rodrigues dotmulC.
   move: (NOFrame.idotk f) => /=.
   rewrite {1}/Base.i {1}(normalizeI w1) => ->.
   rewrite mulr0 scale0r addr0.
-  move: (proj1 (noframe_posP (noframe_pos_crossmul (frameP f)))) => /esym.
+  move: (proj1 (noframe_posP (noframe_pos_crossmul (Frame.P f)))) => /esym.
   rewrite /= -/(Base.k w).
   rewrite {1}/Base.i {1}(normalizeI w1) [in X in _ -> X]crossmulC => ->.
   by rewrite scalerN addrC scaleNr.

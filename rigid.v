@@ -96,6 +96,7 @@ Section central_isometry_3.
 
 Variable R : rcfType.
 
+(* TODO: clean *)
 Definition frame_central_iso (f : 'CIso[R]_3) (p : NOFrame.t R) : NOFrame.t R.
 move: (central_isometry_preserves_norm f (NOFrame.i p)) => ni.
 move: (central_isometry_preserves_norm f (NOFrame.j p)) => nj.
@@ -254,9 +255,9 @@ Definition vtvec p (v : tvec p) := let: TVec v := v in v.
 
 Local Notation "p .-vec" := (tvec p) (at level 5).
 
-Definition tframe_i p (f : tframe p) : p.-vec := TVec p (NOFrame.i f).
-Definition tframe_j p (f : tframe p) : p.-vec := TVec p (NOFrame.j f).
-Definition tframe_k p (f : tframe p) : p.-vec := TVec p (NOFrame.k f).
+Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := TVec _ (Frame.i f).
+Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := TVec _ (Frame.j f).
+Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := TVec _ (Frame.k f).
 
 End tangent_vectors_and_frames.
 
@@ -285,15 +286,15 @@ move=> u v; rewrite /dmap /= -(mulmxBl (vtvec u) (vtvec v) (ortho_of_iso f)).
 by rewrite orth_preserves_norm // ortho_of_iso_is_O.
 Qed.
 
-Lemma dmap_iso_sgnP p (tf : tframe p) (f : 'Iso[R]_3) :
-  let e1 := NOFrame.i tf in
-  let e2 := NOFrame.j tf in
-  let e3 := NOFrame.k tf in
+Lemma dmap_iso_sgnP (tf : TFrame.t R) (f : 'Iso[R]_3) :
+  let e1 := Frame.i tf in
+  let e2 := Frame.j tf in
+  let e3 := Frame.k tf in
+  let p := TFrame.o tf in
   f`* (TVec p e1) *d (f `* (TVec p e2) *v f`* (TVec p e3)) =
   iso_sgn f * (e1 *d (e2 *v e3)).
 Proof.
-move=> e1 e2 e3.
-(*case: tf => fo.*)
+move=> e1 e2 e3 p.
 move: (orthogonal_expansion (can_noframe R) e1).
 set a11 := _ *d 'e_0. set a12 := _ *d 'e_1. set a13 := _ *d 'e_2%:R => He1.
 move: (orthogonal_expansion (can_noframe R) e2).
@@ -321,11 +322,11 @@ Lemma dmap_preserves_crossmul p (u v : p.-vec) (f : 'Iso[R]_3) :
   f`* (TVec p (u *v v)) =
     iso_sgn f *: vtvec (TVec (f p) ((f`* u) *v (f`* v))) :> vector.
 Proof.
-set tf : tframe _ := tframe_trans (TFrame 0 (can_frame R)) p.
+set tf : TFrame.t _ := TFrame.trans (TFrame.mk 0 (can_frame R)) p.
 set u1p := tframe_i tf. set u2p := tframe_j tf. set u3p := tframe_k tf.
-move: (orthogonal_expansion (tf) u).
+move: (orthogonal_expansion tf u).
 set u1 := _ *d 'e_0. set u2 := _ *d 'e_1. set u3 := _ *d 'e_2%:R => Hu.
-move: (orthogonal_expansion (tf) v).
+move: (orthogonal_expansion tf v).
 set v1 := _ *d 'e_0. set v2 := _ *d 'e_1. set v3 := _ *d 'e_2%:R => Hv.
 set e1 := f`* (TVec p u1p). set e2 := f`* (TVec p u2p). set e3 := f`* (TVec p u3p).
 have Ku : f`* u = u1 *: vtvec e1 + u2 *: vtvec e2 + u3 *: vtvec e3 :> vector.
@@ -345,7 +346,7 @@ have @f' : NOFrame.t R.
   by rewrite (NOFrame.idotk (can_noframe R)).
 have -> : iso_sgn f = frame_sgn f'.
   rewrite /frame_sgn dmap_iso_sgnP /=.
-  by rewrite (jcrossk (can_frame _)) dotmulvv norm_delta_mx expr1n mulr1.
+  by rewrite (Frame.jcrossk (can_frame _)) dotmulvv norm_delta_mx expr1n mulr1.
 have : vtvec (TVec (f p) ((f`* u) *v (f`* v))) =
          frame_sgn f' *: vtvec (f`* (TVec p (u *v v))) :> vector.
   rewrite /=.
@@ -368,9 +369,9 @@ have : vtvec (TVec (f p) ((f`* u) *v (f`* v))) =
   rewrite [in RHS]/=.
   rewrite (_ : 'e_0 *v (u1 *: _) = 0); last by rewrite linearZ /= crossmulvv scaler0.
   rewrite (_ : 'e_0 *v (u2 *: _) = u2 *: 'e_2%:R); last first.
-    by rewrite linearZ /= -(icrossj (can_frame _)).
+    by rewrite linearZ /= -(Frame.icrossj (can_frame _)).
   rewrite (_ : 'e_0 *v (u3 *: _) = - u3 *: 'e_1); last first.
-    by rewrite linearZ /= (icrossk (can_frame _)) scalerN scaleNr.
+    by rewrite linearZ /= (Frame.icrossk (can_frame _)) scalerN scaleNr.
   rewrite add0r.
   rewrite mulNmx -[in RHS]scalemxAl [in RHS]mulmxDl.
   rewrite -![in RHS]scalemxAl.
@@ -383,11 +384,11 @@ have : vtvec (TVec (f p) ((f`* u) *v (f`* v))) =
   rewrite [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
   rewrite scaleNr scalerN opprK.
   rewrite (_ : _ *v _ = - u1 *: 'e_2%:R); last first.
-    by rewrite linearZ /= crossmulC -(icrossj (can_frame _)) scalerN scaleNr.
+    by rewrite linearZ /= crossmulC -(Frame.icrossj (can_frame _)) scalerN scaleNr.
   rewrite (_ : _ *v _ = 0); last first.
     by rewrite linearZ /= crossmulvv scaler0.
   rewrite addr0.
-  rewrite (_ : _ *v _ = u3 *: 'e_0); last by rewrite linearZ /= (jcrossk (can_frame _)).
+  rewrite (_ : _ *v _ = u3 *: 'e_0); last by rewrite linearZ /= (Frame.jcrossk (can_frame _)).
   rewrite scaleNr opprK mulmxBl.
   rewrite -![in RHS]scalemxAl.
   have -> : 'e_0 *m ortho_of_iso f = vtvec e1 by done.
@@ -398,9 +399,9 @@ have : vtvec (TVec (f p) ((f`* u) *v (f`* v))) =
   rewrite [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
   rewrite opprD.
   rewrite (_ : _ *v _ = u1 *: 'e_1); last first.
-    by rewrite linearZ /= crossmulC (icrossk (can_frame _)) opprK.
+    by rewrite linearZ /= crossmulC (Frame.icrossk (can_frame _)) opprK.
   rewrite (_ : _ *v _ = - u2 *: 'e_0); last first.
-    by rewrite linearZ /= crossmulC (jcrossk (can_frame _)) scalerN scaleNr.
+    by rewrite linearZ /= crossmulC (Frame.jcrossk (can_frame _)) scalerN scaleNr.
   rewrite (_ : _ *v _ = 0); last first.
     by rewrite linearZ /= crossmulvv scaler0.
   rewrite subr0 scaleNr opprK mulmxDl mulNmx.
@@ -725,7 +726,6 @@ case: T => t r rSO /=; apply/and3P; split.
 - by rewrite /hom block_mxKdr.
 Qed.
 
-(* NB: not used *)
 Definition inv (T : t) := hom (rot T)^T (- trans T *m (rot T)^T).
 
 Lemma invV (T : t) : T *m inv T = 1.
@@ -847,10 +847,6 @@ Lemma SE_preserves_length (T : SE.t R) :
   {mono (SE.ap_point T) : a b / norm (a - b)}.
 Proof. move=> m0 m1; by rewrite SE.ap_pointB SE.ap_vector_preserves_norm. Qed.
 
-(*Lemma SE_preserves_length (T : SE.t R) :
-  f =1 SE.ap_point T -> {mono f : a b / norm (a - b)}.
-Proof. move=> fT m0 m1; by rewrite 2!fT SE.ap_pointB SE.ap_vector_preserves_norm. Qed.*)
-
 Lemma ortho_of_isoE (T : SE.t R) :
   ortho_of_iso (Iso.mk (SE_preserves_length T)) = SE.rot T.
 Proof.
@@ -892,19 +888,20 @@ Definition coplanar (p1 p2 p3 p4 : point) : bool :=
 
 Inductive line := mkLine of point & point.
 
+Definition line_point (l : line) : point := let: mkLine p1 _ := l in p1.
+Definition line_vector (l : line) : vector := let: mkLine p1 p2 := l in p2 - p1.
+
 Definition mkDline (p : point) (u : vector) : line := mkLine p (p + u).
 
 (* equation of a line passing through two points p1 p2 *)
-Definition line_pred (p1 p2 : point) : pred point :=
+Definition line_pred (l : line) : pred point :=
+  let: mkLine p1 p2 := l in
   [pred p : point | colinear (p2 - p1) (p - p1)].
 
-Coercion line_coercion (l : line) :=
-  let: mkLine p1 p2 := l in line_pred p1 p2.
+Coercion line_coercion (l : line) := line_pred l.
   
 Definition parallel : rel line := [rel l1 l2 |
-  let: mkLine p1 p2 := l1 in
-  let: mkLine p3 p4 := l2 in
-  colinear (p2 - p1) (p4 - p3)].
+  colinear (line_vector l1) (line_vector l2)].
 
 Definition skew : rel line := [rel l1 l2 | 
   let: mkLine p1 p2 := l1 in
@@ -913,7 +910,19 @@ Definition skew : rel line := [rel l1 l2 |
   
 Definition intersects : rel line :=
   [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
-  
+
+Definition distance_between_point_and_line (p : point) (l : line) : R :=
+  norm ((p - line_point l) *v (line_vector l)) / norm (line_vector l).
+
+Definition distance_between_lines (l1 l2 : line) : R :=
+  if intersects l1 l2 then
+    0
+  else if parallel l1 l2 then
+    distance_between_point_and_line (line_point l1) l2
+  else (* skew lines *)               
+    let n := line_vector l1 *v line_vector l2 in                        
+    `| (line_point l2 - line_point l1) *d n | / norm n.
+
 End plucker.
 
 Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
@@ -921,18 +930,26 @@ Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
  (A at next level, at level 8,
  format "u  _|_  A , B ").
 
+Section TFrame_properties.
+
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
+Let frame := TFrame.t R.
+
+Definition xaxis (f : frame) := mkDline (TFrame.o f) (Frame.i f).
+Definition yaxis (f : frame) := mkDline (TFrame.o f) (Frame.j f).
+Definition zaxis (f : frame) := mkDline (TFrame.o f) (Frame.k f).
+
+End TFrame_properties.
+
 (* TODO: in progress, [angeles] p.141-142 *)
 Section open_chain.
 
 Variable R : rcfType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
-Variable origin : point.
-Let frame := tframe origin (* NB: positive frame with an origin *).
-
-Definition linei (f : frame) : line R := mkDline origin (NOFrame.i f).
-Definition linej (f : frame) : line R := mkDline origin (NOFrame.j f).
-Definition linek (f : frame) : line R := mkDline origin (NOFrame.k f).
+Let frame := TFrame.t R.
 
 Record joint := mkJoint {
   joint_axis : vector ;
@@ -942,7 +959,7 @@ Record joint := mkJoint {
 Record link := mkLink {
   link_length : R ; (* a_i = distance Zi <-> Zi.+1 (mutually perpendicular segment) *)
   link_offset : R ; (* *)
-  link_twist : angle R (*  *) }.
+  link_twist : angle R (* or twist angle *) }.
 
 (* NB: link_offset, joint_angle, link_length, link_twist are called 
    Denavit-Hartenberg parameters *)
@@ -954,62 +971,61 @@ Record link := mkLink {
 Variable n' : nat.
 Let n := n'.+1.
 
-Axiom i : 'I_n.
-Check (widen_ord (leqnSn _) i).
-
 (* Zi is the axis of the ith joint *)
 Definition Z_joint_axis (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in 
-  joint_axis (joints i) == NOFrame.k (frames i').
+  joint_axis (joints i) == Frame.k (frames i') (* TODO: should not impose the same direction *).
 
+(* Xi is the common perpendicular to Zi-1 and Zi *)
 Definition X_Z (frames : frame ^ n.+1) (i : 'I_n.+1) : bool :=
   let predi := Ordinal (leq_ltn_trans (leq_pred _) (ltn_ord i)) (* NB: i-1 < n.+1 *) in 
-  let: (o_predi, z_predi) := let f := frames predi in (origin (*TODOtorig f*), NOFrame.k f) in
-  let: (o_i, x_i, z_i) := let f := frames i in (origin(*TODOtorig f*), NOFrame.i f, NOFrame.k f) in
-  if intersects (linek (frames predi)) (linek (frames i)) then
+  let: (o_predi, z_predi) := let f := frames predi in (TFrame.o f, Frame.k f) in
+  let: (o_i, x_i, z_i) := let f := frames i in (TFrame.o f, Frame.i f, Frame.k f) in
+  if intersects (zaxis (frames predi)) (zaxis (frames i)) then
     x_i == z_predi *v z_i (* special case *)
   else if colinear z_predi z_i then
-    o_predi \in line_coercion (linei (frames i)) (* special case *)
+    o_predi \in (xaxis (frames i) : pred _) (* special case *)
   else
-    x_i _|_ z_predi, z_i. (* common perpendicular to Zi-1 and Zi *)
-
-Axiom distance_between_lines : point -> vector -> point -> vector -> R.
+    x_i _|_ z_predi, z_i. 
+  (* NB: xi is directed from zi-1 to zi *)
 
 Definition link_length_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_i, z_i) := let f := frames i' in (origin (*TODOtorig f*), NOFrame.k f) in 
-  let: (o_succi, z_succi) := let f := frames succi in (origin (*TODOtorig f*), NOFrame.k f) in 
-  link_length (links i') = distance_between_lines o_i z_i o_succi z_succi.
+  let: (o_i, z_i) := let f := frames i' in (TFrame.o f, Frame.k f) in 
+  let: (o_succi, z_succi) := let f := frames succi in (TFrame.o f, Frame.k f) in 
+  link_length (links i') = distance_between_lines (xaxis (frames i')) (zaxis (frames succi)).
 
 (* TODO *)
-Axiom intersection : point -> vector -> point -> vector -> point.
+Axiom intersection : line R -> line R -> option point.
 
 Definition link_offset_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
   let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi) := let f := frames succi in (origin (*TODOtorig f*), NOFrame.i f) in 
-  let: (o_i, x_i, z_i) := let f := frames i' in (origin (*torig f*), NOFrame.i f, NOFrame.k f) in 
-  let: o'_i := intersection o_i z_i o_succi x_succi in
-  (norm (o'_i - o_i) == link_offset (links i')) &&
-  (`| link_offset (links i') | == distance_between_lines o_i x_i o_succi x_succi).
+  let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, Frame.i f) in 
+  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, Frame.i f, Frame.k f) in 
+  if intersection (zaxis (frames i')) (xaxis (frames succi)) is some o'_i then
+    (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == link_offset (links i')) &&
+    (`| link_offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))
+  else
+    false (* should not happen *).
 
 (* TODO *)
-Axiom angle_between_lines : point -> vector -> point -> vector -> vector (*direction*) -> angle R.
+Axiom angle_between_lines : line R -> line R -> vector (*direction*) -> angle R.
 
 Definition link_twist_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
   let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi, z_succi) := let f := frames succi in (origin (*torig fTODO*), NOFrame.i f, NOFrame.k f) in 
-  let: (o_i, z_i) := let f := frames i' in (origin (*torig f*), NOFrame.k f) in 
-  link_twist (links i') == angle_between_lines o_i z_i o_succi z_succi z_succi.
+  let: (o_succi, x_succi, z_succi) := let f := frames succi in (TFrame.o f, Frame.i f, Frame.k f) in 
+  let: (o_i, z_i) := let f := frames i' in (TFrame.o f, Frame.k f) in 
+  link_twist (links i') == angle_between_lines (zaxis (frames i')) (zaxis (frames succi)) z_succi(*angle measured about the positive direction of Xi+1*).
 
 Definition joint_angle_prop (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi) := let f := frames succi in (origin (*torig f TODO*), NOFrame.i f) in 
-  let: (o_i, x_i, z_i) := let f := frames i' in (origin (*torig f*), NOFrame.i f, NOFrame.i f) in 
-  joint_angle (joints i) = angle_between_lines o_i x_i o_succi x_succi z_i.
+  let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, Frame.i f) in 
+  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, Frame.i f, Frame.i f) in 
+  joint_angle (joints i) = angle_between_lines (xaxis (frames i')) (xaxis (frames succi)) z_i(*angle measured about the positive direction of Zi*).
 
 Record chain := mkChain {
   links : {ffun 'I_n.+1 -> link} ;
@@ -1022,7 +1038,7 @@ Record chain := mkChain {
   _ : forall i : 'I_n, link_offset_prop links frames i ;
   _ : forall i : 'I_n, link_twist_prop links frames i ;
   _ : forall i : 'I_n, joint_angle_prop joints frames i }.
-(* this leaves the frame n.+1 indefined (?) *)
+(* this leaves the n.+1th frame undefined *)
 
 (*Variable R : rcfType.
 Let frame := frame R.
@@ -1054,9 +1070,6 @@ Definition common_normal_xz (i : 'I_n) :=
 End open_chain.
 
 (*
-  option ('rV[R]_3 (* point *) * 'rV[R]_3 (* vec *) ).
-Admitted.
-
 Definition intersection (o o' : 'rV[R]_3) (v v' : 'rV[R]_3) : option 'rV[R]_3.
 Admitted.
 
