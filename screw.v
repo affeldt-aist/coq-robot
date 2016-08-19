@@ -955,10 +955,11 @@ Definition d0 := displacement f 0 *d w.
 Lemma d0_is_a_lb_of_a_displacement p : d0 ^+ 2 <= norm (displacement f p) ^+ 2.
 Proof.
 rewrite /d0 (displacement_proj 0 p).
-move: (Frame.pframe (norm1_neq0 w1)) => F.
+set F := Base.frame (norm1_neq0 w1).
 have -> : norm (displacement f p) =
-          norm (displacement f p *m (col_mx3 (normalize w) (Frame.j w) (Frame.k w))^T).
-  rewrite orth_preserves_norm // orthogonalV rotation_sub //; exact: (pframe_is_rot F).
+          norm (displacement f p *m (col_mx3 (normalize w) (Base.j w) (Base.k w))^T).
+rewrite orth_preserves_norm // orthogonalV rotation_sub //.
+  exact: (pframe_is_rot F).
 rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
   by rewrite normalizeI.
 by rewrite addr_ge0 // sqr_ge0.

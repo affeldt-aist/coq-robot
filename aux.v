@@ -144,4 +144,3 @@ Proof. by simpc. Qed.
 Definition complexZ := (complexZ1, @complexZ2).
 
 End extra_complex.
-

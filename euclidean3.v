@@ -14,7 +14,7 @@ Require Import aux.
 
 (*
  OUTLINE:
- 1. section extra
+ 1. section SpecificsDim2And3
  2. section dot_product
  3. section triple_prod_mat (specialization of col_mx to row vectors of length 2, 3)
     section crossmul
@@ -1023,6 +1023,9 @@ Proof. by rewrite ger0_norm. Qed.
 
 Lemma norm_eq0 u : (norm u == 0) = (u == 0).
 Proof. by rewrite -sqrtr0 eqr_sqrt // ?dotmulvv0 // le0dotmul. Qed.
+
+Lemma norm1_neq0 u : norm u = 1 -> u != 0.
+Proof. rewrite -norm_eq0 => ->; exact: oner_neq0. Qed.
 
 Lemma normZ (k : R) u : norm (k *: u) = `|k| * norm u.
 Proof.

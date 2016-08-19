@@ -96,13 +96,21 @@ Section central_isometry_3.
 
 Variable R : rcfType.
 
-Lemma frame_central_iso (f : 'CIso[R]_3) i j k :
-  oframe i j k -> oframe (f i) (f j) (f k).
-Proof.
-case => *; apply mkOFrame; by
-  rewrite /= central_isometry_preserves_norm ||
-  rewrite /= central_isometry_preserves_dotmul.
-Qed.
+Definition frame_central_iso (f : 'CIso[R]_3) (p : NOFrame.t R) : NOFrame.t R.
+move: (central_isometry_preserves_norm f (NOFrame.i p)) => ni.
+move: (central_isometry_preserves_norm f (NOFrame.j p)) => nj.
+move: (central_isometry_preserves_norm f (NOFrame.k p)) => nk.
+move: (central_isometry_preserves_dotmul f (NOFrame.i p) (NOFrame.j p)) => ij.
+move: (central_isometry_preserves_dotmul f (NOFrame.j p) (NOFrame.k p)) => jk.
+move: (central_isometry_preserves_dotmul f (NOFrame.i p) (NOFrame.k p)) => ik.
+refine ((@NOFrame.mk _ (f (NOFrame.i p)) (f (NOFrame.j p))(f (NOFrame.k p)) _ _ _ _ _ _)).
+by rewrite ni NOFrame.normi.
+by rewrite nj NOFrame.normj.
+by rewrite nk NOFrame.normk.
+by rewrite ij NOFrame.idotj.
+by rewrite jk NOFrame.jdotk.
+by rewrite ik NOFrame.idotk.
+Defined.
 
 Lemma central_isometry_is_linear (f : 'CIso[R]_3) : linear f.
 Proof.
@@ -110,8 +118,7 @@ move=> k /= a b.
 have Hp : forall p, f p = p``_0 *: f 'e_0 + p``_1 *: f 'e_1 + p``_2%:R *: f 'e_2%:R.
   move=> p.
   have -> : f p = f p *d f 'e_0 *: f 'e_0 + f p *d f 'e_1 *: f 'e_1 + f p *d f 'e_2%:R *: f 'e_2%:R.
-    rewrite -orthogonal_expansion //.
-    apply frame_central_iso => //; exact: can_oframe.
+    exact: (orthogonal_expansion (frame_central_iso f (can_noframe R)) (f p)).
   by rewrite 3!central_isometry_preserves_dotmul // 3!coorE.
 rewrite Hp (Hp a) (Hp b) !mxE /= !(scalerDl, scalerDr).
 rewrite !scalerA -!addrA; congr (_ + _).
@@ -247,9 +254,9 @@ Definition vtvec p (v : tvec p) := let: TVec v := v in v.
 
 Local Notation "p .-vec" := (tvec p) (at level 5).
 
-Definition tframe_i p u1 u2 u3 (f : tframe p u1 u2 u3) : p.-vec := TVec p u1.
-Definition tframe_j p u1 u2 u3 (f : tframe p u1 u2 u3) : p.-vec := TVec p u2.
-Definition tframe_k p u1 u2 u3 (f : tframe p u1 u2 u3) : p.-vec := TVec p u3.
+Definition tframe_i p (f : tframe p) : p.-vec := TVec p (NOFrame.i f).
+Definition tframe_j p (f : tframe p) : p.-vec := TVec p (NOFrame.j f).
+Definition tframe_k p (f : tframe p) : p.-vec := TVec p (NOFrame.k f).
 
 End tangent_vectors_and_frames.
 
@@ -278,16 +285,20 @@ move=> u v; rewrite /dmap /= -(mulmxBl (vtvec u) (vtvec v) (ortho_of_iso f)).
 by rewrite orth_preserves_norm // ortho_of_iso_is_O.
 Qed.
 
-Lemma dmap_iso_sgnP p e1 e2 e3 (tf : tframe p e1 e2 e3) (f : 'Iso[R]_3) :
+Lemma dmap_iso_sgnP p (tf : tframe p) (f : 'Iso[R]_3) :
+  let e1 := NOFrame.i tf in
+  let e2 := NOFrame.j tf in
+  let e3 := NOFrame.k tf in
   f`* (TVec p e1) *d (f `* (TVec p e2) *v f`* (TVec p e3)) =
   iso_sgn f * (e1 *d (e2 *v e3)).
 Proof.
-case: tf => fo.
-move: (orthogonal_expansion e1 (can_oframe R)).
+move=> e1 e2 e3.
+(*case: tf => fo.*)
+move: (orthogonal_expansion (can_noframe R) e1).
 set a11 := _ *d 'e_0. set a12 := _ *d 'e_1. set a13 := _ *d 'e_2%:R => He1.
-move: (orthogonal_expansion e2 (can_oframe R)).
+move: (orthogonal_expansion (can_noframe R) e2).
 set a21 := _ *d 'e_0. set a22 := _ *d 'e_1. set a23 := _ *d 'e_2%:R => He2.
-move: (orthogonal_expansion e3 (can_oframe R)).
+move: (orthogonal_expansion (can_noframe R) e3).
 set a31 := _ *d 'e_0. set a32 := _ *d 'e_1. set a33 := _ *d 'e_2%:R => He3.
 have e1a : e1 = row3 a11 a12 a13.
   apply/rowP => i; rewrite !mxE /= coorE.
@@ -310,36 +321,35 @@ Lemma dmap_preserves_crossmul p (u v : p.-vec) (f : 'Iso[R]_3) :
   f`* (TVec p (u *v v)) =
     iso_sgn f *: vtvec (TVec (f p) ((f`* u) *v (f`* v))) :> vector.
 Proof.
-set tf : tframe _ _ _ _ := tframe_trans (TFrame 0 (can_oframe R)) p.
+set tf : tframe _ := tframe_trans (TFrame 0 (can_frame R)) p.
 set u1p := tframe_i tf. set u2p := tframe_j tf. set u3p := tframe_k tf.
-move: (orthogonal_expansion u (oframe_of_tframe tf)).
+move: (orthogonal_expansion (tf) u).
 set u1 := _ *d 'e_0. set u2 := _ *d 'e_1. set u3 := _ *d 'e_2%:R => Hu.
-move: (orthogonal_expansion v (oframe_of_tframe tf)).
+move: (orthogonal_expansion (tf) v).
 set v1 := _ *d 'e_0. set v2 := _ *d 'e_1. set v3 := _ *d 'e_2%:R => Hv.
 set e1 := f`* (TVec p u1p). set e2 := f`* (TVec p u2p). set e3 := f`* (TVec p u3p).
 have Ku : f`* u = u1 *: vtvec e1 + u2 *: vtvec e2 + u3 *: vtvec e3 :> vector.
   by rewrite /= Hu 2!mulmxDl !scalemxAl.
 have Kv : f`* v = v1 *: vtvec e1 + v2 *: vtvec e2 + v3 *: vtvec e3 :> vector.
   by rewrite /= Hv 2!mulmxDl !scalemxAl.
-have f' : oframe e1 e2 e3.
-  split => //.
+have @f' : NOFrame.t R.
+  apply (@NOFrame.mk _ e1 e2 e3).
   by rewrite orth_preserves_norm ?ortho_of_iso_is_O // norm_delta_mx.
   by rewrite orth_preserves_norm ?ortho_of_iso_is_O // norm_delta_mx.
   by rewrite orth_preserves_norm ?ortho_of_iso_is_O // norm_delta_mx.
   rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O //.
-  by case: (can_oframe R).
+  by rewrite (NOFrame.idotj (can_noframe R)).
   rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O //.
-  by case: (can_oframe R).
+  by rewrite (NOFrame.jdotk (can_noframe R)).
   rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O //.
-  by case: (can_oframe R).
+  by rewrite (NOFrame.idotk (can_noframe R)).
 have -> : iso_sgn f = frame_sgn f'.
   rewrite /frame_sgn dmap_iso_sgnP /=.
-    by rewrite (jcrossk (can_frame _)) dotmulvv norm_delta_mx expr1n mulr1.
-  by apply (TFrame _ (can_oframe R)).
+  by rewrite (jcrossk (can_frame _)) dotmulvv norm_delta_mx expr1n mulr1.
 have : vtvec (TVec (f p) ((f`* u) *v (f`* v))) =
          frame_sgn f' *: vtvec (f`* (TVec p (u *v v))) :> vector.
   rewrite /=.
-  rewrite (@crossmul_oframe_sgn _ e1 e2 e3 _ (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //.
+  rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //.
   rewrite /=.
   congr (_ *: _).
   have -> : 'e_0 *m ortho_of_iso f = vtvec e1 by done.
@@ -406,7 +416,7 @@ have : vtvec (TVec (f p) ((f`* u) *v (f`* v))) =
   rewrite -![in RHS]addrA [in RHS]addrCA [in RHS]addrC ![in RHS]addrA -addrA; congr (_ + _).
   by rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u2).
   by rewrite scalerN !scalerA -scalerBl -scaleNr opprB mulrC (mulrC u1).
-move=> ->; by rewrite scalerA -expr2 /iso_sgn -sqr_normr frame_sgn1 expr1n scale1r.
+move=> ->; by rewrite scalerA -expr2 /iso_sgn -sqr_normr noframe_sgn expr1n scale1r.
 Qed.
 
 Definition preserves_orientation (f : 'Iso[R]_3) :=
@@ -877,15 +887,32 @@ Variable R : rcfType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 
-(* equation of a line passing through two points p1 p2 *)
-Definition line (p1 p2 : point) : pred point :=
-  [pred p : point | colinear (p2 - p1) (p - p1)].
-
 Definition coplanar (p1 p2 p3 p4 : point) : bool :=
   (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
 
-Definition intersects (p1 p2 p3 p4 : point) :=
-  coplanar p1 p2 p3 p3 && ~~ colinear (p2 - p1) (p4 - p3).
+Inductive line := mkLine of point & point.
+
+Definition mkDline (p : point) (u : vector) : line := mkLine p (p + u).
+
+(* equation of a line passing through two points p1 p2 *)
+Definition line_pred (p1 p2 : point) : pred point :=
+  [pred p : point | colinear (p2 - p1) (p - p1)].
+
+Coercion line_coercion (l : line) :=
+  let: mkLine p1 p2 := l in line_pred p1 p2.
+  
+Definition parallel : rel line := [rel l1 l2 |
+  let: mkLine p1 p2 := l1 in
+  let: mkLine p3 p4 := l2 in
+  colinear (p2 - p1) (p4 - p3)].
+
+Definition skew : rel line := [rel l1 l2 | 
+  let: mkLine p1 p2 := l1 in
+  let: mkLine p3 p4 := l2 in
+  ~~ coplanar p1 p2 p3 p4].
+  
+Definition intersects : rel line :=
+  [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
   
 End plucker.
 
@@ -900,7 +927,12 @@ Section open_chain.
 Variable R : rcfType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
-Let frame := Tframe R (* NB: positive frame with an origin *).
+Variable origin : point.
+Let frame := tframe origin (* NB: positive frame with an origin *).
+
+Definition linei (f : frame) : line R := mkDline origin (NOFrame.i f).
+Definition linej (f : frame) : line R := mkDline origin (NOFrame.j f).
+Definition linek (f : frame) : line R := mkDline origin (NOFrame.k f).
 
 Record joint := mkJoint {
   joint_axis : vector ;
@@ -922,39 +954,42 @@ Record link := mkLink {
 Variable n' : nat.
 Let n := n'.+1.
 
+Axiom i : 'I_n.
+Check (widen_ord (leqnSn _) i).
+
 (* Zi is the axis of the ith joint *)
 Definition Z_joint_axis (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
-  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _))(* NB: i < n.+1 *) in 
-  joint_axis (joints i) == tframek (frames i').
+  let i' := widen_ord (leqnSn _) i in 
+  joint_axis (joints i) == NOFrame.k (frames i').
 
 Definition X_Z (frames : frame ^ n.+1) (i : 'I_n.+1) : bool :=
   let predi := Ordinal (leq_ltn_trans (leq_pred _) (ltn_ord i)) (* NB: i-1 < n.+1 *) in 
-  let: (o_predi, z_predi) := let f := frames predi in (torig f, tframek f) in
-  let: (o_i, x_i, z_i) := let f := frames i in (torig f, tframei f, tframek f) in
-  if intersects o_predi z_predi o_i z_i then
+  let: (o_predi, z_predi) := let f := frames predi in (origin (*TODOtorig f*), NOFrame.k f) in
+  let: (o_i, x_i, z_i) := let f := frames i in (origin(*TODOtorig f*), NOFrame.i f, NOFrame.k f) in
+  if intersects (linek (frames predi)) (linek (frames i)) then
     x_i == z_predi *v z_i (* special case *)
   else if colinear z_predi z_i then
-    o_predi \in line o_i (o_i + x_i) (* special case *)
+    o_predi \in line_coercion (linei (frames i)) (* special case *)
   else
     x_i _|_ z_predi, z_i. (* common perpendicular to Zi-1 and Zi *)
 
 Axiom distance_between_lines : point -> vector -> point -> vector -> R.
 
 Definition link_length_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=
-  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_i, z_i) := let f := frames i' in (torig f, tframek f) in 
-  let: (o_succi, z_succi) := let f := frames succi in (torig f, tframek f) in 
+  let: (o_i, z_i) := let f := frames i' in (origin (*TODOtorig f*), NOFrame.k f) in 
+  let: (o_succi, z_succi) := let f := frames succi in (origin (*TODOtorig f*), NOFrame.k f) in 
   link_length (links i') = distance_between_lines o_i z_i o_succi z_succi.
 
 (* TODO *)
 Axiom intersection : point -> vector -> point -> vector -> point.
 
 Definition link_offset_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
-  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi) := let f := frames succi in (torig f, tframei f) in 
-  let: (o_i, x_i, z_i) := let f := frames i' in (torig f, tframei f, tframek f) in 
+  let: (o_succi, x_succi) := let f := frames succi in (origin (*TODOtorig f*), NOFrame.i f) in 
+  let: (o_i, x_i, z_i) := let f := frames i' in (origin (*torig f*), NOFrame.i f, NOFrame.k f) in 
   let: o'_i := intersection o_i z_i o_succi x_succi in
   (norm (o'_i - o_i) == link_offset (links i')) &&
   (`| link_offset (links i') | == distance_between_lines o_i x_i o_succi x_succi).
@@ -963,17 +998,17 @@ Definition link_offset_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : '
 Axiom angle_between_lines : point -> vector -> point -> vector -> vector (*direction*) -> angle R.
 
 Definition link_twist_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
-  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi, z_succi) := let f := frames succi in (torig f, tframei f, tframek f) in 
-  let: (o_i, z_i) := let f := frames i' in (torig f, tframek f) in 
+  let: (o_succi, x_succi, z_succi) := let f := frames succi in (origin (*torig fTODO*), NOFrame.i f, NOFrame.k f) in 
+  let: (o_i, z_i) := let f := frames i' in (origin (*torig f*), NOFrame.k f) in 
   link_twist (links i') == angle_between_lines o_i z_i o_succi z_succi z_succi.
 
 Definition joint_angle_prop (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
-  let i' := Ordinal (leq_trans (ltn_ord i) (leqnSn _)) (* i < n.+1 *) in
+  let i' := widen_ord (leqnSn _) i in
   let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi) := let f := frames succi in (torig f, tframei f) in 
-  let: (o_i, x_i, z_i) := let f := frames i' in (torig f, tframei f, tframek f) in 
+  let: (o_succi, x_succi) := let f := frames succi in (origin (*torig f TODO*), NOFrame.i f) in 
+  let: (o_i, x_i, z_i) := let f := frames i' in (origin (*torig f*), NOFrame.i f, NOFrame.i f) in 
   joint_angle (joints i) = angle_between_lines o_i x_i o_succi x_succi z_i.
 
 Record chain := mkChain {

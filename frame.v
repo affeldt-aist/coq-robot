@@ -15,12 +15,12 @@ Require Import aux angle euclidean3 skew vec_angle.
 (* OUTLINE:
   1. section non_oriented_frame
   2. section orthonormal_frame
-     definition of orthonormal frames
+     (mostly about positive frames)
   3. definition of the canonical frame (e_0, e_1, e_2)
-  4. Module Frame1
-     build an orthonormal frame out of a unit vector
-  5. Module Frame
-     build an orthonormal frame out of a non-zero vector
+  4. Module Base1
+     build a positive frame out of a unit vector
+  5. Module Base
+     build a positive frame out of a non-zero vector
   6. section relative_frame.
   7. Module FromTo.
      definition of the rotation from one frame to another
@@ -61,20 +61,45 @@ rewrite /cos /sin expi_arg //; last by rewrite -normr_eq0 v1 oner_neq0.
 by rewrite v1 divr1.
 Qed.*)
 
+Module NOFrame.
+Section non_oriented_frame_def.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+
+Record t := mk {
+  i : vector ;
+  j : vector ;
+  k : vector ;
+  normi : norm i = 1 ;
+  normj : norm j = 1 ;
+  normk : norm k = 1 ;
+  idotj : i *d j = 0 ;
+  jdotk : j *d k = 0 ;
+  idotk : i *d k = 0 }.
+
+End non_oriented_frame_def.
+End NOFrame.
+
 Section non_oriented_frame.
 
 Variable R : rcfType.
+Let vector := 'rV[R]_3.
 Implicit Type p : 'rV[R]_3.
-Variables i j k : 'rV[R]_3.
 
-CoInductive oframe := mkOFrame of
+(*CoInductive noframe (i j k : vector) := mkNOFrame of
   norm i = 1 & norm j = 1 & norm k = 1 &
-  i *d j = 0 & j *d k = 0 & i *d k = 0.
+  i *d j = 0 & j *d k = 0 & i *d k = 0.*)
 
-Lemma orthogonal_expansion_helper : oframe ->
+Variable f : NOFrame.t R.
+Local Notation "'i'" := (NOFrame.i f).
+Local Notation "'j'" := (NOFrame.j f).
+Local Notation "'k'" := (NOFrame.k f).
+
+Lemma orthogonal_expansion_helper : 
   forall p, p *d i = 0 -> p *d j = 0 -> p *d k = 0 -> p = 0.
 Proof.
-case=> ni nj nk ij jk ik p.
+move=> p.
 do 3 rewrite dotmulE sum3E.
 move=> H1 H2 H3.
 have /eqP : p *m (col_mx3 i j k) ^T = 0.
@@ -82,117 +107,109 @@ have /eqP : p *m (col_mx3 i j k) ^T = 0.
 rewrite mul_mx_rowfree_eq0; first by move/eqP.
 apply/row_freeP; exists (col_mx3 i j k).
 apply/eqP; rewrite -orthogonalEC.
-apply matrix_is_orthogonal; by rewrite !rowK.
+apply matrix_is_orthogonal; rewrite !rowK /=; by case: f.
 Qed.
 
-Lemma orthogonal_expansion p : oframe ->
+Lemma orthogonal_expansion p : 
   p = (p *d i) *: i + (p *d j) *: j + (p *d k) *: k.
 Proof.
-case=> x1 y1 z1 xy xz yz.
 set y : 'rV[R]_3 := (p *d i) *: i + (p *d j) *: j + (p *d k) *: k.
 suff /eqP : p - y = 0; first by rewrite subr_eq0 => /eqP.
 apply orthogonal_expansion_helper.
-- by apply mkOFrame.
-- rewrite dotmulDl dotmulNv /y 2!dotmulDl dotmulZv dotmulvv x1 expr1n mulr1.
-  rewrite 2!opprD 2!addrA subrr add0r dotmulZv (dotmulC j) xy mulr0 oppr0.
-  by rewrite dotmulZv (dotmulC k) yz mulr0 subrr.
-- rewrite dotmulDl dotmulNv /y 2!dotmulDl dotmulZv xy mulr0 add0r.
-  rewrite dotmulZv dotmulvv y1 expr1n mulr1 opprD addrA subrr.
-  by rewrite dotmulZv (dotmulC k) xz mulr0 subrr.
-- rewrite dotmulDl dotmulNv /y 2!dotmulDl dotmulZv yz mulr0 add0r dotmulZv.
-  by rewrite xz mulr0 add0r dotmulZv dotmulvv z1 expr1n mulr1 subrr.
+- rewrite dotmulDl dotmulNv /y 2!dotmulDl dotmulZv dotmulvv (NOFrame.normi f) expr1n mulr1.
+  rewrite 2!opprD 2!addrA subrr add0r dotmulZv (dotmulC j) (NOFrame.idotj f) mulr0 oppr0.
+  by rewrite dotmulZv (dotmulC k) (NOFrame.idotk f) mulr0 subrr.
+- rewrite dotmulDl dotmulNv /y 2!dotmulDl dotmulZv (NOFrame.idotj f) mulr0 add0r.
+  rewrite dotmulZv dotmulvv (NOFrame.normj f) expr1n mulr1 opprD addrA subrr.
+  by rewrite dotmulZv (dotmulC k) (NOFrame.jdotk f) mulr0 subrr.
+- rewrite dotmulDl dotmulNv /y 2!dotmulDl dotmulZv (NOFrame.idotk f) mulr0 add0r dotmulZv.
+  by rewrite (NOFrame.jdotk f) mulr0 add0r dotmulZv dotmulvv (NOFrame.normk f) expr1n mulr1 subrr.
 Qed.
 
-Definition frame_sgn (_ : oframe) := i *d (j *v k).
+Definition frame_sgn := i *d (j *v k).
 
-Lemma normi (f : oframe) : norm i = 1. Proof. by case: f. Qed.
-Lemma normj (f : oframe) : norm j = 1. Proof. by case: f. Qed.
-Lemma normk (f : oframe) : norm k = 1. Proof. by case: f. Qed.
+(*Lemma normi (f : noframe) : norm i = 1. Proof. by case: f. Qed.
+Lemma normj (f : noframe) : norm j = 1. Proof. by case: f. Qed.
+Lemma normk (f : noframe) : norm k = 1. Proof. by case: f. Qed.
 
-Lemma idotj (f : oframe) : i *d j = 0. Proof. by case: f. Qed.
-Lemma jdotk (f : oframe) : j *d k = 0. Proof. by case: f. Qed.
-Lemma idotk (f : oframe) : i *d k = 0. Proof. by case: f. Qed.
+Lemma idotj (f : noframe) : i *d j = 0. Proof. by case: f. Qed.
+Lemma jdotk (f : noframe) : j *d k = 0. Proof. by case: f. Qed.
+Lemma idotk (f : noframe) : i *d k = 0. Proof. by case: f. Qed.*)
 
-Lemma frame_sgn1 (f : oframe) : `| frame_sgn f | = 1.
+Lemma noframe_sgn : `| frame_sgn | = 1.
 Proof.
-case: f => x1 y1 z1 xy yz xz; rewrite /frame_sgn crossmul_triple.
-apply/orthogonal_det/matrix_is_orthogonal; by rewrite !rowK.
+rewrite /frame_sgn crossmul_triple.
+apply/orthogonal_det/matrix_is_orthogonal; rewrite !rowK /=; by case: f.
 Qed.
 
-Lemma oframek (f : oframe) : k = i *v j \/ k = - i *v j.
+Lemma noframek : k = i *v j \/ k = - i *v j.
 Proof.
-move: (frame_sgn1 f).
+move: noframe_sgn.
 case: (lerP 0 (i *d (j *v k))) => H.
   rewrite ger0_norm // => {H}.
   rewrite /frame_sgn dotmul_crossmulA.
-  move/dotmul1_inv => H; left; rewrite H //.
-  case: f => He1 He2 ? e1e2 *.
-  rewrite norm_crossmul He1 He2 2!mul1r cos0sin1 //.
+  move/dotmul1_inv => H; left; rewrite H //; last by case: f.
+  rewrite norm_crossmul (NOFrame.normj f) (NOFrame.normi f) !mul1r.
+  rewrite cos0sin1 //.
   do 2 rewrite -[LHS](mul1r).
-  rewrite -{1}He1 -He2 mulrA.
-  by rewrite -dotmul_cos.
-  by case: f.
+  rewrite -{1}(NOFrame.normi f) -(NOFrame.normj f) mulrA.
+  rewrite -dotmul_cos; by case: f.
 rewrite ltr0_norm // => {H} /eqP.
 rewrite eqr_oppLR => /eqP.
 rewrite /frame_sgn dotmul_crossmulA.
-move/dotmulN1_inv => H; right. rewrite crossmulNv H // ?opprK //.
-case: f => He1 He2 ? e1e2 *.
-rewrite norm_crossmul He1 He2 2!mul1r cos0sin1 //.
+move/dotmulN1_inv => H; right; rewrite crossmulNv H // ?opprK //; last by case: f.
+rewrite norm_crossmul (NOFrame.normj f) (NOFrame.normi f) !mul1r.
+rewrite cos0sin1 //.
 do 2 rewrite -[LHS](mul1r).
-rewrite -{1}He1 -He2 mulrA.
-by rewrite -dotmul_cos.
-by case: f.
+rewrite -{1}(NOFrame.normi f) -(NOFrame.normj f) mulrA.
+rewrite -dotmul_cos; by case: f.
 Qed.
 
-Lemma oframe_pos (f : oframe) : k = i *v j -> frame_sgn f = 1.
+Lemma noframe_pos : k = i *v j -> frame_sgn = 1.
 Proof.
 move=> H.
 rewrite /frame_sgn H double_crossmul dotmulvv (dotmulC j).
-case: f => normu1 -> _ -> _ _.
-by rewrite scale0r subr0 expr1n scale1r dotmulvv normu1 expr1n.
+rewrite (NOFrame.normj f) (NOFrame.idotj f).
+by rewrite scale0r subr0 expr1n scale1r dotmulvv (NOFrame.normi f) expr1n.
 Qed.
 
-Lemma oframe_neg (f : oframe) : k = - i *v j -> frame_sgn f = - 1.
+Lemma noframe_neg : k = - i *v j -> frame_sgn = - 1.
 Proof.
 move=> H.
 rewrite /frame_sgn H double_crossmul dotmulvv dotmulvN scaleNr opprK (dotmulC j).
-case: f => normu1 -> _ -> _ _.
-by rewrite scale0r addr0 expr1n scale1r dotmulvN dotmulvv normu1 expr1n.
+rewrite (NOFrame.normj f) (NOFrame.idotj f).
+by rewrite scale0r addr0 expr1n scale1r dotmulvN dotmulvv (NOFrame.normi f) expr1n.
 Qed.
 
-Lemma frame_pos_crossmul (f : oframe) : frame_sgn f = 1 -> k = i *v j.
+Lemma noframe_pos_crossmul : frame_sgn = 1 -> k = i *v j.
 Proof.
-case: (oframek f) => // /(oframe_neg f) -> /esym/eqP.
+case: noframek => // /noframe_neg -> /esym/eqP.
 by rewrite -subr_eq0 opprK -mulr2n pnatr_eq0.
 Qed.
 
-Lemma oframe_posP (f : oframe) : k = i *v j -> j = k *v i /\ i = j *v k.
+Lemma noframe_posP : k = i *v j -> j = k *v i /\ i = j *v k.
 Proof.
 move=> H; split.
   rewrite H crossmulC double_crossmul.
-  case: f => x1 ? ? K *.
-  by rewrite K scale0r add0r opprK dotmulvv x1 expr1n scale1r.
+  by rewrite (NOFrame.idotj f) scale0r add0r opprK dotmulvv (NOFrame.normi f) expr1n scale1r.
 rewrite H double_crossmul.
-case: f => ? y1 ? K *.
-by rewrite dotmulvv y1 expr1n scale1r dotmulC K scale0r subr0.
+by rewrite dotmulvv (NOFrame.normj f) expr1n scale1r dotmulC (NOFrame.idotj f) scale0r subr0.
 Qed.
 
-Lemma oframe_negP (f : oframe) : k = - i *v j -> j = i *v k /\ i = k *v j.
+Lemma noframe_negP : k = - i *v j -> j = i *v k /\ i = k *v j.
 Proof.
 move=> H; split.
   rewrite H crossmulNv crossmulvN double_crossmul.
-  case: f => x1 ? ? K *.
-  by rewrite dotmulvv x1 expr1n scale1r K scale0r add0r opprK.
+  by rewrite dotmulvv (NOFrame.normi f) expr1n scale1r (NOFrame.idotj f) scale0r add0r opprK.
 rewrite H crossmulNv crossmulC crossmulvN opprK double_crossmul.
-case: f => ? y1 ? K *.
-by rewrite dotmulvv y1 expr1n scale1r dotmulC K scale0r subr0.
+by rewrite dotmulvv (NOFrame.normj f) expr1n scale1r dotmulC (NOFrame.idotj f) scale0r subr0.
 Qed.
 
 (* [oneill] lemma 3.5, p.110 *)
-Lemma crossmul_oframe_sgn (f : oframe) v v1 v2 v3 w w1 w2 w3 :
+Lemma crossmul_noframe_sgn v v1 v2 v3 w w1 w2 w3 :
   v = v1 *: i + v2 *: j + v3 *: k ->
   w = w1 *: i + w2 *: j + w3 *: k ->
-  v *v w = frame_sgn f *: ((v2 * w3 - v3 * w2) *: i -
+  v *v w = frame_sgn *: ((v2 * w3 - v3 * w2) *: i -
                            (v1 * w3 - v3 * w1) *: j +
                            (v1 * w2 - v2 * w1) *: k).
 Proof.
@@ -205,8 +222,8 @@ rewrite (crossmulC _ k).
 rewrite !linearD /=.
 rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= crossmulvv scaler0.
 rewrite oppr0 scaler0 add0r.
-case: (oframek f) => e3e1e2.
-  case: (oframe_posP f e3e1e2) => H1 H2.
+case: noframek => e3e1e2.
+  case: (noframe_posP e3e1e2) => H1 H2.
   rewrite (_ : _ *v _ = v2 *: k); last by rewrite linearZ /= -e3e1e2.
   rewrite scalerN (_ : _ *v _ = - v3 *: j); last first.
     by rewrite linearZ /= crossmulC -H1 scalerN scaleNr.
@@ -221,7 +238,7 @@ case: (oframek f) => e3e1e2.
   rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
     by rewrite linearZ /= crossmulvv scaler0.
   rewrite scalerN scaler0 subr0.
-  rewrite (oframe_pos f e3e1e2).
+  rewrite (noframe_pos e3e1e2).
   rewrite !scale1r -![in LHS]addrA addrC.
   rewrite -![in LHS]addrA.
   rewrite addrCA.
@@ -232,7 +249,7 @@ case: (oframek f) => e3e1e2.
   rewrite -addrA addrACA addrC; congr (_ + _).
     by rewrite -scaleNr !scalerA -scalerDl addrC mulrC mulNr (mulrC w2).
   by rewrite !scalerA -scalerBl scalerN -scaleNr opprB mulrC (mulrC w3).
-case: (oframe_negP f e3e1e2) => H1 H2.
+case: (noframe_negP e3e1e2) => H1 H2.
 rewrite (_ : _ *v _ = - v2 *: k); last first.
   by rewrite linearZ /= e3e1e2 crossmulNv scalerN scaleNr opprK.
 rewrite scaleNr opprK.
@@ -257,7 +274,7 @@ rewrite scalerN.
 rewrite (_ : _ *v _ = 0); last first.
   by rewrite linearZ /= crossmulvv scaler0.
 rewrite oppr0 scaler0 addr0.
-rewrite (oframe_neg f e3e1e2).
+rewrite (noframe_neg e3e1e2).
 rewrite -![in LHS]addrA addrC -addrA.
 rewrite addrCA -addrA addrC ![in LHS]addrA -addrA; congr (_ + _); last first.
   by rewrite !scalerA -scalerBl mulrN1 opprB mulrC (mulrC w2).
@@ -268,14 +285,13 @@ Qed.
 
 End non_oriented_frame.
 
-Coercion matrix_of_oframe (R : rcfType) (i j k : 'rV[R]_3) (f : oframe i j k) :=
-  col_mx3 i j k.
+Coercion matrix_of_noframe (R : rcfType) (f : NOFrame.t R) :=
+  col_mx3 (NOFrame.i f) (NOFrame.j f) (NOFrame.k f).
 
-Lemma oframe_is_unit (R : rcfType) i j k (f : @oframe R i j k) :
-  matrix_of_oframe f \is a GRing.unit.
+Lemma noframe_is_unit (R : rcfType) (f : NOFrame.t R) :
+  matrix_of_noframe f \is a GRing.unit.
 Proof.
-case: f => ni nj nk ij jk ik.
-apply/orthogonal_unit/matrix_is_orthogonal => /=; by rewrite !rowK.
+apply/orthogonal_unit/matrix_is_orthogonal => /=; rewrite !rowK /=; by case: f.
 Qed.
 
 (* TODO: move *)
@@ -291,36 +307,43 @@ Qed.
 Lemma dotrow {R : rcfType} (M : 'M[R]_3) i j : M i j = 'e_j *d row i M.
 Proof. by rewrite mxE_col_row /dotmul colE. Qed.
 
+(* positive frames *)
 Section orthonormal_frame.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Let point := 'rV[R]_3.
 Implicit Types p : point.
-Implicit Types i j k : vector.
+(*Implicit Types i j k : vector.*)
 
-Record pframe i j k := mkPFrame {
-  oframe_of_pframe :> oframe i j k ;
-  pframeP : frame_sgn oframe_of_pframe = 1}.
+Record frame := mkFrame {
+  noframe_of_frame :> NOFrame.t R ;
+  frameP : frame_sgn noframe_of_frame = 1}.
 
-Record nframe i j k := mkNFrame {
-  oframe_of_nframe :> oframe i j k ;
-  nframeP : frame_sgn oframe_of_nframe = -1}.
+Record nframe := mkNFrame {
+  noframe_of_nframe :> NOFrame.t R ;
+  nframeP : frame_sgn noframe_of_nframe = -1}.
 
 (*Definition matrix_of_pframe i j k (f : pframe i j k) := col_mx3 i j k.*)
 
-Lemma icrossj i j k (f : pframe i j k) : k = i *v j.
-Proof. exact: (frame_pos_crossmul (pframeP f)). Qed.
-Lemma icrossk i j k (f : pframe i j k) : i *v k = - j.
-Proof. by rewrite (proj1 (oframe_posP f (icrossj f))) crossmulC. Qed.
-Lemma jcrossk i j k (f : pframe i j k) : j *v k = i.
-Proof. by rewrite -(proj2 (oframe_posP f (icrossj f))). Qed.
+Variable f : frame.
+Local Notation "'i'" := (NOFrame.i f).
+Local Notation "'j'" := (NOFrame.j f).
+Local Notation "'k'" := (NOFrame.k f).
 
+Lemma icrossj : k = i *v j.
+Proof. exact: (noframe_pos_crossmul (frameP f)). Qed.
+Lemma icrossk : i *v k = - j.
+Proof. by rewrite (proj1 (@noframe_posP _ f icrossj)) crossmulC. Qed.
+Lemma jcrossk : j *v k = i.
+Proof. by rewrite -(proj2 (@noframe_posP _ f icrossj)). Qed.
+
+(*
 Lemma pframe_swap01 i j k : pframe i j k -> pframe j (- i) k.
 Proof.
 case => -[] i1 j1 k1 ij jk ik Hsgn.
 apply: mkPFrame.
-  apply: mkOFrame => //.
+  apply: mkNOFrame => //.
   by rewrite normN.
   by rewrite dotmulvN dotmulC ij oppr0.
   by rewrite dotmulNv ik oppr0.
@@ -328,66 +351,83 @@ move=> f.
 rewrite /frame_sgn dotmul_crossmulA linearN /= crossmulC -(icrossj (mkPFrame Hsgn)).
 by rewrite opprK dotmulvv k1 expr1n.
 Qed.
+*)
 
-Lemma pframe_is_rot i j k (f : pframe i j k) : col_mx3 i j k \in 'SO[R]_3.
+Lemma pframe_is_rot : col_mx3 i j k \in 'SO[R]_3.
 Proof.
-move: (icrossj f) => Hk.
-case: f => -[? ? ? ? ? ?] sgn.
-by apply matrix_is_rotation; rewrite !rowK.
+move: icrossj => Hk.
+apply matrix_is_rotation; rewrite !rowK /=.
+by rewrite (NOFrame.normi f).
+by rewrite (NOFrame.normj f).
+by rewrite (NOFrame.idotj f).
+done.
 Qed.
 
-Record frame := mkFrame {
+(*Record frame := mkFrame {
   framei : vector ;
   framej : vector ;
   framek : vector ;
-  frameP :> pframe framei framej framek }.
+  frameP :> pframe framei framej framek }.*)
 
 (* TODO: use rowE *)
-Lemma row0_frame (f : frame) : row 0 f = framei f.
-Proof. case: f => x y z xyz /=; apply/rowP => i; by rewrite 2!mxE. Qed.
-Lemma row1_frame (f : frame) : row 1 f = framej f.
-Proof. case: f => x y z xyz /=; apply/rowP => i; by rewrite 2!mxE. Qed.
-Lemma row2_frame (f : frame) : row 2%:R f = framek f.
-Proof. case: f => x y z xyz /=; apply/rowP => i; by rewrite !mxE. Qed.
+Lemma row0_frame : row 0 f = NOFrame.i f.
+Proof. apply/rowP => a; by rewrite 2!mxE. Qed.
+Lemma row1_frame : row 1 f = NOFrame.j f.
+Proof. apply/rowP => a; by rewrite 2!mxE. Qed.
+Lemma row2_frame : row 2%:R f = NOFrame.k f.
+Proof. apply/rowP => a; by rewrite !mxE. Qed.
 
-Lemma norm_row (f : frame) (i : 'I_3) : norm (row i f) = 1.
+Lemma norm_row (a : 'I_3) : norm (row a f) = 1.
 Proof.
-case: f => a b c [] [] a1 b1 c1 H1 H2 H3 Hsgn.
-case/boolP : (i == 0) => [/eqP ->|]; first by rewrite row0_frame.
-rewrite ifnot0 => /orP [] /eqP ->; by [rewrite row1_frame | rewrite row2_frame].
+case/boolP : (a == 0) => [/eqP ->|]. 
+  by rewrite row0_frame NOFrame.normi.
+rewrite ifnot0 => /orP [] /eqP ->.
+  by rewrite row1_frame NOFrame.normj.
+by rewrite row2_frame NOFrame.normk.
 Qed.
 
-(* frame with an origin (tangent frame ?) *)
-CoInductive tframe p (i j k : vector) :=
-  TFrame : oframe i j k -> tframe p i j k.
-Definition oframe_of_tframe p i j k (f : tframe p i j k) :=
-  let: TFrame f := f in f.
+End orthonormal_frame.
 
-Lemma tframe_trans p i j k (f : tframe p i j k) t : tframe (p + t) i j k.
-Proof. by case: f => -[] x1 y1 z1 xy yz xz. Qed.
+(* frame with an origin (tangent frame) *)
+Section tframe.
 
-Record Tframe := mkTFrame {
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Let point := 'rV[R]_3.
+Implicit Types p : point.
+(*Implicit Types i j k : vector.*)
+Record tframe p := TFrame {
+  pframe_of_tframe :> frame R }.
+(*CoInductive tframe p (i j k : vector) :=
+  TFrame : noframe i j k -> tframe p i j k.*)
+(*Definition noframe_of_tframe p i j k (f : tframe p i j k) :=
+  let: TFrame f := f in f.*)
+
+Definition tframe_trans p (f : tframe p) t : tframe (p + t).
+Proof.  case: f => /= H. by apply TFrame. Defined.
+
+(*Record Tframe := mkTFrame {
   torig : point ;
   tframei : vector ;
   tframej : vector ;
   tframek : vector ;
-  tframeP :> tframe torig tframei tframej tframek }.
+  tframeP :> tframe torig tframei tframej tframek }.*)
 
-End orthonormal_frame.
+End tframe.
 
 Section canonical_frame.
 
 Variable R : rcfType.
 
-Definition can_oframe := mkOFrame
+Definition can_noframe := NOFrame.mk
   (norm_delta_mx R 0) (norm_delta_mx _ 1) (norm_delta_mx _ 2%:R)
   (dote2 _ 0 1) (dote2 _ 1 2%:R) (dote2 _ 0 2%:R).
 
-Lemma can_pframeP : frame_sgn can_oframe = 1.
+Lemma can_pframeP : frame_sgn can_noframe = 1.
 Proof. rewrite /frame_sgn crossmulE dotmulE sum3E !mxE /=. by Simp.r. Qed.
 
-Definition can_pframe := mkPFrame can_pframeP.
-Definition can_frame := mkFrame can_pframe.
+(*Definition can_pframe := mkPFrame can_pframeP.*)
+Definition can_frame := mkFrame can_pframeP.
 
 Lemma mulmx_can_frame (v : 'rV[R]_3) : v *m can_frame = v.
 Proof.
@@ -419,9 +459,30 @@ Qed.
 
 End canonical_frame.
 
-(* build an orthonormal frame out of a unit vector *)
-Module Frame1.
-Section frame1.
+(* TODO: go to euclidean3.v? *)
+Lemma basis_change (R : rcfType) (M : 'M[R]_3) (f : NOFrame.t R) (A : 'M[R]_3) :
+  let i := NOFrame.i f in
+  let j := NOFrame.j f in
+  let k := NOFrame.k f in
+  i *m M = A 0 0 *: i + A 0 1 *: j + A 0 2%:R *: k ->
+  j *m M = A 1 0 *: i + A 1 1 *: j + A 1 2%:R *: k ->
+  k *m M = A 2%:R 0 *: i + A 2%:R 1 *: j + A 2%:R 2%:R *: k ->
+  let P := col_mx3 i j k in
+  M = P^-1 * A * P.
+Proof.
+move=> i j k H1 H2 H3 P.
+have : P * M = A * P.
+  rewrite /P -mulmxE mulmx_col3 (col_mx3_rowE A).
+  rewrite mulmx_col3 H1 H2 H3.
+  congr col_mx3; apply/rowP => a; by rewrite !mxE sum3E !mxE.
+rewrite -mulrA => <-.
+rewrite mulrA mulVr ?mul1r // unitmxE unitfE /P det_col_mx3.
+move: (noframe_sgn f) => /=.
+by rewrite /frame_sgn dotmul_crossmulA -normr_gt0 => ->; rewrite ltr01.
+Qed.
+
+Module Base1.
+Section base1.
 Variable R : rcfType.
 Variable i : 'rV[R]_3.
 Hypothesis normi : norm i = 1.
@@ -468,20 +529,19 @@ rewrite /k norm_crossmul_normal // ?norm_normalize // ?normj //.
 by rewrite idotj // mulr0.
 Qed.
 
-Lemma oframe : oframe i j k.
-Proof. exact: (mkOFrame normi normj normk idotj jdotk idotk). Qed.
+Definition noframe := NOFrame.mk normi normj normk idotj jdotk idotk.
 
-Lemma sgn_oframe : frame_sgn oframe = 1.
+Lemma sgn_noframe : frame_sgn noframe = 1.
 Proof.
-case: oframe => /= ? ? H ? ? ?.
-by rewrite /frame_sgn /= dotmul_crossmulA dotmulvv H expr1n.
+rewrite /frame_sgn /= dotmul_crossmulA dotmulvv.
+by rewrite -/k normk expr1n.
 Qed.
 
-Definition pframe : pframe i j k := mkPFrame sgn_oframe.
+Definition frame := mkFrame sgn_noframe.
 
-End frame1.
+End base1.
 
-Section frame1_lemmas.
+Section base1_lemmas.
 
 Variable (R : rcfType).
 
@@ -500,12 +560,11 @@ Proof. by rewrite /j colinearNv normalcompN. Qed.
 Lemma kN : k (- u) = - k u.
 Proof. by rewrite /k jN crossmulNv. Qed.
 
-End frame1_lemmas.
-End Frame1.
+End base1_lemmas.
+End Base1.
 
-(* build an orthonormal frame out of a non-zero vector *)
-Module Frame.
-Section build_frame.
+Module Base.
+Section build_base.
 Variable R : rcfType.
 Variable u : 'rV[R]_3.
 Hypothesis u0 : u != 0.
@@ -515,26 +574,39 @@ Definition i := normalize u.
 Let normi : norm i = 1.
 Proof. by rewrite norm_normalize. Qed.
 
-Definition j := Frame1.j i.
-Definition k := Frame1.k i.
+Definition j := Base1.j i.
+Definition k := Base1.k i.
 
 Lemma udotj : u *d j = 0.
 Proof.
-move: (Frame1.idotj normi) => /eqP.
+move: (Base1.idotj normi) => /eqP.
 by rewrite dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negPf u0) => /eqP.
 Qed.
 
 Lemma udotk : u *d k = 0.
 Proof.
-move: (Frame1.idotk i) => /eqP.
+move: (Base1.idotk i) => /eqP.
 by rewrite dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negPf u0) => /eqP.
 Qed.
 
-Definition pframe := Frame1.pframe normi.
+Definition frame := Base1.frame normi.
 
-End build_frame.
+Lemma icrossj : k = i *v j.
+Proof.
+case: frame => f ?.
+by rewrite /k /Base1.k /j /Base1.j.
+Qed.
 
-Section build_frame_lemmas.
+Lemma icrossk : i *v k = - j.
+Proof. 
+rewrite /k /Base1.k /j.
+rewrite double_crossmul dotmulvv normi expr1n scale1r.
+by rewrite Base1.idotj // scale0r add0r.
+Qed.
+
+End build_base.
+
+Section build_base_lemmas.
 
 Variable (R : rcfType).
 Variable u : 'rV[R]_3.
@@ -544,36 +616,17 @@ Lemma jZ p (p0 : 0 < p) : j (p *: u) = j u.
 Proof. by rewrite /j /i normalizeZ. Qed.
 
 Lemma jN : j (- u) = j u.
-Proof. by rewrite /j /i normalizeN Frame1.jN. Qed.
+Proof. by rewrite /j /i normalizeN Base1.jN. Qed.
 
 Lemma kZ p (p0 : 0 < p) : k (p *: u) = k u.
 Proof. by rewrite /k /i normalizeZ. Qed.
 
 Lemma kN : k (- u) = - k u.
-Proof. by rewrite /k /i normalizeN Frame1.kN. Qed.
+Proof. by rewrite /k /i normalizeN Base1.kN. Qed.
 
-End build_frame_lemmas.
+End build_base_lemmas.
 
-End Frame.
-
-(* TODO: go to euclidean3.v? *)
-Lemma basis_change (R : rcfType) (M : 'M[R]_3) i j k (f : oframe i j k) (A : 'M[R]_3) :
-  i *m M = A 0 0 *: i + A 0 1 *: j + A 0 2%:R *: k ->
-  j *m M = A 1 0 *: i + A 1 1 *: j + A 1 2%:R *: k ->
-  k *m M = A 2%:R 0 *: i + A 2%:R 1 *: j + A 2%:R 2%:R *: k ->
-  let P := col_mx3 i j k in
-  M = P^-1 * A * P.
-Proof.
-move=> H1 H2 H3 P.
-have : P * M = A * P.
-  rewrite /P -mulmxE mulmx_col3 (col_mx3_rowE A).
-  rewrite mulmx_col3 H1 H2 H3.
-  congr col_mx3; apply/rowP => a; by rewrite !mxE sum3E !mxE.
-rewrite -mulrA => <-.
-rewrite mulrA mulVr ?mul1r // unitmxE unitfE /P det_col_mx3.
-move: (frame_sgn1 f) => /=.
-by rewrite /frame_sgn dotmul_crossmulA -normr_gt0 => ->; rewrite ltr01.
-Qed.
+End Base.
 
 (*Module Frame.
 Section frame_section.
@@ -702,7 +755,7 @@ Coercion RotM {R} (A B : frame R) := @FromTo.M _ A B.
 Notation "A %> B" := (@FromTo.t _ A B) (at level 5).
 
 Lemma FromToE R (A B : frame R) (M : A %> B) :
-  M = (matrix_of_oframe A)^-1 *m B :> 'M[R]_3.
+  M = (matrix_of_noframe A)^-1 *m B :> 'M[R]_3.
 Proof.
 case: M => /= M /eqP ->; apply/matrixP => i j.
 rewrite mxE dotmulE /= mxE; apply eq_bigr => /= k _.
@@ -716,12 +769,12 @@ move=> i /=.
 by rewrite (FromToE M) mulmxA mulmx_can_frame (rotation_inv (pframe_is_rot A)).
 Qed.
 
-Lemma FromToPi R (A B : frame R) (M : A %> B) : framei A *m M = framei B.
+Lemma FromToPi R (A B : frame R) (M : A %> B) : NOFrame.i A *m M = NOFrame.i B.
 Proof.
-rewrite (FromToE M) mulmxA (_ : (matrix_of_oframe A)^-1 = A^T); last first.
+rewrite (FromToE M) mulmxA (_ : (matrix_of_noframe A)^-1 = A^T); last first.
   by apply/rotation_inv/(pframe_is_rot A).
-rewrite /matrix_of_oframe.
-rewrite col_mx3_mul dotmulvv (normi A) expr1n (idotj A) (idotk A).
+rewrite /matrix_of_noframe.
+rewrite col_mx3_mul dotmulvv (NOFrame.normi A) expr1n (NOFrame.idotj A) (NOFrame.idotk A).
 rewrite row3_row_mx col_mx3E.
 rewrite (mul_row_col 1%:M) mul1mx (mul_row_col 0%:M).
 by rewrite !mul_scalar_mx scale0r scale0r 2!addr0.
@@ -803,15 +856,15 @@ Proof. by rewrite norm_crossmul_normal // ?normi // ?normj // idotj. Qed.
 Lemma k_neq0 : k != 0.
 Proof. by rewrite -norm_eq0 normk oner_neq0. Qed.
 
-Definition oframe : oframe _ _ _ := mkOFrame normi normj normk idotj jdotk idotk.
+Definition noframe := NOFrame.mk normi normj normk idotj jdotk idotk.
 
-Lemma oframe_is_pos : frame_sgn oframe = 1.
+Lemma noframe_is_pos : frame_sgn noframe = 1.
 Proof.
 rewrite /frame_sgn /k double_crossmul dotmulvv normj expr1n scale1r (dotmulC j).
 by rewrite idotj scale0r subr0 dotmulvv normi expr1n.
 Qed.
 
-Definition pframe : pframe _ _ _ := mkPFrame oframe_is_pos.
+Definition pframe := mkFrame noframe_is_pos.
 (* therefore, x * frame_triad^T turns a vector x in the canonical frame into the frame_triad *)
 
 Lemma is_SO : col_mx3 i j k \is 'SO[R]_3.
@@ -831,8 +884,8 @@ Hypotheses (l12 : l1 != l2) (r12 : r1 != r2).
 Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1))
            (r123 : ~~ colinear (r2 - r1) (r3 - r1)).
 
-Definition lframe := mkFrame (triad.pframe l12 l123).
-Definition rframe := mkFrame (triad.pframe r12 r123).
+Definition lframe := mkFrame (frameP (triad.pframe l12 l123)).
+Definition rframe := mkFrame (frameP (triad.pframe r12 r123)).
 
 Definition rot3 := lframe^T *m rframe.
 
@@ -841,7 +894,7 @@ Definition trans3 : vector := r1 - l1 *m rot3.
 Lemma j_l_r : triad.j l1 l2 l3 *m rot3 = triad.j r1 r2 r3.
 Proof.
 rewrite /rot3 /= mulmxA col_mx3_mul dotmulC triad.idotj dotmulvv triad.normj //.
-rewrite expr1n dotmul_crossmulCA crossmulvv dotmulv0 /matrix_of_oframe /=.
+rewrite expr1n dotmul_crossmulCA crossmulvv dotmulv0 /matrix_of_noframe /=.
 rewrite col_mx3E row3_row_mx (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r mul_scalar_mx scale0r addr0.
 Qed.
@@ -850,7 +903,7 @@ Lemma k_l_r : triad.k l1 l2 l3 *m rot3 = triad.k r1 r2 r3.
 Proof.
 rewrite /rot3 /= mulmxA col_mx3_mul {1}/triad.k dotmulC dotmul_crossmulA.
 rewrite crossmulvv dotmul0v {1}/triad.k -dotmul_crossmulA crossmulvv dotmulv0.
-rewrite /matrix_of_oframe /= dotmulvv triad.normk // expr1n col_mx3E row3_row_mx.
+rewrite /matrix_of_noframe /= dotmulvv triad.normk // expr1n col_mx3E row3_row_mx.
 do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite mul_scalar_mx scale1r.
 Qed.
