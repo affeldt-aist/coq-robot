@@ -335,14 +335,13 @@ by rewrite opprK dotmulvv k1 expr1n.
 Qed.
 *)
 
-Lemma pframe_is_rot : col_mx3 i j k \in 'SO[R]_3.
+Lemma frame_is_rot : col_mx3 i j k \in 'SO[R]_3.
 Proof.
-move: Frame.icrossj => Hk.
 apply matrix_is_rotation; rewrite !rowK /=.
 by rewrite (NOFrame.normi f).
 by rewrite (NOFrame.normj f).
 by rewrite (NOFrame.idotj f).
-done.
+exact: Frame.icrossj.
 Qed.
 
 (* TODO: use rowE *)
@@ -581,6 +580,15 @@ Proof. by rewrite /k /i normalizeZ. Qed.
 Lemma kN : k (- u) = - k u.
 Proof. by rewrite /k /i normalizeN Base1.kN. Qed.
 
+Lemma iE : i u = Frame.i (frame u0).
+Proof. done. Qed.
+
+Lemma jE : j u = Frame.j (frame u0).
+Proof. done. Qed.
+
+Lemma kE : k u = Frame.k (frame u0).
+Proof. done. Qed.
+
 End build_base_lemmas.
 
 End Base.
@@ -640,16 +648,16 @@ Lemma can_of_rel_coordK f (x : vec f) :
   rel_of_can_coord _ (can_of_rel_coord x) = x.
 Proof.
 rewrite /rel_of_can_coord /can_of_rel_coord /=; case: x => x; congr Vec => /=.
-rewrite -mulmxA -(rotation_inv (pframe_is_rot f)) mulmxV ?mulmx1 // unitmxE.
-by rewrite (rotation_det (pframe_is_rot f)) unitr1.
+rewrite -mulmxA -(rotation_inv (frame_is_rot f)) mulmxV ?mulmx1 // unitmxE.
+by rewrite (rotation_det (frame_is_rot f)) unitr1.
 Qed.
 
 Lemma rel_of_can_coordK f (x : vec _) :
   can_of_rel_coord (rel_of_can_coord f x) = x.
 Proof.
 rewrite /rel_of_can_coord /can_of_rel_coord /=; case: x => x; congr Vec => /=.
-rewrite -mulmxA -(rotation_inv (pframe_is_rot f)) mulVmx ?mulmx1 // unitmxE.
-by rewrite (rotation_det (pframe_is_rot f)) unitr1.
+rewrite -mulmxA -(rotation_inv (frame_is_rot f)) mulVmx ?mulmx1 // unitmxE.
+by rewrite (rotation_det (frame_is_rot f)) unitr1.
 Qed.
 
 (*Section about_frame.
@@ -723,43 +731,40 @@ Lemma FromToE A B (M : A %> B) :
 Proof.
 case: M => /= M /eqP ->; apply/matrixP => i j.
 rewrite mxE dotmulE /= mxE; apply eq_bigr => /= k _.
-by rewrite mxE [row _ _ _ _]mxE mxE (rotation_inv (pframe_is_rot A)) 2![_^T _ _]mxE.
+by rewrite mxE [row _ _ _ _]mxE mxE (rotation_inv (frame_is_rot A)) 2![_^T _ _]mxE.
 Qed.
 
 Lemma FromToCan A (M : A %> (can_frame R)) (x : vec A) :
   [fun x : 'rV_3 => x *m M] =1 [fun x => x *m A^T].
 Proof.
 move=> i /=.
-by rewrite (FromToE M) mulmxA mulmx_can_frame (rotation_inv (pframe_is_rot A)).
+by rewrite (FromToE M) mulmxA mulmx_can_frame (rotation_inv (frame_is_rot A)).
 Qed.
 
 Lemma FromToPi A B (M : A %> B) : NOFrame.i A *m M = NOFrame.i B.
 Proof.
-rewrite (FromToE M) mulmxA (_ : (matrix_of_noframe A)^-1 = A^T); last first.
-  by apply/rotation_inv/(pframe_is_rot A).
-rewrite /matrix_of_noframe.
-rewrite col_mx3_mul dotmulvv (NOFrame.normi A) expr1n (NOFrame.idotj A) (NOFrame.idotk A).
-rewrite row3_row_mx col_mx3E.
+rewrite (FromToE M) mulmxA (_ : (A : 'M__)^-1 = A^T); last first.
+  by apply/rotation_inv/(frame_is_rot A).
+rewrite /matrix_of_noframe col_mx3_mul dotmulvv (NOFrame.normi A) expr1n.
+rewrite (NOFrame.idotj A) (NOFrame.idotk A) row3_row_mx col_mx3E.
 rewrite (mul_row_col 1%:M) mul1mx (mul_row_col 0%:M).
 by rewrite !mul_scalar_mx scale0r scale0r 2!addr0.
 Qed.
 
 Lemma FromTo_is_SO A B (M : A %> B) : FromTo.M M \is 'SO[R]_3.
 Proof.
-move: (FromToE M).
-case: M => /= M _ ->.
-by rewrite rpredM // ?(pframe_is_rot B) // rotation_inv // ?rotationV // (pframe_is_rot A).
+move: (FromToE M); case: M => /= M _ ->.
+by rewrite rpredM // ?(frame_is_rot B) // rotation_inv // ?rotationV // (frame_is_rot A).
 Qed.
 
 Lemma FromToComp_proof A B C (M1 : A %> B) (M2 : B %> C) :
   (M1 *m M2) == \matrix_(i, j) (row i A^T *d row j C^T).
 Proof.
-rewrite (FromToE M1) (FromToE M2) -mulmxA (mulmxA B).
-rewrite mulmxV; last first.
-  by rewrite unitmxE (rotation_det (pframe_is_rot B)) unitr1.
+rewrite (FromToE M1) (FromToE M2) -mulmxA (mulmxA B) mulmxV; last first.
+  by rewrite unitmxE (rotation_det (frame_is_rot B)) unitr1.
 rewrite mul1mx; apply/eqP/matrixP => i j.
 rewrite !mxE dotmulE; apply/eq_bigr => k _.
-by rewrite 2![row _ _ _ _]mxE (rotation_inv (pframe_is_rot A)) 2![_^T _ _]mxE mulrC.
+by rewrite 2![row _ _ _ _]mxE (rotation_inv (frame_is_rot A)) 2![_^T _ _]mxE mulrC.
 Qed.
 
 Definition FromToComp A B C (M1 : A %> B) (M2 : B %> C) : A %> C :=
@@ -767,7 +772,7 @@ Definition FromToComp A B C (M1 : A %> B) (M2 : B %> C) : A %> C :=
 
 Lemma FromToCompE A B (M : A %> B) (u : 'rV[R]_3) :
   u *m M = u *m A^T *m B.
-Proof. by rewrite -mulmxA (FromToE M) (rotation_inv (pframe_is_rot A)). Qed.
+Proof. by rewrite -mulmxA (FromToE M) (rotation_inv (frame_is_rot A)). Qed.
 
 End FromTo_properties.
 
@@ -833,8 +838,8 @@ Qed.
 Definition frame := Frame.mk noframe_is_pos.
 (* therefore, x * frame_triad^T turns a vector x in the canonical frame into the frame_triad *)
 
-Lemma is_SO : col_mx3 i j k \is 'SO[R]_3.
-Proof. exact: (pframe_is_rot frame). Qed.
+(*Lemma is_SO : col_mx3 i j k \is 'SO[R]_3.
+Proof. exact: (frame_is_rot frame). Qed.*)
 
 End triad.
 End triad.

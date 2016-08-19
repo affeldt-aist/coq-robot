@@ -959,7 +959,7 @@ set F := Base.frame (norm1_neq0 w1).
 have -> : norm (displacement f p) =
           norm (displacement f p *m (col_mx3 (normalize w) (Base.j w) (Base.k w))^T).
 rewrite orth_preserves_norm // orthogonalV rotation_sub //.
-  exact: (pframe_is_rot F).
+  exact: (frame_is_rot F).
 rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
   by rewrite normalizeI.
 by rewrite addr_ge0 // sqr_ge0.
@@ -1190,3 +1190,5 @@ by rewrite scalemx1 mul_mx_scalar div1r scalemxAl.
 Qed.
 
 End screw_axis.
+
+ 
