@@ -10,25 +10,23 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux angle euclidean3 quaternion skew vec_angle rot frame.
+Require Import aux angle euclidean3 skew vec_angle rot frame.
 
 (*
  OUTLINE:
- 1. section quaternion.
-    correction of rotation using unit quaternions
- 2. section central_isometry_n
- 3. section central_isometry_3
- 4. section isometry_prop.
- 5. section tangent_vectors_and_frames
- 6. section derivative maps of isometries
+ 1. section central_isometry_n
+ 2. section central_isometry_3
+ 3. section isometry_prop.
+ 4. section tangent_vectors_and_frames
+ 5. section derivative maps of isometries
      definition of what it means to preserve the cross-product by a transformation
      (sample lemma: preservation of the cross-product by derivative maps)
- 7. section homogeneous_points_and_vectors
- 8. section SE3_def
- 9. section rigid_transformation_is_homogeneous_transformation
+ 6. section homogeneous_points_and_vectors
+ 7. section SE3_def
+ 8. section rigid_transformation_is_homogeneous_transformation
      (a direct isometry (i.e., cross-product preserving) can be expressed in homogeneous coordinates)
      (NB: converse in progress (?))
- 10. section kinematic_chain
+ 9. section kinematic_chain
 *)
 
 Set Implicit Arguments.
@@ -75,6 +73,7 @@ Variable (R : rcfType) (n : nat).
 Lemma central_isometry_preserves_norm (f : 'CIso[R]_n) : {mono f : x / norm x}.
 Proof. by case: f => f f0 p; rewrite -(subr0 (f p)) -f0 Iso.P subr0. Qed.
 
+(* [oneill] first part of lemma 1.6, p.100 *)
 Lemma central_isometry_preserves_dotmul (f : 'CIso[R]_n) : {mono f : u v / u *d v}.
 Proof.
 case: f => f f0 a b.
@@ -113,6 +112,7 @@ by rewrite jk NOFrame.jdotk.
 by rewrite ik NOFrame.idotk.
 Defined.
 
+(* [oneill] second part of lemma 1.6, p.101 *)
 Lemma central_isometry_is_linear (f : 'CIso[R]_3) : linear f.
 Proof.
 move=> k /= a b.
@@ -145,6 +145,9 @@ have @g : {linear 'rV[R]_n -> 'rV[R]_n}.
 by exists g.
 Defined.
 
+(* [oneill] theorem 1.7, p.101 *)
+(** every isometry of E^3 can be uniquely described as an orthogonal transformation 
+    followed by a translation *)
 Lemma trans_ortho_of_iso (f : 'Iso[R]_3) :
   { trans : 'rV[R]_3 & { rot : 'M[R]_3 |
     (forall x : 'rV[R]_3, f x == x *m rot + trans) /\
@@ -254,15 +257,17 @@ Record tvec p := TVec {tvec_field :> vector}.
 Definition vtvec p (v : tvec p) := let: TVec v := v in v.
 
 Local Notation "p .-vec" := (tvec p) (at level 5).
+Local Notation "u `@ p" := (TVec p u) (at level 4).
 
-Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := TVec _ (Frame.i f).
-Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := TVec _ (Frame.j f).
-Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := TVec _ (Frame.k f).
+Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.i f) `@ (TFrame.o f).
+Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.j f) `@ (TFrame.o f).
+Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.k f) `@ (TFrame.o f).
 
 End tangent_vectors_and_frames.
 
 Coercion vtvec_field_coercion := vtvec.
 Notation "p .-vec" := (tvec p) (at level 5).
+Notation "u `@ p" := (TVec p u) (at level 5).
 
 Section derivative_map.
 
@@ -272,11 +277,11 @@ Let vector := 'rV[R]_3.
 (* [oneill] theorem 2.1, p. 104 *)
 Definition dmap (f : 'Iso[R]_3) p (v : p.-vec) :=
   let C := ortho_of_iso f in
-  TVec (f p) (v *m C).
+  (v *m C) `@ (f p).
 
 Local Notation "f '`*'" := (@dmap f _) (at level 5, format "f `*").
 
-Lemma dmap0 (f : 'Iso[R]_3) p : f `* (TVec p 0) = TVec (f p) 0.
+Lemma dmap0 (f : 'Iso[R]_3) p : f `* (0 `@ p) = 0 `@ (f p).
 Proof. by rewrite /dmap /= mul0mx. Qed.
 
 Lemma derivative_map_preserves_length (f : 'Iso[R]_3) p :
@@ -286,12 +291,13 @@ move=> u v; rewrite /dmap /= -(mulmxBl (vtvec u) (vtvec v) (ortho_of_iso f)).
 by rewrite orth_preserves_norm // ortho_of_iso_is_O.
 Qed.
 
+(* [oneill] lemma 3.2, p.108 *)
 Lemma dmap_iso_sgnP (tf : TFrame.t R) (f : 'Iso[R]_3) :
   let e1 := Frame.i tf in
   let e2 := Frame.j tf in
   let e3 := Frame.k tf in
   let p := TFrame.o tf in
-  f`* (TVec p e1) *d (f `* (TVec p e2) *v f`* (TVec p e3)) =
+  f`* (e1 `@ p) *d (f `* (e2 `@ p) *v f`* (e3 `@ p)) =
   iso_sgn f * (e1 *d (e2 *v e3)).
 Proof.
 move=> e1 e2 e3 p.
@@ -318,17 +324,18 @@ rewrite det_mulmx det_tr; congr (_ * _).
 rewrite det_tr -crossmul_triple; by congr (_ *d (_ *v _)).
 Qed.
 
+(* [oneill] theorem 3.6, p.110 *)
 Lemma dmap_preserves_crossmul p (u v : p.-vec) (f : 'Iso[R]_3) :
-  f`* (TVec p (u *v v)) =
-    iso_sgn f *: vtvec (TVec (f p) ((f`* u) *v (f`* v))) :> vector.
+  f`* ((u *v v) `@ p) =
+    iso_sgn f *: vtvec (((f`* u) *v (f`* v)) `@ (f p)) :> vector.
 Proof.
-set tf : TFrame.t _ := TFrame.trans (TFrame.mk 0 (can_frame R)) p.
+set tf := TFrame.trans (can_tframe R) p.
 set u1p := tframe_i tf. set u2p := tframe_j tf. set u3p := tframe_k tf.
 move: (orthogonal_expansion tf u).
 set u1 := _ *d 'e_0. set u2 := _ *d 'e_1. set u3 := _ *d 'e_2%:R => Hu.
 move: (orthogonal_expansion tf v).
 set v1 := _ *d 'e_0. set v2 := _ *d 'e_1. set v3 := _ *d 'e_2%:R => Hv.
-set e1 := f`* (TVec p u1p). set e2 := f`* (TVec p u2p). set e3 := f`* (TVec p u3p).
+set e1 := f`* (u1p `@ p). set e2 := f`* (u2p `@ p). set e3 := f`* (u3p `@ p).
 have Ku : f`* u = u1 *: vtvec e1 + u2 *: vtvec e2 + u3 *: vtvec e3 :> vector.
   by rewrite /= Hu 2!mulmxDl !scalemxAl.
 have Kv : f`* v = v1 *: vtvec e1 + v2 *: vtvec e2 + v3 *: vtvec e3 :> vector.
@@ -347,8 +354,8 @@ have @f' : NOFrame.t R.
 have -> : iso_sgn f = frame_sgn f'.
   rewrite /frame_sgn dmap_iso_sgnP /=.
   by rewrite (Frame.jcrossk (can_frame _)) dotmulvv norm_delta_mx expr1n mulr1.
-have : vtvec (TVec (f p) ((f`* u) *v (f`* v))) =
-         frame_sgn f' *: vtvec (f`* (TVec p (u *v v))) :> vector.
+have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
+         frame_sgn f' *: vtvec (f`* ((u *v v) `@ p)) :> vector.
   rewrite /=.
   rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //.
   rewrite /=.
@@ -422,15 +429,15 @@ Qed.
 
 Definition preserves_orientation (f : 'Iso[R]_3) :=
   forall p (u v : p.-vec),
-  f`* (TVec p (u *v v)) = TVec (f p) ((f`* u) *v (f`* v))
+  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ (f p)
   :> vector.
 
 Lemma direct_iso_preserves_crossmul (f : 'DIso_3[R]) : preserves_orientation f.
 Proof. move=> p u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P f)) scale1r. Qed.
 
-Lemma preserves_crossmul_is_direct_iso p (u v : p.-vec) (f : 'Iso[R]_3) :
-  ~~ colinear u v ->
-  f`* (TVec p (u *v v)) = TVec (f p) ((f`* u) *v (f`* v)) :> vector ->
+Lemma preserves_crossmul_is_direct_iso (f : 'Iso[R]_3)
+  p (u v : p.-vec) : ~~ colinear u v ->
+  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ (f p) :> vector ->
   iso_sgn f = 1.
 Proof.
 move=> uv0.
@@ -439,8 +446,9 @@ move: (orthogonal_det (ortho_of_iso_is_O f)).
 case: (lerP 0 (\det (ortho_of_iso f))) => K; first by rewrite ger0_norm.
 rewrite ltr0_norm // => /eqP.
 rewrite eqr_oppLR => /eqP {K}K.
-rewrite K scaleN1r /= in H.
-move/esym/opp_self : H.
+exfalso.
+move: H.
+rewrite K scaleN1r => /esym/opp_self.
 move: (mulmxr_crossmulr (vtvec u) (vtvec v) (ortho_of_iso_is_O f)).
 rewrite K scaleN1r => /esym/eqP.
 rewrite eqr_oppLR => /eqP -> /eqP.

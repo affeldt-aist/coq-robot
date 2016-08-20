@@ -423,6 +423,8 @@ rewrite ifnot0 => /orP [] /eqP ->.
 by rewrite row2_frame /= dotrow.
 Qed.
 
+Definition can_tframe := TFrame.mk 0 can_frame. 
+
 End canonical_frame.
 
 (* TODO: go to euclidean3.v? *)
