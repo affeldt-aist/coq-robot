@@ -257,17 +257,17 @@ Record tvec p := TVec {tvec_field :> vector}.
 Definition vtvec p (v : tvec p) := let: TVec v := v in v.
 
 Local Notation "p .-vec" := (tvec p) (at level 5).
-Local Notation "u `@ p" := (TVec p u) (at level 4).
+Local Notation "u `@ p" := (TVec p u) (at level 11).
 
-Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.i f) `@ (TFrame.o f).
-Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.j f) `@ (TFrame.o f).
-Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.k f) `@ (TFrame.o f).
+Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.i f) `@ TFrame.o f.
+Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.j f) `@ TFrame.o f.
+Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.k f) `@ TFrame.o f.
 
 End tangent_vectors_and_frames.
 
 Coercion vtvec_field_coercion := vtvec.
 Notation "p .-vec" := (tvec p) (at level 5).
-Notation "u `@ p" := (TVec p u) (at level 5).
+Notation "u `@ p" := (TVec p u) (at level 11).
 
 Section derivative_map.
 
@@ -277,12 +277,17 @@ Let vector := 'rV[R]_3.
 (* [oneill] theorem 2.1, p. 104 *)
 Definition dmap (f : 'Iso[R]_3) p (v : p.-vec) :=
   let C := ortho_of_iso f in
-  (v *m C) `@ (f p).
+  (v *m C) `@ f p.
 
 Local Notation "f '`*'" := (@dmap f _) (at level 5, format "f `*").
 
 Lemma dmap0 (f : 'Iso[R]_3) p : f `* (0 `@ p) = 0 `@ (f p).
 Proof. by rewrite /dmap /= mul0mx. Qed.
+
+Lemma dmapE (f : 'Iso[R]_3) p (u : p.-vec) b a :
+  u = b - a :> vector ->
+  f `* u = f b - f a :> vector.
+Proof. move=> uab; by rewrite /dmap /= uab img_vec_iso. Qed.
 
 Lemma derivative_map_preserves_length (f : 'Iso[R]_3) p :
   {mono (fun x : p.-vec => f`* x) : u v / norm (vtvec u - vtvec v)}.
@@ -327,7 +332,7 @@ Qed.
 (* [oneill] theorem 3.6, p.110 *)
 Lemma dmap_preserves_crossmul p (u v : p.-vec) (f : 'Iso[R]_3) :
   f`* ((u *v v) `@ p) =
-    iso_sgn f *: vtvec (((f`* u) *v (f`* v)) `@ (f p)) :> vector.
+    iso_sgn f *: vtvec ((f`* u *v f`* v) `@ f p) :> vector.
 Proof.
 set tf := TFrame.trans (can_tframe R) p.
 set u1p := tframe_i tf. set u2p := tframe_j tf. set u3p := tframe_k tf.
@@ -341,7 +346,7 @@ have Ku : f`* u = u1 *: vtvec e1 + u2 *: vtvec e2 + u3 *: vtvec e3 :> vector.
 have Kv : f`* v = v1 *: vtvec e1 + v2 *: vtvec e2 + v3 *: vtvec e3 :> vector.
   by rewrite /= Hv 2!mulmxDl !scalemxAl.
 have @f' : NOFrame.t R.
-  apply (@NOFrame.mk _ e1 e2 e3).
+apply (@NOFrame.mk _ e1 e2 e3).
   by rewrite orth_preserves_norm ?ortho_of_iso_is_O // norm_delta_mx.
   by rewrite orth_preserves_norm ?ortho_of_iso_is_O // norm_delta_mx.
   by rewrite orth_preserves_norm ?ortho_of_iso_is_O // norm_delta_mx.
@@ -429,15 +434,15 @@ Qed.
 
 Definition preserves_orientation (f : 'Iso[R]_3) :=
   forall p (u v : p.-vec),
-  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ (f p)
+  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ f p
   :> vector.
 
-Lemma direct_iso_preserves_crossmul (f : 'DIso_3[R]) : preserves_orientation f.
+Lemma diso_preserves_orientation (f : 'DIso_3[R]) : preserves_orientation f.
 Proof. move=> p u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P f)) scale1r. Qed.
 
-Lemma preserves_crossmul_is_direct_iso (f : 'Iso[R]_3)
+Lemma preserves_crossmul_is_diso (f : 'Iso[R]_3)
   p (u v : p.-vec) : ~~ colinear u v ->
-  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ (f p) :> vector ->
+  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ f p :> vector ->
   iso_sgn f = 1.
 Proof.
 move=> uv0.

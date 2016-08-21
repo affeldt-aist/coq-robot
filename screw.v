@@ -935,7 +935,7 @@ Let T : vector := trans_of_iso f.
 Variable w : vector.
 Hypothesis w1 : norm w = 1.
 Variable a : angle R.
-Hypothesis faxis : is_around_axis w a (mx_lin1 Q).
+Hypothesis Qaxis : is_around_axis w a (mx_lin1 Q).
 
 (* [angeles] theorem 3.2.1, p.97: 
    the displacements of all the points of the body have the same projection onto e *)
@@ -946,7 +946,7 @@ rewrite /dotmul; congr (fun_of_matrix _ 0 0).
 rewrite (displacement_iso f p q) [in RHS]mulmxDl -[LHS](addr0); congr (_ + _).
 rewrite -mulmxA (mulmxBl Q) mul1mx.
 suff -> : Q *m w^T = w^T by rewrite subrr mulmx0.
-rewrite -{1}(is_around_axis_axis faxis) trmx_mul mulmxA mulmxE.
+rewrite -{1}(is_around_axis_axis Qaxis) trmx_mul mulmxA mulmxE.
 move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE => /eqP ->; by rewrite mul1mx.
 Qed.
 
@@ -998,7 +998,7 @@ Definition pitch_new := d0 / radian a.
 
 Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
 Proof.
-rewrite (is_around_axis_exp_skew'_new w1 faxis) linearD /=.
+rewrite (is_around_axis_exp_skew'_new w1 Qaxis) linearD /=.
 rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
 rewrite mulmxBr mulmx1 /exp_skew'.
 rewrite -addrA linearD /= mulmxDr trmx_mul trmxK.
@@ -1012,7 +1012,7 @@ Qed.
 
 Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
 Proof.
-rewrite (is_around_axis_exp_skew'_new w1 faxis) linearD /=.
+rewrite (is_around_axis_exp_skew'_new w1 Qaxis) linearD /=.
 rewrite mulmxDl [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
 rewrite linearD /=.
 rewrite linearZ /= tr_skew scalerN mulmxDl.
@@ -1071,12 +1071,12 @@ rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
   rewrite scalemx1.
   by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
 rewrite addrA.
-rewrite {1}(is_around_axis_exp_skew'_new w1 faxis).
+rewrite {1}(is_around_axis_exp_skew'_new w1 Qaxis).
 rewrite /exp_skew'.
 rewrite -(addrA (w^T *m w)).
 rewrite linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
 rewrite linearD /= linearZ /= linearZ /= 2!linearD /= trmx1.
-rewrite (is_around_axis_exp_skew'_new w1 faxis).
+rewrite (is_around_axis_exp_skew'_new w1 Qaxis).
 rewrite opprD !addrA addrC !addrA tr_skew.
 rewrite (scalerN (sin a) \S( w )) opprK.
 rewrite (addrC (- (sin a *: _))) subrK.
@@ -1149,7 +1149,7 @@ have _(*?*) : displacement f p0 *m (Q - 1) = 0.
   rewrite -normalcomp_colinear // => /eqP H1.
   rewrite (decomp (displacement f p0) w) H1 addr0.
   rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
-  by case: faxis => /= -> _ _; rewrite subrr scaler0.
+  by case: Qaxis => /= -> _ _; rewrite subrr scaler0.
 have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).
     rewrite -(displacement_iso f p0 q) {1}(decomp (displacement f p0) w).
@@ -1190,5 +1190,3 @@ by rewrite scalemx1 mul_mx_scalar div1r scalemxAl.
 Qed.
 
 End screw_axis.
-
- 
