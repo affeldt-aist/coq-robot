@@ -436,7 +436,7 @@ Qed.
 
 End exponential_coordinates_rigid_using_taylor.
 
-Module AngleR.
+(*Module AngleR.
 Section angler.
 Variable R : rcfType.
 
@@ -474,16 +474,47 @@ case=> [|k]; last first.
 by rewrite mulr1n -subr_eq subrr => /eqP.
 Qed.
 End angler.
-End AngleR.
+End AngleR.*)
 
-Section exponential_coordinates_rigid.
+Section rodrigues_gen.
 
 Variable R : rcfType.
 
+(* NB: technical generalization of Rodrigues' formula*)
+Definition rodrigues_gen (v : 'rV[R]_3) a w :=
+  v - (1 - cos a) *: (norm w ^+ 2 *: v) + (1 - cos a) * (v *d w) *: w + sin a *: (w *v v).
+
+Lemma rodrigues_genP u a w : rodrigues_gen u a w = u *m `e^(a, w).
+Proof.
+rewrite /rodrigues_gen.
+rewrite addrAC !mulmxDr mulmx1 -!scalemxAr mulmxA !skew_mxE -!addrA; congr (_ + _).
+rewrite !addrA.
+rewrite [in X in _ = _ + X]crossmulC scalerN.
+rewrite [in X in _ = _ - X]crossmulC.
+rewrite double_crossmul dotmulvv.
+rewrite scalerN opprK.
+rewrite scalerBr [in RHS]addrA [in RHS]addrC -!addrA; congr (_ + (_ + _)).
+by rewrite dotmulC scalerA. 
+Qed.
+
+End rodrigues_gen.
+
+Require Import boolp reals.
+
+Section exponential_coordinates_rigid.
+
+Variable R : rcfType (* NB: realType not yet compatible with angle, defined using rcfType *).
+
+Axiom R2pi : R.
+Axiom R2pi_gt1 : 1 < R2pi.
 Axiom radian : angle R -> R.
-Axiom angle_of_radian : R -> angle R.
-Axiom angle_of_radianK : cancel angle_of_radian radian.
+Definition radian_codom := [pred x | 0 <= x < R2pi].
+Axiom radian_codomP : forall x, radian x \in radian_codom.
+(*Axiom Repr : R -> nat * angle R.*)
+(*Axiom ReprE : forall x, x = R2pi *+ (Repr x).1 + radian (Repr x).2.*)
+Axiom angle_of_radian : R -> angle R (* NB: in other words: (Repr x).2 *).
 Axiom radianK : cancel radian angle_of_radian.
+Axiom angle_of_radianK : forall x, x \in radian_codom -> radian (angle_of_radian x) = x.
 Axiom radian0 : forall a, (radian a == 0) = (a == 0).
 
 (* NB: same definition as exp_twist but using exp_mat instead of the taylor expansion of
@@ -603,10 +634,17 @@ Lemma etwist_is_onto_SE (f : 'M[R]_4) : f \is 'SE3[R] ->
 Proof.
 set p := trans_of_hom f.
 case/boolP: (rot_of_hom f == 1) => rotf fSE.
-  exists \T(normalize p, 0), (norm p).
+case/boolP : (angle_of_radian (norm p) == 0) => p0.
+    exists \T(p, 0), 1.
+    rewrite /etwist /hom_twist ang_of_twistE eqxx lin_of_twistE.
+    rewrite angle_of_radianK; last by rewrite inE R2pi_gt1 ler01.
+    by rewrite scale1r (SE3E fSE) (eqP rotf).
+  exists \T((radian (angle_of_radian (norm p)))^-1 *: p, 0), 
+         (radian (angle_of_radian (norm p))).
   rewrite /etwist /hom_twist ang_of_twistE eqxx /= lin_of_twistE.
-  rewrite angle_of_radianK norm_scale_normalize.
-  by rewrite (SE3E fSE) (eqP rotf).
+  rewrite angle_of_radianK; last by  apply radian_codomP.
+  rewrite scalerA divrr; last by rewrite unitfE radian0.
+  by rewrite scale1r (SE3E fSE) (eqP rotf).
 case: (eskew_is_onto_SO (rot_of_hom_SO fSE)) => a [w [w1 fexp_skew]].
 have a0 : a != 0.
   apply: contra rotf => /eqP.
@@ -654,6 +692,27 @@ exists (etwist_is_onto_SE_mat_inv a w).
 rewrite HA.
 exact: (etwist_is_onto_SE_matP a0 w1).
 Qed.
+
+(* NB: pitch est redefini plus bas *)
+Definition pitch_tmp (w v : 'rV[R]_3) : R := (norm w)^-2 *: v *d w. 
+
+Lemma etwistE a v w : norm w = 1 ->
+  `e$(a , \T(v, w)) = 
+  hom (`e^(a, w)) (if w == 0 then (radian a) *: v else 
+                  (radian a * pitch_tmp w v / radian (pi *+ 2)) *:  w).
+Proof.
+move=> w1.
+rewrite /etwist /hom_twist ang_of_twistE; case: ifPn => [/eqP ->|w0].
+  rewrite lin_of_twistE; congr hom.
+  by rewrite skew_mx0 emx3a0.
+congr hom.
+rewrite /pitch_tmp dotmulZv mulrCA -mulrA -scalerA; congr (_ *: _).
+rewrite lin_of_twistE mulmxA -scalemxAl (_ : v *m w^T = (v *d w)%:M); last first.
+  by rewrite /dotmul -mx11_scalar.
+rewrite (_ : _ *m _ = 0) ?add0r; last first.
+  rewrite mulmxBr mulmx1 -rodrigues_genP /rodrigues_gen.
+  admit.
+Admitted.
 
 Lemma image_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (\S(w) == w^C)%MS.
 Proof.
@@ -788,23 +847,6 @@ rewrite addrA /hom_screw_motion /=; apply/rowP => i.
 rewrite mxE [in RHS]mxE; congr (_ + _).
 rewrite mulmxBr mulmx1 addrCA mxE [in RHS]mxE; congr (_ + _).
 by rewrite mulmxBl.
-Qed.
-
-(* NB: technical generalization of Rodrigues' formula*)
-Definition rodrigues_gen (v : 'rV[R]_3) a w :=
-  v - (1 - cos a) *: (norm w ^+ 2 *: v) + (1 - cos a) * (v *d w) *: w + sin a *: (w *v v).
-
-Lemma rodrigues_genP u a w : rodrigues_gen u a w = u *m `e^(a, w).
-Proof.
-rewrite /rodrigues_gen.
-rewrite addrAC !mulmxDr mulmx1 -!scalemxAr mulmxA !skew_mxE -!addrA; congr (_ + _).
-rewrite !addrA.
-rewrite [in X in _ = _ + X]crossmulC scalerN.
-rewrite [in X in _ = _ - X]crossmulC.
-rewrite double_crossmul dotmulvv.
-rewrite scalerN opprK.
-rewrite scalerBr [in RHS]addrA [in RHS]addrC -!addrA; congr (_ + (_ + _)).
-by rewrite dotmulC scalerA. 
 Qed.
 
 (* [murray] p. 47
