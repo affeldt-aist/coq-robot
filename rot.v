@@ -28,11 +28,13 @@ Require Import aux angle euclidean3 skew vec_angle frame.
       (Rodrigues formula:
         u * e^(phi,w) can be expressed using a linear combination of vectors
           u, (u *d w)w, u *v w)
-  4. section angle_axis
+  4. section angle_axis_of_rot
      sample lemmas:
        any rotation matrix M around an axis has angle acos (tr M - 1)/2
        any rotation matrix M around an axis has axis axial_vec
-     (sample lemma: specialized exponential map <-> Rodrigues' formula) *)
+     (sample lemma: specialized exponential map <-> Rodrigues' formula) 
+  5. section angle_axis_representation
+*)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -55,8 +57,8 @@ Lemma sqr_normr_cossin (R : rcfType) (v :'rV[R]_2) :
   norm v = 1 -> exists a, v 0 0 = cos a /\ v 0 1 = sin a.
 Proof.
 move=> v1.
-have {v1}v1 : `| v 0 0 +i* v 0 1 | = 1 by rewrite normc_def /= -sqr_norm2 sqrtr_sqr v1 normr1.
-exists (arg (v 0 0 +i* v 0 1)).
+have {v1}v1 : (`| v 0 0 +i* v 0 1 | = 1)%C by rewrite normc_def /= -sqr_norm2 sqrtr_sqr v1 normr1.
+exists (arg (v 0 0 +i* v 0 1)%C).
 rewrite /cos /sin expi_arg //; last by rewrite -normr_eq0 v1 oner_neq0.
 by rewrite v1 divr1.
 Qed.
@@ -775,7 +777,7 @@ Proof. by move=> w1; rewrite rotationE eskew_is_O //= det_eskew. Qed.
 Definition eskew_eigenvalues a : seq R[i] := [:: 1; expi a; expi (- a)].
 
 Lemma eigenvalue_ekew a w : norm w = 1 ->
-  eigenvalue (map_mx (fun x => x%:C) `e^(a, w)) =1
+  eigenvalue (map_mx (fun x => x%:C%C) `e^(a, w)) =1
     [pred k | k \in eskew_eigenvalues a].
 Proof.
 move=> u1 /= k.
@@ -922,56 +924,23 @@ End exponential_map_rot.
 Notation "'`e(' a ',' M ')'" := (emx3 a M) (format "'`e(' a ','  M ')'").
 Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )) (format "'`e^(' a ','  w ')'").
 
-Section angle_axis.
+Section angle_axis_of_rot.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
-
-Record angle_axis := AngleAxis {
-  angle_axis_val : angle R * vector ;
-  _ : norm (angle_axis_val.2) == 1 }.
-
-Canonical angle_axis_subType := [subType for angle_axis_val].
-
-Definition aangle (a : angle_axis) := (val a).1.
-Definition aaxis (a : angle_axis) := (val a).2.
-
-Lemma norm_axis a : norm (aaxis a) = 1.
-Proof. by case: a => *; apply/eqP. Qed.
-
-Fact norm_e1_subproof : norm (@delta_mx R _ 3 0 0) == 1.
-Proof. by rewrite norm_delta_mx. Qed.
-
-Definition angle_axis_of (a : angle R) (v : vector) :=
-  insubd (@AngleAxis (a,_) norm_e1_subproof) (a, (norm v)^-1 *: v).
-
-Lemma aaxis_of (a : angle R) (v : vector) : v != 0 ->
-  aaxis (angle_axis_of a v) = (norm v)^-1 *: v.
-Proof.
-move=> v_neq0 /=; rewrite /angle_axis_of /aaxis val_insubd /=.
-by rewrite normZ normfV normr_norm mulVf ?norm_eq0 // eqxx.
-Qed.
-
-(* NB: not used *)
-Lemma aaxis_of1 (a : angle R) (v : vector) : norm v = 1 ->
-  aaxis (angle_axis_of a v) = v.
-Proof.
-move=> v1; rewrite aaxis_of; last by rewrite -norm_eq0 v1 oner_neq0.
-by rewrite v1 invr1 scale1r.
-Qed.
-
-Lemma aangle_of (a : angle R) (v : vector) : aangle (angle_axis_of a v) = a.
-Proof. by rewrite /angle_axis_of /aangle val_insubd /= fun_if if_same. Qed.
 
 (* see table 1.2 of handbook of robotics *)
 Definition angle_of_rot (M : 'M[R]_3) := acos ((\tr M - 1) / 2%:R).
 Definition axis_of_rot (M : 'M[R]_3) : 'rV[R]_3 :=
   let a := angle_of_rot M in 1 / ((sin a) *+ 2) *: axial_vec M.
 
+Lemma tr_angle_of_rot M : angle_of_rot M^T = angle_of_rot M.
+Proof. by rewrite /angle_of_rot mxtrace_tr. Qed.
+
 Definition log_rot (M : 'M[R]_3) : angle R * 'rV[R]_3 :=
   (angle_of_rot M, axis_of_rot M).
 
-Lemma log_exp_skew (a : angle R) (w : 'rV[R]_3) :
+Lemma log_exp_eskew (a : angle R) (w : 'rV[R]_3) :
   sin a != 0 -> a \in Opi_closed R -> norm w = 1 ->
   log_rot `e^(a, w) = (a, w).
 Proof.
@@ -996,9 +965,6 @@ rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
 rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
 by rewrite mulrN opprK -mulr2n -mulrnAl mulrA div1r mulVr // mul1r.
 Qed.
-
-Lemma tr_angle_of_rot M : angle_of_rot M^T = angle_of_rot M.
-Proof. by rewrite /angle_of_rot mxtrace_tr. Qed.
 
 Lemma is_around_axis_angle_of_rot M u a : 
   u != 0 -> a \in Opi_closed R ->
@@ -1097,32 +1063,6 @@ case: (angle_in a) => Ha.
   left; by rewrite MHa opprK MP Rx_RO.
 Qed.
 
-Coercion exp_skew_of_angle_axis r :=
-  let (a, w) := (aangle r, aaxis r) in `e^(a, w).
-
-(*Definition rodrigues (x : vector) r :=
-  let (a, w) := (aangle r, aaxis r) in
-  cos a *: x + (1 - cos a) * (x *d w) *: w + sin a *: (x *v w).
-
-(* Rodrigues formula *)
-Lemma rodriguesP u r : rodrigues u r = u *m r.
-Proof.
-...
-Qed.*)
-
-(* NB: does not seem useful *)
-(*Lemma trace_rodrigues r : \tr (exp_rot_of_angle_axis r) = 1 + 2%:R * cos (aangle r).
-Proof. by rewrite trace_exp_rot_skew_mx // norm_axis. Qed.
-Lemma rodrigues_mx_is_O r : norm (aaxis r) = 1 -> exp_rot_of_angle_axis r \in 'O[R]_3.
-Proof.
-move=> axis1.
-rewrite /exp_rot_of_angle_axis orthogonalE tr_exp_rot {2}(eqP (anti_skew _)) linearN /= trmxK.
-by rewrite inv_exp_rot // skew_mx4.
-Qed.
-Lemma det_rodrigues_mx r : norm (aaxis r) = 1 -> \det (exp_rot_of_angle_axis r) = 1.
-Proof. move=> ?; by rewrite /exp_rot_of_angle_axis det_exp_rot. Qed.
-*)
-
 Lemma angle_of_rot_exp_skew a u : norm u = 1 ->
   a \in Opi_closed R ->
   angle_of_rot `e^(a, u) = a.
@@ -1146,9 +1086,6 @@ have -> : M = `e^(a, u).
 rewrite axial_vec_eskew // scalerA div1r.
 by rewrite mulVr ?scale1r // unitfE mulrn_eq0 negb_or.
 Qed.
-
-Definition angle_axis_of_rot M :=
-  angle_axis_of (angle_of_rot M) (axis_of_rot M).
 
 Lemma angle_axis_eskew_gen M : M \is 'SO[R]_3 ->
   axis_of_rot M != 0 ->
@@ -1237,6 +1174,82 @@ case: (angle_in a') => Ha'.
     by rewrite -scalerA -/(axis_of_rot M) div1r.
 Qed.
 
+Lemma angle_axis_is_around_axis (Q : 'M[R]_3) :
+  Q \is 'SO[R]_3 ->
+  axis_of_rot Q != 0 ->
+  sin (angle_of_rot Q) != 0 ->
+  is_around_axis (normalize (axis_of_rot Q)) (angle_of_rot Q) (mx_lin1 Q).
+Proof.
+move=> QSO w0 a0.
+have HQ : Q = `e^(angle_of_rot Q, normalize (axis_of_rot Q)).
+  by apply: angle_axis_eskew_gen.
+rewrite {3}HQ.
+apply is_around_axis_eskew.
+by rewrite norm_normalize.
+Qed.
+
+End angle_axis_of_rot.
+
+Section angle_axis_representation.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+
+Record angle_axis := AngleAxis {
+  angle_axis_val : angle R * vector ;
+  _ : norm (angle_axis_val.2) == 1 }.
+
+Canonical angle_axis_subType := [subType for angle_axis_val].
+
+Definition aangle (a : angle_axis) := (val a).1.
+Definition aaxis (a : angle_axis) := (val a).2.
+
+Lemma norm_axis a : norm (aaxis a) = 1.
+Proof. by case: a => *; apply/eqP. Qed.
+
+Fact norm_e1_subproof : norm (@delta_mx R _ 3 0 0) == 1.
+Proof. by rewrite norm_delta_mx. Qed.
+
+Definition angle_axis_of (a : angle R) (v : vector) :=
+  insubd (@AngleAxis (a,_) norm_e1_subproof) (a, (norm v)^-1 *: v).
+
+Lemma aaxis_of (a : angle R) (v : vector) : v != 0 ->
+  aaxis (angle_axis_of a v) = (norm v)^-1 *: v.
+Proof.
+move=> v_neq0 /=; rewrite /angle_axis_of /aaxis val_insubd /=.
+by rewrite normZ normfV normr_norm mulVf ?norm_eq0 // eqxx.
+Qed.
+
+(* NB: not used *)
+(*Lemma aaxis_of1 (a : angle R) (v : vector) : norm v = 1 ->
+  aaxis (angle_axis_of a v) = v.
+Proof.
+move=> v1; rewrite aaxis_of; last by rewrite -norm_eq0 v1 oner_neq0.
+by rewrite v1 invr1 scale1r.
+Qed.*)
+
+Lemma aangle_of (a : angle R) (v : vector) : aangle (angle_axis_of a v) = a.
+Proof. by rewrite /angle_axis_of /aangle val_insubd /= fun_if if_same. Qed.
+
+Coercion exp_skew_of_angle_axis r :=
+  let (a, w) := (aangle r, aaxis r) in `e^(a, w).
+
+(* NB: does not seem useful *)
+(*Lemma trace_rodrigues r : \tr (exp_rot_of_angle_axis r) = 1 + 2%:R * cos (aangle r).
+Proof. by rewrite trace_exp_rot_skew_mx // norm_axis. Qed.
+Lemma rodrigues_mx_is_O r : norm (aaxis r) = 1 -> exp_rot_of_angle_axis r \in 'O[R]_3.
+Proof.
+move=> axis1.
+rewrite /exp_rot_of_angle_axis orthogonalE tr_exp_rot {2}(eqP (anti_skew _)) linearN /= trmxK.
+by rewrite inv_exp_rot // skew_mx4.
+Qed.
+Lemma det_rodrigues_mx r : norm (aaxis r) = 1 -> \det (exp_rot_of_angle_axis r) = 1.
+Proof. move=> ?; by rewrite /exp_rot_of_angle_axis det_exp_rot. Qed.
+*)
+
+Definition angle_axis_of_rot M :=
+  angle_axis_of (angle_of_rot M) (axis_of_rot M).
+
 Lemma angle_axis_eskew M : M \is 'SO[R]_3 ->
   axis_of_rot M != 0 ->
   sin (angle_of_rot M) != 0 ->
@@ -1248,4 +1261,4 @@ move=> HM M0 sin0 a w.
 by rewrite (angle_axis_eskew_gen HM M0 sin0) /a /w aangle_of aaxis_of.
 Qed.
 
-End angle_axis.
+End angle_axis_representation.

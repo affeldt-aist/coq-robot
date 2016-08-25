@@ -38,7 +38,7 @@ Section vec_angle.
 
 Variable (R : rcfType).
 
-Definition vec_angle v w : angle R := arg (v *d w +i* norm (v *v w)).
+Definition vec_angle v w : angle R := arg (v *d w +i* norm (v *v w))%C.
 
 Lemma vec_anglev0 v : vec_angle v 0 = vec_angle 0 0.
 Proof. by rewrite /vec_angle 2!dotmulv0 2!crossmulv0. Qed.
@@ -59,7 +59,7 @@ rewrite /vec_angle /cos crossmulNv normN expi_arg; last first.
 rewrite expi_arg; last first.
   rewrite eq_complex /= negb_and.
   by case/boolP : (_ == 0) => ab //=; rewrite norm_eq0 dotmul_eq0_crossmul_neq0.
-rewrite (_ : `|- v *d w +i* _| = `|v *d w +i* norm (v *v w)|); last first.
+rewrite (_ : `|- v *d w +i* _| = `|v *d w +i* norm (v *v w)|)%C; last first.
   by rewrite 2!normc_def /= dotmulNv sqrrN.
 by rewrite /= mul0r oppr0 mulr0 subr0 expr0n /= addr0 subr0 dotmulNv mulNr.
 Qed.
@@ -76,7 +76,7 @@ rewrite [in LHS]expi_arg; last first.
 rewrite expi_arg; last first.
   rewrite eq_complex /= negb_and.
   by case/boolP : (_ == 0) => ab //=; rewrite norm_eq0 dotmul_eq0_crossmul_neq0.
-rewrite (_ : `| _ +i* norm (w *v _)| = `|v *d w +i* norm (v *v w)|); last first.
+rewrite (_ : `| _ +i* norm (w *v _)| = `|v *d w +i* norm (v *v w)|)%C; last first.
   by rewrite 2!normc_def /= sqrrN crossmulC normN.
 by rewrite /= mul0r oppr0 mulr0 expr0n /= addr0 subr0 mulr0 subr0 mulNr.
 Qed.
@@ -123,7 +123,7 @@ wlog /andP[u0 v0] : u v / (u != 0) && (v != 0).
   case/boolP : (u == 0) => [/eqP ->{u}|u0]; first by rewrite dotmul0v norm0 !mul0r.
   case/boolP : (v == 0) => [/eqP ->{v}|v0]; first by rewrite dotmulv0 norm0 !(mulr0,mul0r).
   apply; by rewrite u0.
-rewrite /vec_angle /cos. set x := _ +i* _.
+rewrite /vec_angle /cos. set x := (_ +i* _)%C.
 case/boolP  : (x == 0) => [|x0].
   rewrite eq_complex /= => /andP[/eqP H1 H2].
   exfalso.
@@ -206,7 +206,7 @@ case: (lerP 0 b) => //= b0; by rewrite ltrW.
 Qed.
 
 Lemma norm_dotmul_crossmul (u v : 'rV[R]_3) : u != 0 -> v != 0 ->
-  `|u *d v +i* norm (u *v v)| = (norm u * norm v)%:C.
+  (`|u *d v +i* norm (u *v v)| = (norm u * norm v)%:C)%C.
 Proof.
 move=> u0 v0 .
 rewrite {1}dotmul_cos {1}norm_crossmul normc_def.

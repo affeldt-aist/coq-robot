@@ -1003,21 +1003,6 @@ Qed.
 
 End etwist_alt.
 
-(* TODO: move *)
-Lemma diso_is_around_axis (R : rcfType) (Q : 'M[R]_3) :
-  Q \is 'SO[R]_3 ->
-  axis_of_rot Q != 0 ->
-  sin (angle_of_rot Q) != 0 ->
-  is_around_axis (normalize (axis_of_rot Q)) (angle_of_rot Q) (mx_lin1 Q).
-Proof.
-move=> QSO w0 a0.
-have HQ : Q = `e^(angle_of_rot Q, normalize (axis_of_rot Q)).
-  by apply: angle_axis_eskew_gen.
-rewrite {3}HQ.
-apply is_around_axis_eskew.
-by rewrite norm_normalize.
-Qed.
-
 Section Chasles.
 
 Variable R : rcfType.
@@ -1041,7 +1026,7 @@ rewrite /dotmul; congr (fun_of_matrix _ 0 0).
 rewrite (displacement_iso f p q) [in RHS]mulmxDl -[LHS](addr0); congr (_ + _).
 rewrite -mulmxA (mulmxBl Q) mul1mx.
 suff -> : Q *m w^T = w^T by rewrite subrr mulmx0.
-move: (is_around_axis_axis (diso_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_axis (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
 rewrite -/w => Hw; rewrite -{1}Hw.
 rewrite trmx_mul mulmxA mulmxE.
 move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE => /eqP ->; by rewrite mul1mx.
@@ -1069,11 +1054,14 @@ Proof. by rewrite /parpart /axialcomp dotmulC (displacement_proj _ 0). Qed.
 
 Definition perppart (p : point) := normalcomp (displacement f p) w.
 
+Definition screw_points : pred point := 
+  [pred p0 | colinear (displacement f p0) w].
+
 (* [angeles] theorem 3.2.2, p.97 *)
 (* d0 is the minimal norm of a displacement, all such points are along a line parallel
    to e *)
 Lemma MozziChasles p :
-  norm (displacement f p) = d0 -> colinear (displacement f p) w.
+  norm (displacement f p) = d0 -> p \in screw_points.
 Proof.
 move=> H.
 have Hp : forall p : point,
@@ -1084,24 +1072,24 @@ have Hp : forall p : point,
     by rewrite addr_ge0 // ?sqr_ge0.
   by rewrite /perppart -/(parpart p') parpartP.
 move: {Hp}(Hp p) => Hp.
-rewrite -(normalcomp_colinear _ w1) ?ne // -norm_eq0.
+rewrite inE -(normalcomp_colinear _ w1) ?ne // -norm_eq0.
 suff : norm (displacement f p) ^+2 <= norm (d0 *: (w : 'rV[R]_3)) ^+ 2.
-  by rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 //= norm_eq0.
+  rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 /=; last by done.
+  done.
 rewrite 2!expr2.
 by rewrite ler_pmul // ?norm_ge0 // H normZ w1 mulr1 ler_norm.
 Qed.
 
 End Chasles.
 
-Section screw_axis_point_def.
+Section screw_axis_point_helper.
 
 Variable R : rcfType.
-Let point := 'rV[R]_3.
 Variable a : angle R.
-Variable f : 'DIso_3[R].
-Let Q : 'M[R]_3 := ortho_of_iso f.
 
 Definition Ncos2 := (1 - cos a) *+ 2.
+
+Definition N2cos := 1 - cos a *+ 2.
 
 Lemma unitNcos2 (a0 : a != 0) : Ncos2 \is a GRing.unit.
 Proof.
@@ -1112,8 +1100,30 @@ Qed.
 Lemma Ncos2V (a0 : a != 0) : (Ncos2^-1)%:M *m Ncos2%:M = 1 :> 'M_3.
 Proof. by rewrite -scalar_mxM mulVr // unitNcos2. Qed.
 
+Lemma N2cosNcos2 (a0 : a != 0) : N2cos - Ncos2^-1 * N2cos - N2cos / Ncos2 * N2cos = 0.
+Proof.
+rewrite (mulrC N2cos) -mulrA -{1}(mulKr (unitNcos2 a0) N2cos) -2!mulrBr; apply/eqP.
+rewrite mulf_eq0 invr_eq0.
+move: (unitNcos2 a0); rewrite unitfE => /negPf -> /=.
+rewrite -{2}(mul1r N2cos) -2!mulrBl mulf_eq0.
+rewrite -addrA -opprB opprK subr_eq0.
+by rewrite /Ncos2 {1}/N2cos mulrnBl addrAC eqxx.
+Qed.
+
+End screw_axis_point_helper.
+
+Section screw_axis_point_def.
+
+Variable R : rcfType.
+
+Let point := 'rV[R]_3.
+
+Variable f : 'DIso_3[R].
+Let Q : 'M[R]_3 := ortho_of_iso f.
+Let a := angle_of_rot Q.
+
 Definition screw_axis_point (x : point) : point :=
-  1 / Ncos2 *: (x *m Q - f x) *m (Q - 1)^T.
+  1 / Ncos2 a *: (x *m Q - f x) *m (Q - 1)^T.
 
 End screw_axis_point_def.
 
@@ -1127,14 +1137,15 @@ Variable f : 'DIso_3[R].
 Let Q : 'M[R]_3 := ortho_of_iso f.
 Hypothesis w0 : axis_of_rot Q != 0.
 Let w := normalize (axis_of_rot Q).
-Let w1 : norm w = 1.
-Proof. by rewrite norm_normalize. Qed.
+Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
 Let a := angle_of_rot Q.
 Hypothesis sina0 : sin a != 0.
+Let a0 : a != 0.
+Proof. apply: contra sina0 => /eqP ->; by rewrite sin0. Qed.
 
 Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
 Proof.
-move: (is_around_axis_exp_skew'_new w1 (diso_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
 rewrite mulmxBr mulmx1 /exp_skew'.
@@ -1149,7 +1160,7 @@ Qed.
 
 Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
 Proof.
-move: (is_around_axis_exp_skew'_new w1 (diso_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite mulmxDl [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
 rewrite linearD /= [w]lock linearZ /= tr_skew scalerN mulmxDl -lock.
@@ -1164,26 +1175,14 @@ rewrite mul1mx mulmxE -expr2 (mulmx_tr_uvect w1) //.
 by rewrite subrr scaler0.
 Qed.
 
-Definition N2cos := 1 - cos a *+ 2.
-
-Lemma N2cosNcos2 (a0 : a != 0) : N2cos - (Ncos2 a)^-1 * N2cos - N2cos / (Ncos2 a) * N2cos = 0.
-Proof.
-rewrite (mulrC N2cos) -mulrA -{1}(mulKr (unitNcos2 a0) N2cos) -2!mulrBr; apply/eqP.
-rewrite mulf_eq0 invr_eq0.
-move: (unitNcos2 a0); rewrite unitfE => /negPf -> /=.
-rewrite -{2}(mul1r N2cos) -2!mulrBl mulf_eq0.
-rewrite -addrA -opprB opprK subr_eq0.
-by rewrite /Ncos2 {1}/N2cos mulrnBl addrAC eqxx.
-Qed.
-
 Definition screw_axis_point_mat :=
   let A := row_mx (Q - 1) w^T in A *m A^T.
 
 Definition screw_axis_point_mat_inv : 'M_3 :=
-  (Ncos2 a)^-1 *: 1 + N2cos / (Ncos2 a)*: w^T *m w.
+  (Ncos2 a)^-1 *: 1 + (N2cos a) / (Ncos2 a)*: w^T *m w.
 
 Lemma screw_axis_point_matE : let A := row_mx (Q - 1) w^T in
-  A *m A^T = (Ncos2 a) *: 1 - N2cos *: w^T *m w.
+  A *m A^T = (Ncos2 a) *: 1 - (N2cos a) *: w^T *m w.
 Proof.
 move=>A.
 rewrite /A tr_row_mx mul_row_col trmxK linearD /= linearN /= trmx1.
@@ -1195,14 +1194,14 @@ rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
   rewrite scalemx1.
   by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
 rewrite addrA.
-move: (is_around_axis_exp_skew'_new w1 (diso_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
 rewrite -/Q -/a => HQ.
 rewrite {1}HQ.
 rewrite /exp_skew'.
 rewrite -(addrA (w^T *m w)).
 rewrite [w]lock linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
 rewrite linearD /= [w]lock 2!linearZ /= 2!linearD /= trmx1 -!lock.
-move: (is_around_axis_exp_skew'_new w1 (diso_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
 rewrite -/Q -/a => ->.
 rewrite opprD !addrA addrC !addrA tr_skew.
 rewrite (scalerN (sin a) \S( w )) opprK.
@@ -1214,12 +1213,12 @@ rewrite -scalemxAl /N2cos [in RHS]scalerBl scale1r opprB; congr (_ + _).
 by rewrite mulNrn scaleNr opprK.
 Qed.
 
-Lemma screw_axis_point_Vmat (a0 : a != 0) :
+Lemma screw_axis_point_Vmat (*(a0 : a != 0)*) :
   screw_axis_point_mat_inv * screw_axis_point_mat = 1.
 Proof.
 rewrite /screw_axis_point_mat /screw_axis_point_mat_inv screw_axis_point_matE !scalemx1 -!mulmxE.
 rewrite mulmxBr mulmxDl Ncos2V // -[RHS]addr0 -addrA; congr (_ + _).
-rewrite mul_mx_scalar -{1}scalemxAl {1}(mulrC N2cos) scalerA mulrA mulrV ?unitNcos2 // mul1r.
+rewrite mul_mx_scalar -{1}scalemxAl {1}(mulrC (N2cos a)) scalerA mulrA mulrV ?unitNcos2 // mul1r.
 rewrite mulmxDl.
 rewrite opprD addrA mul_scalar_mx -[in X in X - _ = 0]scalemxAl scalerA.
 rewrite -scalerBl.
@@ -1230,7 +1229,7 @@ rewrite mulmxE -expr2 (mulmx_tr_uvect w1) // -scalerBl.
 by apply/eqP; rewrite scaler_eq0 (N2cosNcos2 a0) eqxx.
 Qed.
 
-Lemma screw_axis_point_matV (a0 : a != 0) :
+Lemma screw_axis_point_matV (*(a0 : a != 0)*) :
   screw_axis_point_mat * screw_axis_point_mat_inv = 1.
 Proof.
 rewrite /screw_axis_point_mat /screw_axis_point_mat_inv screw_axis_point_matE !scalemx1 -!mulmxE.
@@ -1244,17 +1243,17 @@ rewrite -3![in X in _ - X = 0]scalemxAl.
 rewrite -[in X in _ - X = 0]scalemxAr.
 rewrite [in X in _ - X = 0]scalerA.
 rewrite mulmxE -expr2 (mulmx_tr_uvect w1) // -scalerBl.
-by apply/eqP; rewrite scaler_eq0 (mulrC N2cos) N2cosNcos2 // eqxx.
+by apply/eqP; rewrite scaler_eq0 (mulrC (N2cos a)) N2cosNcos2 // eqxx.
 Qed.
 
-Lemma screw_axis_point_mat_unit (a0 : a != 0) :
+Lemma screw_axis_point_mat_unit (*(a0 : a != 0)*) :
   screw_axis_point_mat \is a GRing.unit.
 Proof.
 apply/unitrP; exists screw_axis_point_mat_inv.
 by rewrite screw_axis_point_Vmat // screw_axis_point_matV.
 Qed.
 
-Lemma screw_axis_point_mat_invE (a0 : a != 0) :
+Lemma screw_axis_point_mat_invE (*(a0 : a != 0)*) :
   let A := row_mx (Q - 1) w^T in
   (A *m A^T)^-1 = screw_axis_point_mat_inv.
 Proof.
@@ -1263,25 +1262,28 @@ by rewrite -[LHS]mul1r -screw_axis_point_Vmat // mulrK // screw_axis_point_mat_u
 Qed.
 
 (* [angeles] Sect. 3.2.1 (the screw of a rigid-body motion) *)
-Lemma screw_axis_pointE p0 (* a point on the screw axis *) q (a0 : a != 0) :
-  p0 *d w = 0 (* p0 is the closed point to the origin *) ->
-  normalcomp (displacement f p0) w = 0 ->
-  p0 = screw_axis_point a f q.
+Lemma screw_axis_pointE p0 q (*(a0 : a != 0)*) :
+  (p0 *d w == 0) (* p0 is the closed point to the origin *) &&
+  (p0 \in screw_points f) ->
+  (p0 == screw_axis_point f q).
 Proof.
-move=> p0e0 fp0e0.
+move/andP=> [/eqP p0e0 fp0e0].
 have _(*?*) : displacement f p0 *m (Q - 1) = 0.
   have : colinear (displacement f p0) w.
     rewrite (decomp (displacement f p0) w) -/(parpart f p0) (@parpartP _ _ _) //.
-    by rewrite fp0e0 addr0 colinearZv colinear_refl orbC.
+    rewrite inE -normalcomp_colinear ?norm_normalize // in fp0e0.
+    by rewrite (eqP fp0e0) addr0 colinearZv colinear_refl orbC.
   rewrite -(normalcomp_colinear _ w1) // => /eqP H1.
   rewrite (decomp (displacement f p0) w) H1 addr0.
   rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
-  move: (diso_is_around_axis (ortho_of_diso_is_SO f) w0 sina0); rewrite -/Q -/a -/w.
+  move: (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0); rewrite -/Q -/a -/w.
   by case => /= -> _ _; rewrite subrr scaler0.
 have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).
     rewrite -(displacement_iso f p0 q) {1}(decomp (displacement f p0) w).
-    by rewrite fp0e0 addr0 axialcompE.
+    rewrite inE -normalcomp_colinear ?norm_normalize // in fp0e0.
+    rewrite (eqP fp0e0).
+    by rewrite addr0 axialcompE.
   rewrite (mx11_scalar (displacement f p0 *m w^T)) -/(dotmul _ _).
   rewrite mulmxA (mx11_scalar (displacement f q *m w^T)) -/(dotmul _ _).
   by rewrite (displacement_proj w0 sina0 _ q).
@@ -1315,7 +1317,17 @@ rewrite -[in X in _ = _ + X -> _]mulmxA.
 rewrite -[in X in _ = _ + X -> _]scalemxAl.
 rewrite -[in X in _ = _ + X -> _]scalemxAr.
 rewrite QN1wTw scaler0 mulmx0 addr0.
-by rewrite scalemx1 mul_mx_scalar div1r scalemxAl.
+rewrite scalemx1 mul_mx_scalar div1r scalemxAl => ?.
+by apply/eqP.
 Qed.
 
 End screw_axis_point.
+
+(*
+TODO:
+- eskew_is_onto_SO / angle_axis_eskew
+- finir le rangement sur le screw axis point
+- regarder les series formelles de Cohen CPP 2016
+
+
+*)

@@ -498,14 +498,14 @@ rewrite scale0r subr0 expr0n add0r mulrN mxtrace_skew_mx2 mulrN opprK.
 by rewrite mulrA div1r mulVr ?unitfE ?pnatr_eq0 // mul1r.
 Qed.
 
-Definition skew_mx_eigenvalues : seq R[i] := [:: 0; 'i; 0 -i* 1].
+Definition skew_mx_eigenvalues : seq R[i] := [:: 0; 'i; 0 -i* 1]%C.
 
 Ltac eigenvalue_skew_mx_eval_poly :=
   rewrite /map_poly horner_poly size_addl; [ |by rewrite size_polyXn size_polyX] ;
   rewrite size_polyXn sum4E !coefD !coefXn !coefX !add0r !mul0r !mul1r !add0r !addr0 mul1r.
 
 Lemma eigenvalue_skew_mx u : norm u = 1 ->
-  eigenvalue (map_mx (fun x => x%:C) \S( u)) =1 [pred k | k \in skew_mx_eigenvalues].
+  eigenvalue (map_mx (fun x => x%:C%C) \S( u)) =1 [pred k | k \in skew_mx_eigenvalues].
 Proof.
 move=> u1 /= k.
 rewrite inE eigenvalue_root_char -map_char_poly char_poly_skew_mx u1 expr1n scale1r.

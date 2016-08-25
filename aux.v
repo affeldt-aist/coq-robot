@@ -125,20 +125,20 @@ Section extra_complex.
 
 Variable R : rcfType.
 
-Lemma opp_conjc (a b : R) : - (a -i* b) = - a +i* b.
+Lemma opp_conjc (a b : R) : (- (a -i* b) = (- a +i* b))%C.
 Proof. by apply/eqP; rewrite eq_complex /= opprK !eqxx. Qed.
 
-Lemma Re_scale (x : R[i]) (k : R) : k != 0 -> Re (x / k%:C) = (Re x) / k.
+Lemma Re_scale (x : R[i]) (k : R) : k != 0 -> complex.Re (x / k%:C%C) = complex.Re x / k.
 Proof.
 move=> k0; case: x => a b /=.
 rewrite expr0n /= addr0 mul0r -mulrN opprK mulr0 addr0.
 by rewrite expr2 invrM // ?unitfE // (mulrA k) divff // mul1r.
 Qed.
 
-Lemma complexZ1 (a b k : R) : (k * a) +i* (k * b) = k%:C * (a +i* b).
+Lemma complexZ1 (a b k : R) : ((k * a) +i* (k * b) = k%:C * (a +i* b))%C.
 Proof. by simpc. Qed.
 
-Lemma complexZ2 (a b k : R) : (k * a) -i* (k * b) = k%:C * (a -i* b).
+Lemma complexZ2 (a b k : R) : ((k * a) -i* (k * b) = k%:C * (a -i* b))%C.
 Proof. by simpc. Qed.
 
 Definition complexZ := (complexZ1, @complexZ2).

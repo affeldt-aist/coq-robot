@@ -245,11 +245,17 @@ Notation "''DIso_3[' R ]" := (DIso.t R)
 Definition disometry_coercion := DIso.f.
 Coercion disometry_coercion : DIso.t >-> Iso.t.
 
-Lemma ortho_of_diso_is_SO (R : rcfType) (f : 'DIso_3[R]) : ortho_of_iso f \is 'SO[R]_3.
+Section diso_prop.
+
+Variable R : rcfType.
+
+  
+Lemma ortho_of_diso_is_SO (f : 'DIso_3[R]) : ortho_of_iso f \is 'SO[R]_3.
 Proof.
-case: f => f; rewrite /iso_sgn => Hf /=.
-by rewrite rotationE (ortho_of_iso_is_O f) /=.
+case: f => f; rewrite /iso_sgn => Hf /=; by rewrite rotationE (ortho_of_iso_is_O f).
 Qed.
+
+End diso_prop.
 
 Section tangent_vectors_and_frames.
 

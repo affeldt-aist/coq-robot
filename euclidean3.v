@@ -860,7 +860,7 @@ Qed.
 
 (* eigenvalues of orthogonal matrices have norm 1 *)
 Lemma eigenvalue_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall k,
-   k \in eigenvalue (map_mx (fun x => x%:C) M) -> `| k | = 1.
+   k \in eigenvalue (map_mx (fun x => x%:C%C) M) -> `| k | = 1.
 Proof.
 move=> MSO /= k.
 case/eigenvalueP => v kv v0.
@@ -868,7 +868,7 @@ move/(congr1 trmx)/(congr1 (fun x => map_mx conjc x)) : (kv).
 rewrite trmx_mul map_mxM linearZ /= map_mxZ map_trmx.
 move/(congr1 (fun x => (k *: v) *m x)).
 rewrite -{1}kv -mulmxA (mulmxA (map_mx _ M)) (_ : map_mx _ M *m _ = 1%:M); last first.
-  rewrite (_ : map_mx conjc _ = map_mx (fun x => x%:C) M^T); last first.
+  rewrite (_ : map_mx conjc _ = map_mx (fun x => x%:C%C) M^T); last first.
     apply/matrixP => i j; by rewrite !mxE conjc_real.
   rewrite orthogonalE in MSO.
   by rewrite -map_mxM mulmxE (eqP MSO) map_mx1.
