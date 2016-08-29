@@ -103,6 +103,13 @@ Proof. by Simp.ord; rewrite -val_eqE /=; case: (val i). Qed.
 Lemma liftE1 {m} (i : 'I_m.+3) : fintype.lift i 1 = (i <= 1).+1%:R.
 Proof. by Simp.ord; case: (val i) => [|[]]. Qed.
 
+(*Lemma sum1E_gen {T : ringType} (f : 'I_1 -> T) P : \sum_(i < 1 | P i) f i = (P ord0)%:R * f 0.
+Proof.
+case/boolP : (P ord0) => P0; rewrite ?(mul1r,mul0r).
+  by rewrite (bigD1 ord0) //= big1 ?addr0 // => i; rewrite (ord1 i) eqxx andbF.
+by rewrite big1 // => /= i; rewrite (ord1 i) (negbTE P0).
+Qed.  *)
+
 Lemma sum1E {T : ringType} (f : 'I_1 -> T) : \sum_(i < 1) f i = f 0.
 Proof. by rewrite big_ord1. Qed.
 

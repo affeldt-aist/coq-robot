@@ -542,7 +542,7 @@ set a := skew_mx u.
 rewrite det_mx33 [a]lock !mxE /=. Simp.r.
 rewrite -lock /a !skewij subr0. Simp.r.
 rewrite -!addrA; congr (_ + _); rewrite !addrA.
-by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC -sqr_norm.
+by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC sqr_norm sum3E.
 Qed.
 
 Lemma skew_mx_inv u : 1 - \S( u ) \is a GRing.unit.

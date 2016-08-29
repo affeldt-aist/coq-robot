@@ -1079,12 +1079,12 @@ Section norm3.
 Variable R : rcfType.
 Implicit Types u : 'rV[R]_3.
 
-Lemma sqr_norm u : norm u ^+ 2 = u``_0 ^+ 2 + u``_1 ^+ 2 + u``_2%:R ^+ 2.
-Proof. by rewrite -dotmulvv dotmulE sum3E !expr2. Qed.
+Lemma sqr_norm u : norm u ^+ 2 = \sum_i u``_i ^+ 2.
+Proof. by rewrite -dotmulvv dotmulE sum3E. Qed.
 
 Lemma norm_crossmul' u v : (norm (u *v v)) ^+ 2 = (norm u * norm v) ^+ 2 - (u *d v) ^+ 2 .
 Proof.
-rewrite sqr_norm crossmulE /SimplFunDelta /= !mxE /=.
+rewrite sqr_norm sum3E crossmulE /SimplFunDelta /= !mxE /=.
 transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
   * ((v``_0)^+2 + (v``_1)^+2 + (v``_2%:R)^+2)
   - (u``_0 * v``_0 + u``_1 * v``_1 + u``_2%:R * v``_2%:R)^+2).
@@ -1149,7 +1149,7 @@ transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
   rewrite addrA.
   rewrite addrC -!addrA; congr (_ + _).
   by rewrite addrC.
-rewrite exprMn -2!sqr_norm; congr (_ - _ ^+ 2).
+rewrite exprMn -(sum3E (fun i => u``_i ^+ 2)) -(sum3E (fun i => v``_i ^+ 2)) -2!sqr_norm; congr (_ - _ ^+ 2).
 by rewrite dotmulE sum3E.
 Qed.
 

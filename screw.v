@@ -1042,7 +1042,7 @@ have -> : norm (displacement f p) =
           norm (displacement f p *m (col_mx3 (normalize w) (Base.j w) (Base.k w))^T).
 rewrite orth_preserves_norm // orthogonalV rotation_sub //.
   exact: (frame_is_rot F).
-rewrite col_mx3_mul sqr_norm !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
+rewrite col_mx3_mul sqr_norm sum3E !mxE /= -[X in X <= _]addr0 -addrA ler_add //.
   by rewrite normalizeI // w1.
 by rewrite addr_ge0 // sqr_ge0.
 Qed.
