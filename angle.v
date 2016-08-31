@@ -297,21 +297,6 @@ Proof.
 rewrite -lecR (ler_trans (normc_ge_Re _)) //; by case: a => ? /= /eqP ->.
 Qed.
 
-Lemma cos0_inv a : cos a = 0 -> a = pihalf \/ a = -pihalf.
-Proof.
-case: a => -[a b] ni; rewrite /cos /= => a0.
-have [b1|b1] : b = 1 \/ b = - 1.
-  move: ni.
-  rewrite a0 normc_def /= expr0n add0r sqrtr_sqr eq_complex /= eqxx andbT.
-  case: (lerP 0 b) => b0.
-  + rewrite ger0_norm // => /eqP ->; by left.
-  + rewrite ltr0_norm // eqr_oppLR => /eqP ->; by right.
-- left; apply val_inj => /=;
-  by rewrite /pihalf argK // ?a0 ?b1 // normc_def /= expr0n add0r expr1n sqrtr1.
-- right; apply val_inj => /=.
-  by rewrite /pihalf a0 b1 /= expiNi; apply/eqP; rewrite eq_complex /= oppr0 2!eqxx.
-Qed.
-
 Lemma sin0 : sin 0 = 0.
 Proof.
 by move/eqP: (sin2cos2 0); rewrite cos0 (expr2 1) mulr1 subrr sqrf_eq0 => /eqP.
@@ -337,6 +322,13 @@ Qed.
 
 Lemma expi0 : expi 0 = 1.
 Proof. by rewrite expi_cos_sin cos0 sin0. Qed.
+
+Lemma pi0 : pi != 0.
+Proof.
+apply/eqP => /(congr1 expi).
+rewrite argK ?expi0; last by rewrite normrN normr1.
+by move/eqP; rewrite eq_sym -subr_eq0 opprK (_ : 1 + 1 = 2%:R) // pnatr_eq0.
+Qed.
 
 Lemma expi_expr k a : expi a ^+ k = expi (a *+ k).
 Proof.
@@ -380,6 +372,21 @@ have y0 : y = 0.
   by rewrite expr1n eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
 apply val_inj => /=; rewrite x1 y0 expipi complexr0.
 by rewrite real_complexE; apply/eqP; rewrite eq_complex /= oppr0 2!eqxx.
+Qed.
+
+Lemma cos0_inv a : cos a = 0 -> {a = pihalf} + {a = - pihalf}.
+Proof.
+case: a => -[a b] ni; rewrite /cos /= => a0.
+have [b1|b1] : {b = 1} + {b = - 1}.
+  move: ni.
+  rewrite a0 normc_def /= expr0n add0r sqrtr_sqr eq_complex /= eqxx andbT.
+  case: (lerP 0 b) => b0.
+  - rewrite ger0_norm // => /eqP ->; by left.
+  - rewrite ltr0_norm // eqr_oppLR => /eqP ->; by right.
+- left; apply val_inj => /=;
+  by rewrite /pihalf argK // ?a0 ?b1 // normc_def /= expr0n add0r expr1n sqrtr1.
+- right; apply val_inj => /=.
+  by apply/eqP; rewrite /pihalf a0 b1 expiNi eq_complex /= oppr0 2!eqxx.
 Qed.
 
 Lemma sin0_inv a : sin a = 0 -> a = 0 \/ a = pi.
@@ -653,10 +660,8 @@ case: ifP => a0.
     by rewrite divr_ge0 // ?ler0n // subr_ge0 Im_half_anglec.
   by rewrite mulrC (mulrC (1 - complex.Re x)) -mulrDr addrCA addrK -mulr2n mulVr ?pnatf_unit // sqrtr1.
 rewrite normc_def /= sqr_sqrtr; last first.
-  (*by rewrite divr_ge0 // ?Re_half_anglec // ler0n.*)
   by rewrite divr_ge0 // ?ler0n // subr_ge0 Im_half_anglec.
 rewrite sqrrN sqr_sqrtr; last first.
-  (*by rewrite divr_ge0 // ?ler0n // subr_ge0 Im_half_anglec.*)
   by rewrite divr_ge0 // ?ler0n // Re_half_anglec.
 by rewrite mulrC (mulrC (1 - complex.Re x)) -mulrDr addrCA addrK -mulr2n mulVr ?pnatf_unit // sqrtr1.
 Qed.

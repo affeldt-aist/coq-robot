@@ -133,8 +133,14 @@ Canonical SymAddrPred n := AddrPred (@sym_addr_closed n).
 Lemma sym_scaler_closed n : GRing.scaler_closed (sym n R).
 Proof. move=> ? ?; rewrite 2!symE => /eqP H; by rewrite linearZ /= -H. Qed.
 
-Lemma sym1 n : 1%:M \is sym n R.
-Proof. by rewrite symE trmx1. Qed.
+Lemma sym_cst n a : a%:M \is sym n R.
+Proof. by rewrite symE tr_scalar_mx. Qed.
+
+Lemma sym0 n : 0 \is sym n R.
+Proof. by rewrite symE trmx0. Qed.
+
+(*Lemma sym1 n : 1%:M \is sym n R.
+Proof. by rewrite symE trmx1. Qed.*)
 
 Lemma mul_tr_vec_sym n (u : 'rV[R]_n) : u^T *m u \is sym n R.
 Proof. apply/eqP; by rewrite trmx_mul trmxK. Qed.
@@ -235,32 +241,80 @@ rewrite -(trmxK (skew_mx u)) -trmx_mul tr_skew.
 by rewrite mulmxN skew_mxE crossmulvv oppr0 trmx0.
 Qed.
 
-Definition unskew (M : 'M[R]_3) := row3 (M 1 2%:R) (- M 0 2%:R) (M 0 1).
+Definition unskew (M : 'M[R]_3) :=
+  row3 ((M 1 2%:R - M 2%:R 1)/2%:R) ((M 2%:R 0 - M 0 2%:R)/2%:R) ((M 0 1 - M 1 0)/2%:R).
+(*old, less general definition:
+Definition unskew (M : 'M[R]_3) := row3 (M 1 2%:R) (- M 0 2%:R) (M 0 1).*)
+
+Lemma unskew_sym (M : 'M[R]_3) : M \is sym 3 R -> unskew M = 0.
+Proof.
+rewrite symE => /eqP MMT.
+by rewrite /unskew {1 3 5}MMT !mxE !subrr !mul0r row30.
+Qed.
+
+Lemma unskew_cst a : unskew a%:M = 0 :> 'rV[R]_3.
+Proof. by rewrite unskew_sym // sym_cst. Qed.
 
 Lemma unskew0 : unskew 0 = 0 :> 'rV[R]_3.
-Proof. by rewrite /unskew !mxE oppr0 row30. Qed.
+Proof. 
+rewrite (_ : 0 = 0%:M) ?unskew_cst //.
+by apply/matrixP => ??; rewrite !mxE mul0rn.
+Qed.
 
 Lemma skew_mxK u : unskew \S( u ) = u.
+Proof.
+rewrite /unskew !skewij !opprK -!mulr2n -3!(mulr_natr (u``_ _)) -!mulrA.
+by rewrite divrr ?unitfE ?pnatr_eq0 // 3!mulr1 [RHS]row3E !row3D !(add0r,addr0).
+Qed.
+(*Lemma skew_mxK u : unskew \S( u ) = u.
 Proof.
 apply/rowP => i; rewrite 2!mxE /=.
 case: ifPn => [/eqP ->|]; first by rewrite crossmulE /= !mxE /=; Simp.r.
 by rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij // opprK.
-Qed.
+Qed.*)
 
 Lemma unskewK (M : 'M[R]_3) : M \is 'so[R]_3 -> \S( unskew M ) = M.
 Proof.
+move=> Mso.
+move: (Mso); rewrite antiE => /eqP MMT.
+apply/matrix3P; rewrite skewij ?anti_diag // mxE /=.
+- rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
+  by rewrite unitfE pnatr_eq0.
+- rewrite {1}MMT !mxE -mulNr opprB opprK -mulr2n.
+  rewrite -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.  
+  by rewrite unitfE pnatr_eq0.
+- rewrite {1}MMT !mxE -mulNr opprB opprK -mulr2n.
+  rewrite -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.  
+  by rewrite unitfE pnatr_eq0.
+- rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
+  by rewrite unitfE pnatr_eq0.
+- rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
+  by rewrite unitfE pnatr_eq0.
+- rewrite {1}MMT !mxE -mulNr opprB opprK -mulr2n.
+  rewrite -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.  
+  by rewrite unitfE pnatr_eq0.
+Qed.
+(*Lemma unskewK (M : 'M[R]_3) : M \is 'so[R]_3 -> \S( unskew M ) = M.
+Proof.
 move=> soM.
 by apply/matrix3P; rewrite skewij ?anti_diag // mxE /= ?opprK // {1}(eqP soM) !mxE opprK.
-Qed.
+Qed.*)
 
 Lemma unskewN (M : 'M[R]_3) : unskew (- M) = - unskew M.
-Proof. by rewrite /unskew !mxE -row3N. Qed.
+Proof.
+by rewrite /unskew !mxE !opprK row3N -!mulNr !opprB 3!(addrC (- M _ _)).
+Qed.
+(*by rewrite /unskew !mxE -row3N. Qed.*)
 
-Lemma unskew_mxZ k (M : 'M[R]_3) : unskew (k *: M) = k *: unskew M.
-Proof. by rewrite /unskew !mxE -mulrN row3Z. Qed.
+Lemma unskewZ k (M : 'M[R]_3) : unskew (k *: M) = k *: unskew M.
+Proof.  by rewrite /unskew !mxE row3Z !mulrA !mulrBr. Qed.
+(*by rewrite /unskew !mxE -mulrN row3Z. Qed.*)
 
 Lemma unskewD (A B : 'M[R]_3) : unskew (A + B) = unskew A + unskew B.
-Proof. by rewrite /unskew !mxE opprD row3D. Qed.
+Proof.
+rewrite /unskew row3D -!mulrDl !mxE !opprD -!addrA.
+by rewrite (addrCA (B 1 _)) (addrCA (B 2%:R _)) (addrCA (B 0 _)).
+Qed.
 
 Lemma skew_inj u v : (\S( u ) == \S( v )) = (u == v).
 Proof. 
@@ -301,7 +355,7 @@ Qed.
 Lemma skew_mx2 u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
 Proof.
 apply (symP (sym_skew_mx2 u)); last move=> i j.
-  rewrite rpredD //; last by rewrite rpredN sym_scaler_closed // sym1.
+  rewrite rpredD //; last by rewrite rpredN sym_scaler_closed // sym_cst.
   by rewrite mul_tr_vec_sym.
 rewrite [in X in _ -> _ = X]mxE mulmx_trE.
 case/boolP : (i == 0) => [/eqP -> _|].

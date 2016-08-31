@@ -210,7 +210,7 @@ Qed.
 Lemma ang_of_twistZ k (M : 'M[R]_4) : \w( (k *: M) ) = k *: \w( M ).
 Proof.
 rewrite /ang_of_twist -{1}(@submxK _ 3 1 3 1 M).
-by rewrite (scale_block_mx k (@ulsubmx _ 3 1 3 1 M)) block_mxKul unskew_mxZ.
+by rewrite (scale_block_mx k (@ulsubmx _ 3 1 3 1 M)) block_mxKul unskewZ.
 Qed.
 
 Lemma lin_of_twistZ k (M : 'M[R]_4) : \v( (k *: M) ) = k *: \v( M ).
@@ -1011,11 +1011,18 @@ Let point := 'rV[R]_3.
 
 Variable f : 'DIso_3[R].
 Let Q : 'M[R]_3 := ortho_of_iso f.
-Hypothesis w0 : axis_of_rot Q != 0.
+Hypothesis w0 : axial_vec Q != 0.
 Let w := normalize (axis_of_rot Q).
-Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
 Let a := angle_of_rot Q.
 Hypothesis sina0 : sin a != 0.
+Let api : a != pi.
+Proof. apply: contra sina0 => /eqP ->; by rewrite sinpi. Qed.
+Let Htmp0 : axis_of_rot Q != 0.
+Proof.
+rewrite /axis_of_rot (negbTE api).
+by rewrite scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0 /=.
+Qed.
+Let w1 : norm w = 1. Proof. rewrite norm_normalize //. Qed.
 
 (* [angeles] theorem 3.2.1, p.97: 
    the displacements of all the points of the body have the same projection onto e *)
@@ -1026,7 +1033,7 @@ rewrite /dotmul; congr (fun_of_matrix _ 0 0).
 rewrite (displacement_iso f p q) [in RHS]mulmxDl -[LHS](addr0); congr (_ + _).
 rewrite -mulmxA (mulmxBl Q) mul1mx.
 suff -> : Q *m w^T = w^T by rewrite subrr mulmx0.
-move: (is_around_axis_axis (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_axis (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 api)).
 rewrite -/w => Hw; rewrite -{1}Hw.
 rewrite trmx_mul mulmxA mulmxE.
 move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE => /eqP ->; by rewrite mul1mx.
@@ -1135,17 +1142,28 @@ Let point := 'rV[R]_3.
 
 Variable f : 'DIso_3[R].
 Let Q : 'M[R]_3 := ortho_of_iso f.
-Hypothesis w0 : axis_of_rot Q != 0.
+Hypothesis w0 : axial_vec Q != 0.
 Let w := normalize (axis_of_rot Q).
-Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
 Let a := angle_of_rot Q.
 Hypothesis sina0 : sin a != 0.
 Let a0 : a != 0.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sin0. Qed.
+Let api : a != pi.
+Proof. apply: contra sina0 => /eqP ->; by rewrite sinpi. Qed.
+Let Htmp0 : axis_of_rot Q != 0.
+Proof.
+
+rewrite /axis_of_rot.
+rewrite (negbTE api).
+
+by rewrite scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0 //=.
+Qed.
+Let w1 : norm w = 1. 
+Proof. rewrite norm_normalize //. Qed.
 
 Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
 Proof.
-move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 api)).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
 rewrite mulmxBr mulmx1 /exp_skew'.
@@ -1160,7 +1178,7 @@ Qed.
 
 Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
 Proof.
-move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 api)).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite mulmxDl [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
 rewrite linearD /= [w]lock linearZ /= tr_skew scalerN mulmxDl -lock.
@@ -1194,14 +1212,14 @@ rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
   rewrite scalemx1.
   by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
 rewrite addrA.
-move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 api)).
 rewrite -/Q -/a => HQ.
 rewrite {1}HQ.
 rewrite /exp_skew'.
 rewrite -(addrA (w^T *m w)).
 rewrite [w]lock linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
 rewrite linearD /= [w]lock 2!linearZ /= 2!linearD /= trmx1 -!lock.
-move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0)).
+move: (is_around_axis_exp_skew'_new w1 (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 api)).
 rewrite -/Q -/a => ->.
 rewrite opprD !addrA addrC !addrA tr_skew.
 rewrite (scalerN (sin a) \S( w )) opprK.
@@ -1276,7 +1294,7 @@ have _(*?*) : displacement f p0 *m (Q - 1) = 0.
   rewrite -(normalcomp_colinear _ w1) // => /eqP H1.
   rewrite (decomp (displacement f p0) w) H1 addr0.
   rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
-  move: (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 sina0); rewrite -/Q -/a -/w.
+  move: (angle_axis_is_around_axis (ortho_of_diso_is_SO f) w0 api); rewrite -/Q -/a -/w.
   by case => /= -> _ _; rewrite subrr scaler0.
 have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).

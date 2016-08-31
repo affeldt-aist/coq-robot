@@ -819,17 +819,32 @@ move=> ?; rewrite ap_vectorE orth_preserves_norm // rotation_sub //; by case: T.
 Qed.
 
 Lemma rodrigues_homogeneous M u (HM : M \in 'SO[R]_3) :
-  axis_of_rot M != 0 ->
-  sin (angle_of_rot M) != 0 ->
+  axial_vec M != 0 ->
+  angle_of_rot M != pi ->
   let a := aangle (angle_axis_of_rot M) in 
   let w := aaxis (angle_axis_of_rot M) in
   rodrigues u a w = ap_point (mk 0 HM) u.
 Proof.
-move=> axis0 sin0.
+move=> axis0 api a w.
+case/boolP : (angle_of_rot M == 0) => a0.
+  have M1 : M = 1.
+    apply O_tr_idmx; [by apply rotation_sub |].
+    apply angle_of_rot0_tr => //; by apply/eqP.
+  rewrite ap_pointE /= /rodrigues /a aangle_of (eqP a0) cos0 sin0 scale0r addr0 subrr.
+  rewrite mul0r scale0r addr0 scale1r M1.
+  by rewrite mul_mx_row mulmx0 mulmx1 add_row_mx add0r addr0 /from_h row_mxKl.
 transitivity (u *m M); last first.
   (* TODO: lemma? *)
   by rewrite ap_pointE /= (mul_mx_row u) mulmx0 add_row_mx addr0 add0r to_hpointK.
-have w1 : norm w = 1 by rewrite /w aaxis_of // norm_normalize.
+have Htmp0 : axis_of_rot M != 0.
+
+  rewrite /axis_of_rot.
+  rewrite (negbTE api).
+  
+  rewrite scaler_eq0 negb_or axis0 andbT div1r invr_eq0 mulrn_eq0 /=.
+  apply: contra a0 => /eqP/sin0_inv [/eqP -> //|/eqP]; by rewrite (negbTE api).
+have w1 : norm w = 1.
+ by rewrite /w aaxis_of // norm_normalize.
 rewrite rodriguesP //; congr (_ *m _) => {u}.
 by rewrite (angle_axis_eskew HM).
 Qed.
