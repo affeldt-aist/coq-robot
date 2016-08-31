@@ -276,16 +276,6 @@ Proof. by rewrite sinD cos_pihalf mulr0 add0r sin_pihalf mulr1. Qed.
 Lemma sinBpihalf a : sin (a - pihalf) = - cos a.
 Proof. by rewrite sinB cos_pihalf sin_pihalf mulr0 add0r mulr1. Qed.
 
-Lemma expiNi : expi (- arg 'i) = -'i :> R[i].
-Proof.
-have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
-rewrite expi_cos_sin sinN cosN /cos /sin expi_arg; last by rewrite -normr_eq0 i1 oner_neq0.
-rewrite i1 divr1 /=; apply/eqP; by rewrite eq_complex /= oppr0 2!eqxx.
-Qed.
-
-Lemma tanN x : tan (- x) = - tan x :> R.
-Proof. by rewrite /tan sinN cosN mulNr. Qed.
-
 Lemma cos0 : cos 0 = 1.
 Proof. by rewrite /cos -arg1 argK // ger0_norm // ler01. Qed.
 
@@ -304,6 +294,32 @@ Qed.
 
 Lemma sinpi : sin pi = 0.
 Proof. by rewrite /sin /pi argK /= ?oppr0 // normrN normr1. Qed.
+
+Lemma expiNi : expi (- arg 'i) = -'i :> R[i].
+Proof.
+have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
+rewrite expi_cos_sin sinN cosN /cos /sin expi_arg; last by rewrite -normr_eq0 i1 oner_neq0.
+rewrite i1 divr1 /=; apply/eqP; by rewrite eq_complex /= oppr0 2!eqxx.
+Qed.
+
+Lemma expiNpi : expi (- pi) = - 1 :> R[i].
+Proof.
+rewrite expi_cos_sin cosN sinN cospi sinpi.
+by apply/eqP; rewrite eq_complex /= !eqxx.
+Qed.
+
+Lemma piNpi : pi = - pi.
+Proof. by apply expi_inj; rewrite expiNpi expipi. Qed.
+
+Lemma coucou : pi = 0.
+Proof.
+have : pi + pi == 0.
+  by rewrite {2}piNpi subrr.
+rewrite -mulr2n.
+Abort.
+
+Lemma tanN x : tan (- x) = - tan x :> R.
+Proof. by rewrite /tan sinN cosN mulNr. Qed.
 
 Lemma tan0 : tan 0 = 0 :> R.
 Proof. by rewrite /tan sin0 cos0 mul0r. Qed.
@@ -389,13 +405,21 @@ have [b1|b1] : {b = 1} + {b = - 1}.
   by apply/eqP; rewrite /pihalf a0 b1 expiNi eq_complex /= oppr0 2!eqxx.
 Qed.
 
-Lemma sin0_inv a : sin a = 0 -> a = 0 \/ a = pi.
+Lemma sin0_inv a : sin a = 0 -> { a = 0 } + { a = pi }.
 Proof.
 move=> sa0.
 move/eqP : (cos2Dsin2 a).
-rewrite {}sa0 expr0n addr0 sqrf_eq1; case/orP => /eqP.
+rewrite {}sa0 expr0n addr0 sqrf_eq1.
+case/(Bool.orb_true_elim) => /eqP.
 move/cos1_angle0; by auto.
 move/cosN1_angle0; by auto.
+Qed.
+
+Lemma sin_eq0 a : (sin a == 0) = (a == 0) || (a == pi).
+Proof.
+apply/idP/idP => [/eqP|].
+  by case/sin0_inv => ->; rewrite !eqxx // orbC.
+by case/orP => /eqP ->; rewrite ?sin0 // sinpi.  
 Qed.
 
 Lemma cos1sin0 a : cos a = 1 -> sin a = 0.

@@ -638,7 +638,7 @@ Qed.
 Lemma quat_rot_is_Rot (q : quat) : q \is uquat -> ~~ pureq q ->
   let: (u, a) := polar_of_quat q in
   u != 0 ->
-  is_around_axis u (a *+ 2) (Linear (quat_rot_is_linear q)).
+  Rot u (a *+ 2) (Linear (quat_rot_is_linear q)).
 Proof.
 move=> q_isuqat. rewrite /pureq => q00 u0.
 rewrite normalize_eq0 in u0.

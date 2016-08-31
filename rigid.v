@@ -846,7 +846,7 @@ have Htmp0 : axis_of_rot M != 0.
 have w1 : norm w = 1.
  by rewrite /w aaxis_of // norm_normalize.
 rewrite rodriguesP //; congr (_ *m _) => {u}.
-by rewrite (angle_axis_eskew HM).
+by rewrite (angle_axis_eskew_old HM).
 Qed.
 
 End se.

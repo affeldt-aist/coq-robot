@@ -139,9 +139,6 @@ Proof. by rewrite symE tr_scalar_mx. Qed.
 Lemma sym0 n : 0 \is sym n R.
 Proof. by rewrite symE trmx0. Qed.
 
-(*Lemma sym1 n : 1%:M \is sym n R.
-Proof. by rewrite symE trmx1. Qed.*)
-
 Lemma mul_tr_vec_sym n (u : 'rV[R]_n) : u^T *m u \is sym n R.
 Proof. apply/eqP; by rewrite trmx_mul trmxK. Qed.
 
@@ -342,11 +339,6 @@ Qed.
 Lemma sym_skew_mx2 u : \S( u ) ^+ 2 \is sym 3 R.
 Proof. rewrite symE skew_mx2'; by apply/eqP/matrix3P; rewrite !mxE. Qed.
 
-Lemma mul_tr_vecij u i j : (u^T *m u) i j = u``_i * u``_j.
-Proof.
-by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
-Qed.
-
 Lemma mulmx_trE {n} (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
 Proof.
 by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
@@ -382,46 +374,6 @@ Proof.
 rewrite exprS skew_mx2 mulrBr -mulmxE mulmxA skew_mxT mul0mx add0r.
 by rewrite scalemx1 mul_mx_scalar scaleNr.
 Qed.
-(*
-rewrite exprS skew_mx2'.
-apply/matrixP => i j.
-rewrite mxE /= sum3E.
-do 3 rewrite [col_mx3 _ _ _ _ _]mxE /=.
-do 3 rewrite [row3 _ _ _ _ _]mxE /=.
-move: (dotmulvv u).
-rewrite dotmulE sum3E => /eqP H.
-rewrite -{1}eqr_opp 2!opprD -!expr2 in H.
-move: (H); rewrite subr_eq addrC => /eqP ->.
-move: (H); rewrite addrAC subr_eq addrC => /eqP ->.
-move: (H); rewrite -addrA addrC subr_eq addrC => /eqP ->.
-rewrite [in RHS]mxE.
-case/boolP : (i == 0) => [/eqP -> |].
-  case: ifPn => [/eqP ->|].
-    rewrite !skewij; Simp.r => /=.
-    by rewrite addrC !mulNr mulrAC -mulrA mulrC subrr.
-  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij; Simp.r => /=.
-    rewrite -expr2 -mulrN mulrC -mulrDl; congr (_ * _).
-    by rewrite opprD opprK subrK.
-  rewrite -(mulrC (u``_1)) -mulrA -mulrDr -mulNr mulrC; congr (_ * _).
-  by rewrite addrC mulNr addrK.
-rewrite ifnot0 => /orP [] /eqP -> /=.
-  case: ifPn => [/eqP ->|].
-    rewrite !skewij; Simp.r => /=.
-    rewrite mulrC -mulrDl -[in RHS]mulNr; congr (_ * _).
-    by rewrite mulNr -expr2 addrK.
-  rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij; Simp.r => /=.
-    by rewrite -mulrA mulrC 2!mulNr -mulrBl subrr mul0r.
-  rewrite -mulrA mulrC -mulrA -mulrBr mulrC; congr (_ * _).
-  by rewrite opprD opprK addrCA -expr2 subrr addr0.
-case: ifPn => [/eqP ->|].
-  rewrite !skewij; Simp.r => /=.
-  rewrite -mulrN mulrC -mulrDl; congr (_ * _).
-  by rewrite opprD opprK -expr2 subrK.
-rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij; Simp.r => /=.
-  rewrite -mulrA mulrCA -mulrDr -[in RHS]mulNr [in RHS]mulrC; congr (_ * _).
-  by rewrite addrC mulNr -expr2 addrK.
-by rewrite -mulrA mulrCA -mulrA -mulrDr addrC mulNr subrr mulr0.
-Qed.*)
 
 Lemma skew_mx4 u : \S( u ) ^+ 4 = - norm u ^+2 *: \S( u ) ^+ 2.
 Proof.
