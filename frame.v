@@ -591,6 +591,37 @@ Proof. done. Qed.
 Lemma kE : k u = Frame.k (frame u0).
 Proof. done. Qed.
 
+Lemma j_tr_mul (v : 'rV[R]_3) (v1 : norm v = 1) : j v *m v^T *m v = 0.
+Proof.
+rewrite /Base.j /Base.i normalizeI // /Base1.j.
+case: ifPn => [|_].
+  case/colinearP => [|[_[k [Hk1 Hk2]]]].
+    move/eqP/rowP/(_ ord0).
+    rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
+  rewrite Hk2 !linearZ /= -scalemxAl scalerA -expr2 -sqr_normr Hk1 v1 normeE.
+  rewrite div1r invr1 expr1n scale1r (mx11_scalar ('e_1 *m _)) -/('e_1 *d 'e_0).
+  by rewrite dote2 oner_eq0 /= mul_scalar_mx scale0r.
+apply/eqP.
+by rewrite /normalize -!scalemxAl scaler_eq0 normalcomp_mul_tr // orbT.
+Qed.
+
+Lemma k_tr_mul (v : 'rV[R]_3) (v1 : norm v = 1) : k v *m v^T *m v = 0.
+Proof.
+rewrite /Base.k /Base.i normalizeI // /Base1.k /Base1.j.
+case: ifPn => [|_].
+  case/colinearP => [|[_[k [Hk1 Hk2]]]].
+    move/eqP/rowP/(_ ord0).
+    rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
+  rewrite Hk2 !linearZ /= -scalemxAl scalerA -expr2 -sqr_normr Hk1 v1 normeE.
+  rewrite div1r invr1 expr1n scale1r crossmulZv vecij -!scalemxAl.
+  rewrite (mx11_scalar ('e_2%:R *m _)) -/('e_2%:R *d 'e_0) dote2 /=.
+  by rewrite mul_scalar_mx scale0r scaler0.
+apply/eqP.
+rewrite /normalize crossmulvZ -!scalemxAl scaler_eq0; apply/orP; right.
+rewrite /normalcomp linearD /= crossmulvN crossmulvZ crossmulvv scaler0 subr0.
+by rewrite -axialcompE axialcomp_crossmul.
+Qed.
+
 End build_base_lemmas.
 
 End Base.

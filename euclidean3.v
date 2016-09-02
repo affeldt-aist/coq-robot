@@ -15,18 +15,23 @@ Require Import aux.
 (*
  OUTLINE:
  1. section SpecificsDim2And3
+    contains section row3
  2. section dot_product
  3. section triple_prod_mat (specialization of col_mx to row vectors of length 2, 3)
-    section crossmul
-    (definition of "normal" also)
+ 4. section normal
+ 5. section crossmul
     (sample lemma: double_crossmul)
- 4. section O[R]_n and SO[R]_n
+ 6. section orthogonal_rotation_def
+    section orthogonal
+    section orthogonal_crossmul
     (many lemmas specialized for dim 3)
     (sample lemma: Euler's theorem,
                    orth_preserves_dotmul)
- 5. section norm
+ 7. section norm
     (sample lemma: multiplication by O_3[R] preserves norm)
-    (NB: some specialized lemmas for dimension 3 (Section norm3))
+    section norm3
+    (some specialized lemmas for dimension 3)
+ 8. section properties_of_canonical_vectors
 *)
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -363,7 +368,7 @@ End dot_product.
 Notation "*d%R" := (@dotmul _ _) : ring_scope.
 Notation "u *d w" := (dotmul u w) (at level 40) : ring_scope.
 
-Lemma mxtrace_sqr {R : rcfType} (M : 'M[R]_3) : \tr (M ^+ 2) =
+Lemma mxtrace_sqr (R : rcfType) (M : 'M[R]_3) : \tr (M ^+ 2) =
   \sum_i (M i i ^+2) + M 0 1 * M 1 0 *+ 2 + M 0 2%:R * M 2%:R 0 *+ 2 +
   M 1 2%:R * M 2%:R 1 *+ 2.
 Proof.
@@ -477,7 +482,7 @@ rewrite col_mx3E (tr_col_mx a) (tr_col_mx b) (mul_mx_row x a^T).
 by rewrite row3_row_mx (mul_mx_row x b^T) /dotmul -!mx11_scalar.
 Qed.
 
-Section crossmul.
+Section normal.
 
 Variable R : rcfType.
 
@@ -508,6 +513,20 @@ Implicit Types u v w : 'rV[R]_3.
 
 Lemma normalvv u v : (u _|_ v) = (u *d v == 0).
 Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
+
+End normal.
+
+Local Notation "A _|_ B" := (A%MS <= kermx B%MS^T)%MS (at level 69).
+(*Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
+Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
+ (A at next level, at level 8,
+ format "u  _|_  A , B ").*)
+
+Section crossmul.
+
+Variable R : rcfType.
+
+Implicit Types u v w : 'rV[R]_3.
 
 Definition crossmul u v := \row_(k < 3) \det (col_mx3 'e_k u v).
 
@@ -1062,6 +1081,17 @@ End norm.
 Lemma sqr_norm (R: rcfType) n (u : 'rV[R]_n) : norm u ^+ 2 = \sum_i u``_i ^+ 2.
 Proof. rewrite -dotmulvv dotmulE; apply/eq_bigr => /= i _; by rewrite expr2. Qed.
 
+Lemma mulmx_trE (R : rcfType) n (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
+Proof.
+by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
+Qed.
+
+Lemma mxtrace_tr_mul (R : rcfType) n (u : 'rV[R]_n) : \tr (u^T *m u) = norm u ^+ 2.
+Proof.
+rewrite /mxtrace sqr_norm; apply/eq_bigr => /= i _.
+by rewrite mulmx_trE -expr2.
+Qed.
+
 Lemma orth_preserves_norm R n M : M \is 'O[R]_n.+1 ->
   {mono (fun u => u *m M) : x / norm x }.
 Proof. move=> HM v; by rewrite /norm (proj2 (orth_preserves_dotmul M) HM). Qed.
@@ -1268,7 +1298,7 @@ rewrite crossmulC double_crossmul xy0 scale0r add0r opprK dotmulvv.
 by rewrite ni expr1n scale1r dotmulvv nj expr1n.
 Qed.
 
-Section tmp.
+Section properties_of_canonical_vectors.
 
 Variable R : rcfType.
 
@@ -1296,4 +1326,4 @@ Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[R]__.
 Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 
-End tmp.
+End properties_of_canonical_vectors.

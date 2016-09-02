@@ -443,46 +443,6 @@ Qed.
 
 End exponential_coordinates_rigid_using_taylor.
 
-(*Module AngleR.
-Section angler.
-Variable R : rcfType.
-
-(* fonction de conversion proportionnelle positive non-nulle *)
-Variable conv : angle R -> R.
-Hypothesis conv_pos : forall a, 0 <= conv a.
-Hypothesis conv0 : conv 0 = 0.
-Hypotheses convpi : 0 < conv pi.
-Hypothesis conv_propor : forall k a, conv (a *+ k) = conv a *+ k.
-
-(* modulo *)
-Variable representative : R -> R.
-Hypothesis representative_codomain :  forall r, 0 <= representative r < (conv pi) *+ 2.
-Definition representativeP r := 
-  [pred k | ((0 <= r) ==> (r == representative r + (conv pi) *+ 2 *+ k)) && 
-            ((r < 0) ==> (r == representative r + (conv pi) *+ 2 *- k))].
-Axiom exists_representativeP : forall r, { k | representativeP r k }.
-
-Definition f : angle R -> R := representative \o conv.
-
-Lemma f2pi : f (pi *+ 2) = 0%:R.
-Proof.
-rewrite /f /= conv_propor.
-case: (exists_representativeP (conv pi *+ 2)) => k /=.
-rewrite ltrNge mulrn_wge0 // implyTb implyFb andbT.
-case: k.
-  rewrite mulr0n addr0 => abs.
-  move: (representative_codomain ((conv pi) *+ 2)).
-  by rewrite -(eqP abs) ltrr andbF.
-case=> [|k]; last first.
-  rewrite (mulrS _ k.+1) addrCA addrC -subr_eq subrr eq_sym addr_eq0 => abs.
-  move: (representative_codomain ((conv pi) *+ 2)).
-  rewrite lerNgt (eqP abs) -lerNgt mulrS => /andP[].
-  by rewrite oppr_ge0 lerNgt addrC ltr_paddl // ?pmulrn_rgt0 // mulrn_wge0 // mulrn_wge0 // ltrW.
-by rewrite mulr1n -subr_eq subrr => /eqP.
-Qed.
-End angler.
-End AngleR.*)
-
 Module Rad.
 Section radian.
 Variable R : realType.
@@ -631,7 +591,7 @@ case/boolP : (Rad.angle_of (norm p) == 0) => p0.
   rewrite scalerA divrr; last by rewrite unitfE Rad.f0.
   by rewrite scale1r (SE3E fSE) (eqP rotf).
 case: (eskew_is_onto_SO (rot_of_hom_SO fSE)) => a fexp_skew.
-set w := vaxis_of_rot _ in fexp_skew.
+set w := vaxis_of_SO _ in fexp_skew.
 have a0 : a != 0.
   apply: contra rotf => /eqP.
   rewrite fexp_skew => ->; by rewrite emx30M.
@@ -675,7 +635,7 @@ suff : exists A' : 'M_3 , A' * A = 1.
  *)
 exists (etwist_is_onto_SE_mat_inv a w).
 rewrite HA.
-have w1 : norm w = 1 by rewrite norm_vaxis_of_rot // rot_of_hom_SO.
+have w1 : norm w = 1 by rewrite norm_vaxis_of_SO // rot_of_hom_SO.
 exact: (etwist_is_onto_SE_matP a0 w1).
 Qed.
 
@@ -1000,7 +960,8 @@ rewrite mul_scalar_mx (scalerA _ (v *d w) w) -(dotmulZv v _ w).
 rewrite (_ : _ *d _ = pitch \T(v, w)); last by rewrite /pitch lin_of_twistE ang_of_twistE.
 rewrite addrC.
 rewrite scalerA.
-by rewrite /axis ang_of_twistE (negbTE w0) /= lin_of_twistE -scalemxAl.
+rewrite /axis ang_of_twistE (negbTE w0) /=.
+by rewrite lin_of_twistE -scalemxAl.
 Qed.
 
 End etwist_alt.
@@ -1013,18 +974,17 @@ Let point := 'rV[R]_3.
 
 Variable f : 'DIso_3[R].
 Let Q : 'M[R]_3 := ortho_of_iso f.
+Let w := normalize (Aa.vaxis Q).
+Let a := Aa.angle Q.
 Hypothesis w0 : axial_vec Q != 0.
-Let w := normalize (axis_of_rot Q).
-Let a := angle_of_rot Q.
 Hypothesis sina0 : sin a != 0.
 Let api : a != pi.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sinpi. Qed.
-Let Htmp0 : axis_of_rot Q != 0.
+Let Htmp0 : Aa.vaxis Q != 0.
 Proof.
-rewrite /axis_of_rot (negbTE api).
-by rewrite scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0 /=.
+by rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0.
 Qed.
-Let w1 : norm w = 1. Proof. rewrite norm_normalize //. Qed.
+Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
 
 (* [angeles] theorem 3.2.1, p.97: 
    the displacements of all the points of the body have the same projection onto e *)
@@ -1035,7 +995,7 @@ rewrite /dotmul; congr (fun_of_matrix _ 0 0).
 rewrite (displacement_iso f p q) [in RHS]mulmxDl -[LHS](addr0); congr (_ + _).
 rewrite -mulmxA (mulmxBl Q) mul1mx.
 suff -> : Q *m w^T = w^T by rewrite subrr mulmx0.
-move: (Rot_axis (angle_axis_Rot (ortho_of_diso_is_SO f) w0 api)).
+move: (Rot_axis (angle_axis_Rot w0 (ortho_of_diso_is_SO f))).
 rewrite -/w => Hw; rewrite -{1}Hw.
 rewrite trmx_mul mulmxA mulmxE.
 move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE => /eqP ->; by rewrite mul1mx.
@@ -1083,10 +1043,8 @@ have Hp : forall p : point,
 move: {Hp}(Hp p) => Hp.
 rewrite inE -(normalcomp_colinear _ w1) ?ne // -norm_eq0.
 suff : norm (displacement f p) ^+2 <= norm (d0 *: (w : 'rV[R]_3)) ^+ 2.
-  rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 /=; last by done.
-  done.
-rewrite 2!expr2.
-by rewrite ler_pmul // ?norm_ge0 // H normZ w1 mulr1 ler_norm.
+  by rewrite Hp addrC -ler_subr_addr subrr exprn_even_le0 /=.
+by rewrite 2!expr2 ler_pmul // ?norm_ge0 // H normZ w1 mulr1 ler_norm.
 Qed.
 
 End Chasles.
@@ -1129,7 +1087,7 @@ Let point := 'rV[R]_3.
 
 Variable f : 'DIso_3[R].
 Let Q : 'M[R]_3 := ortho_of_iso f.
-Let a := angle_of_rot Q.
+Let a := Aa.angle Q.
 
 Definition screw_axis_point (x : point) : point :=
   1 / Ncos2 a *: (x *m Q - f x) *m (Q - 1)^T.
@@ -1145,17 +1103,18 @@ Let point := 'rV[R]_3.
 Variable f : 'DIso_3[R].
 Let Q : 'M[R]_3 := ortho_of_iso f.
 Hypothesis w0 : axial_vec Q != 0.
-Let w := normalize (axis_of_rot Q).
-Let a := angle_of_rot Q.
+Let w := normalize (Aa.vaxis Q).
+Let a := Aa.angle Q.
+(* TODO: on peut virer? *)
 Hypothesis sina0 : sin a != 0.
 Let a0 : a != 0.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sin0. Qed.
 Let api : a != pi.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sinpi. Qed.
-Let Htmp0 : axis_of_rot Q != 0.
+Let Htmp0 : Aa.vaxis Q != 0.
 Proof.
 
-rewrite /axis_of_rot.
+rewrite /Aa.vaxis.
 rewrite (negbTE api).
 
 by rewrite scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0 //=.
@@ -1165,7 +1124,7 @@ Proof. rewrite norm_normalize //. Qed.
 
 Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
 Proof.
-move: (Rot_exp_eskew' w1 (angle_axis_Rot (ortho_of_diso_is_SO f) w0 api)).
+move: (Rot_exp_eskew' w1 (angle_axis_Rot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
 rewrite mulmxBr mulmx1 /eskew'.
@@ -1180,7 +1139,7 @@ Qed.
 
 Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
 Proof.
-move: (Rot_exp_eskew' w1 (angle_axis_Rot (ortho_of_diso_is_SO f) w0 api)).
+move: (Rot_exp_eskew' w1 (angle_axis_Rot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite mulmxDl [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
 rewrite linearD /= [w]lock linearZ /= tr_skew scalerN mulmxDl -lock.
@@ -1214,14 +1173,14 @@ rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
   rewrite scalemx1.
   by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
 rewrite addrA.
-move: (Rot_exp_eskew' w1 (angle_axis_Rot (ortho_of_diso_is_SO f) w0 api)).
+move: (Rot_exp_eskew' w1 (angle_axis_Rot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q -/a => HQ.
 rewrite {1}HQ.
 rewrite /eskew'.
 rewrite -(addrA (w^T *m w)).
 rewrite [w]lock linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
 rewrite linearD /= [w]lock 2!linearZ /= 2!linearD /= trmx1 -!lock.
-move: (Rot_exp_eskew' w1 (angle_axis_Rot (ortho_of_diso_is_SO f) w0 api)).
+move: (Rot_exp_eskew' w1 (angle_axis_Rot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q -/a => ->.
 rewrite opprD !addrA addrC !addrA tr_skew.
 rewrite (scalerN (sin a) \S( w )) opprK.
@@ -1296,7 +1255,7 @@ have _(*?*) : displacement f p0 *m (Q - 1) = 0.
   rewrite -(normalcomp_colinear _ w1) // => /eqP H1.
   rewrite (decomp (displacement f p0) w) H1 addr0.
   rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
-  move: (angle_axis_Rot (ortho_of_diso_is_SO f) w0 api); rewrite -/Q -/a -/w.
+  move: (angle_axis_Rot w0 (ortho_of_diso_is_SO f)); rewrite -/Q -/a -/w.
   by case => /= -> _ _; rewrite subrr scaler0.
 have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).
@@ -1306,7 +1265,7 @@ have step2 : displacement f q + relative_displacement f p0 q = displacement f q 
     by rewrite addr0 axialcompE.
   rewrite (mx11_scalar (displacement f p0 *m w^T)) -/(dotmul _ _).
   rewrite mulmxA (mx11_scalar (displacement f q *m w^T)) -/(dotmul _ _).
-  by rewrite (displacement_proj w0 sina0 _ q).
+  by rewrite (displacement_proj w0 _ q).
 have {step2}step2 : p0 *m (Q - 1) = q *m (Q - 1) - displacement f q *m (1 - w^T *m w).
   rewrite [in X in _ = _ - X]mulmxBr mulmx1 -{}step2.
   rewrite (opprD (displacement f q)) opprK addrCA addrA subrr add0r.

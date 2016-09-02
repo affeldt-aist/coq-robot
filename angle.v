@@ -453,6 +453,16 @@ Definition asin (x : R) : angle := arg (Num.sqrt (1 - x^2) +i* x)%C.
 Definition acos (x : R) : angle := arg (x +i* Num.sqrt (1 - x^2))%C.
 Definition atan (x : R) : angle := if x == 0 then 0 else arg ((x^-1 +i* 1)%C *~ sgz x).
 
+Lemma acos1 : acos 1 = 0.
+Proof. by rewrite /acos -exprnP expr1n subrr sqrtr0 complexr0 arg1. Qed.
+
+Lemma acosN1 : acos (- 1) = pi.
+Proof.
+rewrite /acos -exprnP sqrrN expr1n subrr sqrtr0 complexr0.
+rewrite (_ : ((_)%:C)%C = -1) //.
+apply/eqP; by rewrite eq_complex /= oppr0 eqxx eqxx.
+Qed.
+
 Lemma atan0 : atan 0 = 0.
 Proof. by rewrite /atan eqxx. Qed.
 

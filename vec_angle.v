@@ -32,6 +32,7 @@ Local Open Scope ring_scope.
     (easy definitions to construct frames out of already available points/vectors)
  4. section axial_normal_decomposition.
     axialcomp, normalcomp
+ 5. section line
 *)
 
 Lemma sqr_normr_cossin (R : rcfType) (v :'rV[R]_2) :
@@ -432,6 +433,19 @@ Implicit Type u v : vector.
 
 Definition axialcomp v u := u *d v *: u.
 
+Lemma axialcomp_crossmul (u v : 'rV[R]_3) : axialcomp (u *v v) u == 0.
+Proof.
+by rewrite /axialcomp -dotmul_crossmul2 crossmulC crossmulvv crossmulv0 oppr0.
+Qed.
+
+Lemma axialcompE (v u : 'rV[R]_3) : axialcomp v u = v *m u^T *m u.
+Proof.
+by rewrite /axialcomp dotmulC /dotmul (mx11_scalar (v *m _)) mul_scalar_mx mxE eqxx mulr1n.
+Qed.
+
+Lemma crossmul_axialcomp e p : e *v axialcomp p e = 0.
+Proof. apply/eqP; by rewrite /axialcomp linearZ /= crossmulvv scaler0. Qed.
+
 (* normal component of v w.r.t. u *)
 Definition normalcomp v u := v - u *d v *: u.
 
@@ -453,28 +467,11 @@ Qed.
 Lemma ortho_normalcomp u v : u *d v = 0 -> normalcomp u v = u.
 Proof. by move=> uv0; rewrite /normalcomp dotmulC uv0 scale0r subr0. Qed.
 
-Lemma decomp v u : v = axialcomp v u + normalcomp v u.
-Proof. by rewrite /axialcomp /normalcomp addrC subrK. Qed.
-
-Definition orthogonalize v u := normalcomp v (normalize u).
-
-Lemma normalcompP u v : u *d orthogonalize v u = 0.
+Lemma normalcomp_mul_tr (u : 'rV[R]_3) (u1 : norm u = 1) : 
+  normalcomp 'e_0 u *m u^T *m u == 0.
 Proof.
-rewrite /normalcomp /normalize dotmulBr !(dotmulZv, dotmulvZ).
-rewrite mulrACA -invfM -expr2 dotmulvv mulrCA.
-have [->|u_neq0] := eqVneq u 0; first by rewrite dotmul0v mul0r subrr.
-by rewrite mulVr ?mulr1 ?subrr // unitfE sqrf_eq0 norm_eq0.
-Qed.
-
-Lemma axialnormal v e : norm e = 1 -> axialcomp v e *d normalcomp v e = 0.
-Proof.
-move=> ne1; rewrite !(dotmulZv, dotmulvZ, dotmulBr) dotmulvv ne1.
-by rewrite expr1n mulr1 subrr mulr0.
-Qed.
-
-Lemma axialcompE (v u : 'rV[R]_3) : axialcomp v u = v *m u^T *m u.
-Proof.
-by rewrite /axialcomp dotmulC /dotmul (mx11_scalar (v *m _)) mul_scalar_mx mxE eqxx mulr1n.
+rewrite /normalcomp mulmxBl -scalemxAl dotmul1 // dotmulC /dotmul.
+by rewrite scalemx1 -(mx11_scalar (_ *m u^T)) subrr mul0mx.
 Qed.
 
 Lemma dotmul_normalcomp e p : norm e = 1 -> normalcomp p e *d e = 0.
@@ -483,7 +480,74 @@ move=> e1.
 by rewrite /normalcomp dotmulBl dotmulZv dotmulvv e1 expr1n mulr1 dotmulC subrr.
 Qed.
 
-Lemma crossmul_axialcomp e p : e *v axialcomp p e = 0.
-Proof. apply/eqP; by rewrite /axialcomp linearZ /= crossmulvv scaler0. Qed.
+Lemma axialnormal v e : norm e = 1 -> axialcomp v e *d normalcomp v e = 0.
+Proof.
+move=> ne1; rewrite !(dotmulZv, dotmulvZ, dotmulBr) dotmulvv ne1.
+by rewrite expr1n mulr1 subrr mulr0.
+Qed.
+
+Lemma decomp v u : v = axialcomp v u + normalcomp v u.
+Proof. by rewrite /axialcomp /normalcomp addrC subrK. Qed.
+
+Definition orthogonalize v u := normalcomp v (normalize u).
+
+(* TODO: rename *)
+Lemma normalcompP u v : u *d orthogonalize v u = 0.
+Proof.
+rewrite /normalcomp /normalize dotmulBr !(dotmulZv, dotmulvZ).
+rewrite mulrACA -invfM -expr2 dotmulvv mulrCA.
+have [->|u_neq0] := eqVneq u 0; first by rewrite dotmul0v mul0r subrr.
+by rewrite mulVr ?mulr1 ?subrr // unitfE sqrf_eq0 norm_eq0.
+Qed.
 
 End axial_normal_decomposition.
+
+Section line.
+
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
+
+Definition coplanar (p1 p2 p3 p4 : point) : bool :=
+  (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
+
+Inductive line := mkLine of point & point.
+
+Implicit Types l : line.
+
+Definition line_point l : point := let: mkLine p1 _ := l in p1.
+Definition line_vector l : vector := let: mkLine p1 p2 := l in p2 - p1.
+
+Definition mkDline (p : point) (u : vector) : line := mkLine p (p + u).
+
+(* equation of a line passing through two points p1 p2 *)
+Definition line_pred l : pred point :=
+  let p1 := line_point l in
+  [pred p : point | colinear (line_vector l) (p - p1)].
+
+Coercion line_coercion l := line_pred l.
+
+Definition parallel : rel line := [rel l1 l2 |
+  colinear (line_vector l1) (line_vector l2)].
+
+Definition skew : rel line := [rel l1 l2 | 
+  let: mkLine p1 p2 := l1 in
+  let: mkLine p3 p4 := l2 in
+  ~~ coplanar p1 p2 p3 p4].
+
+Definition intersects : rel line :=
+  [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
+
+Definition distance_point_line (p : point) l : R :=
+  norm ((p - line_point l) *v (line_vector l)) / norm (line_vector l).
+
+Definition distance_between_lines l1 l2 : R :=
+  if intersects l1 l2 then
+    0
+  else if parallel l1 l2 then
+    distance_point_line (line_point l1) l2
+  else (* skew lines *)               
+    let n := line_vector l1 *v line_vector l2 in
+    `| (line_point l2 - line_point l1) *d n | / norm n.
+
+End line.

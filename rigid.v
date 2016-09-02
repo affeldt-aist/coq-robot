@@ -16,17 +16,18 @@ Require Import aux angle euclidean3 skew vec_angle rot frame.
  OUTLINE:
  1. section central_isometry_n
  2. section central_isometry_3
- 3. section isometry_prop.
+ 3. section isometry_3_prop
+ 4. section diso_3_prop
  4. section tangent_vectors_and_frames
- 5. section derivative maps of isometries
+ 5. section derivativ_map
      definition of what it means to preserve the cross-product by a transformation
      (sample lemma: preservation of the cross-product by derivative maps)
  6. section homogeneous_points_and_vectors
  7. section SE3_def
+ 8. section SE3_prop
+ 9. Module SE
  8. section rigid_transformation_is_homogeneous_transformation
      (a direct isometry (i.e., cross-product preserving) can be expressed in homogeneous coordinates)
-     (NB: converse in progress (?))
- 9. section kinematic_chain
 *)
 
 Set Implicit Arguments.
@@ -130,13 +131,7 @@ Qed.
 
 End central_isometry_3.
 
-Section isometry_prop.
-
-Variable R : rcfType.
-Let vector := 'rV[R]_3.
-Let point := 'rV[R]_3.
-
-Definition lin1_mx' n (f : 'rV[R]_n -> 'rV[R]_n) : linear f ->
+Definition lin1_mx' (R : rcfType) n (f : 'rV[R]_n -> 'rV[R]_n) : linear f ->
   {M : {linear 'rV[R]_n -> 'rV[R]_n} & forall x, f x = M x}.
 Proof.
 move=> H.
@@ -145,10 +140,17 @@ have @g : {linear 'rV[R]_n -> 'rV[R]_n}.
 by exists g.
 Defined.
 
+Section isometry_3_prop.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Let point := 'rV[R]_3.
+Implicit Types f : 'Iso[R]_3.
+
 (* [oneill] theorem 1.7, p.101 *)
 (** every isometry of E^3 can be uniquely described as an orthogonal transformation 
     followed by a translation *)
-Lemma trans_ortho_of_iso (f : 'Iso[R]_3) :
+Lemma trans_ortho_of_iso f :
   { trans : 'rV[R]_3 & { rot : 'M[R]_3 |
     (forall x : 'rV[R]_3, f x == x *m rot + trans) /\
     rot \is 'O[R]_3 /\
@@ -173,11 +175,11 @@ exists (lin1_mx g); split; last first.
 move=> u; by rewrite mul_rV_lin1 -Hg subrK.
 Qed.
 
-Definition ortho_of_iso (f : 'Iso[R]_3) : 'M[R]_3 := projT1 (projT2 (trans_ortho_of_iso f)).
+Definition ortho_of_iso f : 'M[R]_3 := projT1 (projT2 (trans_ortho_of_iso f)).
 
-Definition trans_of_iso (f : 'Iso[R]_3) : 'rV[R]_3 := projT1 (trans_ortho_of_iso f).
+Definition trans_of_iso f : 'rV[R]_3 := projT1 (trans_ortho_of_iso f).
 
-Lemma trans_of_isoE (f : 'Iso[R]_3) : trans_of_iso f = f 0.
+Lemma trans_of_isoE f : trans_of_iso f = f 0.
 Proof.
 rewrite /trans_of_iso; by case: (trans_ortho_of_iso _) => T [C [H1 [H2 H3]]] /=.
 Qed.
@@ -194,20 +196,18 @@ case: (trans_ortho_of_iso _) => T [C [H1 [H2 H3]]] /=.
 move: (H1 u) => /eqP ->; by rewrite addrK.
 Qed.
 
-Lemma ortho_of_iso_eq (f1 f2 : 'Iso[R]_3) :
-  (forall i, Iso.f f1 i = Iso.f f2 i) ->
+Lemma ortho_of_iso_eq f1 f2 : (forall i, Iso.f f1 i = Iso.f f2 i) ->
   ortho_of_iso f1 = ortho_of_iso f2.
 Proof.
 move=> f12.
 apply/eqP/mulmxP => u.
 rewrite 2!trans_ortho_of_isoE /= 2!trans_of_isoE /=.
-case: f1 f2 f12 => [f1 Hf1] [f2 Hf2] /= f12.
-by rewrite !f12.
+case: f1 f2 f12 => [f1 Hf1] [f2 Hf2] /= f12; by rewrite !f12.
 Qed.
 
-Definition iso_sgn (f : 'Iso[R]_3) : R := \det (ortho_of_iso f).
+Definition iso_sgn f : R := \det (ortho_of_iso f).
 
-Lemma img_vec_iso (f : 'Iso[R]_3) (a b : point) :
+Lemma img_vec_iso f (a b : point) :
   f b - f a = (b - a) *m ortho_of_iso f.
 Proof.
 move/esym/eqP: (trans_ortho_of_isoE f a).
@@ -215,13 +215,13 @@ move/esym/eqP: (trans_ortho_of_isoE f b).
 rewrite mulmxBl => /eqP <- /eqP <-; by rewrite opprB addrA subrK.
 Qed.
 
-Definition displacement (f : 'Iso[R]_3) p := f p - p.
+Definition displacement f p : vector := f p - p.
 
-Definition relative_displacement (f : 'Iso[R]_3) (p a : point) := 
+Definition relative_displacement f (p a : point) := 
   (p - a) *m (ortho_of_iso f - 1).
 
 (* NB: caused only by rotation *)
-Lemma displacement_iso (f : 'Iso[R]_3) p a :
+Lemma displacement_iso f p a :
   displacement f p = displacement f a + relative_displacement f p a.
 Proof.
 rewrite /relative_displacement mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA.
@@ -229,7 +229,7 @@ rewrite subrK; congr (_ - _).
 apply/eqP; by rewrite addrC -subr_eq img_vec_iso.
 Qed.
 
-End isometry_prop.
+End isometry_3_prop.
 
 Module DIso.
 Section direct_isometry.
@@ -245,17 +245,16 @@ Notation "''DIso_3[' R ]" := (DIso.t R)
 Definition disometry_coercion := DIso.f.
 Coercion disometry_coercion : DIso.t >-> Iso.t.
 
-Section diso_prop.
+Section diso_3_prop.
 
 Variable R : rcfType.
 
-  
 Lemma ortho_of_diso_is_SO (f : 'DIso_3[R]) : ortho_of_iso f \is 'SO[R]_3.
 Proof.
 case: f => f; rewrite /iso_sgn => Hf /=; by rewrite rotationE (ortho_of_iso_is_O f).
 Qed.
 
-End diso_prop.
+End diso_3_prop.
 
 Section tangent_vectors_and_frames.
 
@@ -281,27 +280,36 @@ Coercion vtvec_field_coercion := vtvec.
 Notation "p .-vec" := (tvec p) (at level 5).
 Notation "u `@ p" := (TVec p u) (at level 11).
 
+Lemma tvec_of_line (R : rcfType) (l : line R) :
+  line_vector l = (line_vector l) `@ (line_point l).
+Proof. by case: l. Qed.
+
+Lemma line_of_tvec (R : rcfType) (p : 'rV[R]_3) (v : p.-vec) :
+  line_vector (mkLine 0 v) `@ p = v. 
+Proof. case: v => v /=; by rewrite subr0. Qed.
+
 Section derivative_map.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
+Implicit Types f : 'Iso[R]_3.
 
 (* [oneill] theorem 2.1, p. 104 *)
-Definition dmap (f : 'Iso[R]_3) p (v : p.-vec) :=
+Definition dmap f p (v : p.-vec) :=
   let C := ortho_of_iso f in
   (v *m C) `@ f p.
 
 Local Notation "f '`*'" := (@dmap f _) (at level 5, format "f `*").
 
-Lemma dmap0 (f : 'Iso[R]_3) p : f `* (0 `@ p) = 0 `@ (f p).
+Lemma dmap0 f p : f `* (0 `@ p) = 0 `@ (f p).
 Proof. by rewrite /dmap /= mul0mx. Qed.
 
-Lemma dmapE (f : 'Iso[R]_3) p (u : p.-vec) b a :
+Lemma dmapE f p (u : p.-vec) b a :
   u = b - a :> vector ->
   f `* u = f b - f a :> vector.
 Proof. move=> uab; by rewrite /dmap /= uab img_vec_iso. Qed.
 
-Lemma derivative_map_preserves_length (f : 'Iso[R]_3) p :
+Lemma derivative_map_preserves_length f p :
   {mono (fun x : p.-vec => f`* x) : u v / norm (vtvec u - vtvec v)}.
 Proof.
 move=> u v; rewrite /dmap /= -(mulmxBl (vtvec u) (vtvec v) (ortho_of_iso f)).
@@ -309,7 +317,7 @@ by rewrite orth_preserves_norm // ortho_of_iso_is_O.
 Qed.
 
 (* [oneill] lemma 3.2, p.108 *)
-Lemma dmap_iso_sgnP (tf : TFrame.t R) (f : 'Iso[R]_3) :
+Lemma dmap_iso_sgnP (tf : TFrame.t R) f :
   let e1 := Frame.i tf in
   let e2 := Frame.j tf in
   let e3 := Frame.k tf in
@@ -342,7 +350,7 @@ rewrite det_tr -crossmul_triple; by congr (_ *d (_ *v _)).
 Qed.
 
 (* [oneill] theorem 3.6, p.110 *)
-Lemma dmap_preserves_crossmul p (u v : p.-vec) (f : 'Iso[R]_3) :
+Lemma dmap_preserves_crossmul p (u v : p.-vec) f :
   f`* ((u *v v) `@ p) =
     iso_sgn f *: vtvec ((f`* u *v f`* v) `@ f p) :> vector.
 Proof.
@@ -444,16 +452,13 @@ have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
 move=> ->; by rewrite scalerA -expr2 /iso_sgn -sqr_normr noframe_sgn expr1n scale1r.
 Qed.
 
-Definition preserves_orientation (f : 'Iso[R]_3) :=
+Definition preserves_orientation f :=
   forall p (u v : p.-vec),
   f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ f p
   :> vector.
 
-Lemma diso_preserves_orientation (f : 'DIso_3[R]) : preserves_orientation f.
-Proof. move=> p u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P f)) scale1r. Qed.
-
-Lemma preserves_crossmul_is_diso (f : 'Iso[R]_3)
-  p (u v : p.-vec) : ~~ colinear u v ->
+Lemma preserves_crossmul_is_diso f p (u v : p.-vec) : 
+  ~~ colinear u v ->
   f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ f p :> vector ->
   iso_sgn f = 1.
 Proof.
@@ -477,6 +482,9 @@ move: uv0.
 rewrite /colinear; by move/negbTE => ->.
 Qed.
 
+Lemma diso_preserves_orientation (df : 'DIso_3[R]) : preserves_orientation df.
+Proof. move=> p u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P df)) scale1r. Qed.
+
 End derivative_map.
 
 Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
@@ -484,6 +492,8 @@ Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
 Section homogeneous_points_and_vectors.
 
 Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
 
 Definition hpoint := [qualify u : 'rV[R]_4 | u``_3%:R == 1].
 Fact hpoint_key : pred_key hpoint. Proof. by []. Qed.
@@ -501,9 +511,9 @@ Proof. by []. Qed.
 
 Definition from_h (x : 'rV[R]_4) : 'rV[R]_3 := @lsubmx _ 1 3 1 x.
 
-Definition to_hpoint (p : 'rV[R]_3) : 'rV[R]_4 := row_mx p 1.
+Definition to_hpoint (p : point) : 'rV[R]_4 := row_mx p 1.
 
-Definition to_hvector (v : 'rV[R]_3) : 'rV[R]_4 := row_mx v 0.
+Definition to_hvector (v : vector) : 'rV[R]_4 := row_mx v 0.
 
 Lemma to_hpointK p : from_h (to_hpoint p) = p.
 Proof. by rewrite /from_h row_mxKl. Qed.
@@ -820,25 +830,25 @@ Qed.
 
 Lemma rodrigues_homogeneous M u (HM : M \in 'SO[R]_3) :
   axial_vec M != 0 ->
-  angle_of_rot M != pi ->
+  Aa.angle M != pi ->
   let a := aangle (angle_axis_of_rot M) in 
   let w := aaxis (angle_axis_of_rot M) in
   rodrigues u a w = ap_point (mk 0 HM) u.
 Proof.
 move=> axis0 api a w.
-case/boolP : (angle_of_rot M == 0) => a0.
+case/boolP : (Aa.angle M == 0) => a0.
   have M1 : M = 1.
     apply O_tr_idmx; [by apply rotation_sub |].
-    apply angle_of_rot0_tr => //; by apply/eqP.
+    apply Aa.angle0_tr => //; by apply/eqP.
   rewrite ap_pointE /= /rodrigues /a aangle_of (eqP a0) cos0 sin0 scale0r addr0 subrr.
   rewrite mul0r scale0r addr0 scale1r M1.
   by rewrite mul_mx_row mulmx0 mulmx1 add_row_mx add0r addr0 /from_h row_mxKl.
 transitivity (u *m M); last first.
   (* TODO: lemma? *)
   by rewrite ap_pointE /= (mul_mx_row u) mulmx0 add_row_mx addr0 add0r to_hpointK.
-have Htmp0 : axis_of_rot M != 0.
+have Htmp0 : Aa.vaxis M != 0.
 
-  rewrite /axis_of_rot.
+  rewrite /Aa.vaxis.
   rewrite (negbTE api).
   
   rewrite scaler_eq0 negb_or axis0 andbT div1r invr_eq0 mulrn_eq0 /=.
@@ -916,227 +926,3 @@ rewrite rotation_det ?scale1r //; by case: T.
 Qed.
 
 End rigid_transformation_is_homogeneous_transformation.
-
-Section plucker.
-
-Variable R : rcfType.
-Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
-
-Definition coplanar (p1 p2 p3 p4 : point) : bool :=
-  (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
-
-Inductive line := mkLine of point & point.
-
-Definition line_point (l : line) : point := let: mkLine p1 _ := l in p1.
-Definition line_vector (l : line) : vector := let: mkLine p1 p2 := l in p2 - p1.
-
-Definition mkDline (p : point) (u : vector) : line := mkLine p (p + u).
-
-(* equation of a line passing through two points p1 p2 *)
-Definition line_pred (l : line) : pred point :=
-  let: mkLine p1 p2 := l in
-  [pred p : point | colinear (p2 - p1) (p - p1)].
-
-Coercion line_coercion (l : line) := line_pred l.
-  
-Definition parallel : rel line := [rel l1 l2 |
-  colinear (line_vector l1) (line_vector l2)].
-
-Definition skew : rel line := [rel l1 l2 | 
-  let: mkLine p1 p2 := l1 in
-  let: mkLine p3 p4 := l2 in
-  ~~ coplanar p1 p2 p3 p4].
-  
-Definition intersects : rel line :=
-  [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
-
-Definition distance_between_point_and_line (p : point) (l : line) : R :=
-  norm ((p - line_point l) *v (line_vector l)) / norm (line_vector l).
-
-Definition distance_between_lines (l1 l2 : line) : R :=
-  if intersects l1 l2 then
-    0
-  else if parallel l1 l2 then
-    distance_between_point_and_line (line_point l1) l2
-  else (* skew lines *)               
-    let n := line_vector l1 *v line_vector l2 in                        
-    `| (line_point l2 - line_point l1) *d n | / norm n.
-
-End plucker.
-
-Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
-Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
- (A at next level, at level 8,
- format "u  _|_  A , B ").
-
-Section TFrame_properties.
-
-Variable R : rcfType.
-Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
-Let frame := TFrame.t R.
-
-Definition xaxis (f : frame) := mkDline (TFrame.o f) (Frame.i f).
-Definition yaxis (f : frame) := mkDline (TFrame.o f) (Frame.j f).
-Definition zaxis (f : frame) := mkDline (TFrame.o f) (Frame.k f).
-
-End TFrame_properties.
-
-(* TODO: in progress, [angeles] p.141-142 *)
-Section open_chain.
-
-Variable R : rcfType.
-Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
-Let frame := TFrame.t R.
-
-Record joint := mkJoint {
-  joint_axis : vector ;
-  norm_joint_axis : norm joint_axis = 1 ;                  
-  joint_angle : angle R (*  *) }.
-
-Record link := mkLink {
-  link_length : R ; (* a_i = distance Zi <-> Zi.+1 (mutually perpendicular segment) *)
-  link_offset : R ; (* *)
-  link_twist : angle R (* or twist angle *) }.
-
-(* NB: link_offset, joint_angle, link_length, link_twist are called 
-   Denavit-Hartenberg parameters *)
-
-(* n + 1 links numberes 0,..., n (at least two links: the manipulator base and the end-effector)
-   n + 1 frames numbered F_1, F_2, ..., F_n+1 (F_i attached to link i-1)
-   n joints *)
-
-Variable n' : nat.
-Let n := n'.+1.
-
-(* Zi is the axis of the ith joint *)
-Definition Z_joint_axis (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
-  let i' := widen_ord (leqnSn _) i in 
-  joint_axis (joints i) == Frame.k (frames i') (* TODO: should not impose the same direction *).
-
-(* Xi is the common perpendicular to Zi-1 and Zi *)
-Definition X_Z (frames : frame ^ n.+1) (i : 'I_n.+1) : bool :=
-  let predi := Ordinal (leq_ltn_trans (leq_pred _) (ltn_ord i)) (* NB: i-1 < n.+1 *) in 
-  let: (o_predi, z_predi) := let f := frames predi in (TFrame.o f, Frame.k f) in
-  let: (o_i, x_i, z_i) := let f := frames i in (TFrame.o f, Frame.i f, Frame.k f) in
-  if intersects (zaxis (frames predi)) (zaxis (frames i)) then
-    x_i == z_predi *v z_i (* special case *)
-  else if colinear z_predi z_i then
-    o_predi \in (xaxis (frames i) : pred _) (* special case *)
-  else
-    x_i _|_ z_predi, z_i. 
-  (* NB: xi is directed from zi-1 to zi *)
-
-Definition link_length_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=
-  let i' := widen_ord (leqnSn _) i in
-  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_i, z_i) := let f := frames i' in (TFrame.o f, Frame.k f) in 
-  let: (o_succi, z_succi) := let f := frames succi in (TFrame.o f, Frame.k f) in 
-  link_length (links i') = distance_between_lines (xaxis (frames i')) (zaxis (frames succi)).
-
-(* TODO *)
-Axiom intersection : line R -> line R -> option point.
-
-Definition link_offset_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
-  let i' := widen_ord (leqnSn _) i in
-  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, Frame.i f) in 
-  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, Frame.i f, Frame.k f) in 
-  if intersection (zaxis (frames i')) (xaxis (frames succi)) is some o'_i then
-    (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == link_offset (links i')) &&
-    (`| link_offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))
-  else
-    false (* should not happen *).
-
-(* TODO *)
-Axiom angle_between_lines : line R -> line R -> vector (*direction*) -> angle R.
-
-Definition link_twist_prop (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
-  let i' := widen_ord (leqnSn _) i in
-  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi, z_succi) := let f := frames succi in (TFrame.o f, Frame.i f, Frame.k f) in 
-  let: (o_i, z_i) := let f := frames i' in (TFrame.o f, Frame.k f) in 
-  link_twist (links i') == angle_between_lines (zaxis (frames i')) (zaxis (frames succi)) z_succi(*angle measured about the positive direction of Xi+1*).
-
-Definition joint_angle_prop (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
-  let i' := widen_ord (leqnSn _) i in
-  let succi := Ordinal (leq_ltn_trans (ltn_ord i) (ltnSn _)) (* i.+1 < n.+1 *) in
-  let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, Frame.i f) in 
-  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, Frame.i f, Frame.i f) in 
-  joint_angle (joints i) = angle_between_lines (xaxis (frames i')) (xaxis (frames succi)) z_i(*angle measured about the positive direction of Zi*).
-
-Record chain := mkChain {
-  links : {ffun 'I_n.+1 -> link} ;
-  frames : {ffun 'I_n.+1 -> frame} ;
-  joints : {ffun 'I_n -> joint} ;
-  (* the six conditions [angeles] p.141-142 *)
-  _ : forall i : 'I_n, Z_joint_axis joints frames i ;
-  _ : forall i : 'I_n.+1, X_Z frames i ;
-  _ : forall i : 'I_n, link_length_prop links frames i ;
-  _ : forall i : 'I_n, link_offset_prop links frames i ;
-  _ : forall i : 'I_n, link_twist_prop links frames i ;
-  _ : forall i : 'I_n, joint_angle_prop joints frames i }.
-(* this leaves the n.+1th frame undefined *)
-
-(*Variable R : rcfType.
-Let frame := frame R.
-
-Record joint := mkJoint {
-  offset : R ;
-  joint_angle : angle R }.
-
-Record link := mkLink {
-  length : R ;
-  link_angle : angle R }.
-
-Variable n' : nat.
-Let n := n'.+1.
-Variables chain : {ffun 'I_n -> frame * link * joint}.
-Definition frames := fun i => (chain (insubd ord0 i)).1.1.
-Definition links := fun i => (chain (insubd ord0 i)).1.2.
-Definition joints := fun i => (chain (insubd ord0 i)).2.
-
-Local Notation "u _|_ A" := (u <= kermx A^T)%MS (at level 8).
-Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
- (A at next level, at level 8,
- format "u  _|_  A , B ").
-
-Definition common_normal_xz (i : 'I_n) :=
-  (framej (frames i.-1)) _|_ (framek (frames i)), (framei (frames i.-1)).
- *)
-
-End open_chain.
-
-(*
-Definition intersection (o o' : 'rV[R]_3) (v v' : 'rV[R]_3) : option 'rV[R]_3.
-Admitted.
-
-Definition length_prop (i : 'I_n) (f f' : frame) :
-  unique_common_orthogonal (origin f) (origin f') ()
-  length (links i) = `| |
-
-Definition z_vec (i : 'I_n) := zframes i
-
-joint i is located between links i-1 and i
-z_vec (frames i) "is located along the axis of joint i"
-
-the zi axis along the axis of joint i
-
-Definition before_after_joint (i : 'I_n) : option (link * link):=
-  match ltnP O i with
-    | LtnNotGeq H (* 0 < i*) => Some (links i.-1, links i)
-    | GeqNotLtn H (* i <= 0*) => None
-  end.
-
-link length and twist along and about the x_i-1 axis
-
-Hypothesis :
-
-Check forall i, (z_ax (basis (frames i))).
-
-x_vec (frames i.-1) _|_ plane (z_vec (frames i.-1)),(z_vec (frames i))
-
-length (links i) = distance from (z_vec (frames i.-1)) to (z_vec (frames i)) along (x_vec)
- *)

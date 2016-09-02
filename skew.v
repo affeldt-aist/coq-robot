@@ -339,11 +339,6 @@ Qed.
 Lemma sym_skew_mx2 u : \S( u ) ^+ 2 \is sym 3 R.
 Proof. rewrite symE skew_mx2'; by apply/eqP/matrix3P; rewrite !mxE. Qed.
 
-Lemma mulmx_trE {n} (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
-Proof.
-by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
-Qed.
-
 Lemma skew_mx2 u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
 Proof.
 apply (symP (sym_skew_mx2 u)); last move=> i j.
