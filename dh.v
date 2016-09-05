@@ -34,9 +34,9 @@ Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 Let frame := TFrame.t R.
 
-Definition xaxis (f : frame) := mkDline (TFrame.o f) (Frame.i f).
-Definition yaxis (f : frame) := mkDline (TFrame.o f) (Frame.j f).
-Definition zaxis (f : frame) := mkDline (TFrame.o f) (Frame.k f).
+Definition xaxis (f : frame) := mkLine (TFrame.o f) (Frame.i f).
+Definition yaxis (f : frame) := mkLine (TFrame.o f) (Frame.j f).
+Definition zaxis (f : frame) := mkLine (TFrame.o f) (Frame.k f).
 
 End TFrame_properties.
 
@@ -62,6 +62,13 @@ Record link := mkLink {
 
 Definition same_direction (u v : 'rV[R]_3) : bool := 0 <= cos (vec_angle u v).
 
+(* equation of a line passing through two points p1 p2 *)
+Coercion line_pred {R':rcfType} (l : line R') : pred 'rV[R']_3 :=
+  let p1 := line_point l in
+  [pred p : 'rV[R']_3 | 
+     (p == p1) ||
+     ((line_vector l != 0) && colinear (line_vector l) (p - p1))].
+
 (*Definition intersection (o o' : 'rV[R]_3) (v v' : 'rV[R]_3) : option 'rV[R]_3.
 Admitted.*)
 (* http://math.stackexchange.com/questions/270767/find-intersection-of-two-3d-lines *)
@@ -71,16 +78,148 @@ Definition intersection (l1 l2 : line R) : option point :=
   if p1 \in (l2 : pred _) then Some p1
   else if p2 \in (l1 : pred _) then Some p2
   else let w : vector := p2 - p1 in
-  let hw := norm (u2 *v w) in
-  let h1 := norm (u2 *v u1) in
+  let hw := u2 *v w in
+  let h1 := u2 *v u1 in
   if (hw == 0) || (h1 == 0) then
     None
   else
-    let k := (hw / h1) *: u1 in
+    let k := (norm hw / norm h1) *: u1 in
     if same_direction (u2 *v w) (u2 *v u1) then
       Some (p1 + k)
     else 
       Some (p1 - k).
+
+Lemma line_point_in (l : line R) : line_point l \in (l : pred _).
+Proof. 
+by case: l => p v /=; rewrite inE /= eqxx.
+Qed.
+
+Lemma lineP p (l : line R) :
+  reflect (exists k', p = line_point l + k' *: line_vector l) 
+          (p \in (l : pred _)).
+Proof.
+apply (iffP idP) => [|].
+  rewrite inE.
+  case/orP => [/eqP pl|].
+    exists 0; by rewrite scale0r addr0.
+  case/andP => l0 /colinearP[|].
+    rewrite subr_eq0 => /eqP ->.
+    exists 0; by rewrite scale0r addr0.
+  case=> pl [k [Hk1 Hk2]].
+  have k0 : k != 0 by rewrite -normr_eq0 Hk1 mulf_neq0 // ?invr_eq0 norm_eq0.
+  exists k^-1.
+  by rewrite Hk2 scalerA mulVr ?unitfE // scale1r addrCA subrr addr0.
+case=> k' ->. 
+rewrite inE.
+case/boolP : (line_vector l == 0) => [/eqP ->|l0 /=].
+  by rewrite scaler0 addr0 eqxx.
+by rewrite addrAC subrr add0r colinearvZ colinear_refl 2!orbT.
+Qed.
+
+Lemma law_of_sinuses (v1 v2 : vector) (p1 p2 : point) p :
+  intersection (mkLine p1 v1) (mkLine p2 v2) = Some p ->
+  norm (p - p1) * sin (vec_angle v1 v2) =
+  norm (p2 - p1) * sin (vec_angle (p2 - p1) v2).
+Proof.
+rewrite /intersection /=.
+case: ifPn.
+  rewrite inE /=.
+  case/orP => [/eqP -> [->]|/andP[v20 Hv2] [<-]].
+    by rewrite subrr norm0 [in RHS]mul0r mul0r.
+  rewrite subrr norm0 [in LHS]mul0r.
+  case/boolP : (p2 - p1 == 0) => p12; first by rewrite (eqP p12) norm0 mul0r.
+  apply/esym/eqP.
+  by rewrite mulf_eq0 -colinear_sin // -colinearNv opprB colinear_sym Hv2 orbT.
+rewrite inE /= negb_or => /andP[p1p2].
+rewrite negb_and negbK => /orP[/eqP ->|].
+  rewrite !crossmul0v.
+  case: ifPn.
+    rewrite inE /= eq_sym (negbTE p1p2) /= => /andP[v10 v1p2p1] [<-].
+    case/boolP : (p2 - p1 == 0) => p12. 
+      by rewrite (eqP p12) norm0 [in LHS]mul0r mul0r.
+    by rewrite 2!vec_angle0.
+  rewrite eqxx /= => _ ?; exfalso; done.
+move=> v2p1p2.
+case: ifPn.
+  rewrite inE /= eq_sym (negbTE p1p2) /= => /andP[v10 v1p2p1] [<-].
+  case/colinearP : v1p2p1.
+    rewrite subr_eq0 eq_sym (negbTE p1p2) => ?; exfalso; done.
+  case=> p2p10 [k [Hk1 Hk2]].
+  rewrite Hk2.
+  case/boolP : (k == 0) => k0.
+    exfalso.
+    apply/negP : k0.
+    apply: contra v10.
+    rewrite Hk2 => /eqP ->; by rewrite scale0r.
+  move: k0.
+  rewrite eqr_le negb_and -2!ltrNge => /orP[] k0.
+    by rewrite [in LHS]vec_angleC (vec_angleZ _ _ k0) [in LHS]vec_angleC.
+  rewrite [in LHS]vec_angleC (vec_angleZ_neg _ _ k0).
+  rewrite [in LHS]vec_angleC [in LHS]sin_vec_angleN //.
+  by rewrite -/(colinear (p2 - p1) v2) -colinearNv opprB colinear_sym.
+rewrite inE /= negb_or => /andP[_].
+rewrite negb_and negbK => /orP[/eqP ->|].
+  rewrite crossmulv0 eqxx orbT => ?; exfalso; done.
+move=> v1p2p1.
+case: ifPn.
+  move=> _ abs; exfalso; done.
+rewrite negb_or => /andP[v2p2p1 v2v1].
+have v10 : v1 != 0.
+  apply: contra v2v1 => /eqP ->; by rewrite crossmulv0.
+have v20 : v2 != 0.
+  apply: contra v2v1 => /eqP ->; by rewrite crossmul0v.
+case: ifPn => H [<-].
+  rewrite -addrA addrCA subrr addr0.
+  rewrite normZ ger0_norm; last by rewrite divr_ge0 // norm_ge0.
+  rewrite norm_crossmul (mulrC (norm v2)) -!mulrA; congr (_ * _).
+  have sin0 : sin (vec_angle v2 v1) != 0 by rewrite -colinear_sin.
+  rewrite norm_crossmul -(mulrA (norm v2)) invrM; last 2 first.
+    by rewrite unitfE norm_eq0.
+    by rewrite unitfE mulf_neq0 // ?norm_eq0 // normr_eq0.
+  rewrite (mulrC _ (norm v2)^-1) !mulrA (mulrC _ (norm v2)^-1) mulrA mulVr; last first.
+    by rewrite unitfE norm_eq0.
+  rewrite mul1r invrM; last 2 first.
+    by rewrite unitfE norm_eq0.
+    by rewrite unitfE normr_eq0.
+  rewrite -!mulrA (mulrA (norm v1)^-1) mulVr ?mul1r; last first.
+    by rewrite unitfE norm_eq0.
+  move: sin0.
+  rewrite eqr_le negb_and -!ltrNge => /orP[]sin0.
+    rewrite mulrC.
+    rewrite [in X in X * _ = _](gtr0_norm sin0).
+    rewrite (vec_angleC v1 v2) mulVr ?mul1r ?unitfE ?gtr_eqF //.
+    rewrite vec_angleC.
+    admit.
+  rewrite mulrC.
+  rewrite [in X in X * _ = _](ltr0_norm sin0).
+  rewrite (vec_angleC v1 v2) invrN mulNr mulVr ?mul1r ?unitfE ?ltr_eqF // mulN1r.
+  admit.
+admit.
+Admitted.
+
+Lemma intersectionP l1 l2 p : line_vector l1 != 0 -> line_vector l2 != 0 ->
+  intersection l1 l2 = Some p ->
+  (p \in (l1 : pred _)) && (p \in (l2 : pred _)).
+Proof.
+move=> l10 l20 H.
+move: (H).
+rewrite /intersection.
+case: ifPn => [l12 [<-]|l12].
+  apply/andP; split; [exact: line_point_in|exact l12].
+case: ifPn => [l21 [<-]|l21].
+  apply/andP; split; [exact l21|exact: line_point_in].
+case: ifPn => [//|].
+rewrite negb_or => /andP[H1 H2].
+case: ifPn => samedir [<-].
+  set k := _ / norm (_ *v _).
+  have k_gt0 : 0 < k.
+    by rewrite /k divr_gt0 // ltr_neqAle norm_ge0 andbT eq_sym norm_eq0.
+  apply/andP; split; first by apply/lineP; exists k.
+  rewrite inE l20 /=.
+  apply/orP; right.
+  move/law_of_sinuses in H.
+  admit.
+Admitted.
 
 Definition angle_between_lines (u1 u2 w(* direction *) : vector) : angle R :=
   if same_direction w (u1 *v u2) then

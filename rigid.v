@@ -285,8 +285,8 @@ Lemma tvec_of_line (R : rcfType) (l : line R) :
 Proof. by case: l. Qed.
 
 Lemma line_of_tvec (R : rcfType) (p : 'rV[R]_3) (v : p.-vec) :
-  line_vector (mkLine 0 v) `@ p = v. 
-Proof. case: v => v /=; by rewrite subr0. Qed.
+  line_vector (mkLine p v) `@ p = v. 
+Proof. by case: v => v /=. Qed.
 
 Section derivative_map.
 

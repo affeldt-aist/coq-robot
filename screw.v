@@ -847,9 +847,9 @@ Let vector := 'rV[R]_3.
 Definition axis (t : 'M[R]_4) : line R :=
   let w := \w( t ) in let v := \v( t ) in
   if w == 0 then
-    mkDline 0 v
+    mkLine 0 v
   else
-    mkDline ((norm w)^-2 *: (w *v v)) w.
+    mkLine ((norm w)^-2 *: (w *v v)) w.
 
 (* [murray] 2.42, p.47 *)
 Definition pitch (t : 'M[R]_4) : R := 

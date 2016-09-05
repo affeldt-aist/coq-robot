@@ -93,6 +93,16 @@ rewrite (_ : `| _ +i* norm (w *v _)| = `|v *d w +i* norm (v *v w)|)%C; last firs
 by rewrite /= mul0r oppr0 mulr0 expr0n /= addr0 subr0 mulr0 subr0 mulNr.
 Qed.
 
+Lemma sin_vec_angleN u v (uv : u *v v != 0 (*NB: colinear u v*)) : 
+  sin (vec_angle u (- v)) = sin (vec_angle u v).
+Proof. 
+rewrite /vec_angle dotmulvN crossmulvN normN.
+rewrite /sin !expi_arg /=.
+  by rewrite !(mul0r,oppr0,mulr0,add0r,expr0n,addr0,sqrrN).
+by rewrite eq_complex /= negb_and norm_eq0 uv orbT.
+by rewrite eq_complex /= negb_and norm_eq0 uv orbT.
+Qed.
+
 Lemma vec_angleC v w : vec_angle v w = vec_angle w v.
 Proof. by rewrite /vec_angle dotmulC crossmulC normN. Qed.
 
@@ -365,6 +375,43 @@ exists (- (norm u / norm v)); split => //.
 by rewrite normrN ger0_norm // divr_ge0 // norm_ge0.
 Qed.
 
+Lemma colinear_sin u v (u0 : u != 0) (v0 : v != 0) : 
+  (colinear u v) = (sin (vec_angle u v) == 0).
+Proof.
+apply/idP/idP.
+- rewrite colinear_sym => /colinearP.
+  rewrite (negbTE u0).
+  case=> // -[_ [k [Hk1 Hk2]]].
+  rewrite Hk2 /vec_angle crossmulvZ crossmulvv scaler0 norm0 complexr0.
+  rewrite dotmulvZ dotmulvv /sin.
+  have k0 : k != 0 by apply: contra v0 => /eqP k0; rewrite Hk2 k0 scale0r.
+  rewrite expi_arg; last first.
+    by rewrite eq_complex /= eqxx andbT mulf_neq0 // sqrf_eq0 norm_eq0.
+  by rewrite ImZ mulf_eq0 mulf_eq0 (negbTE k0) sqrf_eq0 norm_eq0 (negbTE u0) /= mul0r oppr0.
+- move=> [:H].
+  rewrite /vec_angle /sin expi_arg; last first.
+    rewrite eq_complex /= negb_and.
+    abstract: H.
+    case/boolP : (u *d v == 0) => [/eqP udv0/=|//].
+    by rewrite norm_crossmul dotmul0_vec_angle // mulr1 mulf_neq0 // ?norm_eq0.
+  rewrite /= !(mul0r,oppr0,mulr0,add0r,expr0n,addr0).
+  set tmp := Num.sqrt _.
+  move=> [:tmp0].
+  rewrite (_ : tmp / tmp ^+ 2 = tmp ^-1); last first.
+    rewrite expr2 invrM; last 2 first.
+      abstract: tmp0.
+      rewrite unitfE /tmp sqrtr_eq0 -ltrNge ltr_neqAle.
+      rewrite addr_ge0 ?sqr_ge0 // andbT eq_sym.
+      rewrite paddr_eq0 ?sqr_ge0 // negb_and !sqrf_eq0 norm_eq0 crossmulC oppr_eq0.
+      by rewrite crossmulC oppr_eq0 -(norm_eq0 (_ *v _)).
+      done.
+    by rewrite mulrCA divrr ?mulr1.
+  rewrite mulf_eq0 invr_eq0 => /orP[]; last first.
+    move: tmp0.
+    by rewrite unitfE => /negbTE ->.
+  by rewrite norm_eq0.
+Qed.
+
 End colinear.
 
 Section normalize.
@@ -511,28 +558,29 @@ Let vector := 'rV[R]_3.
 Definition coplanar (p1 p2 p3 p4 : point) : bool :=
   (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
 
-Inductive line := mkLine of point & point.
+Record line := mkLine {
+  line_point : point ;
+  line_vector :> vector }.
+
+Definition line_point2 (l : line) := line_point l + line_vector l.
 
 Implicit Types l : line.
 
-Definition line_point l : point := let: mkLine p1 _ := l in p1.
-Definition line_vector l : vector := let: mkLine p1 p2 := l in p2 - p1.
+(*Definition line_point l : point := let: mkLine p1 _ := l in p1.
+Definition line_vector l : vector := line_point2 l - line_point l.*)
 
-Definition mkDline (p : point) (u : vector) : line := mkLine p (p + u).
-
-(* equation of a line passing through two points p1 p2 *)
-Definition line_pred l : pred point :=
-  let p1 := line_point l in
-  [pred p : point | colinear (line_vector l) (p - p1)].
-
-Coercion line_coercion l := line_pred l.
+(*Definition mkDline (p : point) (u : vector) (u0 : u != 0) : line.
+apply (@mkLine p (p + u)).
+apply: contra u0.
+by rewrite addrC -subr_eq subrr eq_sym.
+Defined.*)
 
 Definition parallel : rel line := [rel l1 l2 |
   colinear (line_vector l1) (line_vector l2)].
 
 Definition skew : rel line := [rel l1 l2 | 
-  let: mkLine p1 p2 := l1 in
-  let: mkLine p3 p4 := l2 in
+  let: (p1, p2) := (line_point l1, line_point2 l1) in
+  let: (p3, p4) := (line_point l2, line_point2 l2) in
   ~~ coplanar p1 p2 p3 p4].
 
 Definition intersects : rel line :=

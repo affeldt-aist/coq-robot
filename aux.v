@@ -148,6 +148,12 @@ Proof. by simpc. Qed.
 Lemma complexZ2 (a b k : R) : ((k * a) -i* (k * b) = k%:C * (a -i* b))%C.
 Proof. by simpc. Qed.
 
+Lemma ReZ (x : R[i]) (k : R) : complex.Re (k%:C%C * x) = k * complex.Re x.
+Proof. case: x => a b /=; by rewrite mul0r subr0. Qed.
+
+Lemma ImZ (x : R[i]) (k : R) : complex.Im ((k%:C)%C * x) = k * complex.Im x.
+Proof. by case: x => a b /=; rewrite mul0r addr0. Qed.
+
 Definition complexZ := (complexZ1, @complexZ2).
 
 End extra_complex.

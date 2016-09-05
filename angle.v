@@ -31,11 +31,6 @@ Record angle := Angle {
   expi : R[i];
   _ : `| expi | == 1 }.
 
-Lemma ReZ (x : R[i]) (k : R) : complex.Re (k%:C%C * x) = k * complex.Re x.
-Proof.
-case: x => a b /=; by rewrite mul0r subr0.
-Qed.
-
 Fact angle0_subproof : `| 1 / `| 1 | | == 1 :> R[i].
 Proof. by rewrite normr1 divr1 normr1. Qed.
 

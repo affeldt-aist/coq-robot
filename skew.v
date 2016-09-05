@@ -10,7 +10,8 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux euclidean3 vec_angle.
+Require Import aux euclidean3.
+Require vec_angle.
 
 (*
  OUTLINE:
@@ -608,7 +609,7 @@ Lemma kernel_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
 Proof.
 apply/andP; split; last by apply/sub_kermxP; rewrite skew_mxE crossmulvv.
 apply/rV_subP => v /sub_kermxP.
-rewrite skew_mxE => /eqP/colinearP[|[_[k [Hk1 Hk2]]]].
+rewrite skew_mxE => /eqP/vec_angle.colinearP[|[_[k [Hk1 Hk2]]]].
   move/eqP => ->.
   by rewrite sub0mx.
 apply/sub_rVP; exists (k^-1).
