@@ -96,21 +96,14 @@ Section central_isometry_3.
 
 Variable R : rcfType.
 
-(* TODO: clean *)
 Definition frame_central_iso (f : 'CIso[R]_3) (p : NOFrame.t R) : NOFrame.t R.
-move: (central_isometry_preserves_norm f (NOFrame.i p)) => ni.
-move: (central_isometry_preserves_norm f (NOFrame.j p)) => nj.
-move: (central_isometry_preserves_norm f (NOFrame.k p)) => nk.
-move: (central_isometry_preserves_dotmul f (NOFrame.i p) (NOFrame.j p)) => ij.
-move: (central_isometry_preserves_dotmul f (NOFrame.j p) (NOFrame.k p)) => jk.
-move: (central_isometry_preserves_dotmul f (NOFrame.i p) (NOFrame.k p)) => ik.
-refine ((@NOFrame.mk _ (f (NOFrame.i p)) (f (NOFrame.j p))(f (NOFrame.k p)) _ _ _ _ _ _)).
-by rewrite ni NOFrame.normi.
-by rewrite nj NOFrame.normj.
-by rewrite nk NOFrame.normk.
-by rewrite ij NOFrame.idotj.
-by rewrite jk NOFrame.jdotk.
-by rewrite ik NOFrame.idotk.
+apply: (@NOFrame.mk _ (f (NOFrame.i p)) (f (NOFrame.j p)) (f (NOFrame.k p))).
+by rewrite central_isometry_preserves_norm NOFrame.normi.
+by rewrite central_isometry_preserves_norm NOFrame.normj.
+by rewrite central_isometry_preserves_norm NOFrame.normk.
+by rewrite central_isometry_preserves_dotmul NOFrame.idotj.
+by rewrite central_isometry_preserves_dotmul NOFrame.jdotk.
+by rewrite central_isometry_preserves_dotmul NOFrame.idotk.
 Defined.
 
 (* [oneill] second part of lemma 1.6, p.101 *)
@@ -161,11 +154,9 @@ set Tm1f := fun x => f x - T.
 have Tm1f_is_iso : {mono Tm1f : a b / norm (a - b)}.
   move=> ? ?; by rewrite /Tm1f -addrA opprB 2!addrA subrK (Iso.P f).
 have Tm1f0 : Tm1f 0 = 0 by rewrite /Tm1f subrr.
-have /= linearTm1f : linear (@CIso.mk _ _ (Iso.mk Tm1f_is_iso) Tm1f0).
-  by apply: central_isometry_is_linear.
-have orthogonalTm1f : {mono Tm1f : u v / u *d v}.
-  move=> ? ?; by rewrite (central_isometry_preserves_dotmul
-    (@CIso.mk _ _ (Iso.mk Tm1f_is_iso) Tm1f0)).
+set c := @CIso.mk _ _ (Iso.mk Tm1f_is_iso) Tm1f0.
+have /= linearTm1f := central_isometry_is_linear c.
+have /= orthogonalTm1f := central_isometry_preserves_dotmul c.
 exists T.
 case: (lin1_mx' linearTm1f) => g Hg.
 exists (lin1_mx g); split; last first.
@@ -520,6 +511,12 @@ Proof. by rewrite /from_h row_mxKl. Qed.
 
 Lemma to_hvectorK v : from_h (to_hvector v) = v.
 Proof. by rewrite /from_h row_mxKl. Qed.
+
+Lemma from_hD (a' b : 'rV[R]_4) : from_h (a' + b) = from_h a' + from_h b.
+Proof. apply/rowP => i; by rewrite !mxE. Qed.
+
+Lemma from_hZ k (a' : 'rV[R]_4) : from_h (k *: a') = k *: from_h a'.
+Proof. apply/rowP => i; by rewrite !mxE. Qed.
 
 Lemma from_hB (a b : 'rV[R]_4) : from_h (a - b) = from_h a - from_h b.
 Proof. apply/rowP => i; by rewrite !mxE. Qed.

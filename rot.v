@@ -504,9 +504,16 @@ Lemma vaxis_of_SOP M (HM : M \is 'SO[R]_3) :
 Proof.
 rewrite /vaxis_of_SO; case: eqVneq => H.
   rewrite (_ : H = HM) //; last by apply eq_irrelevance.
-  case: (SO_Rot HM) => /= x [a [? H']].
-  by exists a.
+  case: (SO_Rot HM) => /= x [a [? H']]; by exists a.
 by rewrite HM in H.
+Qed.
+
+Lemma vaxis_of_SO_invariant (M : 'M[R]_3) (MSO : M \is 'SO[R]_3) :
+  vaxis_of_SO M *m M = vaxis_of_SO M.
+Proof.
+rewrite /vaxis_of_SO.
+case: eqVneq => [MSO'|]; last by rewrite mul0mx.
+case: (SO_Rot MSO') => /= w' [a' [w'1]]; by case.
 Qed.
 
 End relation_with_rotation_matrices.
@@ -1205,6 +1212,16 @@ Definition vaxis M : 'rV[R]_3 :=
     vaxis_of_SO M
   else
     1 / ((sin a) *+ 2) *: axial_vec M.
+
+Lemma vaxis_ortho_of_iso (M : 'M[R]_3) (MSO : M \is 'SO[R]_3) :
+  vaxis M *m M = vaxis M.
+Proof.
+rewrite /vaxis.
+case: ifPn => [_|pi].
+  by rewrite vaxis_of_SO_invariant.
+move/axial_vec_vec_eigenspace : MSO => /eigenspaceP.
+rewrite -scalemxAl => ->; by rewrite scale1r.
+Qed.
 
 Lemma Rot_vaxis (M : 'M[R]_3) u a : 
   u != 0 -> sin a != 0 ->

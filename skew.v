@@ -52,21 +52,23 @@ Section symmetric_and_antisymmetric_matrices.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
+Variable n : nat.
+Implicit Types M A B : 'M[R]_n.
 
-Lemma antiE n M : (M \is 'so[R]_n) = (M == - M^T). Proof. by []. Qed.
+Lemma antiE M : (M \is 'so[R]_n) = (M == - M^T). Proof. by []. Qed.
 
-Lemma symE n M : (M \is sym n R) = (M == M^T). Proof. by []. Qed.
+Lemma symE M : (M \is sym n R) = (M == M^T). Proof. by []. Qed.
 
-Lemma antiN n M : (- M \is 'so[R]_n) = (M \is 'so[R]_n).
+Lemma antiN M : (- M \is 'so[R]_n) = (M \is 'so[R]_n).
 Proof. apply/idP/idP; by rewrite !antiE linearN /= opprK eqr_oppLR. Qed.
 
-Lemma anti_diag n M (i : 'I_n) : M \is 'so[R]_n -> M i i = 0.
+Lemma anti_diag M (i : 'I_n) : M \is 'so[R]_n -> M i i = 0.
 Proof.
 rewrite antiE -addr_eq0 => /eqP/matrixP/(_ i i); rewrite !mxE.
 by rewrite -mulr2n -mulr_natr => /eqP; rewrite mulf_eq0 pnatr_eq0 orbF => /eqP.
 Qed.
 
-Lemma antiP n (A B : 'M[R]_n) : A \is 'so[R]_n -> B \is 'so[R]_n ->
+Lemma antiP A B : A \is 'so[R]_n -> B \is 'so[R]_n ->
   (forall i j : 'I_n, (i < j)%N -> A i j = - B j i) -> A = B.
 Proof.
 move=> soA soB AB; apply/matrixP => i j.
@@ -80,7 +82,7 @@ move: (soB); rewrite antiE -eqr_oppLR => /eqP/matrixP/(_ i j).
 rewrite !mxE => <-; by rewrite opprK.
 Qed.
 
-Lemma symP n (A B : 'M[R]_n) : A \in sym n R -> B \in sym n R ->
+Lemma symP A B : A \in sym n R -> B \in sym n R ->
   (forall i j : 'I_n, (i <= j)%N -> A i j = B i j) -> A = B.
 Proof.
 move=> symA symB AB; apply/matrixP => i j.
@@ -93,64 +95,66 @@ by move=> {ij}ij; rewrite AB // leq_eqVlt ij orbC.
 Qed.
 
 (* (anti)symmetric parts of a matrix *)
-Definition symp n (A : 'M[R]_n) := 1/2%:R *: (A + A^T).
-Definition antip n (A : 'M[R]_n) := 1/2%:R *: (A - A^T).
+Definition symp A := 1/2%:R *: (A + A^T).
+Definition antip A := 1/2%:R *: (A - A^T).
 
-Lemma symp_antip n (A : 'M[R]_n) : A = symp A + antip A.
+Lemma symp_antip A : A = symp A + antip A.
 Proof.
 rewrite /symp /antip -scalerDr addrCA addrK -mulr2n- scaler_nat.
 by rewrite scalerA div1r mulVr ?pnatf_unit // scale1r.
 Qed.
 
-Lemma antip_is_so n (M : 'M[R]_n) : antip M \is 'so[R]_n.
+Lemma antip_is_so M : antip M \is 'so[R]_n.
 Proof.
 rewrite antiE /antip; apply/eqP; rewrite [in RHS]linearZ -scalerN /=.
 by rewrite [in RHS]linearD /= opprD linearN /= opprK trmxK addrC.
 Qed.
 
-Lemma antip_scaler_closed n : GRing.scaler_closed 'so[R]_n.
+Lemma antip_scaler_closed : GRing.scaler_closed 'so[R]_n.
 Proof.
 move=> ? ?; rewrite antiE => /eqP H; by rewrite antiE linearZ /= -scalerN -H.
 Qed.
 
-Lemma sym_symp n (M : 'M[R]_n) : symp M \in sym n R.
+Lemma sym_symp M : symp M \in sym n R.
 Proof.
 by apply/eqP; rewrite /symp linearZ /= [in RHS]linearD /= trmxK addrC.
 Qed.
 
-Lemma sym_oppr_closed n : oppr_closed (sym n R).
+Lemma sym_oppr_closed : oppr_closed (sym n R).
 Proof. move=> /= M /eqP HM; apply/eqP; by rewrite linearN /= -HM. Qed.
 
-Lemma sym_addr_closed n : addr_closed (sym n R).
+Lemma sym_addr_closed : addr_closed (sym n R).
 Proof.
 split; first by rewrite symE trmx0.
 move=> /= A B; rewrite 2!symE => /eqP sA /eqP sB.
 by rewrite symE linearD /= -sA -sB.
 Qed.
 
-Canonical SymOpprPred n := OpprPred (@sym_oppr_closed n).
-Canonical SymAddrPred n := AddrPred (@sym_addr_closed n).
+Canonical SymOpprPred := OpprPred sym_oppr_closed.
+Canonical SymAddrPred := AddrPred sym_addr_closed.
 
-Lemma sym_scaler_closed n : GRing.scaler_closed (sym n R).
+Lemma sym_scaler_closed : GRing.scaler_closed (sym n R).
 Proof. move=> ? ?; rewrite 2!symE => /eqP H; by rewrite linearZ /= -H. Qed.
 
-Lemma sym_cst n a : a%:M \is sym n R.
+Lemma sym_cst a : a%:M \is sym n R.
 Proof. by rewrite symE tr_scalar_mx. Qed.
 
-Lemma sym0 n : 0 \is sym n R.
+Lemma sym0 : 0 \is sym n R.
 Proof. by rewrite symE trmx0. Qed.
 
-Lemma mul_tr_vec_sym n (u : 'rV[R]_n) : u^T *m u \is sym n R.
+Lemma mul_tr_vec_sym (u : 'rV[R]_n) : u^T *m u \is sym n R.
 Proof. apply/eqP; by rewrite trmx_mul trmxK. Qed.
 
 (* TODO: Canonical? *)
 
-Lemma trace_anti n (M : 'M[R]_n) : M \is 'so[R]_n -> \tr M = 0.
+Lemma trace_anti M : M \is 'so[R]_n -> \tr M = 0.
 Proof.
 move/anti_diag => m; by rewrite /mxtrace (eq_bigr (fun=> 0)) // sumr_const mul0rn.
 Qed.
 
-Lemma sqr_antip (M : 'M[R]_3) : M \is 'so[R]_3 ->
+End symmetric_and_antisymmetric_matrices.
+
+Lemma sqr_antip (R : rcfType) (M : 'M[R]_3) : M \is 'so[R]_3 ->
   M ^+ 2 = col_mx3
   (row3 (- M 0 1 ^+ 2 - M 0 2%:R ^+ 2) (- M 1 2%:R * M 0 2%:R) (M 0 1 * M 1 2%:R))
   (row3 (- M 1 2%:R * M 0 2%:R) (- M 0 1 ^+ 2 - M 1 2%:R ^+ 2) (- M 0 1 * M 0 2%:R))
@@ -168,22 +172,29 @@ move=> a; apply/matrix3P; rewrite !mxE /= sum3E /a !anti_diag //; Simp.r => //.
 - rewrite {1}(eqP a) 2!mxE mulNr -expr2; congr (_ + _); by rewrite {1}(eqP a) 2!mxE mulNr -expr2.
 Qed.
 
-End symmetric_and_antisymmetric_matrices.
-
 Section skew.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
-Implicit Type u : vector.
+Implicit Types u : vector.
+Implicit Types M : 'M[R]_3.
 
 Definition skew_mx u : 'M[R]_3 := \matrix_i (u *v 'e_i).
 
 Local Notation "'\S(' u ')'" := (skew_mx u) (at level 3, format "'\S(' u ')'").
 
-Lemma skew_mx0 : \S( 0 ) = 0.
+Lemma skew_mxE u v : u *m \S( v ) = v *v u.
 Proof.
-by apply/matrixP => i j; rewrite /skew_mx mxE crossmul0v 2!mxE.
+rewrite crossmulC -crossmulNv [RHS]crossmulC -crossmulvN [u]row_sum_delta.
+rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
+by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK crossmulvN opprK.
 Qed.
+
+Lemma skew_mx0 : \S( 0 ) = 0.
+Proof. by apply/matrixP => i j; rewrite /skew_mx mxE crossmul0v 2!mxE. Qed.
+
+Lemma skew_mxD u v : \S(u + v) = \S(u) + \S(v).
+Proof. apply/eqP/mulmxP => w; by rewrite mulmxDr !skew_mxE crossmulDl. Qed.
 
 Lemma skew_mxZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
@@ -226,25 +237,18 @@ Proof. by rewrite anti_diag // anti_skew. Qed.
 
 Definition skewij := (skew01, skew10, skew02, skew20, skew21, skew12, skewii).
 
-Lemma skew_mxE u v : u *m \S( v ) = v *v u.
-Proof.
-rewrite crossmulC -crossmulNv.
-  rewrite [RHS]crossmulC -crossmulvN [u]row_sum_delta -/(mulmxr _ _) !linear_sum /=.
-by apply: eq_bigr=> i _; rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK crossmulvN opprK.
-Qed.
-
 Lemma skew_mxT u : \S( u ) *m u^T = 0.
 Proof.
 rewrite -(trmxK (skew_mx u)) -trmx_mul tr_skew.
 by rewrite mulmxN skew_mxE crossmulvv oppr0 trmx0.
 Qed.
 
-Definition unskew (M : 'M[R]_3) :=
-  row3 ((M 1 2%:R - M 2%:R 1)/2%:R) ((M 2%:R 0 - M 0 2%:R)/2%:R) ((M 0 1 - M 1 0)/2%:R).
-(*old, less general definition:
-Definition unskew (M : 'M[R]_3) := row3 (M 1 2%:R) (- M 0 2%:R) (M 0 1).*)
+Definition unskew M := row3 
+  ((M 1 2%:R - M 2%:R 1) / 2%:R) 
+  ((M 2%:R 0 - M 0 2%:R) / 2%:R) 
+  ((M 0 1 - M 1 0) / 2%:R).
 
-Lemma unskew_sym (M : 'M[R]_3) : M \is sym 3 R -> unskew M = 0.
+Lemma unskew_sym M : M \is sym 3 R -> unskew M = 0.
 Proof.
 rewrite symE => /eqP MMT.
 by rewrite /unskew {1 3 5}MMT !mxE !subrr !mul0r row30.
@@ -264,14 +268,8 @@ Proof.
 rewrite /unskew !skewij !opprK -!mulr2n -3!(mulr_natr (u``_ _)) -!mulrA.
 by rewrite divrr ?unitfE ?pnatr_eq0 // 3!mulr1 [RHS]row3E !row3D !(add0r,addr0).
 Qed.
-(*Lemma skew_mxK u : unskew \S( u ) = u.
-Proof.
-apply/rowP => i; rewrite 2!mxE /=.
-case: ifPn => [/eqP ->|]; first by rewrite crossmulE /= !mxE /=; Simp.r.
-by rewrite ifnot0 => /orP [] /eqP -> /=; rewrite !skewij // opprK.
-Qed.*)
 
-Lemma unskewK (M : 'M[R]_3) : M \is 'so[R]_3 -> \S( unskew M ) = M.
+Lemma unskewK M : M \is 'so[R]_3 -> \S( unskew M ) = M.
 Proof.
 move=> Mso.
 move: (Mso); rewrite antiE => /eqP MMT.
@@ -298,15 +296,13 @@ move=> soM.
 by apply/matrix3P; rewrite skewij ?anti_diag // mxE /= ?opprK // {1}(eqP soM) !mxE opprK.
 Qed.*)
 
-Lemma unskewN (M : 'M[R]_3) : unskew (- M) = - unskew M.
+Lemma unskewN M : unskew (- M) = - unskew M.
 Proof.
 by rewrite /unskew !mxE !opprK row3N -!mulNr !opprB 3!(addrC (- M _ _)).
 Qed.
-(*by rewrite /unskew !mxE -row3N. Qed.*)
 
-Lemma unskewZ k (M : 'M[R]_3) : unskew (k *: M) = k *: unskew M.
+Lemma unskewZ k M : unskew (k *: M) = k *: unskew M.
 Proof.  by rewrite /unskew !mxE row3Z !mulrA !mulrBr. Qed.
-(*by rewrite /unskew !mxE -mulrN row3Z. Qed.*)
 
 Lemma unskewD (A B : 'M[R]_3) : unskew (A + B) = unskew A + unskew B.
 Proof.

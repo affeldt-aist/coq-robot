@@ -472,7 +472,7 @@ Definition k := i *v j.
 Lemma idotj : i *d j = 0.
 Proof.
 rewrite /j; case: ifPn => [|_]; last first.
-  by rewrite dotmulvZ -{3}(normalizeI normi) normalcompP mulr0.
+  by rewrite dotmulvZ -{3}(normalizeI normi) dotmul_orthogonalize mulr0.
 case/colinearP => [| [_ [k [Hk ->]]]].
   by rewrite -norm_eq0 norm_delta_mx (negbTE (oner_neq0 _)).
 by rewrite dotmulZv dote2 mulr0.
@@ -846,7 +846,7 @@ Lemma j_neq0 : j != 0.
 Proof. by rewrite -norm_eq0 normj oner_neq0. Qed.
 
 Lemma idotj : i *d j = 0.
-Proof. by rewrite /= /i /j dotmulZv dotmulvZ normalcompP 2!mulr0. Qed.
+Proof. by rewrite /= /i /j dotmulZv dotmulvZ dotmul_orthogonalize 2!mulr0. Qed.
 
 Lemma jdotk : j *d k = 0.
 Proof. by rewrite /k dotmul_crossmulCA crossmulvv dotmulv0. Qed.

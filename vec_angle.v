@@ -60,6 +60,31 @@ Proof. by rewrite /vec_angle 2!dotmul0v 2!crossmul0v. Qed.
 
 Definition vec_angle0 := (vec_anglev0, vec_angle0v).
 
+Lemma vec_angleC v w : vec_angle v w = vec_angle w v.
+Proof. by rewrite /vec_angle dotmulC crossmulC normN. Qed.
+
+Lemma vec_angleZ u v k : 0 < k -> vec_angle u (k *: v) = vec_angle u v.
+Proof.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite !vec_angle0.
+case/boolP : (v == 0) => [/eqP ->|v0 k0]; first by rewrite scaler0 !vec_angle0.
+by rewrite /vec_angle dotmulvZ linearZ normZ ger0_norm ?ltrW // complexZ argZ.
+Qed.
+
+Lemma vec_angleZ_neg u v k : k < 0 -> vec_angle u (k *: v) = vec_angle (- u) v.
+Proof.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite oppr0 !vec_angle0.
+case/boolP : (v == 0) => [/eqP ->|v0 k0]; first by rewrite scaler0 !vec_angle0.
+rewrite /vec_angle dotmulvZ linearZ /= normZ ltr0_norm //.
+by rewrite mulNr complexZ argZ_neg // opp_conjc dotmulNv crossmulNv normN.
+Qed.
+
+Lemma vec_anglevv u : u != 0 -> vec_angle u u = 0.
+Proof.
+move=> u0.
+rewrite /vec_angle /= crossmulvv norm0 complexr0 dotmulvv arg_Re ?arg1 //.
+by rewrite ltr_neqAle sqr_ge0 andbT eq_sym sqrf_eq0 norm_eq0.
+Qed.
+
 Lemma cos_vec_angleNv v w : v != 0 -> w != 0 ->
   cos (vec_angle (- v) w) = - cos (vec_angle v w).
 Proof.
@@ -93,40 +118,31 @@ rewrite (_ : `| _ +i* norm (w *v _)| = `|v *d w +i* norm (v *v w)|)%C; last firs
 by rewrite /= mul0r oppr0 mulr0 expr0n /= addr0 subr0 mulr0 subr0 mulNr.
 Qed.
 
-Lemma sin_vec_angleN u v (uv : u *v v != 0 (*NB: colinear u v*)) : 
-  sin (vec_angle u (- v)) = sin (vec_angle u v).
-Proof. 
-rewrite /vec_angle dotmulvN crossmulvN normN.
-rewrite /sin !expi_arg /=.
-  by rewrite !(mul0r,oppr0,mulr0,add0r,expr0n,addr0,sqrrN).
-by rewrite eq_complex /= negb_and norm_eq0 uv orbT.
-by rewrite eq_complex /= negb_and norm_eq0 uv orbT.
+Lemma sin_vec_angle_ge0 (u v : 'rV[R]_3) (u0 : u != 0) (v0 : v != 0) : 
+  0 <= sin (vec_angle u v).
+Proof.
+rewrite /sin /vec_angle expi_arg /=; last first.
+  rewrite eq_complex /= negb_and norm_eq0.
+  case/boolP : (u *d v == 0) => //=.
+  move/dotmul_eq0_crossmul_neq0; by apply.
+rewrite !(mul0r,oppr0,mulr0,add0r,expr0n,addr0) mulr_ge0 // ?norm_ge0 //.
+by rewrite divr_ge0 // ?sqrtr_ge0 // sqr_ge0.
 Qed.
 
-Lemma vec_angleC v w : vec_angle v w = vec_angle w v.
-Proof. by rewrite /vec_angle dotmulC crossmulC normN. Qed.
-
-Lemma vec_angleZ u v k : 0 < k -> vec_angle u (k *: v) = vec_angle u v.
+Lemma sin_vec_anglevN u v : sin (vec_angle u (- v)) = sin (vec_angle u v).
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite !vec_angle0.
-case/boolP : (v == 0) => [/eqP ->|v0 k0]; first by rewrite scaler0 !vec_angle0.
-by rewrite /vec_angle dotmulvZ linearZ normZ ger0_norm ?ltrW // complexZ argZ.
+case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite oppr0 !vec_angle0.
+rewrite /vec_angle dotmulvN crossmulvN normN.
+case/boolP : (u *d v == 0) => [/eqP ->|uv]; first by rewrite oppr0.
+rewrite /sin !expi_arg /=.
+  by rewrite !(mul0r,oppr0,mulr0,add0r,expr0n,addr0,sqrrN).
+by rewrite eq_complex /= negb_and uv orTb.
+by rewrite eq_complex /= negb_and oppr_eq0 uv.
 Qed.
 
-Lemma vec_angleZ_neg u v k : k < 0 -> vec_angle u (k *: v) = vec_angle (- u) v.
-Proof.
-case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite oppr0 !vec_angle0.
-case/boolP : (v == 0) => [/eqP ->|v0 k0]; first by rewrite scaler0 !vec_angle0.
-rewrite /vec_angle dotmulvZ linearZ /= normZ ltr0_norm //.
-by rewrite mulNr complexZ argZ_neg // opp_conjc dotmulNv crossmulNv normN.
-Qed.
-
-Lemma vec_anglevv u : u != 0 -> vec_angle u u = 0.
-Proof.
-move=> u0.
-rewrite /vec_angle /= crossmulvv norm0 complexr0 dotmulvv arg_Re ?arg1 //.
-by rewrite ltr_neqAle sqr_ge0 andbT eq_sym sqrf_eq0 norm_eq0.
-Qed.
+Lemma sin_vec_angleNv u v : sin (vec_angle (- u) v) = sin (vec_angle u v).
+Proof. by rewrite vec_angleC [in RHS]vec_angleC [in LHS]sin_vec_anglevN. Qed.
 
 Lemma polarization_identity (v w : 'rV[R]_3) :
   v *d w = 1 / 4%:R * (norm (v + w) ^+ 2 - norm (v - w) ^+ 2).
@@ -412,6 +428,10 @@ apply/idP/idP.
   by rewrite norm_eq0.
 Qed.
 
+Lemma sin_vec_angle_iff (u v : 'rV[R]_3) (u0 : u != 0) (v0 : v != 0) : 
+  0 <= sin (vec_angle u v) ?= iff (colinear u v).
+Proof. split; [exact: sin_vec_angle_ge0|by rewrite colinear_sin]. Qed.
+
 End colinear.
 
 Section normalize.
@@ -529,8 +549,8 @@ Qed.
 
 Lemma axialnormal v e : norm e = 1 -> axialcomp v e *d normalcomp v e = 0.
 Proof.
-move=> ne1; rewrite !(dotmulZv, dotmulvZ, dotmulBr) dotmulvv ne1.
-by rewrite expr1n mulr1 subrr mulr0.
+move=> ?.
+by rewrite /axialcomp dotmulZv (dotmulC _ (normalcomp v e)) dotmul_normalcomp // mulr0.
 Qed.
 
 Lemma decomp v u : v = axialcomp v u + normalcomp v u.
@@ -538,8 +558,7 @@ Proof. by rewrite /axialcomp /normalcomp addrC subrK. Qed.
 
 Definition orthogonalize v u := normalcomp v (normalize u).
 
-(* TODO: rename *)
-Lemma normalcompP u v : u *d orthogonalize v u = 0.
+Lemma dotmul_orthogonalize u v : u *d orthogonalize v u = 0.
 Proof.
 rewrite /normalcomp /normalize dotmulBr !(dotmulZv, dotmulvZ).
 rewrite mulrACA -invfM -expr2 dotmulvv mulrCA.

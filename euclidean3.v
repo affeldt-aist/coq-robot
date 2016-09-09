@@ -648,7 +648,6 @@ Proof. by case: i => [[|[|[|?]]] ?]; rewrite crossmulE !mxE; Simp.ord. Qed.
 Lemma crossmulNv u v : - u *v v = - (u *v v).
 Proof. by rewrite crossmulC linearN /= opprK crossmulC. Qed.
 
-(* TODO: useful? *)
 Lemma crossmulvN u v : u *v (- v) = - (u *v v).
 Proof. by rewrite linearN. Qed.
 
@@ -658,8 +657,20 @@ Proof. by rewrite crossmulC linearZ /= crossmulC scalerN opprK. Qed.
 Lemma crossmulvZ u v k : (u *v (k *: v)) = k *: (u *v v).
 Proof. by rewrite linearZ. Qed.
 
+Lemma crossmulDl u v w : (u + v) *v w = u *v w + v *v w.
+Proof.
+rewrite crossmulC linearD /= opprD; congr (_ + _); by rewrite crossmulC opprK.
+Qed.
+
+Lemma crossmulBl u v w : (u - v) *v w = u *v w - v *v w.
+Proof.
+rewrite crossmulC linearD /= opprD; congr (_ + _);
+  by rewrite ?crossmulvN crossmulC ?opprK.
+Qed.
+
 Lemma crossmul0E u v :
-  (u *v v == 0) = [forall i, [forall j, (i != j) ==> (u``_j * v``_i == u``_i * v``_j)]].
+  (u *v v == 0) =
+  [forall i, [forall j, (i != j) ==> (u``_j * v``_i == u``_i * v``_j)]].
 Proof.
 apply/eqP/'forall_'forall_implyP; last first.
   move=> uv_eq_vu; apply/rowP=> k; rewrite nth_crossmul mxE.
@@ -716,7 +727,7 @@ rewrite -mulmxA mulmxV ?unitmx_tr // mulmx1 => <-.
 by rewrite -scalemxAr trmx_inv scalemxAl.
 Qed.
 
-Lemma double_crossmul (u v w : 'rV[R]_3) :
+Lemma double_crossmul u v w :
  u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
 Proof.
 suff aux i : u *d w * v``_i - u *d v * w``_i =
@@ -1078,7 +1089,7 @@ End norm1.
 
 End norm.
 
-Lemma sqr_norm (R: rcfType) n (u : 'rV[R]_n) : norm u ^+ 2 = \sum_i u``_i ^+ 2.
+Lemma sqr_norm (R : rcfType) n (u : 'rV[R]_n) : norm u ^+ 2 = \sum_i u``_i ^+ 2.
 Proof. rewrite -dotmulvv dotmulE; apply/eq_bigr => /= i _; by rewrite expr2. Qed.
 
 Lemma mulmx_trE (R : rcfType) n (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
@@ -1143,7 +1154,8 @@ Section norm3.
 Variable R : rcfType.
 Implicit Types u : 'rV[R]_3.
 
-Lemma norm_crossmul' u v : (norm (u *v v)) ^+ 2 = (norm u * norm v) ^+ 2 - (u *d v) ^+ 2 .
+Lemma norm_crossmul' u v :
+  (norm (u *v v)) ^+ 2 = (norm u * norm v) ^+ 2 - (u *d v) ^+ 2.
 Proof.
 rewrite sqr_norm sum3E crossmulE /SimplFunDelta /= !mxE /=.
 transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
