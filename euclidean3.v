@@ -1060,6 +1060,9 @@ Proof. by rewrite ger0_norm. Qed.
 Lemma norm_eq0 u : (norm u == 0) = (u == 0).
 Proof. by rewrite -sqrtr0 eqr_sqrt // ?dotmulvv0 // le0dotmul. Qed.
 
+Lemma norm_gt0 u : (0 < norm u) = (u != 0).
+Proof. by rewrite ltr_neqAle norm_ge0 andbT eq_sym norm_eq0. Qed.
+
 Lemma norm1_neq0 u : norm u = 1 -> u != 0.
 Proof. rewrite -norm_eq0 => ->; exact: oner_neq0. Qed.
 

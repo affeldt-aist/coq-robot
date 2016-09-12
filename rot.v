@@ -466,7 +466,7 @@ case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
     by rewrite norm_normalize.
   apply: (proj1 (@RotZ _ phi (mx_lin1 M) (norm v) _ _)).
   by rewrite /i normalize_eq0.
-  by rewrite ltr_neqAle ?norm_ge0 andbT eq_sym norm_eq0.
+  by rewrite norm_gt0.
   rewrite /i norm_scale_normalize; split => //=.
   by rewrite -!(Ha,Hb,Hc).
   by rewrite -!(Hb,Hc,Hd).
@@ -961,8 +961,7 @@ Lemma Rot_pi_inv (M : 'M[R]_3) u :
 Proof.
 move=> u0 H.
 have {H}H : Rot (normalize u) pi (mx_lin1 M).
-  apply RotZ => //.
-  by rewrite invr_gt0 ltr_neqAle norm_ge0 andbT eq_sym norm_eq0.
+  apply RotZ => //; by rewrite invr_gt0 norm_gt0.
 move/Rot_exp_eskew' : H.
 rewrite norm_normalize // => /(_ erefl) ->.
 by rewrite /eskew' cospi sinpi scale0r addr0 scaleN1r opprB addrA -mulr2n.
@@ -1330,8 +1329,7 @@ case: (angle_in a) => Ha.
     by rewrite /w norm_scale_normalize /Aa.vaxis (negbTE api).
   - move: (Rot_eskew (Aa.angle M) (norm1_neq0 w1)).
     rewrite {3}/w norm_scale_normalize (normalizeI w1) {1}/w {1}/normalize.
-    apply: (proj1 (RotZ _ _ _ _)) => //.
-    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 Htmp0.
+    apply: (proj1 (RotZ _ _ _ _)) => //; by rewrite invr_gt0 norm_gt0.
 - move: (Aa.Rot_angleN w0 Ha wa) => a_angle_of_rot.
   have : M \in unitmx by rewrite orthogonal_unit // rotation_sub // -rotationV.
   move/(@Rot_tr _ _ (Aa.angle M^T) w0 M).
@@ -1355,8 +1353,7 @@ case: (angle_in a) => Ha.
     apply RotN; rewrite opprK.
     move: H.
     rewrite {1}/w {1}/normalize.
-    apply: (proj1 (RotZ _ _ _ _)) => //.
-    by rewrite invr_gt0 ltr_neqAle norm_ge0 andbT eq_sym norm_eq0.
+    apply: (proj1 (RotZ _ _ _ _)) => //; by rewrite invr_gt0 norm_gt0.
 Qed.
 
 Lemma angle_axis_Rot (Q : 'M[R]_3) :
@@ -1380,7 +1377,7 @@ rewrite {3}H RotZ; last 2 first.
   abstract: vaxis0.
   rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or Q0 andbT div1r. 
   by rewrite invr_eq0 mulrn_eq0 /= sin_eq0 negb_or a0 api.
-  by rewrite invr_gt0 ltr_neqAle norm_ge0 andbT eq_sym norm_eq0.
+  by rewrite invr_gt0 norm_gt0.
 by apply Rot_eskew.
 Qed.
 

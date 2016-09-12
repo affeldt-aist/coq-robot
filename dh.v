@@ -266,127 +266,107 @@ have H1 : sin (vec_angle v1 v2) = norm p1H / norm v1.
     rewrite v1v2 axialcompE.
     rewrite (mx11_scalar (v1 *m v2^T)).
     by rewrite -/(v1 *d v2) (eqP v1v20) mul_scalar_mx scale0r add0r.
-  rewrite -sin_vec_angleNv.
-  suff H : 1 - cos (vec_angle (- v1) v2) ^+ 2 = (norm p1H ^+ 2 / norm v1 ^+ 2).
+  suff H : sin (vec_angle v1 v2) ^+ 2 == (norm p1H ^+ 2 / norm v1 ^+ 2).
     apply/eqP.
-    rewrite -(@eqr_expn2 _ 2) // ?sin_vec_angle_ge0 ?oppr_eq0 // ?divr_ge0 ?norm_ge0 //.
-    by rewrite sin2cos2 H expr_div_n.
-  suff H : norm v1 ^+ 2 - norm v1 ^+ 2 * cos (vec_angle (- v1) v2) ^+ 2 = norm p1H ^+ 2.
-    rewrite -H.
-    rewrite mulrBl divrr ?unitfE ?sqrf_eq0 ?norm_eq0 //.
-    rewrite /p1H.
-    rewrite /normalcomp.
-(*    rewrite (normB v1).
-    rewrite sqr_sqrtr.
-
+    rewrite -(@eqr_expn2 _ 2) // ?sin_vec_angle_ge0 ?oppr_eq0 ?divr_ge0 ?norm_ge0 //.
+    by rewrite expr_div_n.
+  suff H : norm v1 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm p1H ^+ 2.
+    by rewrite -H -mulrA (mulrCA (norm v1 ^+ 2)) divrr ?mulr1 // unitfE sqrf_eq0 norm_eq0.
   rewrite /p1H.
-  move/eqP : v1v2.
-  rewrite addrC -subr_eq => /eqP <-.
-
-  rewrite cosine_law'.
-
-  admit.
-have H2 : sin (vec_angle (p2 - p1) v2) = norm p1H / norm (p2 - p1).
-  admit.
-rewrite [in LHS]H1 [in RHS]H2.
-rewrite [in LHS]mulrCA [in LHS]divrr; last first.
-  admit.
-by rewrite mulrCA divrr // unitfE norm_eq0.*)
+  rewrite /normalcomp.
 Abort.
+
+Definition normalcomp_new (v u : 'rV[R]_3) := v - normalize u *d v *: normalize u.
+
+Definition axialcomp_new (v u : 'rV[R]_3) := normalize u *d v *: normalize u.
+
+Lemma decomp_new v u : v = axialcomp_new v u + normalcomp_new v u.
+Proof. by rewrite /axialcomp_new /normalcomp_new addrC subrK. Qed.
+
+Lemma normalcomp0v (v : 'rV[R]_3) : normalcomp_new 0 v = 0.
+Proof. by rewrite /normalcomp_new dotmulv0 scale0r subrr. Qed.
+
+Lemma normalcompv0 (v : 'rV[R]_3) : normalcomp_new v 0 = v.
+Proof. by rewrite /normalcomp_new /normalize scaler0 dotmul0v scaler0 subr0. Qed.
+
+Lemma colinear_axialcomp e p : colinear e (axialcomp_new p e).
+Proof. apply/eqP; by rewrite /axialcomp_new linearZ /= crossmulvZ crossmulvv 2!scaler0. Qed.
+
+Lemma colinearD (u v w : 'rV[R]_3) : colinear u w -> colinear v w ->
+  colinear (u + v) w.
+Proof.
+case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite addr0.
+case/colinearP => [/eqP -> _| [w0 [k [Hk1 Hk2]]]]; first by rewrite colinear_sym colinear0.
+case/colinearP => [/eqP ->|[_ [k' [Hk'1 Hk'2]]]]; first by rewrite colinear_sym colinear0.
+by rewrite Hk2 Hk'2 -scalerDl colinearZv colinear_refl orbT.
+Qed.
+
+Lemma mem_add_line (l : line R) (p v : 'rV[R]_3) :
+  line_vector l != 0 ->
+  colinear v (line_vector l) ->
+  (p + v \in (l : pred _)) = (p \in (l : pred _)).
+Proof.
+move=> l0 vl.
+apply/lineP/idP => [[] x /eqP|pl].
+  rewrite eq_sym -subr_eq => /eqP <-.
+  rewrite inE l0 /=; apply/orP; right.
+  rewrite -!addrA addrC !addrA subrK colinear_sym.
+  by rewrite colinearD // ?colinearZv ?colinear_refl ?orbT // colinearNv.
+case/colinearP : vl => [|[_ [k [Hk1 ->]]]]; first by rewrite (negPf l0).
+case/lineP : pl => k' ->.
+exists (k' + k); by rewrite -addrA -scalerDl.
+Qed.
+
+Lemma law_of_sinuses_helper (p1 p2 p : point) :
+  let v1 := p - p1 in
+  let v2 := p2 - p in
+  v2 != 0 ->
+  norm v1 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp_new v1 v2) ^+ 2.
+Proof.
+move=> v1 v2 v20.
+case/boolP : (v1 == 0) => [/eqP ->|v10].
+  by rewrite normalcomp0v norm0 expr0n mul0r.
+rewrite /normalcomp_new.
+rewrite [in RHS]normB.
+case/boolP : (0 < normalize v2 *d v1) => [v2v1|].
+  rewrite normZ gtr0_norm // norm_normalize // mulr1 scalerA vec_anglevZ //; last first.
+    by rewrite divr_gt0 // norm_gt0.
+  rewrite dotmul_cos norm_normalize // mul1r vec_angleZv; last first.
+    by rewrite invr_gt0 norm_gt0.
+  rewrite [in RHS]mulrA (vec_angleC v1) -expr2 -mulrA -expr2 exprMn.
+  by rewrite mulr2n opprD addrA subrK sin2cos2 mulrBr mulr1.
+rewrite -lerNgt ler_eqVlt => /orP[|v2v1].
+  rewrite {1}dotmul_cos norm_normalize // mul1r mulf_eq0 norm_eq0 (negbTE v10) /=.
+  rewrite vec_angleZv; last by rewrite invr_gt0 norm_gt0.
+  move/eqP=> Hcos.
+  rewrite dotmulZv (_ : _ *d _ = 0); last by rewrite dotmul_cos Hcos mulr0.
+  rewrite mulr0 scale0r norm0 mulr0 mul0r expr0n mul0rn addr0 subr0.
+  by rewrite -(sqr_normr (sin _)) vec_angleC cos0sin1 ?expr1n ?mulr1.
+rewrite vec_anglevZN // cos_vec_anglevN // ?normalize_eq0 //.
+rewrite scalerA normZ ltr0_norm; last first.
+  rewrite mulr_lt0 invr_eq0 norm_eq0 v20 /= ltr_eqF //=.
+  by rewrite invr_lt0 (ltrNge (norm v2)) norm_ge0 addbF.
+rewrite mulNr -(mulrA _ _ (norm v2)) mulVr ?mulr1 ?unitfE ?norm_eq0 //.
+rewrite vec_anglevZ // ?invr_gt0 ?norm_gt0 // sqrrN mulrN mulNr mulrN opprK.
+rewrite dotmul_cos norm_normalize // mul1r vec_angleZv ?invr_gt0 ?norm_gt0 //.
+rewrite (vec_angleC v2) mulrA -expr2 exprMn.
+rewrite addrAC -addrA -mulrA -mulrnAr -mulrBr.
+rewrite -{2}(mulr1 (norm v1 ^+ 2)) -mulrDr; congr (_ * _).
+by rewrite sin2cos2 -expr2 mulr2n opprD !addrA addrK.
+Qed.
 
 Lemma law_of_sinuses (p1 p2 p : point) :
   let v1 := p - p1 in
   let v2 := p2 - p in
-  intersection (mkLine p1 v1) (mkLine p2 v2) = Some p ->
-  norm (p - p1) * sin (vec_angle v1 v2) =
-  norm (p2 - p1) * sin (vec_angle (p2 - p1) v2).
+  v1 != 0 ->
+  v2 != 0 ->
+  sin (vec_angle v1 v2) = norm (normalcomp_new v1 v2) / norm v1.
 Proof.
-move=> v1 v2.
-rewrite /intersection /=.
-case: ifPn.
-  rewrite inE /=.
-  case/orP => [/eqP -> [->]|/andP[v20 Hv2] [<-]].
-    by rewrite subrr norm0 [in RHS]mul0r !mul0r.
-  case/boolP : (p2 - p1 == 0) => p12.
-    by rewrite (eqP p12) subrr norm0 [in RHS]mul0r mul0r.
-  rewrite subrr norm0 mul0r (_ : sin (vec_angle _ _) = 0) ?mulr0 //.
-  by apply/eqP; rewrite -(colinear_sin p12 v20) -colinearNv opprB colinear_sym.
-rewrite inE /= negb_or => /andP[p1p2].
-rewrite negb_and negbK => /orP[/eqP ->|].
-  rewrite !crossmul0v.
-  case: ifPn.
-    rewrite inE /= eq_sym (negbTE p1p2) /= => /andP[v10 v1p2p1] [<-].
-    by rewrite !vec_angle0.
-  rewrite eqxx /= => _ ?; exfalso; done.
-move=> v2p1p2.
-case: ifPn.
-  rewrite inE /= eq_sym (negbTE p1p2) /= => /andP[v10 v1p2p1] [<-].
-  case/colinearP : v1p2p1.
-    rewrite subr_eq0 eq_sym (negbTE p1p2) => ?; exfalso; done.
-  case=> p2p10 [k [Hk1 Hk2]].
-  rewrite Hk2.
-  case/boolP : (k == 0) => k0.
-    exfalso.
-    apply/negP : k0.
-    apply: contra v10.
-    rewrite Hk2 => /eqP ->; by rewrite scale0r.
-  move: k0.
-  rewrite eqr_le negb_and -2!ltrNge => /orP[] k0.
-    by rewrite [in LHS]vec_angleC (vec_angleZ _ _ k0) [in LHS]vec_angleC.
-  rewrite [in LHS]vec_angleC (vec_angleZ_neg _ _ k0) [in LHS]sin_vec_angleNv.
-  by rewrite vec_angleC.
-rewrite inE /= negb_or => /andP[_].
-rewrite negb_and negbK => /orP[/eqP ->|].
-  rewrite crossmulv0 eqxx orbT => ?; exfalso; done.
-move=> v1p2p1.
-case: ifPn.
-  move=> _ abs; exfalso; done.
-rewrite negb_or => /andP[v2p2p1 v2v1].
-have v10 : v1 != 0 by apply: contra v2v1 => /eqP ->; rewrite crossmulv0.
-have v20 : v2 != 0 by apply: contra v2v1 => /eqP ->; rewrite crossmul0v.
-case: ifPn => samedir [<-].
-  rewrite -addrA addrCA subrr addr0.
-  rewrite normZ ger0_norm; last by rewrite divr_ge0 // norm_ge0.
-  rewrite norm_crossmul (mulrC (norm v2)) -!mulrA; congr (_ * _).
-  have sin0 : sin (vec_angle v2 v1) != 0 by rewrite -colinear_sin.
-  rewrite norm_crossmul -(mulrA (norm v2)) invrM; last 2 first.
-    by rewrite unitfE norm_eq0.
-    by rewrite unitfE mulf_neq0 // ?norm_eq0 // normr_eq0.
-  rewrite (mulrC _ (norm v2)^-1) !mulrA (mulrC _ (norm v2)^-1) mulrA mulVr; last first.
-    by rewrite unitfE norm_eq0.
-  rewrite mul1r invrM; last 2 first.
-    by rewrite unitfE norm_eq0.
-    by rewrite unitfE normr_eq0.
-  rewrite -!mulrA (mulrA (norm v1)^-1) mulVr ?mul1r; last first.
-    by rewrite unitfE norm_eq0.
-  move: sin0.
-  rewrite eqr_le negb_and -ltrNge sin_vec_angle_ge0 //= orbF => sin0.
-  rewrite mulrC.
-  rewrite [in X in X * _ = _](gtr0_norm sin0).
-  rewrite (vec_angleC v1 v2) mulVr ?mul1r ?unitfE ?gtr_eqF //.
-  by rewrite vec_angleC ger0_norm ?sin_vec_angle_ge0 // subr_eq0 eq_sym.
-
-  rewrite -addrA addrCA subrr addr0.
-  rewrite normN.
-  rewrite normZ ger0_norm; last by rewrite divr_ge0 // norm_ge0.
-  rewrite norm_crossmul (mulrC (norm v2)) -!mulrA; congr (_ * _).
-  have sin0 : sin (vec_angle v2 v1) != 0 by rewrite -colinear_sin.
-  rewrite norm_crossmul -(mulrA (norm v2)) invrM; last 2 first.
-    by rewrite unitfE norm_eq0.
-    by rewrite unitfE mulf_neq0 // ?norm_eq0 // normr_eq0.
-  rewrite (mulrC _ (norm v2)^-1) !mulrA (mulrC _ (norm v2)^-1) mulrA mulVr; last first.
-    by rewrite unitfE norm_eq0.
-  rewrite mul1r invrM; last 2 first.
-    by rewrite unitfE norm_eq0.
-    by rewrite unitfE normr_eq0.
-  rewrite -!mulrA (mulrA (norm v1)^-1) mulVr ?mul1r; last first.
-    by rewrite unitfE norm_eq0.
-  move: sin0.
-  rewrite eqr_le negb_and -ltrNge sin_vec_angle_ge0 //= orbF => sin0.
-  rewrite mulrC.
-  rewrite [in X in X * _ = _](gtr0_norm sin0).
-  rewrite (vec_angleC v1 v2) mulVr ?mul1r ?unitfE ?gtr_eqF //.
-  by rewrite vec_angleC ger0_norm ?sin_vec_angle_ge0 // subr_eq0 eq_sym.
+move=> v1 v2 v10 v20.
+apply/eqP.
+rewrite -(@eqr_expn2 _ 2) // ?divr_ge0 // ?norm_ge0 // ?sin_vec_angle_ge0 //.
+rewrite exprMn -law_of_sinuses_helper // mulrAC exprVn divrr ?mul1r //.
+by rewrite unitfE sqrf_eq0 norm_eq0.
 Qed.
 
 Lemma intersectionP l1 l2 p : line_vector l1 != 0 -> line_vector l2 != 0 ->
@@ -403,12 +383,35 @@ case: ifPn => [l21 [<-]|l21].
 case: ifPn => [//|].
 rewrite negb_or => /andP[H1 H2].
 case: ifPn => samedir [<-].
+  set p1 := line_point l1.
+  set p2 := line_point l2.
+  set v1 := line_vector l1.
+  set v2 := line_vector l2.
   set k := _ / norm (_ *v _).
   have k_gt0 : 0 < k.
     by rewrite /k divr_gt0 // ltr_neqAle norm_ge0 andbT eq_sym norm_eq0.
   apply/andP; split; first by apply/lineP; exists k.
-  move: (@law_of_sinuses (line_point l1) (line_point l2) p) => /=.
-simpl.
+
+  rewrite (decomp_new v1 v2).
+  rewrite scalerDr addrA.
+  rewrite addrAC mem_add_line //; last first.
+    by rewrite -/v2 colinearZv colinear_sym colinear_axialcomp orbT.
+
+  rewrite inE.
+  rewrite /k.
+  rewrite norm_crossmul ger0_norm ?sin_vec_angle_ge0 //; last first.
+    rewrite subr_eq add0r; apply: contra l21 => /eqP.
+    by rewrite -/p2 => ->; rewrite inE eqxx.
+  rewrite norm_crossmul ger0_norm ?sin_vec_angle_ge0 //.
+  rewrite -(mulrA (norm v2) (norm v1)) invrM; last 2 first.
+    by rewrite ?unitfE norm_eq0.
+    rewrite unitfE.
+    move: H2.
+    rewrite -norm_eq0.
+    rewrite norm_crossmul -/v1 -/v2 ger0_norm ?sin_vec_angle_ge0 //.
+    by rewrite -mulrA mulf_eq0 norm_eq0 (negbTE l20) /=.
+  rewrite (mulrC (_^-1)).
+  rewrite mulrCA !mulrA mulVr ?mul1r ?unitfE ?norm_eq0 //.
 Admitted.
 
 Axiom directed_from_to : 'rV[R]_3 -> 'rV[R]_3 -> 'rV[R]_3 -> bool.

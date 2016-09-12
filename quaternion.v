@@ -10,7 +10,7 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux euclidean3 angle vec_angle rot frame.
+Require Import aux euclidean3 angle vec_angle frame rot.
 
 (*************************************************************************)
 (*  section quaternion                                                   *)
@@ -646,10 +646,8 @@ set a := atan _.
 split.
 - set u : 'rV_3 := normalize q`1.
   by rewrite quat_rot_is_linearE quat_rot_axis.
-- rewrite /normalize Base.jZ //; last first.
-    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
-  rewrite /normalize Base.kZ //; last first.
-    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
+- rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
+  rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
   move: (Base.frame u0).
   rewrite -/(Base.j q`1) -/(Base.k q`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /= (Base.udotj u0) scale0r mul0rn addr0.
@@ -658,10 +656,8 @@ split.
   rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
   by rewrite polar_of_uquat_prop.
   by rewrite mulrnAl polar_of_uquat_prop2.
-- rewrite /normalize Base.jZ //; last first.
-    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
-  rewrite /normalize Base.kZ //; last first.
-    by rewrite invr_gt0 ltr_neqAle norm_ge0 eq_sym norm_eq0 andbT.
+- rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
+  rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
   move: (Base.frame u0).
   rewrite -/(Base.j q`1) -/(Base.k q`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /= (Base.udotk u0) scale0r mul0rn addr0.
