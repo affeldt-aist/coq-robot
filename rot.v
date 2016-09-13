@@ -886,18 +886,22 @@ rewrite (decomp (p *m Q) u).
 have -> : axialcomp (p *m Q) u = axialcomp p u.
   rewrite axialcompE.
   case: (Maxis) => /= H2 _ _.
-  rewrite -{1}H2 trmx_mul mulmxA -(mulmxA p).
+  rewrite -{2}H2 trmx_mul mulmxA -(mulmxA p).
   move: QO; rewrite orthogonalE mulmxE => /eqP ->.
   by rewrite mulmx1 axialcompE.
 rewrite /eskew'.
 rewrite -[in RHS]addrA mulmxDr axialcompE mulmxA; congr (_ + _).
+  by rewrite e1 expr1n invr1 scale1r.
 have H1 : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
   transitivity (normalcomp p u *m Q).
-    (* lemma? *)
+    (* TODO: lemma? *)
     rewrite /normalcomp mulmxBl; congr (_ - _).
     case: Maxis => /= H1 _ _.
-    rewrite -scalemxAl H1 -{1}H1; congr (_ *: _).
+    rewrite -2!scalemxAl H1; congr (_ *: _).
+    rewrite 2!dotmulZv -{2}H1.
     by rewrite (proj2 (orth_preserves_dotmul Q) QO u).
+(*    rewrite -scalemxAl H1 -{1}H1; congr (_ *: _).
+    by rewrite (proj2 (orth_preserves_dotmul Q) QO u).*)
   case: Maxis => /= H1 H2 H3.
   move: (orthogonal_expansion (Base.frame (norm1_neq0 e1))) => /(_ (normalcomp p (Base.i u))) /= Hp.
   rewrite (_ : Base.i u = u) in Hp; last by rewrite /Base.i normalizeI.
@@ -925,6 +929,7 @@ rewrite {}H1 /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
 rewrite scalerBr -2!addrA; congr (_ + _).
 rewrite -scalemxAr -(scalerN (sin a)) crossmulC opprK -(skew_mxE p u).
 congr (- (_ *: _) + _).
+rewrite normalizeI //.
 by rewrite dotmulC mulmxA (mx11_scalar (p *m _)) mul_scalar_mx.
 Qed.
 

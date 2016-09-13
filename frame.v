@@ -618,8 +618,16 @@ case: ifPn => [|_].
   by rewrite mul_scalar_mx scale0r scaler0.
 apply/eqP.
 rewrite /normalize crossmulvZ -!scalemxAl scaler_eq0; apply/orP; right.
+rewrite /normalcomp linearD /= crossmulvN 2!crossmulvZ crossmulvv 2!scaler0 subr0.
+move: (axialcompE (v *v 'e_0) v).
+rewrite v1 expr1n invr1 scale1r => <-.
+by rewrite axialcomp_crossmul.
+(*
+apply/eqP.
+rewrite /normalize crossmulvZ -!scalemxAl scaler_eq0; apply/orP; right.
 rewrite /normalcomp linearD /= crossmulvN crossmulvZ crossmulvv scaler0 subr0.
 by rewrite -axialcompE axialcomp_crossmul.
+*)
 Qed.
 
 End build_base_lemmas.

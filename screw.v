@@ -999,17 +999,24 @@ Qed.
 
 Definition axialdisp p := axialcomp (displacement f p) w.
 
-Lemma axialdispE p : axialdisp p = d0 *: w.
-Proof. by rewrite /axialdisp /axialcomp dotmulC displacement_proj. Qed.
+Lemma axialdispE p : axialdisp p = d0 *: ((norm w)^-2 *: w).
+Proof. 
+rewrite /axialdisp /axialcomp dotmulC dotmulvZ displacement_proj mulrC -scalerA.
+by rewrite (scalerA (norm w)^-1) -expr2 exprVn.
+Qed.
 
 Definition normdisp p := normalcomp (displacement f p) w.
 
 Lemma decomp_displacement p :
-  norm (displacement f p) ^+ 2 = norm (d0 *: w) ^+2 + norm (normdisp p) ^+ 2.
+  norm (displacement f p) ^+ 2 = norm (d0 *: (norm w ^- 2 *: w)) ^+2 + norm (normdisp p) ^+ 2.
 Proof.
-rewrite (decomp (displacement f p) w) normD -dotmul_cos (axialnormal _ w1) //.
-rewrite mul0rn addr0 sqr_sqrtr; last by rewrite addr_ge0 // ?sqr_ge0.
+rewrite (decomp (displacement f p) w) normD -dotmul_cos (axialnormal _ w1) // mul0rn addr0.
 by rewrite -/(normdisp p) -/(axialdisp p) axialdispE.
+(*
+rewrite (decomp (displacement f p) w) normD -dotmul_cos (axialnormal _ w1) //.
+rewrite mul0rn addr0 sqr_sqrtr. ; last by rewrite addr_ge0 // ?sqr_ge0.
+by rewrite -/(normdisp p) -/(axialdisp p) axialdispE.
+*)
 Qed.
 
 (*Lemma d0_is_a_lb_of_a_displacement p : d0 ^+ 2 <= norm (displacement f p) ^+ 2.
@@ -1023,6 +1030,7 @@ Proof.
 move=> Hp.
 have := lerr (norm (d0 *: w) ^+ 2).
 rewrite {1}normZ w1 mulr1 sqr_normr -{1}Hp decomp_displacement -ler_sub_addl.
+rewrite w1 expr1n invr1 scale1r.
 by rewrite subrr ler_eqVlt ltrNge sqr_ge0 orbF sqrf_eq0 norm_eq0 => /eqP.
 Qed.
 
@@ -1244,6 +1252,7 @@ have _(*?*) : relative_displacement f (f p0) p0 = 0 (*displacement f p0 *m (Q - 
   rewrite (decomp (displacement f p0) w) H1 addr0.
   rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
   move: (angle_axis_Rot w0 (ortho_of_diso_is_SO f)); rewrite -/Q -/a -/w.
+  rewrite normalizeI //.
   by case => /= -> _ _; rewrite subrr scaler0.
 have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).
@@ -1251,7 +1260,8 @@ have step2 : displacement f q + relative_displacement f p0 q = displacement f q 
     move/(MozziChasles w0 sina0) in fp0e0.
     rewrite -normalcomp_colinear ?norm_normalize // in fp0e0.
     rewrite (eqP fp0e0).
-    by rewrite addr0 axialcompE.
+    rewrite addr0 axialcompE.
+    by rewrite w1 expr1n invr1 scale1r.
   rewrite (mx11_scalar (displacement f p0 *m w^T)) -/(dotmul _ _).
   rewrite mulmxA (mx11_scalar (displacement f q *m w^T)) -/(dotmul _ _).
   by rewrite 2!(displacement_proj w0).
