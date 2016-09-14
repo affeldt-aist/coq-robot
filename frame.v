@@ -522,7 +522,7 @@ Variable u : 'rV[R]_3.
 Hypothesis u0 : u != 0.
 
 Lemma jN : j (- u) = j u.
-Proof. by rewrite /j colinearNv normalcompN. Qed.
+Proof. by rewrite /j colinearNv normalcompvN. Qed.
 
 Lemma kN : k (- u) = - k u.
 Proof. by rewrite /k jN crossmulNv. Qed.
@@ -846,8 +846,8 @@ Proof. by rewrite -norm_eq0 normi oner_neq0. Qed.
 Lemma normj : norm j = 1.
 Proof.
 rewrite /j norm_normalize // normalcomp_colinear ?normi //.
-apply: contra (abc); rewrite colinear_sym colinearZv invr_eq0 norm_eq0.
-by rewrite subr_eq0 eq_sym (negPf ab).
+apply: contra (abc); rewrite colinearvZ invr_eq0 norm_eq0 subr_eq0.
+by rewrite eq_sym (negPf ab) /= colinear_sym.
 Qed.
 
 Lemma j_neq0 : j != 0.

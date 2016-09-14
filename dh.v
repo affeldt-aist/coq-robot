@@ -226,247 +226,60 @@ rewrite /plucker_of_line /plucker_array_mx /=.
 by rewrite /pluckern /pluckere crossmulvZ -scale_row_mx.
 Qed.
 
-(*Definition intersection (o o' : 'rV[R]_3) (v v' : 'rV[R]_3) : option 'rV[R]_3.
-Admitted.*)
-(* http://math.stackexchange.com/questions/270767/find-intersection-of-two-3d-lines *)
+Definition is_interpoint (p : point) (l1 l2 : line R) :=
+  (p \in (l1 : pred _)) && (p \in (l2 : pred _)).
 
-Definition same_direction (u v : 'rV[R]_3) := 0 <= cos (vec_angle u v).
+Definition interpoint_param x (l1 l2 : line R) :=
+  let p1 := line_point l1 in let p2 := line_point l2 in
+  let v1 := line_vector l1 in let v2 := line_vector l2 in
+  \det (col_mx3 (p2 - p1) x (v1 *v v2)) / norm (v1 *v v2) ^+ 2. 
 
-Definition intersection (l1 l2 : line R) : option point :=
-  let: (p1, u1) := (line_point l1, line_vector l1) in
-  let: (p2, u2) := (line_point l2, line_vector l2) in
-  if p1 \in (l2 : pred _) then Some p1
-  else if p2 \in (l1 : pred _) then Some p2
-  else let w : vector := p2 - p1 in
-  let hw := u2 *v w in
-  let h1 := u2 *v u1 in
-  if (hw == 0) || (h1 == 0) then
+Definition interpoint_s (l1 l2 : line R) := interpoint_param (line_vector l1) l1 l2.
+
+Definition interpoint_t (l1 l2 : line R) := interpoint_param (line_vector l2) l1 l2.
+
+Lemma interpointP p l1 l2 : ~~ parallel l1 l2 ->
+  let p1 := line_point l1 in let p2 := line_point l2 in
+  let v1 := line_vector l1 in let v2 := line_vector l2 in
+  is_interpoint p l1 l2 <->
+  let s := interpoint_s l1 l2 in let t := interpoint_t l1 l2 in
+  p1 + t *: v1 = p /\ p2 + s *: v2 = p.
+Proof.
+move=> l1l2 p1 p2 v1 v2; split; last first.
+  move=> [Hs Ht]; rewrite /is_interpoint; apply/andP; split; apply/lineP;
+  by [exists (interpoint_t l1 l2) | exists (interpoint_s l1 l2)].
+case/andP => /lineP[t' Hs] /lineP[s' Ht] s t.
+have Ht' : t' = interpoint_t l1 l2.
+  have : t' *: (v1 *v v2) = (p2 - p1) *v v2.
+    move: (Ht); rewrite Hs -/p1 -/p2 -/v1 -/v2 => /(congr1 (fun x => x - p1)).
+    rewrite addrAC subrr add0r addrAC => /(congr1 (fun x => x *v v2)).
+    by rewrite crossmulZv crossmulDl crossmulZv crossmulvv scaler0 addr0.
+  move/(congr1 (fun x => x *d (v1 *v v2))).
+  rewrite dotmulZv dotmulvv.
+  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
+  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
+  by rewrite -dotmul_crossmulA crossmul_triple.
+have Hs' : s' = interpoint_s l1 l2.
+  have : s' *: (v1 *v v2) = (p2 - p1) *v v1.
+    move: (Ht); rewrite Hs -/p1 -/p2 -/v1 -/v2 => /(congr1 (fun x => x - p2)).
+    rewrite [in X in _ = X -> _]addrAC subrr add0r addrAC => /(congr1 (fun x => x *v v1)).
+    rewrite [in X in _ = X -> _]crossmulZv crossmulDl crossmulZv crossmulvv scaler0 addr0.
+    rewrite -(opprB p2 p1) (crossmulC v2) scalerN => /eqP.
+    by rewrite crossmulNv eqr_opp => /eqP.
+  move/(congr1 (fun x => x *d (v1 *v v2))).
+  rewrite dotmulZv dotmulvv.
+  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
+  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
+  by rewrite -dotmul_crossmulA crossmul_triple.
+by rewrite /t /s -Ht' -Hs'.
+Qed.
+
+Definition intersection (l1 l2 : line R) : option point := 
+  if ~~ intersects l1 l2 then
     None
   else
-    let k := (norm hw / norm h1) *: u1 in
-    if same_direction hw h1 then
-      Some (p1 + k)
-    else 
-      Some (p1 - k).
-
-Definition tricolinear (a b c : point) := colinear (b - a) (c - a).
-
-Lemma tricolinear_rot a b c : tricolinear a b c = tricolinear b c a.
-Proof.
-rewrite /tricolinear /colinear !linearD /= !crossmulDl !crossmulvN !crossmulNv.
-by rewrite !opprK !crossmulvv !addr0 -addrA addrC (crossmulC a c) opprK (crossmulC b c).
-Qed.
-
-Lemma tricolinear_perm a b c : tricolinear a b c = tricolinear b a c.
-Proof.
-rewrite /tricolinear /colinear !linearD /= !crossmulDl !crossmulvN !crossmulNv.
-rewrite !opprK !crossmulvv !addr0 -{1}oppr0 -eqr_oppLR 2!opprB.
-by rewrite addrC (crossmulC a b) opprK.
-Qed.
-
-Lemma tricolinear_aab (a b : point) : tricolinear a a b.
-Proof. by rewrite /tricolinear subrr colinear0. Qed.
-
-Lemma tricolinear_aba (a b : point) : tricolinear a b a.
-Proof. by rewrite /tricolinear subrr colinear_sym colinear0. Qed.
-
-Lemma tricolinear_baa (a b : point) : tricolinear b a a.
-Proof. by rewrite /tricolinear colinearvv. Qed.
-
-Definition tricolinearpp := (tricolinear_aab, tricolinear_aba, tricolinear_baa).
-
-Lemma triangle_sin_helper (v1 v2 : 'rV[R]_3) : ~~ colinear v1 v2 ->
-  norm v1 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp v1 v2) ^+ 2.
-Proof.
-move=> H.
-have v10 : v1 != 0.
-  apply: contra H => /eqP ->; by rewrite colinear0.
-have v20 : v2 != 0.
-  apply: contra H => /eqP ->; by rewrite colinear_sym colinear0.
-rewrite /normalcomp.
-rewrite [in RHS]normB.
-case/boolP : (0 < normalize v2 *d v1) => [v2v1|].
-  rewrite normZ gtr0_norm // norm_normalize // mulr1 scalerA vec_anglevZ //; last first.
-    by rewrite divr_gt0 // norm_gt0.
-  rewrite dotmul_cos norm_normalize // mul1r vec_angleZv; last first.
-    by rewrite invr_gt0 norm_gt0.
-  rewrite [in RHS]mulrA (vec_angleC v1) -expr2 -mulrA -expr2 exprMn.
-  by rewrite mulr2n opprD addrA subrK sin2cos2 mulrBr mulr1.
-rewrite -lerNgt ler_eqVlt => /orP[|v2v1].
-  rewrite {1}dotmul_cos norm_normalize // mul1r mulf_eq0 norm_eq0 (negbTE v10) /=.
-  rewrite vec_angleZv; last by rewrite invr_gt0 norm_gt0.
-  move/eqP=> Hcos.
-  rewrite dotmulZv (_ : _ *d _ = 0); last by rewrite dotmul_cos Hcos mulr0.
-  rewrite mulr0 scale0r norm0 mulr0 mul0r expr0n mul0rn addr0 subr0.
-  by rewrite -(sqr_normr (sin _)) vec_angleC cos0sin1 ?expr1n ?mulr1.
-rewrite vec_anglevZN // cos_vec_anglevN // ?normalize_eq0 //.
-rewrite scalerA normZ ltr0_norm; last first.
-  rewrite mulr_lt0 invr_eq0 norm_eq0 v20 /= ltr_eqF //=.
-  by rewrite invr_lt0 (ltrNge (norm v2)) norm_ge0 addbF.
-rewrite mulNr -(mulrA _ _ (norm v2)) mulVr ?mulr1 ?unitfE ?norm_eq0 //.
-rewrite vec_anglevZ // ?invr_gt0 ?norm_gt0 // sqrrN mulrN mulNr mulrN opprK.
-rewrite dotmul_cos norm_normalize // mul1r vec_angleZv ?invr_gt0 ?norm_gt0 //.
-rewrite (vec_angleC v2) mulrA -expr2 exprMn.
-rewrite addrAC -addrA -mulrA -mulrnAr -mulrBr.
-rewrite -{2}(mulr1 (norm v1 ^+ 2)) -mulrDr; congr (_ * _).
-by rewrite sin2cos2 -expr2 mulr2n opprD !addrA addrK.
-Qed.
-
-Lemma triangle_sin_helper_old (p1 p2 p : point) :
-  ~~ tricolinear p1 p2 p ->
-  let v1 := p1 - p in
-  let v2 := p2 - p in
-  norm v1 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp v1 v2) ^+ 2.
-Proof.
-move=> H v1 v2.
-apply triangle_sin_helper.
-apply: contra H.
-by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
-Qed.
-
-Lemma triangle_sin_helper2 (v1 v2 : 'rV[R]_3) :
-  ~~ colinear v1 v2 ->
-  norm v2 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp v2 v1) ^+ 2.
-Proof. rewrite colinear_sym => /triangle_sin_helper; by rewrite vec_angleC. Qed.
-
-Lemma triangle_sin_helper2_old (p1 p2 p : point) :
-  ~~ tricolinear p1 p2 p ->
-  let v1 := p1 - p in
-  let v2 := p2 - p in
-  norm v2 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp v2 v1) ^+ 2.
-Proof.
-move=> H v1 v2.
-apply triangle_sin_helper2.
-apply: contra H.
-by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
-Qed.
-
-Lemma triangle_sin (v1 v2 : 'rV[R]_3) :
-  ~~ colinear v1 v2 ->
-  sin (vec_angle v1 v2) = norm (normalcomp v1 v2) / norm v1.
-Proof.
-move=> H.
-have v10 : v1 != 0.
-  apply: contra H => /eqP ->; by rewrite colinear0.
-have v20 : v2 != 0.
-  apply: contra H => /eqP ->; by rewrite colinear_sym colinear0.
-apply/eqP.
-rewrite -(@eqr_expn2 _ 2) // ?divr_ge0 // ?norm_ge0 // ?sin_vec_angle_ge0 //.
-rewrite exprMn -triangle_sin_helper // mulrAC exprVn divrr ?mul1r //.
-by rewrite unitfE sqrf_eq0 norm_eq0.
-Qed.
-
-Lemma triangle_sin_old (p1 p2 p : point) :
-  ~~ tricolinear p1 p2 p ->
-  let v1 := p1 - p in
-  let v2 := p2 - p in
-  sin (vec_angle v1 v2) = norm (normalcomp v1 v2) / norm v1.
-Proof.
-move=> H v1 v2.
-apply triangle_sin.
-apply: contra H.
-by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
-Qed.
-
-Lemma triangle_sin2 (v1 v2 : 'rV[R]_3) :
-  ~~ colinear v1 v2 ->
-  sin (vec_angle v1 v2) = norm (normalcomp v2 v1) / norm v2.
-Proof.
-move=> H.
-have v10 : v1 != 0.
-  apply: contra H => /eqP ->; by rewrite colinear0.
-have v20 : v2 != 0.
-  apply: contra H => /eqP ->; by rewrite colinear_sym colinear0.
-apply/eqP.
-rewrite -(@eqr_expn2 _ 2) // ?divr_ge0 // ?norm_ge0 // ?sin_vec_angle_ge0 //.
-rewrite exprMn -triangle_sin_helper2 // mulrAC exprVn divrr ?mul1r //.
-by rewrite unitfE sqrf_eq0 norm_eq0.
-Qed.
-
-Lemma triangle_sin2_old (p1 p2 p : point) :
-  ~~ tricolinear p1 p2 p ->
-  let v1 := p1 - p in
-  let v2 := p2 - p in
-  sin (vec_angle v1 v2) = norm (normalcomp v2 v1) / norm v2.
-Proof.
-move=> H v1 v2.
-apply triangle_sin2.
-apply: contra H.
-by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
-Qed.
-
-Lemma normalcompNv (v u : 'rV[R]_3) : normalcomp (- v) u = - normalcomp v u.
-Proof. by rewrite /normalcomp dotmulvN scaleNr opprK opprD opprK. Qed.
-
-Lemma law_of_sines (v1 v2 : 'rV[R]_3) :
-  ~~ colinear v1 v2 ->
-  sin (vec_angle v1 v2) / norm (v2 - v1) =
-  sin (vec_angle (v2 - v1) v2) / norm v1.
-Proof.
-move=> H.
-move: (triangle_sin H) => /= H1.
-rewrite [in LHS]H1.
-have H' : ~~ colinear v2 (v2 - v1).
-  rewrite colinear_sym.
-  apply: contra H => H.
-  move: (colinear_refl v2).
-  rewrite -colinearNv.
-  move/(colinearD H).
-  by rewrite addrAC subrr add0r colinearNv.
-move: (triangle_sin2 H') => /= H2.
-rewrite [in RHS]vec_angleC.
-rewrite [in RHS]H2.
-have H3 : normalcomp v1 v2 = normalcomp (v1 - v2) v2.
-  (* TODO: lemma? *)
-  apply/eqP.
-  rewrite /normalcomp subr_eq -addrA.
-  rewrite -scaleNr -scalerDl -dotmulvN -dotmulDr opprB.
-  rewrite -(addrA v1) (addrCA v1) subrK dotmulC.
-  rewrite dotmul_normalize_norm.
-  by rewrite norm_scale_normalize addrC addrK.
-rewrite H3.
-by rewrite mulrAC -(opprB v2) normalcompNv normN.
-Qed.
-
-Lemma law_of_sines_old (p1 p2 p : point) :
-  ~~ tricolinear p1 p2 p ->
-  let v1 := p1 - p in
-  let v2 := p2 - p in
-  sin (vec_angle v1 v2) / norm (p2 - p1) =
-  sin (vec_angle (p2 - p1) (p2 - p)) / norm (p1 - p).
-Proof.
-move=> H v1 v2.
-rewrite (_ : p2 - p1 = v2 - v1); last by rewrite /v1 /v2 opprB addrA subrK.
-apply law_of_sines.
-apply: contra H.
-by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
-Qed.
-
-Lemma intersectionP l1 l2 p : line_vector l1 != 0 -> line_vector l2 != 0 ->
-  intersection l1 l2 = Some p ->
-  (p \in (l1 : pred _)) && (p \in (l2 : pred _)).
-Proof.
-move=> l10 l20 H.
-move: (H).
-rewrite /intersection.
-case: ifPn => [l12 [<-]|l12].
-  apply/andP; split; [exact: line_point_in|exact l12].
-case: ifPn => [l21 [<-]|l21].
-  apply/andP; split; [exact l21|exact: line_point_in].
-case: ifPn => [//|].
-rewrite negb_or => /andP[H1 H2].
-case: ifPn.
-  set p1 := line_point l1.
-  set p2 := line_point l2.
-  set v1 := line_vector l1.
-  set v2 := line_vector l2.
-  move=> samedir [<-].
-  set k := _ / norm (_ *v _).
-  have k_gt0 : 0 < k.
-    by rewrite /k divr_gt0 // ltr_neqAle norm_ge0 andbT eq_sym norm_eq0.
-  apply/andP; split; first by apply/lineP; exists k.
-Abort.
-
+    Some (line_point l1 + interpoint_t l1 l2 *: line_vector l1).
+  
 Axiom directed_from_to : 'rV[R]_3 -> 'rV[R]_3 -> 'rV[R]_3 -> bool.
 
 Axiom angle_between_lines : 'rV[R]_3 -> 'rV[R]_3 -> 'rV[R]_3 -> angle R.

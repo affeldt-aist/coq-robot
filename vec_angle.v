@@ -380,11 +380,16 @@ Proof. by rewrite /colinear crossmulC linearZ /= crossmulvv scaler0 oppr0. Qed.
 Lemma colinear_refl : reflexive colinear.
 Proof. move=> ?; by rewrite /colinear crossmulvv. Qed.
 
-Lemma colinear0 u : colinear 0 u.
-Proof. by rewrite /colinear crossmul0v. Qed.
-
 Lemma colinear_sym : symmetric colinear.
 Proof. by move=> u v; rewrite /colinear crossmulC -eqr_opp opprK oppr0. Qed.
+
+Lemma colinear0v u : colinear 0 u.
+Proof. by rewrite /colinear crossmul0v. Qed.
+
+Lemma colinearv0 u : colinear u 0.
+Proof. by rewrite colinear_sym colinear0v. Qed.
+
+Definition colinear0 := (colinear0v, colinearv0).
 
 Lemma colinear_trans v u w : u != 0 -> colinear v u -> colinear u w -> colinear v w.
 Proof.
@@ -413,6 +418,9 @@ Proof. by rewrite /colinear crossmulvZ scaler_eq0. Qed.
 Lemma colinearNv u v : colinear (- u) v = colinear u v.
 Proof. by rewrite /colinear crossmulNv eqr_oppLR oppr0. Qed.
 
+Lemma colinearvN u v : colinear u (- v) = colinear u v.
+Proof. by rewrite colinear_sym colinearNv colinear_sym. Qed.
+
 (* TODO: to be improved? *)
 Lemma colinearP u v :
   reflect (v == 0 \/
@@ -420,7 +428,7 @@ Lemma colinearP u v :
           (colinear u v).
 Proof.
 apply: (iffP idP); last first.
-  case => [/eqP ->|]; first by rewrite colinear_sym colinear0.
+  case => [/eqP ->|]; first by rewrite colinear0.
   case => v0 [k [k0 ukv]].
   by rewrite /colinear ukv crossmulC linearZ /= crossmulvv scaler0 oppr0.
 rewrite /colinear => uv.
@@ -444,8 +452,8 @@ Lemma colinearD u v w: colinear u w -> colinear v w ->
   colinear (u + v) w.
 Proof.
 case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite addr0.
-case/colinearP => [/eqP -> _| [w0 [k [Hk1 Hk2]]]]; first by rewrite colinear_sym colinear0.
-case/colinearP => [/eqP ->|[_ [k' [Hk'1 Hk'2]]]]; first by rewrite colinear_sym colinear0.
+case/colinearP => [/eqP -> _| [w0 [k [Hk1 Hk2]]]]; first by rewrite colinear0.
+case/colinearP => [/eqP ->|[_ [k' [Hk'1 Hk'2]]]]; first by rewrite colinear0.
 by rewrite Hk2 Hk'2 -scalerDl colinearZv colinear_refl orbT.
 Qed.
 
@@ -603,11 +611,14 @@ rewrite /normalcomp linearD /= crossmulvN dotmulC crossmulvZ.
 by rewrite crossmulvZ crossmulvv 2!scaler0 subr0.
 Qed.
 
-Lemma normalcompN v u : normalcomp v (- u)  = normalcomp v u.
+Lemma normalcompvN v u : normalcomp v (- u)  = normalcomp v u.
 Proof. 
 by rewrite /normalcomp normalizeN scalerN dotmulNv scaleNr opprK.
 (*by rewrite /normalcomp dotmulNv scaleNr scalerN opprK. *)
 Qed.
+
+Lemma normalcompNv v u : normalcomp (- v) u = - normalcomp v u.
+Proof. by rewrite /normalcomp dotmulvN scaleNr opprK opprD opprK. Qed.
 
 Lemma normalcomp_colinear_helper v u : normalcomp v u = 0 -> colinear v u.
 Proof.
@@ -676,6 +687,118 @@ Qed.
 
 End axial_normal_decomposition.
 
+Section law_of_sines.
+
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
+Implicit Types a b c : point.
+Implicit Types v : vector.
+
+Definition tricolinear a b c := colinear (b - a) (c - a).
+
+Lemma tricolinear_rot a b c : tricolinear a b c = tricolinear b c a.
+Proof.
+rewrite /tricolinear /colinear !linearD /= !crossmulDl !crossmulvN !crossmulNv.
+rewrite !opprK !crossmulvv !addr0 -addrA addrC (crossmulC a c) opprK.
+by rewrite (crossmulC b c).
+Qed.
+
+Lemma tricolinear_perm a b c : tricolinear a b c = tricolinear b a c.
+Proof.
+rewrite /tricolinear /colinear !linearD /= !crossmulDl !crossmulvN !crossmulNv.
+rewrite !opprK !crossmulvv !addr0 -{1}oppr0 -eqr_oppLR 2!opprB.
+by rewrite addrC (crossmulC a b) opprK.
+Qed.
+
+Lemma triangle_sin_vector_helper v1 v2 : ~~ colinear v1 v2 ->
+  norm v1 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp v1 v2) ^+ 2.
+Proof.
+move=> H.
+have v10 : v1 != 0 by apply: contra H => /eqP ->; rewrite colinear0.
+have v20 : v2 != 0 by apply: contra H => /eqP ->; rewrite colinear_sym colinear0.
+rewrite /normalcomp [in RHS]normB.
+case/boolP : (0 < normalize v2 *d v1) => [v2v1|].
+  rewrite normZ gtr0_norm // norm_normalize // mulr1 scalerA vec_anglevZ //; last first.
+    by rewrite divr_gt0 // norm_gt0.
+  rewrite dotmul_cos norm_normalize // mul1r vec_angleZv; last first.
+    by rewrite invr_gt0 norm_gt0.
+  rewrite [in RHS]mulrA (vec_angleC v1) -expr2 -mulrA -expr2 exprMn.
+  by rewrite mulr2n opprD addrA subrK sin2cos2 mulrBr mulr1.
+rewrite -lerNgt ler_eqVlt => /orP[|v2v1].
+  rewrite {1}dotmul_cos norm_normalize // mul1r mulf_eq0 norm_eq0 (negbTE v10) /=.
+  rewrite vec_angleZv => [/eqP Hcos|]; last by rewrite invr_gt0 norm_gt0.
+  rewrite dotmulZv (_ : _ *d _ = 0); last by rewrite dotmul_cos Hcos mulr0.
+  rewrite mulr0 scale0r norm0 mulr0 mul0r expr0n mul0rn addr0 subr0.
+  by rewrite -(sqr_normr (sin _)) vec_angleC cos0sin1 ?expr1n ?mulr1.
+rewrite vec_anglevZN // cos_vec_anglevN // ?normalize_eq0 //.
+rewrite scalerA normZ ltr0_norm; last first.
+  rewrite mulr_lt0 invr_eq0 norm_eq0 v20 /= ltr_eqF //=.
+  by rewrite invr_lt0 (ltrNge (norm v2)) norm_ge0 addbF.
+rewrite mulNr -(mulrA _ _ (norm v2)) mulVr ?mulr1 ?unitfE ?norm_eq0 //.
+rewrite vec_anglevZ // ?invr_gt0 ?norm_gt0 // sqrrN mulrN mulNr mulrN opprK.
+rewrite dotmul_cos norm_normalize // mul1r vec_angleZv ?invr_gt0 ?norm_gt0 //.
+rewrite (vec_angleC v2) mulrA -expr2 exprMn addrAC -addrA -mulrA -mulrnAr.
+rewrite -mulrBr -{2}(mulr1 (norm v1 ^+ 2)) -mulrDr; congr (_ * _).
+by rewrite sin2cos2 -expr2 mulr2n opprD !addrA addrK.
+Qed.
+
+Lemma triangle_sin_vector v1 v2 : ~~ colinear v1 v2 ->
+  sin (vec_angle v1 v2) = norm (normalcomp v1 v2) / norm v1.
+Proof.
+move=> H.
+have v10 : v1 != 0 by apply: contra H => /eqP ->; rewrite colinear0.
+have v20 : v2 != 0 by apply: contra H => /eqP ->; rewrite colinear_sym colinear0.
+apply/eqP.
+rewrite -(@eqr_expn2 _ 2) // ?divr_ge0 // ?norm_ge0 // ?sin_vec_angle_ge0 //.
+rewrite exprMn -triangle_sin_vector_helper // mulrAC exprVn divrr ?mul1r //.
+by rewrite unitfE sqrf_eq0 norm_eq0.
+Qed.
+
+Lemma triangle_sin_point p1 p2 p : ~~ tricolinear p1 p2 p ->
+  let v1 := p1 - p in let v2 := p2 - p in
+  sin (vec_angle v1 v2) = norm (normalcomp v1 v2) / norm v1.
+Proof.
+move=> H v1 v2; apply triangle_sin_vector; apply: contra H.
+by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
+Qed.
+
+Lemma law_of_sines_vector v1 v2 : ~~ colinear v1 v2 ->
+  sin (vec_angle v1 v2) / norm (v2 - v1) = sin (vec_angle (v2 - v1) v2) / norm v1.
+Proof.
+move=> H.
+move: (triangle_sin_vector H) => /= H1.
+rewrite [in LHS]H1.
+have H' : ~~ colinear v2 (v2 - v1).
+  rewrite colinear_sym; apply: contra H => H.
+  move: (colinear_refl v2); rewrite -colinearNv => /(colinearD H).
+  by rewrite addrAC subrr add0r colinearNv.
+have H2 : sin (vec_angle v2 (v2 - v1)) = norm (normalcomp (v2 - v1) v2) / norm (v2 - v1).
+  rewrite vec_angleC; apply triangle_sin_vector; by rewrite colinear_sym.
+rewrite [in RHS]vec_angleC [in RHS]H2.
+have H3 : normalcomp v1 v2 = normalcomp (v1 - v2) v2.
+  (* TODO: lemma? *)
+  apply/eqP.
+  rewrite /normalcomp subr_eq -addrA -scaleNr -scalerDl -dotmulvN -dotmulDr.
+  rewrite opprB -(addrA v1) (addrCA v1) subrK dotmulC dotmul_normalize_norm.
+  by rewrite norm_scale_normalize addrC addrK.
+by rewrite H3 mulrAC -(opprB v2) normalcompNv normN.
+Qed.
+
+Lemma law_of_sines_point p1 p2 p : ~~ tricolinear p1 p2 p ->
+  let v1 := p1 - p in let v2 := p2 - p in
+  sin (vec_angle v1 v2) / norm (p2 - p1) =
+  sin (vec_angle (p2 - p1) (p2 - p)) / norm (p1 - p).
+Proof.
+move=> H v1 v2.
+rewrite (_ : p2 - p1 = v2 - v1); last by rewrite /v1 /v2 opprB addrA subrK.
+apply law_of_sines_vector.
+apply: contra H.
+by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
+Qed.
+
+End law_of_sines.
+
 Section line.
 
 Variable R : rcfType.
@@ -692,15 +815,6 @@ Record line := mkLine {
 Definition line_point2 (l : line) := line_point l + line_vector l.
 
 Implicit Types l : line.
-
-(*Definition line_point l : point := let: mkLine p1 _ := l in p1.
-Definition line_vector l : vector := line_point2 l - line_point l.*)
-
-(*Definition mkDline (p : point) (u : vector) (u0 : u != 0) : line.
-apply (@mkLine p (p + u)).
-apply: contra u0.
-by rewrite addrC -subr_eq subrr eq_sym.
-Defined.*)
 
 Definition parallel : rel line := [rel l1 l2 |
   colinear (line_vector l1) (line_vector l2)].
