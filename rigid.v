@@ -725,6 +725,23 @@ Qed.
 
 Canonical SE3_is_divr_closed := DivrPred SE3_divr_closed.
 
+(* elementary rotations in homogeneous form *)
+Definition hRx a : 'M[R]_4 := hom (Rx a) 0.
+
+Lemma hRx_correct a (p : 'rV[R]_3) : from_h ((to_hpoint p) *m hRx a) = p *m Rx a.
+Proof.
+rewrite {1}/to_hpoint /hRx /hom (mul_row_block p 1 (Rx a)).
+by rewrite !(mulmx0,addr0,add0r,mulmx1) -/(to_hpoint (p *m Rx a)) to_hpointK.
+Qed.
+
+Definition hRz a : 'M[R]_4 := hom (Rz a) 0.
+Definition hRy a : 'M[R]_4 := hom (Ry a) 0.
+
+(* elementary translations in homogeneous form *)
+Definition hTx d : 'M[R]_4 := hom 1 (row3 d 0 0).
+Definition hTy d : 'M[R]_4 := hom 1 (row3 0 d 0).
+Definition hTz d : 'M[R]_4 := hom 1 (row3 0 0 d).
+
 End SE3_prop.
 
 Module SE.

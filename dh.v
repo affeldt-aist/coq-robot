@@ -40,23 +40,6 @@ Definition zaxis (f : frame) := mkLine (TFrame.o f) (Frame.k f).
 
 End TFrame_properties.
 
-Module Plucker.
-Section plucker.
-Variable R : rcfType.
-Let vector := 'rV[R]_3.
-
-Record array := mkArray {
-  e : vector ;
-  n : vector ;
-  _ : e *d e == 1 ;
-  _ : n *d e == 0 }.
-
-End plucker.
-End Plucker.
-
-Coercion plucker_array_mx (R : rcfType) (p : Plucker.array R) :=
-  row_mx (Plucker.e p) (Plucker.n p).
-
 (* equation of a line passing through two points p1 p2 *)
 Coercion line_pred {R':rcfType} (l : line R') : pred 'rV[R']_3 :=
   let p1 := line_point l in
@@ -111,132 +94,23 @@ Qed.
 
 End line_ext.
 
-(* TODO: in progress, [angeles] p.141-142 *)
-Section open_chain.
+Section line_line_intersection.
 
 Variable R : rcfType.
 Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
-Let frame := TFrame.t R.
+Implicit Types l : line R.
 
-Record joint := mkJoint {
-  joint_vaxis : vector ;
-  norm_joint_vaxis : norm joint_vaxis = 1 ;                  
-  joint_angle : angle R (* between to successive X axes *) }.
-
-Record link := mkLink {
-  link_length : R ; (* nonnegative, distance between to successive joint axes *)
-  link_offset : R ; (* between to successive X axes *)
-  link_twist : angle R (* or twist angle, between two successive Z axes *) }.
-(* NB: link_offset, joint_angle, link_length, link_twist are called 
-   Denavit-Hartenberg parameters *)
-
-(*Lemma crossmul_mat (u : 'rV[R]_3) : forall v : 'rV[R]_3,
-  u *v v = v *m \S( u ).
-Proof. move=> v; by rewrite skew_mxE. Qed.*)
-
-Lemma pluckerP p (l : line R) :
-  p \in (l : pred _) ->
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  p *m (\S( p2 ) - \S( p1 )) + p1 *v (p2 - p1) = 0.
-Proof.
-rewrite inE => /orP[/eqP -> p1 p2|].
-  rewrite -/p1 mulmxBr linearB /= !skew_mxE crossmulvv.
-  by rewrite 2!subr0 crossmulC addrC subrr.
-case/andP => l0 H p1 p2.
-rewrite -/p1 in H.
-rewrite /p2 /line_point2 -/p1 addrAC subrr add0r skew_mxD addrAC subrr add0r.
-rewrite skew_mxE crossmulC addrC -crossmulBl crossmulC.
-rewrite -crossmulvN opprB; by apply/eqP.
-Qed.
-
-Definition hPlucker (l : line R) :=
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  col_mx (\S( p2 ) - \S( p1 )) (p1 *v (p2 - p1)).
-
-Require Import rigid.
-
-Lemma hPluckerP p (l : line R) :
-  p \is 'hP[R] ->
-  from_h p \in (l : pred _) ->
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  p *m hPlucker l = 0.
-Proof.
-move=> hp Hp p1 p2.
-move/pluckerP : Hp => /=.
-rewrite /hPlucker -/p1 -/p2 => Hp.
-move: (hp); rewrite hpoint_from_h => /eqP ->.
-by rewrite (mul_row_col (from_h p) 1) mul1mx.
-Qed.
-
-Definition plucker_of_line (l : line R) : 'rV[R]_6 :=
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  row_mx (p2 - p1) (p1 *v (p2 - p1)).
-
-Definition pluckere (l : line R) :=
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  (norm (p2 - p1))^-1 *: (p2 - p1).
-
-Definition pluckern (l : line R) :=
-  let p1 := line_point l in
-  p1 *v pluckere l.
-
-Definition nplucker (l : line R) : 'rV[R]_6 := 
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  row_mx (pluckere l) (pluckern l).
-
-Lemma npluckerP (l : line R) :
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  line_vector l != 0 ->
-  plucker_of_line l = (norm (p2 - p1)) *: nplucker l.
-Proof.
-move=> p1 p2 l0.
-rewrite /nplucker /pluckere /pluckern -/p1 -/p2 crossmulvZ -scale_row_mx scalerA.
-by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 /line_point2 -/p1 addrAC subrr add0r.
-Qed.
-
-Lemma pluckereP (l : line R) : line_vector l != 0 ->
-  let e := pluckere l in e *d e == 1.
-Proof.
-move=> l0 /=.
-rewrite /pluckere dotmulZv dotmulvZ dotmulvv.
-rewrite /line_point2 addrAC subrr add0r.
-rewrite mulrA mulrAC expr2 mulrA mulVr ?unitfE ?norm_eq0 // mul1r.
-by rewrite divrr // unitfE norm_eq0.
-Qed.
-
-Lemma pluckernP (l : line R) : pluckern l *d pluckere l == 0.
-Proof.
-rewrite /pluckern /pluckere /line_point2 addrAC subrr add0r crossmulvZ.
-by rewrite dotmulvZ dotmulZv -dotmul_crossmulA crossmulvv dotmulv0 2!mulr0.
-Qed.
-
-Lemma plucker_of_lineE (l : line R) (l0 : line_vector l != 0) :
-  (norm (line_point2 l - line_point l))^-1 *: plucker_of_line l =
-  Plucker.mkArray (pluckereP l0) (pluckernP l).
-Proof.
-rewrite /plucker_of_line /plucker_array_mx /=.
-by rewrite /pluckern /pluckere crossmulvZ -scale_row_mx.
-Qed.
-
-Definition is_interpoint (p : point) (l1 l2 : line R) :=
+Definition is_interpoint p l1 l2 :=
   (p \in (l1 : pred _)) && (p \in (l2 : pred _)).
 
-Definition interpoint_param x (l1 l2 : line R) :=
+Definition interpoint_param x l1 l2 :=
   let p1 := line_point l1 in let p2 := line_point l2 in
   let v1 := line_vector l1 in let v2 := line_vector l2 in
   \det (col_mx3 (p2 - p1) x (v1 *v v2)) / norm (v1 *v v2) ^+ 2. 
 
-Definition interpoint_s (l1 l2 : line R) := interpoint_param (line_vector l1) l1 l2.
+Definition interpoint_s l1 l2 := interpoint_param (line_vector l1) l1 l2.
 
-Definition interpoint_t (l1 l2 : line R) := interpoint_param (line_vector l2) l1 l2.
+Definition interpoint_t l1 l2 := interpoint_param (line_vector l2) l1 l2.
 
 Lemma interpointP p l1 l2 : ~~ parallel l1 l2 ->
   let p1 := line_point l1 in let p2 := line_point l2 in
@@ -274,13 +148,236 @@ have Hs' : s' = interpoint_s l1 l2.
 by rewrite /t /s -Ht' -Hs'.
 Qed.
 
-Definition intersection (l1 l2 : line R) : option point := 
-  if ~~ intersects l1 l2 then
-    None
-  else
-    Some (line_point l1 + interpoint_t l1 l2 *: line_vector l1).
-  
-Axiom directed_from_to : 'rV[R]_3 -> 'rV[R]_3 -> 'rV[R]_3 -> bool.
+Definition intersection l1 l2 : option point :=
+  if ~~ intersects l1 l2 then None
+  else Some (line_point l1 + interpoint_t l1 l2 *: line_vector l1).
+
+End line_line_intersection.
+
+(* [ angeles2014: p.102-203] *)
+Module Plucker.
+Section plucker.
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+
+Record array := mkArray {
+  e : vector ; (* direction *)
+  n : vector ; (* location, moment *)
+  _ : e *d e == 1 ;
+  _ : n *d e == 0 }.
+
+End plucker.
+End Plucker.
+
+Coercion plucker_array_mx (R : rcfType) (p : Plucker.array R) :=
+  row_mx (Plucker.e p) (Plucker.n p).
+
+Section plucker_of_line.
+
+Variable R : rcfType.
+Implicit Types l : line R.
+
+Definition normalized_plucker_direction l :=
+  let p1 := line_point l in
+  let p2 := line_point2 l in
+  (norm (p2 - p1))^-1 *: (p2 - p1).
+
+Lemma normalized_plucker_directionP (l : line R) : line_vector l != 0 ->
+  let e := normalized_plucker_direction l in e *d e == 1.
+Proof.
+move=> l0 /=.
+rewrite /normalized_plucker_direction dotmulZv dotmulvZ dotmulvv.
+rewrite /line_point2 addrAC subrr add0r.
+rewrite mulrA mulrAC expr2 mulrA mulVr ?unitfE ?norm_eq0 // mul1r.
+by rewrite divrr // unitfE norm_eq0.
+Qed.
+
+Definition normalized_plucker_position l :=
+  let p1 := line_point l in
+  p1 *v normalized_plucker_direction l.
+
+Lemma normalized_plucker_positionP l :
+  normalized_plucker_position l *d normalized_plucker_direction l == 0.
+Proof.
+rewrite /normalized_plucker_position /normalized_plucker_direction /line_point2 addrAC subrr add0r crossmulvZ.
+by rewrite dotmulvZ dotmulZv -dotmul_crossmulA crossmulvv dotmulv0 2!mulr0.
+Qed.
+
+Definition normalized_plucker l : 'rV[R]_6 :=
+  row_mx (normalized_plucker_direction l) (normalized_plucker_position l).
+
+Definition plucker_of_line l : 'rV[R]_6 :=
+  let p1 := line_point l in
+  let p2 := line_point2 l in
+  row_mx (p2 - p1) (p1 *v (p2 - p1)).
+
+Lemma normalized_pluckerP l :
+  let p1 := line_point l in
+  let p2 := line_point2 l in
+  line_vector l != 0 ->
+  plucker_of_line l = norm (p2 - p1) *: normalized_plucker l.
+Proof.
+move=> p1 p2 l0.
+rewrite /normalized_plucker /normalized_plucker_direction /normalized_plucker_position.
+rewrite -/p1 -/p2 crossmulvZ -scale_row_mx scalerA.
+by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 /line_point2 -/p1 addrAC subrr add0r.
+Qed.
+
+Lemma plucker_of_lineE l (l0 : line_vector l != 0) :
+  plucker_of_line l = norm (line_point2 l - line_point l) *:
+  (Plucker.mkArray (normalized_plucker_directionP l0) (normalized_plucker_positionP l) : 'M__).
+Proof.
+rewrite /plucker_of_line /plucker_array_mx /=.
+rewrite /normalized_plucker_direction /normalized_plucker_position crossmulvZ -scale_row_mx.
+rewrite scalerA divrr ?scale1r //.
+by rewrite unitfE norm_eq0 /line_point2 addrAC subrr add0r.
+Qed.
+
+Definition plucker_eqn p l :=
+  let p1 := line_point l in let p2 := line_point2 l in
+  p *m (\S( p2 ) - \S( p1 )) + p1 *v (p2 - p1).
+
+Lemma in_plucker p l : p \in (l : pred _)->
+  let p1 := line_point l in let p2 := line_point2 l in
+  plucker_eqn p l = 0.
+Proof.
+rewrite inE => /orP[/eqP -> p1 p2|].
+  rewrite /plucker_eqn -/p1 mulmxBr linearB /= !skew_mxE crossmulvv.
+  by rewrite 2!subr0 crossmulC addrC subrr.
+case/andP => l0 H p1 p2; rewrite -/p1 in H.
+rewrite /plucker_eqn.
+rewrite /p2 /line_point2 -/p1 addrAC subrr add0r skew_mxD addrAC subrr add0r.
+rewrite skew_mxE crossmulC addrC -crossmulBl crossmulC -crossmulvN opprB; by apply/eqP.
+Qed.
+
+Definition homogeneous_plucker_eqn l :=
+  let p1 := line_point l in let p2 := line_point2 l in
+  col_mx (\S( p2 ) - \S( p1 )) (p1 *v (p2 - p1)).
+
+Require Import rigid.
+
+Lemma homogeneous_in_plucker p (l : line R) : p \is 'hP[R] ->
+  from_h p \in (l : pred _) ->
+  let p1 := line_point l in let p2 := line_point2 l in
+  p *m homogeneous_plucker_eqn l = 0.
+Proof.
+move=> hp /in_plucker Hp p1 p2 /=.
+rewrite /homogeneous_plucker_eqn -/p1 -/p2.
+move: (hp); rewrite hpoint_from_h => /eqP ->.
+by rewrite (mul_row_col (from_h p) 1) mul1mx.
+Qed.
+
+End plucker_of_line.
+
+Section dh_parameters.
+
+Variable R : rcfType.
+
+Definition dh (jangle : angle R) loffset llength (ltwist : angle R) : 'M[R]_4 :=
+  hRx ltwist * hTx llength * hTz loffset * hRz jangle.
+
+Definition dh_rot (jangle ltwist : angle R) := col_mx3
+  (row3 (cos jangle) (sin jangle) 0)
+  (row3 (cos ltwist * - sin jangle) (cos ltwist * cos jangle) (sin ltwist))
+  (row3 (sin ltwist * sin jangle) (- sin ltwist * cos jangle) (cos ltwist)).
+
+Lemma dhE jangle loffset llength ltwist : dh jangle loffset llength ltwist =
+  hom (dh_rot jangle ltwist)
+  (row3 (llength * cos jangle) (llength * sin jangle) loffset).
+Proof.
+rewrite /dh /hRz /hTz homM mulr1 mul0mx add0r /hTx homM mulr1 mulmx1 row3D.
+rewrite !(add0r,addr0) /hRx homM addr0; congr hom; last first.
+  rewrite /Rx mulmx_row3_col3 scale0r addr0 e2row 2!row3Z !(mulr1,mulr0).
+  by rewrite row3D addr0 !(addr0,add0r).
+rewrite /Rx /Rz -mulmxE mulmx_col3; congr col_mx3.
+- by rewrite e0row mulmx_row3_col3 scale1r !scale0r !addr0.
+- rewrite e2row mulmx_row3_col3 scale0r add0r 2!row3Z !mulr0 row3D.
+  by rewrite !(addr0,mulr1,add0r).
+- rewrite e2row mulmx_row3_col3 scale0r add0r 2!row3Z !mulr0 mulr1 row3D.
+  by rewrite !(addr0,add0r) mulrN mulNr opprK.
+Qed.
+
+Variable F0 F1 : TFrame.t R.
+Variable p1_in_0 : 'rV[R]_3.
+
+Variable A : 'M[R]_4.
+Definition From0To1 : 'M[R]_3 := (matrix_of_noframe F0) ^-1 * (matrix_of_noframe F1).
+Hypothesis HA : A = hom From0To1 p1_in_0.
+
+Hypothesis dh1 : (*x1*)(Frame.i F1) *d (*z0*)(Frame.j F0) = 0.
+
+Hypothesis dh2 : exists p, intersection (xaxis F1) (zaxis F0) = Some p.
+
+Lemma dh_correct : exists alpha theta d a,
+  A = dh theta d a alpha.
+Proof.
+have H1 : From0To1 0 2%:R = 0.
+  (* use dh1 *)
+  admit.
+have H2 : From0To1 0 0 ^+ 2 + From0To1 1 0 ^+ 2 = 1 /\
+  From0To1 2%:R 1 ^+ 2 + From0To1 2%:R 2%:R ^+ 2 = 1.
+  (* use H1 *)
+  admit.
+have [theta [alpha H3]] : exists theta alpha,
+  From0To1 0 0 = cos theta /\
+  From0To1 1 0 = sin theta /\
+  From0To1 2%:R 2%:R = cos alpha /\
+  From0To1 2%:R 1 = sin alpha.
+  admit.
+have H4 : From0To1 = dh_rot theta alpha.
+  (* use the fact that From0To1 is a rotation matrix *)
+  admit.
+have [d [a H5]] : exists d a,
+  TFrame.o F1 = TFrame.o F0 + d *: (Frame.k F0) + a *: (Frame.i F1).
+  (* use dh2 *)
+  admit.
+have H6 : p1_in_0 = (* TFrame.o F1 w.r.t. 0 *)
+    0 (* TFrame.o F0 w.r.t. 0*) + d *: 'e_2%:R (* (Frame.k F0) in 0 *)
+      + a *: row3 (cos theta) (sin theta) 0 (* (Frame.i F1) in 0*).
+  admit.
+exists alpha, theta, d, a.
+rewrite dhE -H4 HA; congr hom.
+by rewrite H6 add0r e2row 2!row3Z !mulr0 mulr1 row3D !add0r addr0.
+Admitted.
+
+End dh_parameters.
+
+Module Joint.
+Section joint.
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Record t := mk {
+  vaxis : vector ;
+  norm_vaxis : norm vaxis = 1 ;
+  angle : angle R (* between to successive X axes *) }.
+End joint.
+End Joint.
+
+Module Link.
+Section link.
+Variable R : rcfType.
+Record t := mk {
+  length : R ; (* nonnegative, distance between to successive joint axes *)
+  offset : R ; (* between to successive X axes *)
+  twist : angle R (* or twist angle, between two successive Z axes *) }.
+End link.
+End Link.
+(* NB: Link.offset, Joint.angle, Link.length, Link.twist are called
+   Denavit-Hartenberg parameters *)
+
+(* TODO: in progress, [angeles] p.141-142 *)
+Section open_chain.
+
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Let vector := 'rV[R]_3.
+Let frame := TFrame.t R.
+Let joint := Joint.t R.
+Let link := Link.t R.
+
+(* u is directed from p1 to p2 *)
+Definition directed_from_to (u : vector) (p1 p2 : point) : bool :=
+  0 <= cos (vec_angle u (p2 - p1)).
 
 Axiom angle_between_lines : 'rV[R]_3 -> 'rV[R]_3 -> 'rV[R]_3 -> angle R.
 
@@ -288,13 +385,13 @@ Variable n' : nat.
 Let n := n'.+1.
 
 (* 1. Zi is the axis of the ith joint *)
-Definition Z_joint_axis (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
+Definition joint_axis (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in 
-  (joint_vaxis (joints i) == Frame.k (frames i')) ||
-  (joint_vaxis (joints i) == - Frame.k (frames i')).
+  (Joint.vaxis (joints i) == Frame.k (frames i')) ||
+  (Joint.vaxis (joints i) == - Frame.k (frames i')).
 
 (* 2. Xi is the common perpendicular to Zi-1 and Zi *)
-Definition X_Z (frames : frame ^ n.+1) (i : 'I_n) : bool :=
+Definition X_Z (frames : frame ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in 
   let predi : 'I_n.+1 := inord i.-1 in 
   let: (o_predi, z_predi) := let f := frames predi in (TFrame.o f, Frame.k f) in
@@ -305,43 +402,43 @@ Definition X_Z (frames : frame ^ n.+1) (i : 'I_n) : bool :=
     o_predi \in (xaxis (frames i') : pred _)
   else
     (x_i _|_ z_predi, z_i) && (* Xi is the common perpendicular to Zi-1 and Zi *)
-    (directed_from_to x_i z_i z_predi) (* xi is directed from zi-1 to zi *).
+    directed_from_to x_i o_predi o_i (* directed from Zi-1 to Zi *).
 
 (*Definition common_normal_xz (i : 'I_n) :=
   (framej (frames i.-1)) _|_ (framek (frames i)), (framei (frames i.-1)).*)
 (* x_vec (frames i.-1) _|_ plane (z_vec (frames i.-1)),(z_vec (frames i)) *)
 
 (* 3. distance Zi-1<->Zi = link length *)
-Definition link_lengthP (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=
+Definition link_length (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  link_length (links i') = distance_between_lines (zaxis (frames i')) (zaxis (frames succi)).
+  Link.length (links i') = distance_between_lines (zaxis (frames i')) (zaxis (frames succi)).
 
-Definition link_offsetP (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
+Definition link_offset (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
   let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, Frame.i f) in 
   let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, Frame.i f, Frame.k f) in 
   if intersection (zaxis (frames i')) (xaxis (frames succi)) is some o'_i then
-    (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == link_offset (links i')) &&
-    (`| link_offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))
+    (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == Link.offset (links i')) &&
+    (`| Link.offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))
   else
     false (* should not happen since Zi always intersects Xi.+1 (see condidion 2.) *).
 
-Definition link_twistP (links : link ^ n.+1) (frames : frame ^ n.+1) (i : 'I_n) :=  
+Definition link_twist (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
   let: (x_succi, z_succi) := let f := frames succi in (Frame.i f, Frame.k f) in 
   let z_i := Frame.k (frames i') in 
-  link_twist (links i') == angle_between_lines z_i z_succi x_succi.
+  Link.twist (links i') == angle_between_lines z_i z_succi x_succi.
   (*angle measured about the positive direction of Xi+1*)
 
-Definition joint_angleP (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) :=
+Definition joint_angle (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
   let: x_succi := Frame.i (frames succi) in 
   let: (x_i, z_i) := let f := frames i' in (Frame.i f, Frame.i f) in 
-  joint_angle (joints i) = angle_between_lines x_i x_succi z_i.
+  Joint.angle (joints i) = angle_between_lines x_i x_succi z_i.
   (*angle measured about the positive direction of Zi*)
 
 (* n + 1 links numbered 0,..., n (at least two links: the manipulator base and the end-effector)
@@ -352,14 +449,14 @@ Definition joint_angleP (joints : joint ^ n) (frames : frame ^ n.+1) (i : 'I_n) 
 Record chain := mkChain {
   links : {ffun 'I_n.+1 -> link} ;
   frames : {ffun 'I_n.+1 -> frame} ;
-  joints : {ffun 'I_n -> joint} ;
+  joints : {ffun 'I_n -> joint} ; (* joint i located between links i and i+1 *)
   (* the six conditions [angeles] p.141-142 *)
-  _ : forall i, Z_joint_axis joints frames i ;
+  _ : forall i, joint_axis frames joints i ;
   _ : forall i, X_Z frames i ;
-  _ : forall i, link_lengthP links frames i ;
-  _ : forall i, link_offsetP links frames i ;
-  _ : forall i, link_twistP links frames i ;
-  _ : forall i, joint_angleP joints frames i 
+  _ : forall i, link_length frames links i ;
+  _ : forall i, link_offset frames links i ;
+  _ : forall i, link_twist frames links i ;
+  _ : forall i, joint_angle frames joints i
   (* this leaves the n.+1th frame unspecified (on purpose) *)
   }.
 
@@ -379,3 +476,10 @@ Definition before_after_joint (i : 'I_n) : option (link * link):=
  *)
 
 End open_chain.
+
+(* SCARA robot manipulator as an example? *)
+Section scara.
+
+Variable R : rcfType.
+
+End scara.
