@@ -227,6 +227,28 @@ Definition Rz a := col_mx3
   (row3 (- sin a) (cos a) 0)
   'e_2%:R.
 
+Lemma Rz_is_SO a : Rz a \is 'SO[R]_3.
+Proof.
+apply matrix_is_rotation.
+- apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+  by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 -2!expr2 cos2Dsin2.
+- apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+- by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 mulrN mulNr opprK addrC cos2Dsin2.
+- by rewrite 2!rowK /= dotmulE sum3E !mxE /= mulrN mulr0 addr0 addrC mulrC subrr.
+- rewrite 3!rowK /= crossmulE !mxE /=. Simp.r. by rewrite -!expr2 cos2Dsin2 e2row.
+Qed.
+
+Lemma RzE a : Rz a = (frame_of_SO (Rz_is_SO a)) _R^ (can_frame R).
+Proof. rewrite FrameRot_to_can; by apply/matrix3P; rewrite !mxE. Qed.
+
+Lemma to_coord_Rz a :
+  to_coord (can_frame R) (Vec (frame_of_SO (Rz_is_SO a)) 'e_0) = Vec _ (row 0 (Rz a)).
+Proof.
+rewrite /to_coord; congr (Vec _ _).
+rewrite /= FrameRot_to_can -rowE; congr row.
+by rewrite [RHS]RzE FrameRot_to_can.
+Qed.
+
 End elementary_rotations.
 
 Section Rot_definition.

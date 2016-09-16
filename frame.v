@@ -58,6 +58,9 @@ Record t := mk {
 End non_oriented_frame_def.
 End NOFrame.
 
+Coercion matrix_of_noframe (R : rcfType) (f : NOFrame.t R) :=
+  col_mx3 (NOFrame.i f) (NOFrame.j f) (NOFrame.k f).
+
 Section non_oriented_frame_properties.
 
 Variable R : rcfType.
@@ -68,6 +71,30 @@ Variable f : NOFrame.t R.
 Local Notation "'i'" := (NOFrame.i f).
 Local Notation "'j'" := (NOFrame.j f).
 Local Notation "'k'" := (NOFrame.k f).
+
+Definition noframe_of_O (M : 'M[R]_3) (HM : M \is 'O[R]_3) : NOFrame.t R.
+apply (@NOFrame.mk _ (row 0 M) (row 1 M) (row 2%:R M)).
+by rewrite norm_row_of_O.
+by rewrite norm_row_of_O.
+by rewrite norm_row_of_O.
+by apply/orthogonalP.
+by apply/orthogonalP.
+by apply/orthogonalP.
+Defined.
+
+Lemma noframe_is_ortho : col_mx3 i j k \in 'O[R]_3.
+Proof.
+apply matrix_is_orthogonal; rewrite !rowK /=.
+by rewrite (NOFrame.normi f).
+by rewrite (NOFrame.normj f).
+by rewrite (NOFrame.normk f).
+by rewrite (NOFrame.idotj f).
+by rewrite (NOFrame.idotk f).
+by rewrite (NOFrame.jdotk f).
+Qed.
+
+Lemma noframe_inv : (matrix_of_noframe f)^-1 = f^T.
+Proof. by rewrite -(orthogonal_inv noframe_is_ortho). Qed.
 
 Lemma orthogonal_expansion_helper p : 
   p *d i = 0 -> p *d j = 0 -> p *d k = 0 -> p = 0.
@@ -249,9 +276,6 @@ Qed.
 
 End non_oriented_frame_properties.
 
-Coercion matrix_of_noframe (R : rcfType) (f : NOFrame.t R) :=
-  col_mx3 (NOFrame.i f) (NOFrame.j f) (NOFrame.k f).
-
 Lemma noframe_is_unit (R : rcfType) (f : NOFrame.t R) :
   matrix_of_noframe f \is a GRing.unit.
 Proof.
@@ -335,7 +359,7 @@ by rewrite opprK dotmulvv k1 expr1n.
 Qed.
 *)
 
-Lemma frame_is_rot : col_mx3 i j k \in 'SO[R]_3.
+Lemma frame_is_rot : matrix_of_noframe f \in 'SO[R]_3.
 Proof.
 apply matrix_is_rotation; rewrite !rowK /=.
 by rewrite (NOFrame.normi f).
@@ -344,12 +368,17 @@ by rewrite (NOFrame.idotj f).
 exact: Frame.icrossj.
 Qed.
 
+Definition frame_of_SO (M : 'M[R]_3) (HM : M \is 'SO[R]_3) : Frame.t R.
+apply (@Frame.mk _ (noframe_of_O (rotation_sub HM))).
+by rewrite /frame_sgn crossmul_triple /= -col_mx3_rowE rotation_det.
+Defined.
+
 (* TODO: use rowE *)
-Lemma row0_frame : row 0 f = Frame.i f.
+Lemma row0_frame : row 0 f = NOFrame.i f.
 Proof. apply/rowP => a; by rewrite 2!mxE. Qed.
-Lemma row1_frame : row 1 f = Frame.j f.
+Lemma row1_frame : row 1 f = NOFrame.j f.
 Proof. apply/rowP => a; by rewrite 2!mxE. Qed.
-Lemma row2_frame : row 2%:R f = Frame.k f.
+Lemma row2_frame : row 2%:R f = NOFrame.k f.
 Proof. apply/rowP => a; by rewrite !mxE. Qed.
 
 Lemma norm_row (a : 'I_3) : norm (row a f) = 1.
@@ -395,11 +424,14 @@ Proof. rewrite /frame_sgn crossmulE dotmulE sum3E !mxE /=. by Simp.r. Qed.
 
 Definition can_frame := Frame.mk can_frameP.
 
-Lemma mulmx_can_frame (v : 'rV[R]_3) : v *m can_frame = v.
+Definition can_frame_1 : can_frame = 1 :> 'M_3.
+Proof. by apply/matrix3P; rewrite !mxE. Qed.
+
+(*Lemma mulmx_can_frame (v : 'rV[R]_3) : v *m can_frame = v.
 Proof.
 rewrite [RHS]row_sum_delta.
 by apply/rowP => i; rewrite !mxE sum3E /= summxE sum3E !mxE.
-Qed.
+Qed.*)
 
 (* rotation M <-> canonical_frame *)
 Lemma rotation_can_frame (M : Frame.t R) i j : M i j = row j can_frame *d row i M.
@@ -656,50 +688,92 @@ Coercion Framebasis R (f : Frame.t R) : 'M[R]_3 := Frame.basis f.
 *)
 (*Hint Immediate Frame.unit.*)
 
-Section relative_frame.
+(* base vectors of B expressed w.r.t. base vectors of A *)
+Definition FrameRot (R : rcfType) (A B : Frame.t R) :=
+  \matrix_(i, j) (row i B *d row j A).
+
+Notation "B _R^ A" := (@FrameRot _ A B) (at level 5).
+
+Section FrameRot_properties.
 
 Variable R : rcfType.
-Implicit Types f : Frame.t R.
+Implicit Types A B C : Frame.t R.
 
-Inductive vec f : Type := Vec of 'rV[R]_3.
+Lemma FrameRotE A B : (B _R^ A) = B *m (matrix_of_noframe A)^-1 :> 'M[R]_3.
+Proof.
+apply/matrixP => i j.
+rewrite mxE dotmulE /= mxE; apply eq_bigr => /= k _.
+rewrite mxE; congr (_ * _).
+by rewrite mxE noframe_inv [in RHS]mxE.
+Qed.
+
+Lemma FrameRot_to_can A : A _R^ (can_frame R) = A.
+Proof. by rewrite FrameRotE can_frame_1 invr1 mulmx1. Qed.
+
+Lemma FrameRot_from_can A : (can_frame R) _R^ A = A^T.
+Proof. by rewrite FrameRotE can_frame_1 mul1mx noframe_inv. Qed.
+
+Lemma FramRotI A : A _R^ A = 1.
+Proof.
+apply/matrix3P; rewrite !mxE /= ?dotmulvv ?norm_row_of_O ?noframe_is_ortho // ?expr1n //;
+  by apply/orthogonalP/noframe_is_ortho.
+Qed.
+
+Lemma trmx_FrameRot A B : (A _R^ B)^T = B _R^ A.
+Proof.
+apply/matrix3P; rewrite !mxE /=; by rewrite dotmulC.
+Qed.
+
+Lemma FrameRot_is_O A B : (A _R^ B) \is 'O[R]_3.
+Proof.
+rewrite orthogonalE FrameRotE trmx_mul.
+rewrite {2}(noframe_inv B) trmxK -mulmxE mulmxA -(mulmxA _ (matrix_of_noframe B)^-1).
+by rewrite mulVmx ?noframe_is_unit // mulmx1 -noframe_inv mulmxV // noframe_is_unit.
+Qed.
+
+Lemma FrameRot_is_SO A B : (A _R^ B) \is 'SO[R]_3.
+Proof.
+by rewrite FrameRotE rpredM // ?frame_is_rot // noframe_inv rotationV frame_is_rot.
+Qed.
+
+Lemma FrameRot_comp A B C : (C _R^ B) *m (B _R^ A) = (C _R^ A).
+Proof.
+rewrite 2!FrameRotE -mulmxA (mulmxA _ B) mulVmx; last first.
+  by rewrite unitmxE (rotation_det (frame_is_rot B)) unitr1.
+rewrite mul1mx; apply/matrixP => i j.
+rewrite !mxE dotmulE; apply/eq_bigr => k _.
+rewrite 2![row _ _ _ _]mxE; congr (_ * _).
+by rewrite noframe_inv mxE.
+Qed.
+
+End FrameRot_properties.
+
+Section change_of_coordinate.
+
+Variable R : rcfType.
+Implicit Types A B : Frame.t R.
+
+Inductive vec (f : Frame.t R) : Type := Vec of 'rV[R]_3.
 
 Definition vec_of f (x : vec f) := let: Vec v := x in v.
 
-(* consider "frame" to be w.r.t. the canonical frame *)
-(* x *m f : *rotate* a vector in the canonical frame according to the frame
-  (we obtain a new vector but still in the canonical frame after rotation)
- rotational operator *)
-Definition rotate_wrt_frame f (x : vec (can_frame R)) : vec (can_frame R) :=
-  Vec _ (vec_of x *m f).
+Lemma VecK A (x : vec A) : Vec A (vec_of x) = x.
+Proof. by case: x. Qed.
 
-Lemma rotate_wrt_canonical_frame (x : vec (can_frame R)) :
-  rotate_wrt_frame (can_frame R) x = x.
-Proof. case: x => x; congr Vec => /=; by rewrite mulmx_can_frame. Qed.
+(* change of coordinates:
+   "mapping" from frame f to canonical frame *)
+Definition to_coord A B (x : vec A) : vec B :=
+  Vec _ (vec_of x *m (A _R^ B)).
 
-(* change of coordinates: same vector but with coord in the canonical frame *)
-(* "mapping" from frame f to canonical frame *)
-Definition can_of_rel_coord f (x : vec f) : vec (can_frame R) :=
-  Vec _ (vec_of x *m f).
-
-(* change of coordinates: same vector but with coord given in f *)
-Definition rel_of_can_coord f (x : vec (can_frame R)) : vec f :=
-  Vec _ (vec_of x *m f^T).
-
-Lemma can_of_rel_coordK f (x : vec f) :
-  rel_of_can_coord _ (can_of_rel_coord x) = x.
+Lemma to_coordK A B (x : vec A) :
+  to_coord A (to_coord B x) = x.
 Proof.
-rewrite /rel_of_can_coord /can_of_rel_coord /=; case: x => x; congr Vec => /=.
-rewrite -mulmxA -(rotation_inv (frame_is_rot f)) mulmxV ?mulmx1 // unitmxE.
-by rewrite (rotation_det (frame_is_rot f)) unitr1.
+rewrite /to_coord /= 2!FrameRotE -2!mulmxA (mulmxA ((matrix_of_noframe B)^-1)).
+rewrite mulmxE mulVr ?noframe_is_unit // mulmxA mul1r -mulmxA mulmxE.
+by rewrite divrr ?noframe_is_unit // mulmx1 VecK.
 Qed.
 
-Lemma rel_of_can_coordK f (x : vec _) :
-  can_of_rel_coord (rel_of_can_coord f x) = x.
-Proof.
-rewrite /rel_of_can_coord /can_of_rel_coord /=; case: x => x; congr Vec => /=.
-rewrite -mulmxA -(rotation_inv (frame_is_rot f)) mulVmx ?mulmx1 // unitmxE.
-by rewrite (rotation_det (frame_is_rot f)) unitr1.
-Qed.
+End change_of_coordinate.
 
 (*Section about_frame.
 
@@ -742,80 +816,6 @@ Lemma relative_vecK f (x : vector) : absolute_vec (relative_vec f x) = x.
 Proof. by rewrite /= -mulmxA mulVmx // ?Frame.unit // mulmx1. Qed.
 
 End about_frame.*)
-
-End relative_frame.
-
-Module FromTo.
-Section tmp.
-Variable R : rcfType.
-Variables A B : Frame.t R.
-Record t := mkT {
-  M :> 'M[R]_3 ;
-  HM : M == \matrix_(i, j) (row i A^T *d row j B^T)
-  (* transpose of def 1.1 of handbook ->
-     "orientation of coor frame B related to coor frame A" (A ^R_ B) *)
-}.
-End tmp.
-End FromTo.
-
-Coercion RotM {R} (A B : Frame.t R) := @FromTo.M _ A B.
-
-Notation "A %> B" := (@FromTo.t _ A B) (at level 5).
-
-Section FromTo_properties.
-
-Variable R : rcfType.
-Implicit Types A B C : Frame.t R.
-
-Lemma FromToE A B (M : A %> B) : 
-  M = (matrix_of_noframe A)^-1 *m B :> 'M[R]_3.
-Proof.
-case: M => /= M /eqP ->; apply/matrixP => i j.
-rewrite mxE dotmulE /= mxE; apply eq_bigr => /= k _.
-by rewrite mxE [row _ _ _ _]mxE mxE (rotation_inv (frame_is_rot A)) 2![_^T _ _]mxE.
-Qed.
-
-Lemma FromToCan A (M : A %> (can_frame R)) (x : vec A) :
-  [fun x : 'rV_3 => x *m M] =1 [fun x => x *m A^T].
-Proof.
-move=> i /=.
-by rewrite (FromToE M) mulmxA mulmx_can_frame (rotation_inv (frame_is_rot A)).
-Qed.
-
-Lemma FromToPi A B (M : A %> B) : NOFrame.i A *m M = NOFrame.i B.
-Proof.
-rewrite (FromToE M) mulmxA (_ : (A : 'M__)^-1 = A^T); last first.
-  by apply/rotation_inv/(frame_is_rot A).
-rewrite /matrix_of_noframe col_mx3_mul dotmulvv (NOFrame.normi A) expr1n.
-rewrite (NOFrame.idotj A) (NOFrame.idotk A) row3_row_mx col_mx3E.
-rewrite (mul_row_col 1%:M) mul1mx (mul_row_col 0%:M).
-by rewrite !mul_scalar_mx scale0r scale0r 2!addr0.
-Qed.
-
-Lemma FromTo_is_SO A B (M : A %> B) : FromTo.M M \is 'SO[R]_3.
-Proof.
-move: (FromToE M); case: M => /= M _ ->.
-by rewrite rpredM // ?(frame_is_rot B) // rotation_inv // ?rotationV // (frame_is_rot A).
-Qed.
-
-Lemma FromToComp_proof A B C (M1 : A %> B) (M2 : B %> C) :
-  (M1 *m M2) == \matrix_(i, j) (row i A^T *d row j C^T).
-Proof.
-rewrite (FromToE M1) (FromToE M2) -mulmxA (mulmxA B) mulmxV; last first.
-  by rewrite unitmxE (rotation_det (frame_is_rot B)) unitr1.
-rewrite mul1mx; apply/eqP/matrixP => i j.
-rewrite !mxE dotmulE; apply/eq_bigr => k _.
-by rewrite 2![row _ _ _ _]mxE (rotation_inv (frame_is_rot A)) 2![_^T _ _]mxE mulrC.
-Qed.
-
-Definition FromToComp A B C (M1 : A %> B) (M2 : B %> C) : A %> C :=
-  FromTo.mkT (FromToComp_proof M1 M2).
-
-Lemma FromToCompE A B (M : A %> B) (u : 'rV[R]_3) :
-  u *m M = u *m A^T *m B.
-Proof. by rewrite -mulmxA (FromToE M) (rotation_inv (frame_is_rot A)). Qed.
-
-End FromTo_properties.
 
 Module triad.
 Section triad.
@@ -879,9 +879,6 @@ Qed.
 Definition frame := Frame.mk noframe_is_pos.
 (* therefore, x * frame_triad^T turns a vector x in the canonical frame into the frame_triad *)
 
-(*Lemma is_SO : col_mx3 i j k \is 'SO[R]_3.
-Proof. exact: (frame_is_rot frame). Qed.*)
-
 End triad.
 End triad.
 
@@ -899,21 +896,21 @@ Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1))
 Definition lframe := triad.frame l12 l123.
 Definition rframe := triad.frame r12 r123.
 
-Definition rot3 := lframe^T *m rframe.
+Definition rot_l2r := lframe^T *m rframe.
 
-Definition trans3 : vector := r1 - l1 *m rot3.
+Definition trans3 : vector := r1 - l1 *m rot_l2r.
 
-Lemma j_l_r : triad.j l1 l2 l3 *m rot3 = triad.j r1 r2 r3.
+Lemma j_l_r : triad.j l1 l2 l3 *m rot_l2r = triad.j r1 r2 r3.
 Proof.
-rewrite /rot3 /= mulmxA col_mx3_mul dotmulC triad.idotj dotmulvv triad.normj //.
+rewrite /rot_l2r /= mulmxA col_mx3_mul dotmulC triad.idotj dotmulvv triad.normj //.
 rewrite expr1n dotmul_crossmulCA crossmulvv dotmulv0 /matrix_of_noframe /=.
 rewrite col_mx3E row3_row_mx (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r mul_scalar_mx scale0r addr0.
 Qed.
 
-Lemma k_l_r : triad.k l1 l2 l3 *m rot3 = triad.k r1 r2 r3.
+Lemma k_l_r : triad.k l1 l2 l3 *m rot_l2r = triad.k r1 r2 r3.
 Proof.
-rewrite /rot3 /= mulmxA col_mx3_mul {1}/triad.k dotmulC dotmul_crossmulA.
+rewrite /rot_l2r /= mulmxA col_mx3_mul {1}/triad.k dotmulC dotmul_crossmulA.
 rewrite crossmulvv dotmul0v {1}/triad.k -dotmul_crossmulA crossmulvv dotmulv0.
 rewrite /matrix_of_noframe /= dotmulvv triad.normk // expr1n col_mx3E row3_row_mx.
 do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
@@ -927,13 +924,10 @@ apply/matrixP => i j; rewrite /dotmul !mxE.
 apply eq_bigr => /= k _; by rewrite !mxE.
 Qed.
 
-Definition FromLeftToRight : lframe %> rframe.
-apply FromTo.mkT with (lframe^T *m rframe).
-rewrite -(trmxK lframe) mulmx_tr.
-apply/eqP/matrixP => i j; by rewrite [in LHS]mxE [in RHS]mxE dotmulC.
-Qed.
-
-Lemma FromLeftToRightE (u : 'rV[R]_3) : u *m FromLeftToRight = u *m rot3.
-Proof. by rewrite FromToCompE /rot3 ?trmx_mul mulmxA. Qed.
+Lemma LeftToRightE (u : 'rV[R]_3) : u *m (lframe _R^ rframe) = u *m rot_l2r.
+Proof.
+rewrite FrameRotE /rot_l2r.
+(* TODO *)
+Abort.
 
 End transformation_given_three_points.
