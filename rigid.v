@@ -742,6 +742,9 @@ Definition hTx d : 'M[R]_4 := hom 1 (row3 d 0 0).
 Definition hTy d : 'M[R]_4 := hom 1 (row3 0 d 0).
 Definition hTz d : 'M[R]_4 := hom 1 (row3 0 0 d).
 
+Definition FromToDisp (R : rcfType) (B A : TFrame.t R) (x : 'rV[R]_3) : 'rV[R]_3 :=
+  x *m (B _R^ A) + TFrame.o B.
+
 End SE3_prop.
 
 Module SE.

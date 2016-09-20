@@ -794,6 +794,7 @@ Lemma orthogonalE M : (M \is 'O[R]_n) = (M * M^T == 1). Proof. by []. Qed.
 Lemma orthogonal1 : 1 \is 'O[R]_n.
 Proof. by rewrite orthogonalE trmx1 mulr1. Qed.
 
+(* TODO: useful? *)
 Lemma orthogonalEinv M : (M \is 'O[R]_n) = (M \is a GRing.unit) && (M^-1 == M^T).
 Proof.
 rewrite orthogonalE; have [Mu | notMu] /= := boolP (M \in unitmx); last first.
@@ -863,10 +864,8 @@ Qed.
 Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
 Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
 
-End orthogonal.
-
-Lemma orthogonalP n R M :
-  reflect (forall i j, row i M *d row j M = (i == j)%:R) (M \is 'O[R]_n.+1).
+Lemma orthogonalP M :
+  reflect (forall i j, row i M *d row j M = (i == j)%:R) (M \is 'O[R]_n).
 Proof.
 apply: (iffP idP) => [|H] /=.
   rewrite orthogonalE => /eqP /matrixP H i j.
@@ -877,6 +876,8 @@ apply/eqP/matrixP => i j; rewrite !mxE.
 rewrite -H /dotmul !mxE.
 apply eq_bigr => k _; by rewrite !mxE.
 Qed.
+
+End orthogonal.
 
 (* TODO: move? *)
 Lemma dotmul_conjc_eq0 {R : rcfType} n (v : 'rV[R[i]]_n.+1) :
@@ -1115,6 +1116,14 @@ Proof.
 move=> MSO i.
 apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
 rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
+Qed.
+
+Lemma norm_col_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (col i M)^T = 1.
+Proof.
+move=> MSO i.
+apply/eqP.
+rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv tr_col dotmulvv.
+by rewrite norm_row_of_O ?expr1n // orthogonalV.
 Qed.
 
 Lemma Oii_ub (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> forall i, M i i <= 1.

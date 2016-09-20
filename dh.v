@@ -273,6 +273,30 @@ Section dh_parameters.
 
 Variable R : rcfType.
 
+(* TODO: rename to dh_mat *)
+(*Definition dh (jangle : angle R) loffset llength (ltwist : angle R) : 'M[R]_4 :=
+  hRz jangle * hTz loffset * hTx llength * hRx ltwist.
+
+Definition dh_rot (jangle ltwist : angle R) := col_mx3
+  (row3 (cos jangle) (sin jangle * cos ltwist) (sin jangle * sin ltwist))
+  (row3 (- sin jangle) (cos jangle * cos ltwist) (cos jangle * sin ltwist))
+  (row3 0 (- sin ltwist) (cos ltwist)).
+
+Lemma dhE jangle loffset llength ltwist : dh jangle loffset llength ltwist =
+  hom (dh_rot jangle ltwist)
+  (row3 llength (loffset * - sin ltwist) (loffset * cos ltwist)).
+Proof.
+rewrite /dh /hRz /hTz homM mulr1 mul0mx add0r /hTx homM mulr1 mulmx1 row3D.
+rewrite !(add0r,addr0) /hRx homM addr0; congr hom; last first.
+  rewrite /Rx mulmx_row3_col3 scale0r addr0 e0row 2!row3Z !(mulr1,mulr0).
+  by rewrite row3D addr0 !(addr0,add0r).
+rewrite /Rx /Rz -mulmxE mulmx_col3; congr col_mx3.
+- rewrite e0row mulmx_row3_col3 !scale0r !addr0 2!row3Z !(mulr1,mulr0) row3D.
+  by rewrite !(addr0,add0r).
+- by rewrite mulmx_row3_col3 scale0r e0row !row3Z mulr1 !mulr0 row3D !(addr0,add0r).
+- by rewrite e2row mulmx_row3_col3 scale0r add0r 2!row3Z !(mulr0,mul0r,mul1r) row3D !add0r.
+Qed.*)
+
 Definition dh (jangle : angle R) loffset llength (ltwist : angle R) : 'M[R]_4 :=
   hRx ltwist * hTx llength * hTz loffset * hRz jangle.
 
@@ -280,6 +304,11 @@ Definition dh_rot (jangle ltwist : angle R) := col_mx3
   (row3 (cos jangle) (sin jangle) 0)
   (row3 (cos ltwist * - sin jangle) (cos ltwist * cos jangle) (sin ltwist))
   (row3 (sin ltwist * sin jangle) (- sin ltwist * cos jangle) (cos ltwist)).
+
+Definition dh_rot_tmp (jangle ltwist : angle R) := col_mx3
+  (row3 (cos jangle) (sin jangle) 0)
+  (row3 (cos ltwist * sin jangle) (- cos ltwist * cos jangle) (sin ltwist))
+  (row3 (- sin ltwist * sin jangle) (sin ltwist * cos jangle) (cos ltwist)).
 
 Lemma dhE jangle loffset llength ltwist : dh jangle loffset llength ltwist =
   hom (dh_rot jangle ltwist)
@@ -299,44 +328,150 @@ Qed.
 
 Variable F0 F1 : TFrame.t R.
 Variable p1_in_0 : 'rV[R]_3.
+Definition From0To1 := locked (F1 _R^ F0).
 
-Variable A : 'M[R]_4.
-Definition From0To1 : 'M[R]_3 := (matrix_of_noframe F0) ^-1 * (matrix_of_noframe F1).
-Hypothesis HA : A = hom From0To1 p1_in_0.
+Hypothesis dh1 : (*x1*)(Frame.i F1) *d (*z0*)(Frame.k F0) = 0.
 
-Hypothesis dh1 : (*x1*)(Frame.i F1) *d (*z0*)(Frame.j F0) = 0.
+Hypothesis dh2 : exists p, is_interpoint p (xaxis F1) (zaxis F0).
 
-Hypothesis dh2 : exists p, intersection (xaxis F1) (zaxis F0) = Some p.
+Lemma row3_of_row (M : 'M[R]_3) (i : 'I_3) : row i M = row3 (M i 0) (M i 1) (M i 2%:R).
+Proof.
+apply/rowP => k; rewrite !mxE /=; case: ifPn => [/eqP -> //|].
+by rewrite ifnot0 => /orP[]/eqP->.
+Qed.
+
+Lemma orthogonalPcol n M :
+  reflect (forall i j, (col i M)^T *d (col j M)^T = (i == j)%:R) (M \is 'O[R]_n.+1).
+Proof.
+apply: (iffP idP) => [|H] /=.
+  move=> MSO i j; move: (MSO).
+  rewrite -rpredV orthogonal_inv // => /orthogonalP <-.
+  by rewrite 2!tr_col.
+suff : M^T \is 'O[R]_n.+1.
+  move=> MSO; move: (MSO).
+  move/orthogonal_inv; rewrite trmxK => <-; by rewrite rpredV.
+apply/orthogonalP => i j.
+by rewrite -H 2!tr_col.
+Qed.
+
+Lemma sin0cos1angle0 (a : angle R) : sin a = 0 -> cos a = 1 -> a = 0.
+Proof.
+case: a => -[a b] /= H.
+rewrite /sin /cos /= => b0 a1; subst a b.
+apply/val_inj => /=.
+by rewrite expi0.
+Qed.
 
 Lemma dh_correct : exists alpha theta d a,
-  A = dh theta d a alpha.
+  hom From0To1 p1_in_0 = dh theta d a alpha.
 Proof.
 have H1 : From0To1 0 2%:R = 0.
-  (* use dh1 *)
+  by rewrite /From0To1 -lock /FromTo mxE row0_frame row2_frame.
+have [H2a H2b] : From0To1 0 0 ^+ 2 + From0To1 0 1 ^+ 2 = 1 /\
+  From0To1 1 2%:R ^+ 2 + From0To1 2%:R 2%:R ^+ 2 = 1.
+  move: (norm_row_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
+  rewrite expr1n -dotmulvv dotmulE sum3E [_ 0 2%:R]mxE.
+  move: (H1); rewrite {1}/From0To1 -lock => ->.
+  rewrite  mulr0 addr0 -!expr2 => H1a.
+  split.
+    rewrite [_ 0 0]mxE [_ 0 1]mxE in H1a.
+    by rewrite /From0To1 -lock.
+  move: (norm_col_of_O (FromTo_is_O F1 F0) 2%:R) => /= /(congr1 (fun x => x ^+ 2)).
+  rewrite expr1n -dotmulvv dotmulE sum3E 2![_ 0 0]mxE.
+  move: (H1); rewrite {1}/From0To1 -lock => ->.
+  by rewrite mulr0 add0r -!expr2 tr_col [_ 0 1]mxE [_ 0 2%:R]mxE /From0To1 -lock !mxE.
+have [theta [alpha [H00 [H01 [H22 H12]]]]] : exists theta alpha,
+  From0To1 0 0 = cos theta /\ From0To1 0 1 = sin theta /\ 
+  From0To1 2%:R 2%:R = cos alpha /\ From0To1 1 2%:R = sin alpha.
+  case/sqr_normr_cossin_helper : H2a => theta Htheta.
+  rewrite addrC in H2b.
+  case/sqr_normr_cossin_helper : H2b => alpha Halpha.
+  exists theta, alpha.
+  by intuition.
+
+move/orthogonalPcol : (FromTo_is_O F1 F0) => /(_ 1 2%:R) /=.
+rewrite dotmulE sum3E !tr_col 2![_ 0 0]mxE [_ 2%:R 0]mxE.
+move: (H1); rewrite {1}/From0To1 -lock => ->.
+rewrite mulr0 add0r [_ 0 1]mxE [_ 1 1]mxE [_ 0 1]mxE [_ 2%:R 1]mxE.
+move: (H12); rewrite {1}/From0To1 -lock => ->.
+rewrite 2![_ 0 2%:R]mxE [_ 1 2%:R]mxE [_ 2%:R 2%:R]mxE.
+move: (H22); rewrite {1}/From0To1 -lock => -> /eqP.
+rewrite addr_eq0 => /eqP H11_H21.
+
+move/orthogonalPcol : (FromTo_is_O F1 F0) => /(_ 2%:R 0) /=.
+rewrite dotmulE sum3E !tr_col 3![_ 0 0]mxE [_ 2%:R 0]mxE.
+move: (H1); rewrite {1}/From0To1 -lock => ->.
+rewrite mul0r add0r [_ 0 1]mxE [_ 2%:R 1]mxE.
+move: (H12); rewrite {1}/From0To1 -lock => ->.
+rewrite 2![_ 0 1]mxE [_ 0 2%:R]mxE [_ 2%:R 2%:R]mxE.
+move: (H22);   rewrite {1}/From0To1 -lock => ->.
+rewrite 2![_ 0 2%:R]mxE => /eqP.
+rewrite addr_eq0 => /eqP H10_H20.
+
+move: (norm_col_of_O (FromTo_is_O F1 F0) 1) => /= /(congr1 (fun x => x ^+ 2)).
+rewrite expr1n sqr_norm sum3E tr_col [_ 0 0]mxE [_ 1 0]mxE.
+move: (H01); rewrite {1}/From0To1 -lock => ->.
+rewrite [_ 0 1]mxE [_ 1 1]mxE [_ 0 2%:R]mxE [_ 1 2%:R]mxE.
+move/eqP. rewrite -addrA eq_sym addrC -subr_eq -cos2sin2. move/eqP.
+move/(congr1 (fun x => (sin alpha)^+2 * x)).
+rewrite mulrDr -(@exprMn _ _ (sin alpha) (_ 1 1)) (mulrC _ (_ 1 1)) H11_H21.
+rewrite sqrrN exprMn (mulrC _ (_ ^+ 2)) -mulrDl cos2Dsin2 mul1r => /esym sqr_H21.
+
+move: (norm_col_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
+rewrite sqr_norm sum3E 2![_ 0 0]mxE.
+move: (H00); rewrite {1}/From0To1 -lock => ->.
+rewrite expr1n [_ 0 1]mxE [_ 1 0]mxE [_ 0 2%:R]mxE [_ 2%:R 0]mxE.
+move/eqP. rewrite -addrA eq_sym addrC -subr_eq -sin2cos2. move/eqP.
+move/(congr1 (fun x => (sin alpha)^+2 * x)).
+rewrite mulrDr -(@exprMn _ _ (sin alpha) (_ 1 0)) H10_H20 sqrrN.
+rewrite exprMn -mulrDl cos2Dsin2 mul1r => /esym sqr_H20.
+
+have : \det From0To1 = 1 by apply rotation_det; rewrite /From0To1 -lock; apply: FromTo_is_SO.
+rewrite {1}/From0To1 -lock det_mx33.
+move: (H1); rewrite {1}/From0To1 -lock => ->; rewrite mul0r addr0.
+move: (H00); rewrite {1}/From0To1 -lock => ->.
+move: (H01); rewrite {1}/From0To1 -lock => ->.
+move: (H12); rewrite {1}/From0To1 -lock => ->.
+move: (H22); rewrite {1}/From0To1 -lock => -> Hrot.
+
+have sa0 : sin alpha != 0.
   admit.
-have H2 : From0To1 0 0 ^+ 2 + From0To1 1 0 ^+ 2 = 1 /\
-  From0To1 2%:R 1 ^+ 2 + From0To1 2%:R 2%:R ^+ 2 = 1.
-  (* use H1 *)
-  admit.
-have [theta [alpha H3]] : exists theta alpha,
-  From0To1 0 0 = cos theta /\
-  From0To1 1 0 = sin theta /\
-  From0To1 2%:R 2%:R = cos alpha /\
-  From0To1 2%:R 1 = sin alpha.
-  admit.
+
 have H4 : From0To1 = dh_rot theta alpha.
-  (* use the fact that From0To1 is a rotation matrix *)
+  rewrite /dh_rot [LHS]col_mx3_rowE row3_of_row H00 H01 2!row3_of_row H1 H12 H22.
+  move/eqP : sqr_H20.
+  rewrite -exprMn eqf_sqr => /orP[/eqP H20|].
+    rewrite {3}/From0To1 -lock H20.
+
+    move: H10_H20.
+    rewrite H20 mulrCA -mulrN.
+    move/(congr1 (fun x => (sin alpha)^-1 * x)).
+    rewrite !mulrA mulVr ?mul1r ?unitfE // => H10.
+    rewrite {1}/From0To1 -lock H10 -mulrN.
+
+    move/eqP : sqr_H21.
+    rewrite -exprMn eqf_sqr => /orP[H21|/eqP H21]; last first.
+      rewrite {2}/From0To1 -lock H21 -mulNr.
+    
+      move: H11_H21.
+      rewrite H21 [in X in X -> _]mulNr opprK (mulrC _ (sin alpha)).
+      move/(congr1 (fun x => (sin alpha)^-1 * x)).
+      rewrite !mulrA mulVr ?mul1r ?unitfE // => H11.
+      
+      by rewrite {1}/From0To1 -lock H11 (mulrC (cos theta) (cos alpha)).
+    admit.
   admit.
 have [d [a H5]] : exists d a,
   TFrame.o F1 = TFrame.o F0 + d *: (Frame.k F0) + a *: (Frame.i F1).
-  (* use dh2 *)
+  case: dh2 => p.
+  move/interpointP => H.
   admit.
 have H6 : p1_in_0 = (* TFrame.o F1 w.r.t. 0 *)
     0 (* TFrame.o F0 w.r.t. 0*) + d *: 'e_2%:R (* (Frame.k F0) in 0 *)
       + a *: row3 (cos theta) (sin theta) 0 (* (Frame.i F1) in 0*).
   admit.
 exists alpha, theta, d, a.
-rewrite dhE -H4 HA; congr hom.
+rewrite dhE -H4; congr hom.
 by rewrite H6 add0r e2row 2!row3Z !mulr0 mulr1 row3D !add0r addr0.
 Admitted.
 

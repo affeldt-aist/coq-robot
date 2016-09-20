@@ -122,6 +122,7 @@ Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 Lemma sum4E {T : ringType} (f : 'I_4 -> T) : \sum_(i < 4) f i = f 0 + f 1 + f 2%:R + f 3%:R.
 Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 
+(* TODO: rename (at least) *)
 Lemma opp_self {R : rcfType} n (u : 'rV[R]_n) : u = - u -> u = 0.
 Proof.
 move/eqP.

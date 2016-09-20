@@ -35,15 +35,23 @@ Local Open Scope ring_scope.
  5. section line
 *)
 
+(* TODO: rename, move to euclidean3.v? *)
+Lemma sqr_normr_cossin_helper (R : rcfType) (x y : R) :
+  x ^+ 2 + y ^+ 2 = 1 -> {a | x = cos a /\ y = sin a}.
+Proof.
+move=> v1.
+have {v1}v1 : (`| x +i* y | = 1)%C by rewrite normc_def /= v1 sqrtr1.
+exists (arg (x +i* y)%C).
+rewrite /cos /sin expi_arg //; last by rewrite -normr_eq0 v1 oner_neq0.
+by rewrite v1 divr1.
+Qed.
+
 Lemma sqr_normr_cossin (R : rcfType) (v :'rV[R]_2) :
   norm v = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
 Proof.
 move=> v1.
-have {v1}v1 : (`| v 0 0 +i* v 0 1 | = 1)%C.
- by rewrite normc_def /= -(sum2E (fun i => v``_i ^+ 2)) -sqr_norm sqrtr_sqr v1 normr1.
-exists (arg (v 0 0 +i* v 0 1)%C).
-rewrite /cos /sin expi_arg //; last by rewrite -normr_eq0 v1 oner_neq0.
-by rewrite v1 divr1.
+apply sqr_normr_cossin_helper.
+by rewrite -(sum2E (fun i => v``_i ^+ 2)) -sqr_norm v1 expr1n.
 Qed.
 
 Section vec_angle.

@@ -239,15 +239,11 @@ apply matrix_is_rotation.
 Qed.
 
 Lemma RzE a : Rz a = (frame_of_SO (Rz_is_SO a)) _R^ (can_frame R).
-Proof. rewrite FrameRot_to_can; by apply/matrix3P; rewrite !mxE. Qed.
+Proof. rewrite FromTo_to_can; by apply/matrix3P; rewrite !mxE. Qed.
 
-Lemma to_coord_Rz a :
+Lemma to_coord_Rz_e0 a :
   to_coord (can_frame R) (Vec (frame_of_SO (Rz_is_SO a)) 'e_0) = Vec _ (row 0 (Rz a)).
-Proof.
-rewrite /to_coord; congr (Vec _ _).
-rewrite /= FrameRot_to_can -rowE; congr row.
-by rewrite [RHS]RzE FrameRot_to_can.
-Qed.
+Proof. by rewrite to_coordE_to_can rowE [in RHS]RzE FromTo_to_can. Qed.
 
 End elementary_rotations.
 

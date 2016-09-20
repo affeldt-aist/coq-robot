@@ -527,14 +527,11 @@ rewrite !inE orbA; apply/orP; right.
 by rewrite eq_complex /= oppr0 !eqxx.
 Qed.
 
-Lemma skew_mxC u : let a := \S( u ) in (1 + a) * (1 - a) = (1 - a) * (1 + a).
-Proof.
-move=> a.
-rewrite mulrDl mul1r mulrDr mulr1 mulrN addrA subrK.
-by rewrite mulrDr mulr1 mulrBl mul1r addrA subrK.
-Qed.
+(* TODO: move *)
+Lemma sub1radd1r_comm n (M : 'M[R]_n.+1) : (1 - M) * (1 + M) = (1 + M) * (1 - M).
+Proof. by rewrite mulrDr mulr1 mulrBl mul1r mulrDl mul1r mulrBr mulr1. Qed.
 
-Lemma det_skew_mx1 u : \det (1 - \S( u )) = 1 + norm u ^+ 2.
+Lemma det_sub1skew_mx u : \det (1 - \S( u )) = 1 + norm u ^+ 2.
 Proof.
 set a := skew_mx u.
 rewrite det_mx33 [a]lock !mxE /=. Simp.r.
@@ -546,50 +543,74 @@ Qed.
 Lemma skew_mx_inv u : 1 - \S( u ) \is a GRing.unit.
 Proof.
 set a := skew_mx u.
-by rewrite unitmxE unitfE det_skew_mx1 paddr_eq0 // ?ler01 // ?sqr_ge0 // negb_and oner_neq0.
+by rewrite unitmxE unitfE det_sub1skew_mx paddr_eq0 // ?ler01 // ?sqr_ge0 // negb_and oner_neq0.
 Qed.
 
-Definition cayley_of_skew u := (1 - \S( u ))^-1 * (1 + \S( u )).
-
-Lemma cayley_of_skew_is_O u : cayley_of_skew u \is 'O[R]_3.
+Lemma det_add1skew_mx u : \det (1 + \S( u )) = 1 + norm u ^+ 2.
 Proof.
-rewrite orthogonalE /cayley_of_skew.
 set a := skew_mx u.
-rewrite trmx_mul trmxV.
-do 2 rewrite linearD /= trmx1.
-rewrite [in X in _ * _ * (_ * X) == _]linearN /= tr_skew.
-rewrite (opprK (skew_mx u)) -/a -mulrA (mulrA (1 + a)) skew_mxC -/a.
-rewrite !mulrA mulVr ?skew_mx_inv // mul1r divrr //.
-by rewrite -(opprK a) -skew_mxN skew_mx_inv.
+rewrite det_mx33 [a]lock !mxE /=. Simp.r.
+rewrite -lock /a !skewij addr0. Simp.r.
+rewrite -!addrA; congr (_ + _); rewrite !addrA.
+rewrite sqr_norm sum3E -!expr2 -!addrA; congr (_ + _).
+rewrite mulrDr -expr2 (addrC _ (_^+2)) -!addrA addrC; congr (_ + _).
+by rewrite mulrBr opprB -expr2 addrCA mulrCA subrr addr0.
 Qed.
 
-Lemma det_caley u : \det (cayley_of_skew u) = 1.
+Lemma sym_add1r M : M \is 'so[R]_3 -> \det (1 + M) != 0.
 Proof.
-rewrite /cayley_of_skew det_mulmx det_inv det_skew_mx1.
-rewrite -(opprK (skew_mx u)) -skew_mxN det_skew_mx1 normN.
-by rewrite mulVr // unitfE paddr_eq0 ?ler01 // ?sqr_ge0 // oner_eq0.
+move/unskewK => <-.
+by rewrite det_add1skew_mx paddr_eq0 // ?sqr_ge0 // oner_eq0.
 Qed.
 
-Lemma cayley_of_skew_is_SO u : cayley_of_skew u \is 'SO[R]_3.
-Proof. by rewrite rotationE cayley_of_skew_is_O det_caley eqxx. Qed.
+Lemma sym_sub1r M : M \is 'so[R]_3 -> \det (1 - M) != 0.
+Proof.
+move/unskewK => <-.
+by rewrite det_sub1skew_mx paddr_eq0 // ?sqr_ge0 // oner_eq0.
+Qed.
+
+(* TODO: rename cayley_of_sym? *)
+Definition cayley_of_skew M := (1 + M) * (1 - M)^-1.
+
+Lemma trmx_cayley_of_skew M : M \is 'so[R]_3 ->
+  (cayley_of_skew M)^T = (1 + M)^-1 * (1 - M).
+Proof.
+move=> Mso.
+rewrite /cayley_of_skew trmx_mul trmxV linearB /= trmx1 linearD /= trmx1.
+move: (Mso); rewrite antiE => /eqP {1}<-.
+move: Mso; rewrite antiE => /eqP {2}->; by rewrite linearN /= trmxK.
+Qed.
+
+Lemma cayley_of_skew_is_O M : M \is 'so[R]_3 -> cayley_of_skew M \is 'O[R]_3.
+Proof.
+move=> Mso.
+rewrite orthogonalEC trmx_cayley_of_skew // /cayley_of_skew.
+rewrite -mulrA (mulrA (1 - M)) sub1radd1r_comm !mulrA.
+rewrite mulVr ?mul1r ?unitmxE ?unitfE ?sym_add1r //.
+by rewrite mulrV // unitmxE unitfE sym_sub1r.
+Qed.
+
+Lemma det_caley M : M \is 'so[R]_3 -> \det (cayley_of_skew M) = 1.
+Proof.
+move/unskewK => <-.
+rewrite /cayley_of_skew det_mulmx det_inv det_add1skew_mx det_sub1skew_mx.
+by rewrite divrr // unitfE paddr_eq0 ?oner_eq0 /= // sqr_ge0.
+Qed.
+
+Lemma cayley_of_skew_is_SO M : M \is 'so[R]_3 -> cayley_of_skew M \is 'SO[R]_3.
+Proof. move=> Mso; by rewrite rotationE cayley_of_skew_is_O //= det_caley. Qed.
 
 Definition skew_of_ortho (M : 'M[R]_3) := (M - 1) * (M + 1)^-1.
 
 Lemma skew_of_ortho_is_skew Q : Q \is 'O[R]_3 -> skew_of_ortho Q \is 'so[R]_3.
 Proof.
 move=> HQ.
-rewrite antiE /skew_of_ortho.
-rewrite trmx_mul trmxV.
+rewrite antiE.
+rewrite /skew_of_ortho.
+rewrite trmx_mul.
+rewrite trmxV.
 rewrite linearD /= trmx1.
-rewrite linearD /= linearN /= trmx1.
-move: (HQ).
-rewrite orthogonalEinv => /andP[Qinv] /eqP <-.
-rewrite mulmxE -mulrN opprB idmxE; apply/eqP.
-rewrite -[in RHS](mul1r (1 - Q^-1)).
-rewrite -unitrV in Qinv.
-rewrite -{4}(divrr Qinv).
-rewrite -mulrA invrK (mulrBr Q) mulr1 divrr; last by rewrite -unitrV.
-rewrite mulrA.
+rewrite linearB /= trmx1.
 Abort.
 
 Definition lie_bracket w1 w2 := \S( w1 ) * \S( w2) - \S( w2 ) * \S( w1 ).
