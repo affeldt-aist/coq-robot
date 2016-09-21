@@ -674,25 +674,24 @@ Proof.
 by rewrite /emx3 !linearD /= !linearZ /= trmx1 expr2 trmx_mul expr2.
 Qed.
 
-Lemma inv_emx3 a M : M ^+ 4 = - M ^+ 2 -> `e(a, M) * `e(a, -M) = 1.
+Lemma inv_emx3 a M : M ^+ 4 = - M ^+ 2 -> `e(a, M) * `e(a, - M) = 1.
 Proof.
 move=> aM.
-case/boolP : (cos a == 1) => [/eqP cphi|cphi]; rewrite /emx3.
-  by rewrite cphi subrr 2!scale0r !addr0 scalerN (cos1sin0 cphi) scale0r addr0 subr0 mulr1.
+case/boolP : (cos a == 1) => [/eqP|] ca; rewrite /emx3.
+  rewrite ca subrr (_ : sin a = 0) ; last by rewrite cos1sin0 // ca normr1.
+  by rewrite !scale0r !addr0 mulr1.
 rewrite !mulrDr !mulrDl !mulr1 !mul1r -[RHS]addr0 -!addrA; congr (_ + _).
-rewrite !addrA (_ : (- M) ^+ 2 = M ^+ 2); last by rewrite expr2 mulNr mulrN opprK -expr2.
-rewrite -!addrA (addrCA (_ *: M ^+ 2)) !addrA scalerN subrr add0r.
+rewrite !addrA sqrrN -!addrA (addrCA (_ *: M ^+ 2)) !addrA scalerN subrr add0r.
 rewrite (_ : (1 - _) *: _ * _ = - (sin a *: M * ((1 - cos a) *: M ^+ 2))); last first.
   rewrite mulrN; congr (- _).
-  rewrite -2!scalerAr -!scalerAl -exprS -exprSr 2!scalerA; congr (_ *: _).
-  by rewrite mulrC.
+  by rewrite -2!scalerAr -!scalerAl -exprS -exprSr 2!scalerA mulrC.
 rewrite -!addrA (addrCA (- (sin a *: _ * _))) !addrA subrK.
 rewrite mulrN -scalerAr -scalerAl -expr2 scalerA -expr2.
 rewrite -[in X in _ - _ + _ + X = _]scalerAr -scalerAl -exprD scalerA -expr2.
 rewrite -scalerBl -scalerDl sin2cos2.
 rewrite -{2}(expr1n _ 2) subr_sqr -{1 3}(mulr1 (1 - cos a)) -mulrBr -mulrDr.
 rewrite opprD addrA subrr add0r -(addrC 1) -expr2 -scalerDr.
-apply/eqP; rewrite scaler_eq0 sqrf_eq0 subr_eq0 eq_sym (negbTE cphi) /=.
+apply/eqP; rewrite scaler_eq0 sqrf_eq0 subr_eq0 eq_sym (negbTE ca) /=.
 by rewrite aM subrr.
 Qed.
 
@@ -716,7 +715,9 @@ rewrite (_ : - _ = - 2%:R); last by rewrite expr1n mulr1.
 by rewrite mulrDl addrA mul1r -natrB // mulrC mulrN -mulNr opprK.
 Qed.
 
-(* see table 1.1 of handbook of robotics *)
+(* table 1.1 of [springer] 
+   'equivalent rotation matrices for various representations of orientation'
+   angle-axis angle a, vector u *)
 Lemma eskewE a u : norm u = 1 ->
   let va := 1 - cos a in let ca := cos a in let sa := sin a in
   `e^(a, u) = col_mx3
@@ -798,12 +799,6 @@ Proof.
 move=> u1 /= k.
 rewrite inE eigenvalue_root_char -map_char_poly.
 Abort.
-
-(*Lemma trace_sqr_exp_rot_skew_mx (phi : angle R) w : norm w = 1 ->
-  \tr `e^(phi, (skew_mx w) ^+ 2) = - (1 + 2%:R * cos phi) ^+ 2(*?*).
-Proof.
-move=> w1.
-Abort.*)
 
 Lemma Rz_eskew a : Rz a = `e^(a, 'e_2%:R).
 Proof.
