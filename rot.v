@@ -100,8 +100,8 @@ Lemma rot2d M : M \is 'SO[R]_2 -> {a | M = RO a}.
 Proof.
 move=> MSO.
 move: (MSO); rewrite rotationE => /andP[MO _].
-case: (sqr_normr_cossin (norm_row_of_O MO 0)); rewrite !mxE => a [a1 a2].
-case: (sqr_normr_cossin (norm_row_of_O MO 1)); rewrite !mxE => b [b1 b2].
+case: (norm1_cossin (norm_row_of_O MO 0)); rewrite !mxE => a [a1 a2].
+case: (norm1_cossin (norm_row_of_O MO 1)); rewrite !mxE => b [b1 b2].
 move/orthogonalP : (MO) => /(_ 0 1) /=.
 rewrite dotmulE sum2E !mxE a1 a2 b1 b2 -cosB.
 case/cos0_inv => [abpi|].
@@ -131,8 +131,8 @@ Qed.
 Lemma rot2d' M : M \is 'O[R]_2 -> { a : angle R & {M = RO a} + {M = RO' a} }.
 Proof.
 move=> MO.
-case: (sqr_normr_cossin (norm_row_of_O MO 0)); rewrite !mxE => a [a1 a2].
-case: (sqr_normr_cossin (norm_row_of_O MO 1)); rewrite !mxE => b [b1 b2].
+case: (norm1_cossin (norm_row_of_O MO 0)); rewrite !mxE => a [a1 a2].
+case: (norm1_cossin (norm_row_of_O MO 1)); rewrite !mxE => b [b1 b2].
 move/orthogonalP : (MO) => /(_ 0 1) /=.
 rewrite dotmulE sum2E !mxE a1 a2 b1 b2 -cosB.
 have HM : M = col_mx2 (row2 (cos a) (sin a)) (row2 (cos b) (sin b)).
@@ -1445,8 +1445,8 @@ Lemma angle_axis_eskew_old M : M \is 'SO[R]_3 ->
   let w := aaxis (angle_axis_of_rot M) in
   M = `e^(a, w).
 Proof.
-move=> HM M0 (*sin0*) a w.
-rewrite (angle_axis_eskew HM) /a aangle_of; congr (`e^(_, _)). 
+move=> MSO M0 a w.
+rewrite (angle_axis_eskew MSO) /a aangle_of; congr (`e^(_, _)).
 by rewrite /w /angle_axis_of_rot /= aaxis_of.
 Qed.
 

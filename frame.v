@@ -15,7 +15,8 @@ Require Import aux angle euclidean3 skew vec_angle.
 (* OUTLINE:
   1. section non_oriented_frame
   2. section oriented_frame
-     (mostly about positive frames)
+     mostly about positive frames
+     also about positive frames with an origin (TFrame.t)
   3. definition of the canonical frame (e_0, e_1, e_2)
   4. Module Base1
      build a positive frame out of a unit vector
@@ -410,6 +411,10 @@ End TFrame.
 
 Coercion frame_of_tframe (R : rcfType) (f : TFrame.t R) :=
   let: TFrame.mk _ f' := f in f'.
+
+Definition xaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (Frame.i f).
+Definition yaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (Frame.j f).
+Definition zaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (Frame.k f).
 
 Section canonical_frame.
 

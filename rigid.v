@@ -271,12 +271,12 @@ Coercion vtvec_field_coercion := vtvec.
 Notation "p .-vec" := (tvec p) (at level 5).
 Notation "u `@ p" := (TVec p u) (at level 11).
 
-Lemma tvec_of_line (R : rcfType) (l : line R) :
-  line_vector l = (line_vector l) `@ (line_point l).
+Lemma tvec_of_line (R : rcfType) (l : Line.t R) :
+  Line.vector l = (Line.vector l) `@ (Line.point l).
 Proof. by case: l. Qed.
 
 Lemma line_of_tvec (R : rcfType) (p : 'rV[R]_3) (v : p.-vec) :
-  line_vector (mkLine p v) `@ p = v. 
+  Line.vector (Line.mk p v) `@ p = v.
 Proof. by case: v => v /=. Qed.
 
 Section derivative_map.

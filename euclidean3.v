@@ -32,6 +32,7 @@ Require Import aux.
     section norm3
     (some specialized lemmas for dimension 3)
  8. section properties_of_canonical_vectors
+ 9. section normalize
 *)
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1045,7 +1046,7 @@ End orthogonal_crossmul.
 Section norm.
 
 Variables (R : rcfType) (n : nat).
-Implicit Types u : 'rV[R]_n.
+Implicit Types u v : 'rV[R]_n.
 
 Definition norm u := Num.sqrt (u *d u).
 
@@ -1083,6 +1084,17 @@ Lemma dotmulvv u : u *d u = norm u ^+ 2.
 Proof.
 rewrite /norm [_ ^+ _]sqr_sqrtr // dotmulE sumr_ge0 //.
 by move=> i _; rewrite sqr_ge0.
+Qed.
+
+Lemma polarization_identity v u :
+  v *d u = 1 / 4%:R * (norm (v + u) ^+ 2 - norm (v - u) ^+ 2).
+Proof.
+apply: (@mulrI _ 4%:R); first exact: pnatf_unit.
+rewrite [in RHS]mulrA div1r divrr ?pnatf_unit // mul1r.
+rewrite -2!dotmulvv dotmulD dotmulD mulr_natl (addrC (v *d v)).
+rewrite (_ : 4 = 2 + 2)%N // mulrnDr -3![in RHS]addrA; congr (_ + _).
+rewrite opprD addrCA 2!addrA -(addrC (v *d v)) subrr add0r.
+by rewrite addrC opprD 2!dotmulvN dotmulNv opprK subrK -mulNrn opprK.
 Qed.
 
 Section norm1.
@@ -1358,3 +1370,61 @@ Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[R]__.
 Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 
 End properties_of_canonical_vectors.
+
+
+Section normalize.
+
+Variables (R : rcfType) (n : nat).
+Implicit Type u v : 'rV[R]_3.
+
+Definition normalize v := (norm v)^-1 *: v.
+
+Lemma normalizeN u : normalize (- u) = - normalize u.
+Proof. by rewrite /normalize normN scalerN. Qed.
+
+Lemma normalizeI v : norm v = 1 -> normalize v = v.
+Proof. by move=> v1; rewrite /normalize v1 invr1 scale1r. Qed.
+
+Lemma norm_normalize v : v != 0 -> norm (normalize v) = 1.
+Proof.
+move=> v0; rewrite normZ ger0_norm; last by rewrite invr_ge0 // norm_ge0.
+by rewrite mulVr // unitfE norm_eq0.
+Qed.
+
+Lemma normalize_eq0 v : (normalize v == 0) = (v == 0).
+Proof.
+apply/idP/idP => [|/eqP ->]; last by rewrite /normalize scaler0.
+case/boolP : (v == 0) => [//| /norm_normalize].
+rewrite -norm_eq0 => -> /negPn; by rewrite oner_neq0.
+Qed.
+
+Lemma norm_scale_normalize u : norm u *: normalize u = u.
+Proof.
+case/boolP : (u == 0) => [/eqP -> {u}|u0]; first by rewrite norm0 scale0r.
+by rewrite /normalize scalerA divrr ?scale1r // unitfE norm_eq0.
+Qed.
+
+Lemma normalizeZ u (u0 : u != 0) k (k0 : 0 < k) : normalize (k *: u) = normalize u.
+Proof.
+rewrite {1}/normalize normZ gtr0_norm // invrM ?unitfE ?gtr_eqF // ?norm_gt0 //.
+by rewrite scalerA -mulrA mulVr ?mulr1 ?unitfE ?gtr_eqF.
+Qed.
+
+(* NB: not used *)
+Lemma dotmul_normalize_norm u : u *d normalize u = norm u.
+Proof.
+case/boolP : (u == 0) => [/eqP ->{u}|u0]; first by rewrite norm0 dotmul0v.
+rewrite -{1}(norm_scale_normalize u) dotmulZv dotmulvv norm_normalize //.
+by rewrite expr1n mulr1.
+Qed.
+
+Lemma dotmul_normalize u v : (normalize u *d v == 0) = (u *d v == 0).
+Proof.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite /normalize scaler0.
+apply/idP/idP.
+  rewrite /normalize dotmulZv mulf_eq0 => /orP [|//].
+  by rewrite invr_eq0 norm_eq0 (negbTE u0).
+rewrite /normalize dotmulZv => /eqP ->; by rewrite mulr0.
+Qed.
+
+End normalize.

@@ -27,94 +27,27 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B))
  (A at next level, at level 8,
  format "u  _|_  A , B ").
 
-Section TFrame_properties.
-
-Variable R : rcfType.
-Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
-Let frame := TFrame.t R.
-
-Definition xaxis (f : frame) := mkLine (TFrame.o f) (Frame.i f).
-Definition yaxis (f : frame) := mkLine (TFrame.o f) (Frame.j f).
-Definition zaxis (f : frame) := mkLine (TFrame.o f) (Frame.k f).
-
-End TFrame_properties.
-
-(* equation of a line passing through two points p1 p2 *)
-Coercion line_pred {R':rcfType} (l : line R') : pred 'rV[R']_3 :=
-  let p1 := line_point l in
-  [pred p : 'rV[R']_3 |
-     (p == p1) ||
-     ((line_vector l != 0) && colinear (line_vector l) (p - p1))].
-
-Section line_ext.
-
-Variable R : rcfType.
-
-Lemma line_point_in (l : line R) : line_point l \in (l : pred _).
-Proof. by case: l => p v /=; rewrite inE /= eqxx. Qed.
-
-Lemma lineP p (l : line R) :
-  reflect (exists k', p = line_point l + k' *: line_vector l)
-          (p \in (l : pred _)).
-Proof.
-apply (iffP idP) => [|].
-  rewrite inE.
-  case/orP => [/eqP pl|].
-    exists 0; by rewrite scale0r addr0.
-  case/andP => l0 /colinearP[|].
-    rewrite subr_eq0 => /eqP ->.
-    exists 0; by rewrite scale0r addr0.
-  case=> pl [k [Hk1 Hk2]].
-  have k0 : k != 0 by rewrite -normr_eq0 Hk1 mulf_neq0 // ?invr_eq0 norm_eq0.
-  exists k^-1.
-  by rewrite Hk2 scalerA mulVr ?unitfE // scale1r addrCA subrr addr0.
-case=> k' ->.
-rewrite inE.
-case/boolP : (line_vector l == 0) => [/eqP ->|l0 /=].
-  by rewrite scaler0 addr0 eqxx.
-by rewrite addrAC subrr add0r colinearvZ colinear_refl 2!orbT.
-Qed.
-
-Lemma mem_add_line (l : line R) (p v : 'rV[R]_3) :
-  line_vector l != 0 ->
-  colinear v (line_vector l) ->
-  (p + v \in (l : pred _)) = (p \in (l : pred _)).
-Proof.
-move=> l0 vl.
-apply/lineP/idP => [[] x /eqP|pl].
-  rewrite eq_sym -subr_eq => /eqP <-.
-  rewrite inE l0 /=; apply/orP; right.
-  rewrite -!addrA addrC !addrA subrK colinear_sym.
-  by rewrite colinearD // ?colinearZv ?colinear_refl ?orbT // colinearNv.
-case/colinearP : vl => [|[_ [k [Hk1 ->]]]]; first by rewrite (negPf l0).
-case/lineP : pl => k' ->.
-exists (k' + k); by rewrite -addrA -scalerDl.
-Qed.
-
-End line_ext.
-
 Section line_line_intersection.
 
 Variable R : rcfType.
 Let point := 'rV[R]_3.
-Implicit Types l : line R.
+Implicit Types l : Line.t R.
 
 Definition is_interpoint p l1 l2 :=
   (p \in (l1 : pred _)) && (p \in (l2 : pred _)).
 
 Definition interpoint_param x l1 l2 :=
-  let p1 := line_point l1 in let p2 := line_point l2 in
-  let v1 := line_vector l1 in let v2 := line_vector l2 in
+  let p1 := Line.point l1 in let p2 := Line.point l2 in
+  let v1 := Line.vector l1 in let v2 := Line.vector l2 in
   \det (col_mx3 (p2 - p1) x (v1 *v v2)) / norm (v1 *v v2) ^+ 2. 
 
-Definition interpoint_s l1 l2 := interpoint_param (line_vector l1) l1 l2.
+Definition interpoint_s l1 l2 := interpoint_param (Line.vector l1) l1 l2.
 
-Definition interpoint_t l1 l2 := interpoint_param (line_vector l2) l1 l2.
+Definition interpoint_t l1 l2 := interpoint_param (Line.vector l2) l1 l2.
 
 Lemma interpointP p l1 l2 : ~~ parallel l1 l2 ->
-  let p1 := line_point l1 in let p2 := line_point l2 in
-  let v1 := line_vector l1 in let v2 := line_vector l2 in
+  let p1 := Line.point l1 in let p2 := Line.point l2 in
+  let v1 := Line.vector l1 in let v2 := Line.vector l2 in
   is_interpoint p l1 l2 <->
   let s := interpoint_s l1 l2 in let t := interpoint_t l1 l2 in
   p1 + t *: v1 = p /\ p2 + s *: v2 = p.
@@ -150,7 +83,7 @@ Qed.
 
 Definition intersection l1 l2 : option point :=
   if ~~ intersects l1 l2 then None
-  else Some (line_point l1 + interpoint_t l1 l2 *: line_vector l1).
+  else Some (Line.point l1 + interpoint_t l1 l2 *: Line.vector l1).
 
 End line_line_intersection.
 
@@ -175,31 +108,31 @@ Coercion plucker_array_mx (R : rcfType) (p : Plucker.array R) :=
 Section plucker_of_line.
 
 Variable R : rcfType.
-Implicit Types l : line R.
+Implicit Types l : Line.t R.
 
 Definition normalized_plucker_direction l :=
-  let p1 := line_point l in
-  let p2 := line_point2 l in
+  let p1 := Line.point l in
+  let p2 := Line.point2 l in
   (norm (p2 - p1))^-1 *: (p2 - p1).
 
-Lemma normalized_plucker_directionP (l : line R) : line_vector l != 0 ->
+Lemma normalized_plucker_directionP (l : Line.t R) : Line.vector l != 0 ->
   let e := normalized_plucker_direction l in e *d e == 1.
 Proof.
 move=> l0 /=.
 rewrite /normalized_plucker_direction dotmulZv dotmulvZ dotmulvv.
-rewrite /line_point2 addrAC subrr add0r.
+rewrite /Line.point2 addrAC subrr add0r.
 rewrite mulrA mulrAC expr2 mulrA mulVr ?unitfE ?norm_eq0 // mul1r.
 by rewrite divrr // unitfE norm_eq0.
 Qed.
 
 Definition normalized_plucker_position l :=
-  let p1 := line_point l in
+  let p1 := Line.point l in
   p1 *v normalized_plucker_direction l.
 
 Lemma normalized_plucker_positionP l :
   normalized_plucker_position l *d normalized_plucker_direction l == 0.
 Proof.
-rewrite /normalized_plucker_position /normalized_plucker_direction /line_point2 addrAC subrr add0r crossmulvZ.
+rewrite /normalized_plucker_position /normalized_plucker_direction /Line.point2 addrAC subrr add0r crossmulvZ.
 by rewrite dotmulvZ dotmulZv -dotmul_crossmulA crossmulvv dotmulv0 2!mulr0.
 Qed.
 
@@ -207,38 +140,38 @@ Definition normalized_plucker l : 'rV[R]_6 :=
   row_mx (normalized_plucker_direction l) (normalized_plucker_position l).
 
 Definition plucker_of_line l : 'rV[R]_6 :=
-  let p1 := line_point l in
-  let p2 := line_point2 l in
+  let p1 := Line.point l in
+  let p2 := Line.point2 l in
   row_mx (p2 - p1) (p1 *v (p2 - p1)).
 
 Lemma normalized_pluckerP l :
-  let p1 := line_point l in
-  let p2 := line_point2 l in
-  line_vector l != 0 ->
+  let p1 := Line.point l in
+  let p2 := Line.point2 l in
+  Line.vector l != 0 ->
   plucker_of_line l = norm (p2 - p1) *: normalized_plucker l.
 Proof.
 move=> p1 p2 l0.
 rewrite /normalized_plucker /normalized_plucker_direction /normalized_plucker_position.
 rewrite -/p1 -/p2 crossmulvZ -scale_row_mx scalerA.
-by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 /line_point2 -/p1 addrAC subrr add0r.
+by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 /Line.point2 -/p1 addrAC subrr add0r.
 Qed.
 
-Lemma plucker_of_lineE l (l0 : line_vector l != 0) :
-  plucker_of_line l = norm (line_point2 l - line_point l) *:
+Lemma plucker_of_lineE l (l0 : Line.vector l != 0) :
+  plucker_of_line l = norm (Line.point2 l - Line.point l) *:
   (Plucker.mkArray (normalized_plucker_directionP l0) (normalized_plucker_positionP l) : 'M__).
 Proof.
 rewrite /plucker_of_line /plucker_array_mx /=.
 rewrite /normalized_plucker_direction /normalized_plucker_position crossmulvZ -scale_row_mx.
 rewrite scalerA divrr ?scale1r //.
-by rewrite unitfE norm_eq0 /line_point2 addrAC subrr add0r.
+by rewrite unitfE norm_eq0 /Line.point2 addrAC subrr add0r.
 Qed.
 
 Definition plucker_eqn p l :=
-  let p1 := line_point l in let p2 := line_point2 l in
+  let p1 := Line.point l in let p2 := Line.point2 l in
   p *m (\S( p2 ) - \S( p1 )) + p1 *v (p2 - p1).
 
 Lemma in_plucker p l : p \in (l : pred _)->
-  let p1 := line_point l in let p2 := line_point2 l in
+  let p1 := Line.point l in let p2 := Line.point2 l in
   plucker_eqn p l = 0.
 Proof.
 rewrite inE => /orP[/eqP -> p1 p2|].
@@ -246,19 +179,19 @@ rewrite inE => /orP[/eqP -> p1 p2|].
   by rewrite 2!subr0 crossmulC addrC subrr.
 case/andP => l0 H p1 p2; rewrite -/p1 in H.
 rewrite /plucker_eqn.
-rewrite /p2 /line_point2 -/p1 addrAC subrr add0r skew_mxD addrAC subrr add0r.
+rewrite /p2 /Line.point2 -/p1 addrAC subrr add0r skew_mxD addrAC subrr add0r.
 rewrite skew_mxE crossmulC addrC -crossmulBl crossmulC -crossmulvN opprB; by apply/eqP.
 Qed.
 
 Definition homogeneous_plucker_eqn l :=
-  let p1 := line_point l in let p2 := line_point2 l in
+  let p1 := Line.point l in let p2 := Line.point2 l in
   col_mx (\S( p2 ) - \S( p1 )) (p1 *v (p2 - p1)).
 
 Require Import rigid.
 
-Lemma homogeneous_in_plucker p (l : line R) : p \is 'hP[R] ->
+Lemma homogeneous_in_plucker p (l : Line.t R) : p \is 'hP[R] ->
   from_h p \in (l : pred _) ->
-  let p1 := line_point l in let p2 := line_point2 l in
+  let p1 := Line.point l in let p2 := Line.point2 l in
   p *m homogeneous_plucker_eqn l = 0.
 Proof.
 move=> hp /in_plucker Hp p1 p2 /=.
@@ -354,11 +287,10 @@ have [H2a H2b] : From1To0 0 0 ^+ 2 + From1To0 0 1 ^+ 2 = 1 /\
 have [theta [alpha [H00 [H01 [H22 H12]]]]] : exists theta alpha,
   From1To0 0 0 = cos theta /\ From1To0 0 1 = sin theta /\ 
   From1To0 2%:R 2%:R = cos alpha /\ From1To0 1 2%:R = sin alpha.
-  case/sqr_normr_cossin_helper : H2a => theta Htheta.
+  case/sqrD1_cossin : H2a => theta Htheta.
   rewrite addrC in H2b.
-  case/sqr_normr_cossin_helper : H2b => alpha Halpha.
-  exists theta, alpha.
-  by intuition.
+  case/sqrD1_cossin : H2b => alpha Halpha.
+  exists theta, alpha; by intuition.
 
 move/orthogonalPcol : (FromTo_is_O F1 F0) => /(_ 1 2%:R) /=.
 rewrite dotmulE sum3E !tr_col 2![_ 0 0]mxE [_ 2%:R 0]mxE.
