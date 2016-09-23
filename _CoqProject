@@ -10,5 +10,9 @@ skew.v
 rot.v
 frame.v
 dh.v
+scara.v
+(* PYS *)
+reals.v
+boolp.v
 
 -R . Robot

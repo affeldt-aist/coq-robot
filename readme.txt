@@ -1,4 +1,4 @@
-reals.v comes from
+boolp.v, reals.v come from
 https://github.com/strub/coq-alternate-reals
 by P.-Y. Strub
 
