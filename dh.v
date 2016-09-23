@@ -261,7 +261,7 @@ Variable F0 F1 : TFrame.t R.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[R]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_frame R) _R^ F0.
 
-Hypothesis dh1 : (Frame.i F1) *d (Frame.k F0) = 0.
+Hypothesis dh1 : Frame.i F1 *d Frame.k F0 = 0.
 Hypothesis dh2 : exists p, is_interpoint p (xaxis F1) (zaxis F0).
 
 (* [spong] an homogeneous transformation that satisfies dh1 and dh2 
@@ -474,15 +474,10 @@ have H4 : From1To0 = dh_rot theta alpha.
 have [d [a H5]] : exists d a,
   TFrame.o F1 = TFrame.o F0 + d *: (Frame.k F0) + a *: (Frame.i F1).
   case: dh2 => p.
-  move/interpointP.
-  rewrite /parallel /= {1}/colinear.
-  move/eqP : dh1.
-  move/(dotmul_eq0_crossmul_neq0 (norm1_neq0 (NOFrame.normi F1)) (norm1_neq0 (NOFrame.normk F0)))  => ->.
-  case/(_ erefl).
-  move/eqP; rewrite eq_sym -subr_eq => /eqP Hp1 Hp2.
-  rewrite -Hp1 -Hp2.
-  exists (interpoint_s (xaxis F1) (zaxis F0)), (- interpoint_t (xaxis F1) (zaxis F0)).
-  by rewrite scaleNr.
+  rewrite /is_interpoint => /andP[/lineP[k1 /= Hk1] /lineP[k2 /= Hk2]].
+  exists k2, (- k1).
+  rewrite -Hk2.
+  by apply/eqP; rewrite Hk1 scaleNr addrK.
 exists alpha, theta, d, a.
 rewrite dh_matE -H4; congr hom.
 suff -> : p1_in_0 = (* TFrame.o F1 w.r.t. 0 *)
@@ -637,9 +632,190 @@ Definition before_after_joint (i : 'I_n) : option (link * link):=
 
 End open_chain.
 
-(* TODO: SCARA robot manipulator as an example? *)
+(* SCARA robot manipulator as an example *)
 Section scara.
 
-Variable R : rcfType.
+Require Import reals.
+
+Variable R : realType.
+Let vector := 'rV[R]_3.
+
+Variable theta1 : angle R.
+Variable a1 : R.
+Variable theta2 : angle R.
+Variable a2 : R.
+Variable d3 : R.
+Variable theta4 : angle R.
+Variable d4 : R.
+
+Definition A1 := hom (Rz theta1) (row3 (a1 * cos theta1) (a1 * sin theta1) 0).
+Definition A2 := hom (Rz theta2) (row3 (a2 * cos theta2) (a2 * sin theta2) 0).
+Definition A3 := hTz d3.
+Definition A4 := hom (Rz theta4) (row3 0 0 d4).
+
+Definition rotA := Rz (theta1 + theta2 + theta4).
+
+Definition transA := row3
+  (a2 * cos (theta2 + theta1) + a1 * cos theta1)
+  (a2 * sin (theta2 + theta1) + a1 * sin theta1)
+  (d4 + d3).
+
+(* [spong] p. 81, eqn. 3.49 *)
+Lemma A_compute : A4 * A3 * A2 * A1 = hom rotA transA.
+Proof.
+rewrite /A4 /A3.
+rewrite homM mulr1 mulmx1 row3D. Simp.r.
+rewrite /A2.
+rewrite homM RzM mulmx_row3_col3 !scale0r !add0r e2row !row3Z row3D. Simp.r.
+rewrite homM RzM addrC (addrC _ theta2) addrA; congr hom.
+rewrite mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
+by rewrite -!mulrA -mulrBr -cosD -mulrDr (addrC (_ * sin theta1)) -sinD.
+Qed.
+
+Require Import screw.
+
+Section scara_screw.
+
+Variable l0 : R.
+
+(* initial configuration *)
+Definition g0 := hom 1 (row3 (a1 + a2) 0 l0).
+
+Definition w1 : vector := 'e_2%:R.
+Definition w2 : vector := 'e_2%:R.
+Definition w3 : vector := 'e_2%:R.
+
+(* axis points *)
+Definition q1 : vector := 'e_2%:R.
+Definition q2 : vector := row3 a1 0 0.
+Definition q3 : vector := row3 (a1 + a2) 0 0.
+
+Definition t1 := rjoint_twist w1 q1.
+Definition t2 := rjoint_twist w2 q2.
+Definition t3 : Twist.t R := Twist.mk 'e_2%:R 0. (* TODO: notation for prismatic joint? *)
+
+Goal - w1 *v q1 = 0.
+by rewrite crossmulNv crossmulvv oppr0.
+Abort.
+Goal - w2 *v q2 = - row3 0 a1 0.
+rewrite /w2 /q2 e2row crossmulNv crossmulE !mxE /=. Simp.r.
+done.
+Abort.
+
+Definition t4 := rjoint_twist w3 q3.
+
+Goal -w3 *v q3 = - row3 0 (a1 + a2) 0.
+rewrite /w3 /q3 e2row crossmulNv crossmulE !mxE /=. Simp.r.
+done.
+Abort.
+
+Definition g := `e$(theta4, t4) *
+                `e$(Rad.angle_of d3, t3) *
+                `e$(theta2, t2) *
+                `e$(theta1, t1).
+
+Definition g_old := `e$(theta1, t1) *
+                `e$(theta2, t2) *
+                `e$(Rad.angle_of d3, t3) *
+                `e$(theta4, t4).
+
+Lemma H1 : `e$(theta1, t1) = hRz theta1.
+Proof.
+rewrite /t1 /rjoint_twist crossmulNv crossmulvv oppr0 etwist_Rz; last first.
+  by rewrite -norm_eq0 normeE oner_eq0.
+by rewrite -Rz_eskew.
+Qed.
+
+(* TODO: generalize *)
+Lemma point_axis_twist (d : R) :
+  Line.point (axis \T((- 'e_2%:R *v row3 d 0 0), 'e_2%:R)) = row3 d 0 0.
+Proof.
+rewrite {1}/axis ang_of_twistE.
+rewrite (_ : 'e_2%:R == 0 = false) /=; last first.
+  apply/negP/negP; by rewrite -norm_eq0 normeE oner_eq0.
+rewrite normeE expr1n invr1 scale1r lin_of_twistE crossmulNv crossmulvN.
+rewrite double_crossmul dotmulvv normeE expr1n scale1r /w2 /q2 e2row.
+rewrite dotmulE sum3E !mxE /=. by Simp.r.
+Qed.
+
+Lemma H2_helper th d :
+  `e$(th, Twist.mk (- w2 *v row3 d 0 0) w2) = hom (Rz th) (row3 (d * (1 - cos th)) (- d * sin th) 0).
+Proof.
+rewrite etwistE.
+rewrite (_ : w2 == 0 = false); last first.
+  apply/negP/negP; by rewrite -norm_eq0 normeE oner_eq0.
+rewrite pitch_perp ?normeE // mulr0 scale0r add0r.
+rewrite point_axis_twist.
+rewrite -Rz_eskew.
+congr hom.
+rewrite mulmxBr mulmx1 mulmx_row3_col3 !scale0r !addr0 row3Z row3N row3D.
+Simp.r.
+by rewrite mulrBr mulr1.
+Qed.
+
+Lemma H2 : `e$(theta2, t2) = hom (Rz theta2) (row3 (a1 * (1 - cos theta2)) (- a1 * sin theta2) 0).
+Proof. by rewrite /t2 H2_helper. Qed.
+
+Lemma H3 : `e$(Rad.angle_of d3, t3) = hTz d3.
+Proof.
+rewrite etwistE eqxx eskew_v0 Rad.angle_ofK.
+  rewrite e2row row3Z. Simp.r. done.
+admit.
+Admitted.
+
+Lemma H4 : `e$(theta4, t4) = hom (Rz theta4)
+  (row3 ((a1 + a2) * (1 - cos theta4)) (- (a1 + a2) * sin theta4) 0).
+Proof. by rewrite /t4 /q3 H2_helper. Qed.
+
+Definition tR' := (row3 (- a1 * cos theta1 - a2 * cos (theta1 + theta2))
+       (a1 * sin theta1 + a2 * sin (theta1 + theta2))
+       (l0 + d3)).
+
+Lemma H1234 : g = hom rotA transA.
+Proof.
+rewrite /g.
+rewrite H1 H2 H3 H4.
+rewrite homM mulr1 mulmx1 row3D. Simp.r.
+rewrite homM RzM mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
+rewrite homM RzM mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
+rewrite addrC (addrC theta4) addrA; congr hom.
+rewrite /transA.
+congr row3.
+Abort.
+
+Lemma H1234_old : g_old = hom rotA transA.
+Proof.
+rewrite /g_old.
+rewrite etwistE.
+rewrite etwistE.
+rewrite (negbTE (norm1_neq0 (@normeE _ _))).
+rewrite (_ : - w1 *v q1 = 0); last first.
+  by rewrite /q1 /w1 crossmulNv crossmulvv oppr0.
+rewrite pitch_nolin mulr0 scale0r add0r.
+rewrite point_axis_nolin; last by rewrite -norm_eq0 normeE oner_eq0.
+rewrite mul0mx.
+rewrite pitch_perp ?normeE // mulr0 scale0r add0r.
+rewrite point_axis_twist homM mul0mx add0r.
+rewrite eskewM ?normeE //.
+rewrite etwistE eqxx eskew_v0 homM mulr1 mulmx1.
+rewrite etwistE (negbTE (norm1_neq0 (@normeE _ _))).
+rewrite pitch_perp ?normeE // mulr0 scale0r add0r.
+rewrite point_axis_twist homM.
+rewrite eskewM ?normeE //.
+rewrite -Rz_eskew; congr hom.
+
+rewrite !mulmxBr !mulmx1 e2row.
+rewrite !row3Z mulr0 mulr1.
+rewrite eskewE ?normeE // mulmx_row3_col3 !scale0r. Simp.r. simpl.
+rewrite /w2 e2row !mxE /= expr0n /=. Simp.r.
+rewrite row3Z row3N !row3D. Simp.r.
+rewrite eskewE ?normeE // /w3 e2row !mxE /= expr0n expr1n. Simp.r.
+rewrite !mulmx_row3_col3 !row3Z. Simp.r.
+rewrite !opprD !row3N !row3D. Simp.r. simpl.
+
+rewrite (addrAC 1) -(addrA 1) subrr addr0 mulr1.
+Abort.
+
+End scara_screw.
 
 End scara.

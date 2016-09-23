@@ -227,6 +227,14 @@ Definition Rz a := col_mx3
   (row3 (- sin a) (cos a) 0)
   'e_2%:R.
 
+Lemma RzM a b : Rz a * Rz b = Rz (a + b).
+Proof.
+rewrite {1 2}/Rz e2row -mulmxE !mulmx_col3 !mulmx_row3_col3. Simp.r.
+rewrite !row3Z !row3D. Simp.r. rewrite -e2row; congr col_mx3.
+- by rewrite -cosD sinD (addrC (_ * _)).
+- by rewrite -opprD -sinD [in X in row3 _ X _]addrC -cosD.
+Qed.
+
 Lemma Rz_is_SO a : Rz a \is 'SO[R]_3.
 Proof.
 apply matrix_is_rotation.
@@ -697,6 +705,9 @@ Qed.
 
 Local Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )) (format "'`e^(' a ','  w ')'").
 
+Lemma eskew_v0 a : `e^(a, 0) = 1.
+Proof. by rewrite skew_mx0 emx3a0. Qed.
+
 Lemma unskew_eskew a w : unskew `e^(a, w) = (sin a) *: w.
 Proof.
 rewrite /emx3 !(unskewD,unskewZ,skew_mx2,unskewN,skew_mxK,unskew_cst,scaler0,add0r,subr0).
@@ -705,6 +716,10 @@ Qed.
 
 Lemma tr_eskew a w : `e^(a, w)^T = `e^(a, - w).
 Proof. by rewrite tr_emx3 tr_skew /emx3 skew_mxN. Qed.
+
+Lemma eskewM a b (w : 'rV[R]_3) : norm w = 1 ->
+  `e^(a, w) * `e^(b, w) = `e^(a + b, w).
+Proof. move=> w1; by rewrite emx3M // skew_mx3 w1 expr1n scaleN1r. Qed.
 
 Lemma trace_eskew a u : norm u = 1 -> \tr `e^(a, u) = 1 + 2%:R * cos a.
 Proof.

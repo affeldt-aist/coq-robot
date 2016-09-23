@@ -845,10 +845,28 @@ Definition axis (t : 'M[R]_4) : Line.t R :=
   else
     Line.mk ((norm w)^-2 *: (w *v v)) w.
 
+Lemma point_axis_nolin w : w != 0 -> Line.point (axis \T(0, w)) = 0.
+Proof.
+move=> w0; rewrite /axis ang_of_twistE (negbTE w0) /=.
+by rewrite lin_of_twistE /= crossmulv0 scaler0.
+Qed.
+
 (* [murray] 2.42, p.47 *)
 Definition pitch (t : 'M[R]_4) : R := 
   let w := \w( t ) in let v := \v( t ) in
   (norm w)^-2 *: v *d w. 
+
+Lemma pitch_nolin (w : 'rV[R]_3) : pitch \T(0, w) = 0.
+Proof. by rewrite /pitch ang_of_twistE lin_of_twistE scaler0 dotmul0v. Qed.
+
+(* twist of a revolute joint *)
+Definition rjoint_twist (w u : 'rV[R]_3) := \T(- w *v u, w).
+
+Lemma pitch_perp (w u : 'rV[R]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
+Proof.
+move=> w1; rewrite /pitch ang_of_twistE lin_of_twistE w1 expr1n invr1 scale1r.
+by rewrite {1}crossmulC crossmulvN opprK -dotmul_crossmulA crossmulvv dotmulv0.
+Qed.
 
 (* [murray] 2.44, p.48 *)
 Definition magnitude (t : 'M[R]_4) : R := 
@@ -956,6 +974,13 @@ rewrite addrC.
 rewrite scalerA.
 rewrite /axis ang_of_twistE (negbTE w0) /=.
 by rewrite lin_of_twistE -scalemxAl.
+Qed.
+
+Lemma etwist_Rz a (w : 'rV[R]_3) : w != 0 ->
+  `e$(a, \T(0, w)) = hom `e^(a, w) 0.
+Proof.
+move=> w0; rewrite etwistE (negbTE w0) pitch_nolin mulr0.
+by rewrite  scale0r add0r point_axis_nolin // mul0mx.
 Qed.
 
 End etwist_alt.
