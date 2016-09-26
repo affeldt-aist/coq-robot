@@ -63,16 +63,16 @@ Definition scara_trans := row3
 (* [spong] p. 81, eqn. 3.49 *)
 Section hom_scara.
 
-Definition A1 := hom (Rz theta1) (row3 (a1 * cos theta1) (a1 * sin theta1) 0).
-Definition A2 := hom (Rz theta2) (row3 (a2 * cos theta2) (a2 * sin theta2) 0).
-Definition A3 := hTz d3.
-Definition A4 := hom (Rz theta4) (row3 0 0 d4).
+Definition A10 := hom (Rz theta1) (row3 (a1 * cos theta1) (a1 * sin theta1) 0).
+Definition A21 := hom (Rz theta2) (row3 (a2 * cos theta2) (a2 * sin theta2) 0).
+Definition A32 := hTz d3.
+Definition A43 := hom (Rz theta4) (row3 0 0 d4).
 
-Lemma hom_SCARA_forward : A4 * A3 * A2 * A1 = hom scara_rot scara_trans.
+Lemma hom_SCARA_forward : A43 * A32 * A21 * A10 = hom scara_rot scara_trans.
 Proof.
-rewrite /A4 /A3.
+rewrite /A43 /A32.
 rewrite homM mulr1 mulmx1 row3D. Simp.r.
-rewrite /A2.
+rewrite /A21.
 rewrite homM RzM mulmx_row3_col3 !scale0r !add0r e2row !row3Z row3D. Simp.r.
 rewrite homM RzM addrC (addrC _ theta2) addrA; congr hom.
 rewrite mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
@@ -80,6 +80,34 @@ by rewrite -!mulrA -mulrBr -cosD -mulrDr (addrC (_ * sin theta1)) -sinD.
 Qed.
 
 End hom_scara.
+
+(* TODO: move to dh.v *)
+Lemma hTxRz (a : R) theta :
+  hTx a * hRz theta = hom (Rz theta) (row3 (a * cos theta) (a * sin theta) 0).
+Proof.
+by rewrite homM mul1r addr0 mulmx_row3_col3 2!scale0r !addr0 row3Z mulr0.
+Qed.
+
+Lemma hTzRz (d : R) theta :
+  hTz d * hRz theta = hom (Rz theta) (row3 0 0 d).
+Proof.
+by rewrite homM mul1r mulmx_row3_col3 2!scale0r !(add0r,addr0) e2row row3Z !(mulr0,mulr1).
+Qed.
+
+Section dh_scara.
+
+Definition B10 := hTx a1 * hRz theta1.
+Definition B21 := hTx a2 * hRz theta2.
+Definition B32 := hTz d3.
+Definition B43 := hTz d4 * hRz theta4.
+
+Lemma dh_SCARA_forward : B43 * B32 * B21 * B10 = hom scara_rot scara_trans.
+Proof.
+rewrite -hom_SCARA_forward /B10 hTxRz -/A10 /B21 hTxRz -/A21.
+by rewrite /B32 -/A32 /B43 /A43 hTzRz.
+Qed.
+
+End dh_scara.
 
 (* [murray] example 3.1, p.87 *)
 Section screw_scara.
@@ -89,17 +117,18 @@ Definition g0 := hom 1 (row3 (a1 + a2) 0 d4).
 
 Definition w1 : vector := 'e_2%:R.
 Definition w2 : vector := 'e_2%:R.
-Definition w3 : vector := 'e_2%:R.
+Definition v3 : vector := 'e_2%:R.
+Definition w4 : vector := 'e_2%:R.
 
 (* axis points *)
 Definition q1 : vector := 0.
 Definition q2 : vector := row3 a1 0 0.
-Definition q3 : vector := row3 (a1 + a2) 0 0.
+Definition q4 : vector := row3 (a1 + a2) 0 0.
 
 Definition t1 := rjoint_twist w1 q1.
 Definition t2 := rjoint_twist w2 q2.
-Definition t3 : Twist.t R := Twist.mk 'e_2%:R 0. (* TODO: notation for prismatic joint? *)
-Definition t4 := rjoint_twist w3 q3.
+Definition t3 := pjoint_twist v3.
+Definition t4 := rjoint_twist w4 q4.
 
 Definition g := g0 * `e$(theta4, t4) *
   `e$(Rad.angle_of d3, t3) * `e$(theta2, t2) * `e$(theta1, t1).
@@ -142,13 +171,13 @@ Hypothesis Hd3 : d3 \in Rad.f_codom R.
 Lemma S3 : `e$(Rad.angle_of d3, t3) = hTz d3.
 Proof.
 rewrite etwistE eqxx eskew_v0 Rad.angle_ofK.
-  rewrite e2row row3Z. Simp.r. done.
+  rewrite /hTz /v3 e2row row3Z. by Simp.r.
 exact Hd3.
 Qed.
 
 Lemma S4 : `e$(theta4, t4) = hom (Rz theta4)
   (row3 ((a1 + a2) * (1 - cos theta4)) (- (a1 + a2) * sin theta4) 0).
-Proof. by rewrite /t4 /q3 S2_helper. Qed.
+Proof. by rewrite /t4 /q4 S2_helper. Qed.
 
 Lemma screw_SCARA_forward : g = hom scara_rot scara_trans.
 Proof.

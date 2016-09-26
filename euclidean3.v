@@ -661,6 +661,11 @@ Proof.
 rewrite crossmulC linearD /= opprD; congr (_ + _); by rewrite crossmulC opprK.
 Qed.
 
+Lemma crossmulDr u v w : w *v (u + v) = w *v u + w *v v.
+Proof.
+by rewrite crossmulC crossmulDl opprD crossmulC opprK (crossmulC v) opprK.
+Qed.
+
 Lemma crossmulBl u v w : (u - v) *v w = u *v w - v *v w.
 Proof.
 rewrite crossmulC linearD /= opprD; congr (_ + _);

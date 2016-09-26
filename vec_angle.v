@@ -1,3 +1,4 @@
+
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp
 Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
@@ -732,20 +733,8 @@ Definition skew : rel (Line.t R) := [rel l1 l2 |
   let: (p3, p4) := (Line.point l2, Line.point2 l2) in
   ~~ coplanar p1 p2 p3 p4].
 
-Definition intersects : rel (Line.t R) :=
-  [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
-
 Definition distance_point_line (p : point) l : R :=
   norm ((p - Line.point l) *v (Line.vector l)) / norm (Line.vector l).
-
-Definition distance_between_lines l1 l2 : R :=
-  if intersects l1 l2 then
-    0
-  else if parallel l1 l2 then
-    distance_point_line (Line.point l1) l2
-  else (* skew lines *)               
-    let n := Line.vector l1 *v Line.vector l2 in
-    `| (Line.point l2 - Line.point l1) *d n | / norm n.
 
 Lemma line_point_in l : Line.point l \in (l : pred _).
 Proof. by case: l => p v /=; rewrite inE /= eqxx. Qed.

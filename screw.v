@@ -664,7 +664,55 @@ Variables l1 l2 : R.
 Variable a : angle R.
 Hypothesis a0 : a != 0.
 
-Definition TAB := row3 (- l2 * sin a) (l1 + l2 * cos a) 0.
+Definition TAB := row3 (l1 + l2 * cos a) (l2 * sin a) 0.
+
+Definition w : vector := 'e_2%:R.
+
+Let A_inv := etwist_is_onto_SE_mat_inv a w.
+
+Definition v := ((norm w)^+2 *: TAB) *m A_inv.
+
+Lemma vP : v = row3 ((l1 + l2) * sin a / (2%:R * (1 - cos a))) (- (l1 - l2) / 2%:R) 0 :> vector.
+Proof.
+rewrite /v normeE expr1n scale1r /TAB.
+rewrite /A_inv /etwist_is_onto_SE_mat_inv.
+rewrite mulmxDr mulmxBr.
+rewrite mul_mx_scalar row3Z mulr0.
+rewrite -scalemxAr scalemxAl row3Z mulr0 skew_mxE crossmulE !mxE /=. Simp.r. rewrite /=.
+rewrite -scaleN1r row3Z !mulN1r opprK oppr0 row3D addr0.
+rewrite -scalemxAr scalemxAl expr2 -mulmxE mulmxA -scalemxAl.
+rewrite (skew_mxE (row3 _ _ _)) crossmulE !mxE /=. Simp.r.
+rewrite -scalemxAl skew_mxE crossmulE !mxE /=. Simp.r.
+rewrite row3Z mulr0 row3D addr0.
+case/boolP : (a == pi) => [/eqP ->|api].
+  rewrite cot_half_angle sinpi cospi !(mulr0,addr0,subr0,oppr0,add0r,mul0r,mulrN1).
+  rewrite mulrN subrr.
+  by rewrite mulrC.
+congr row3; last first.
+  rewrite mulrN mulrBl opprB -!addrA addrC !addrA -mulrA subrK.
+  rewrite cot_half_angle' -!mulrA (mulrCA _ l2) mulVr ?mulr1; last first.
+    by rewrite unitfE sin_eq0 negb_or a0 api.
+  rewrite addrC -mulrBr opprD mulrDl mul1r -!addrA (addrCA _ (- l1)) (mulrC _ l2) subrr addr0.
+  by rewrite -mulNr opprB mulrC.
+rewrite mulrN mulrBl opprB -!addrA addrC !addrA -mulrA subrK.
+rewrite -(mulrA _ (cot _ )) -mulrDr.
+rewrite invrM; last 2 first.
+  by rewrite unitfE pnatr_eq0.
+  rewrite unitfE subr_eq0; apply: contra a0.
+  by move/eqP/esym/cos1_angle0/eqP.
+rewrite ![in RHS]mulrA [in RHS]mulrC; congr (_ * _).
+rewrite -[in RHS]mulrA -cot_half_angle.
+rewrite mulrDr addrCA [in RHS]mulrDl (mulrC _ l1); congr (_ + _).
+rewrite mulrCA -mulrDr; congr (_ * _).
+apply/eqP.
+rewrite eq_sym -subr_eq.
+rewrite -{1}(mulr1 (cot (half_angle a))) -mulrBr.
+rewrite cot_half_angle -mulrA mulVr ?mulr1 //.
+  rewrite unitfE subr_eq0; apply: contra a0.
+  by move/eqP/esym/cos1_angle0/eqP.
+Qed.
+
+(*Definition TAB := row3 (- l2 * sin a) (l1 + l2 * cos a) 0.
 
 Definition w : vector := 'e_2%:R.
 
@@ -713,7 +761,7 @@ rewrite mulrAC -{1}(mulr1 (sin a)) -{1}(@divrr _ (1 - cos a)); last first.
   by rewrite unitfE subr_eq0; apply: contra a0 => /eqP/esym/cos1_angle0 ->.
 rewrite mulrA -mulrDl; congr (_ / _).
 by rewrite mulrBr mulr1 subrK.
-Qed.
+Qed.*)
 
 End example.
 End Example.
@@ -861,6 +909,9 @@ Proof. by rewrite /pitch ang_of_twistE lin_of_twistE scaler0 dotmul0v. Qed.
 
 (* twist of a revolute joint *)
 Definition rjoint_twist (w u : 'rV[R]_3) := \T(- w *v u, w).
+
+(* twist of a prismatic joint *)
+Definition pjoint_twist (v : 'rV[R]_3) := \T(v, 0).
 
 Lemma pitch_perp (w u : 'rV[R]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
 Proof.
