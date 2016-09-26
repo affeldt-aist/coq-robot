@@ -57,8 +57,8 @@ Definition interpoint_s l1 l2 := interpoint_param (Line.vector l1) l1 l2.
 
 Definition interpoint_t l1 l2 := interpoint_param (Line.vector l2) l1 l2.
 
-Lemma intersects_interpoint l1 l2 : ~~ parallel l1 l2 ->
-  ~~ skew l1 l2 ->
+(* TODO: clean *)
+Lemma intersects_interpoint l1 l2 : ~~ parallel l1 l2 -> ~~ skew l1 l2 ->
   {p | is_interpoint p l1 l2}.
 Proof.
 move=> l1l2 Hskew.
@@ -73,7 +73,38 @@ set v1 := Line.vector l1.
 set v2 := Line.vector l2.
 move=> l1l2 Hskew.
 rewrite /colinear in l1l2.
-Abort.
+case/boolP : (p1 == p2) => p1p2.
+  exists p1.
+  rewrite /is_interpoint; apply/andP; split.
+    by rewrite inE eqxx orTb.
+  by rewrite (eqP p1p2) inE eqxx orTb.
+exists (p1 + interpoint_t l1 l2 *: v1).
+rewrite /is_interpoint; apply/andP; split.
+  apply/lineP.
+  by exists (interpoint_t l1 l2).
+rewrite /interpoint_t /interpoint_param -/p1 -/p2 -/v1 -/v2.
+rewrite det_col_mx3.
+apply/lineP.
+rewrite -/p2 -/v2.
+exists (interpoint_s l1 l2).
+rewrite /interpoint_s /interpoint_param -/p1 -/p2 -/v1 -/v2.
+rewrite det_col_mx3.
+apply/eqP.
+rewrite -subr_eq -addrA eq_sym addrC -subr_eq.
+rewrite 2!(mulrC _ (_^-2)) -2!scalerA -scalerBr.
+set c := v1 *v v2.
+rewrite dotmulC.
+rewrite (dotmul_crossmulA).
+rewrite (dotmulC _ c).
+rewrite (dotmul_crossmulA).
+rewrite -double_crossmul.
+rewrite crossmulC.
+rewrite double_crossmul.
+rewrite dotmulC.
+rewrite -{2}(opprB p1 p2) dotmulNv (eqP Hskew) oppr0 scale0r add0r opprK.
+rewrite dotmulvv scalerA mulVr ?scale1r //.
+by rewrite unitfE sqrf_eq0 norm_eq0.
+Qed.
 
 Lemma interpointP p l1 l2 : ~~ parallel l1 l2 -> is_interpoint p l1 l2 ->
   let s := interpoint_s l1 l2 in let t := interpoint_t l1 l2 in
@@ -84,27 +115,26 @@ Proof.
 move=> ?.
 case/andP => /lineP[t' Hs] /lineP[s' Ht] s t.
 move=> p1 p2 v1 v2.
-
+have H (a b va vb : 'rV[R]_3) (k l : R) :
+  a + k *: va = b + l *: vb -> k *: (va *v vb) = (b - a) *v vb.
+  clear.
+  move=> /(congr1 (fun x => x - a)).
+  rewrite addrAC subrr add0r addrAC => /(congr1 (fun x => x *v vb)).
+  by rewrite crossmulZv crossmulDl crossmulZv crossmulvv scaler0 addr0.
 have Ht' : t' = interpoint_t l1 l2.
   have : t' *: (v1 *v v2) = (p2 - p1) *v v2.
-    move: (Ht); rewrite Hs -/p1 -/p2 -/v1 -/v2.
-    clear s t.
-    move=> /(congr1 (fun x => x - p1)).
-    rewrite addrAC subrr add0r addrAC => /(congr1 (fun x => x *v v2)).
-    by rewrite crossmulZv crossmulDl crossmulZv crossmulvv scaler0 addr0.
+    by rewrite (H p1 p2 _ _ _ s') // -Hs -Ht.
   move/(congr1 (fun x => x *d (v1 *v v2))).
   rewrite dotmulZv dotmulvv.
   move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
   rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
   by rewrite -dotmul_crossmulA crossmul_triple.
-
 have Hs' : s' = interpoint_s l1 l2.
   have : s' *: (v1 *v v2) = (p2 - p1) *v v1.
-    move: (Ht); rewrite Hs -/p1 -/p2 -/v1 -/v2 => /(congr1 (fun x => x - p2)).
-    rewrite [in X in _ = X -> _]addrAC subrr add0r addrAC => /(congr1 (fun x => x *v v1)).
-    rewrite [in X in _ = X -> _]crossmulZv crossmulDl crossmulZv crossmulvv scaler0 addr0.
-    rewrite -(opprB p2 p1) (crossmulC v2) scalerN => /eqP.
-    by rewrite crossmulNv eqr_opp => /eqP.
+    move: (H p2 p1 v2 v1 s' t').
+    rewrite -Hs -Ht => /(_ erefl).
+    rewrite crossmulC scalerN -opprB crossmulNv => /eqP.
+    by rewrite eqr_opp => /eqP.
   move/(congr1 (fun x => x *d (v1 *v v2))).
   rewrite dotmulZv dotmulvv.
   move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
