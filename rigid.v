@@ -367,11 +367,10 @@ apply (@NOFrame.mk _ e1 e2 e3).
   by rewrite (NOFrame.jdotk (can_noframe R)).
   rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O //.
   by rewrite (NOFrame.idotk (can_noframe R)).
-have -> : iso_sgn f = frame_sgn f'.
-  rewrite /frame_sgn dmap_iso_sgnP /=.
-  by rewrite (Frame.jcrossk (can_frame _)) dotmulvv norm_delta_mx expr1n mulr1.
+have -> : iso_sgn f = NOFrame.sgn f'.
+  by rewrite /NOFrame.sgn dmap_iso_sgnP /= -/(NOFrame.sgn _) (Frame.P (can_frame R)) mulr1.
 have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
-         frame_sgn f' *: vtvec (f`* ((u *v v) `@ p)) :> vector.
+         NOFrame.sgn f' *: vtvec (f`* ((u *v v) `@ p)) :> vector.
   rewrite /=.
   rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //.
   rewrite /=.

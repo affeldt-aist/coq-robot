@@ -1,4 +1,3 @@
-
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp
 Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
@@ -32,6 +31,10 @@ Local Open Scope ring_scope.
     axialcomp, normalcomp
     (easy definitions to construct frames out of already available points/vectors)
  4. section line
+ 5. section line_line_intersection
+ 6. section line_distance
+      distance_point_line
+      distance_between_lines
 *)
 
 Lemma norm1_cossin (R : rcfType) (v :'rV[R]_2) :
@@ -705,15 +708,18 @@ Record t := mk {
   vector :> 'rV[R]_3
 }.
 Definition point2 (l : t) := point l + vector l.
+Lemma vectorE l : vector l = point2 l - point l.
+Proof. by rewrite /point2 addrAC subrr add0r. Qed.
 End line_def.
 End Line.
 
-(* equation of a line passing through two points p1 p2 *)
+Notation "'\pt(' l ')'" := (Line.point l) (at level 3, format "'\pt(' l ')'").
+Notation "'\pt2(' l ')'" := (Line.point2 l) (at level 3, format "'\pt2(' l ')'").
+Notation "'\vec(' l ')'" := (Line.vector l) (at level 3, format "'\vec(' l ')'").
+
 Coercion line_pred (R : rcfType) (l : Line.t R) : pred 'rV[R]_3 :=
-  let p1 := Line.point l in
-  [pred p : 'rV[R]_3 |
-     (p == p1) ||
-     ((Line.vector l != 0) && colinear (Line.vector l) (p - p1))].
+  [pred p | (p == \pt( l )) ||
+    (\vec( l ) != 0) && colinear \vec( l ) (p - \pt( l ))].
 
 Section line.
 
@@ -722,49 +728,28 @@ Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 Implicit Types l : Line.t R.
 
-Definition coplanar (p1 p2 p3 p4 : point) : bool :=
-  (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
-
-Definition parallel : rel (Line.t R) := [rel l1 l2 |
-  colinear (Line.vector l1) (Line.vector l2)].
-
-Definition skew : rel (Line.t R) := [rel l1 l2 |
-  let: (p1, p2) := (Line.point l1, Line.point2 l1) in
-  let: (p3, p4) := (Line.point l2, Line.point2 l2) in
-  ~~ coplanar p1 p2 p3 p4].
-
-Definition distance_point_line (p : point) l : R :=
-  norm ((p - Line.point l) *v (Line.vector l)) / norm (Line.vector l).
-
-Lemma line_point_in l : Line.point l \in (l : pred _).
+Lemma line_point_in l : \pt( l ) \in (l : pred _).
 Proof. by case: l => p v /=; rewrite inE /= eqxx. Qed.
 
 Lemma lineP p l :
-  reflect (exists k', p = Line.point l + k' *: Line.vector l)
-          (p \in (l : pred _)).
+  reflect (exists k', p = \pt( l ) + k' *: \vec( l)) (p \in (l : pred _)).
 Proof.
-apply (iffP idP) => [|].
+apply (iffP idP) => [|[k' ->]].
   rewrite inE.
-  case/orP => [/eqP pl|].
-    exists 0; by rewrite scale0r addr0.
-  case/andP => l0 /colinearP[|].
-    rewrite subr_eq0 => /eqP ->.
-    exists 0; by rewrite scale0r addr0.
-  case=> pl [k [Hk1 Hk2]].
+  case/orP => [/eqP pl|]; first by exists 0; rewrite scale0r addr0.
+  case/andP => l0 /colinearP[|[pl [k [Hk1 Hk2]]]].
+    rewrite subr_eq0 => /eqP ->; exists 0; by rewrite scale0r addr0.
   have k0 : k != 0 by rewrite -normr_eq0 Hk1 mulf_neq0 // ?invr_eq0 norm_eq0.
   exists k^-1.
   by rewrite Hk2 scalerA mulVr ?unitfE // scale1r addrCA subrr addr0.
-case=> k' ->.
 rewrite inE.
-case/boolP : (Line.vector l == 0) => [/eqP ->|l0 /=].
+case/boolP : (\vec( l ) == 0) => [/eqP ->|l0 /=].
   by rewrite scaler0 addr0 eqxx.
 by rewrite addrAC subrr add0r colinearvZ colinear_refl 2!orbT.
 Qed.
 
-Lemma mem_add_line l (p : point) (v : vector) :
-  Line.vector l != 0 ->
-  colinear v (Line.vector l) ->
-  (p + v \in (l : pred _)) = (p \in (l : pred _)).
+Lemma mem_add_line l (p : point) (v : vector) : \vec( l ) != 0 ->
+  colinear v \vec( l ) -> p + v \in (l : pred _) = (p \in (l : pred _)).
 Proof.
 move=> l0 vl.
 apply/lineP/idP => [[] x /eqP|pl].
@@ -777,4 +762,164 @@ case/lineP : pl => k' ->.
 exists (k' + k); by rewrite -addrA -scalerDl.
 Qed.
 
+Definition parallel : rel (Line.t R) :=
+  [rel l1 l2 | colinear \vec( l1 ) \vec( l2 )].
+
+(* skew lines *)
+
+Definition coplanar (p1 p2 p3 p4 : point) : bool :=
+  (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
+
+Definition skew : rel (Line.t R) := [rel l1 l2 |
+  ~~ coplanar \pt( l1 ) \pt2( l1 ) \pt( l2 ) \pt2( l2) ].
+
+Lemma skewE l1 l2 :
+  skew l1 l2 = ~~ coplanar \pt( l1 ) \pt2( l1 ) \pt( l2 ) \pt2( l2).
+Proof. by []. Qed.
+
 End line.
+
+Section line_line_intersection.
+
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+Implicit Types l : Line.t R.
+
+Definition intersects : rel (Line.t R) :=
+  [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
+
+Definition is_interpoint p l1 l2 :=
+  (p \in (l1 : pred _)) && (p \in (l2 : pred _)).
+
+Definition interpoint_param x l1 l2 :=
+  let v1 := \vec( l1 ) in let v2 := \vec( l2 ) in
+  \det (col_mx3 (\pt( l2 ) - \pt( l1 )) x (v1 *v v2)) / norm (v1 *v v2) ^+ 2.
+
+Lemma interpoint_param0 l1 l2 v : \pt( l1 ) = \pt( l2 ) ->
+  interpoint_param v l1 l2 = 0.
+Proof.
+move=> p1p2.
+by rewrite /interpoint_param p1p2 subrr -crossmul_triple dotmul0v mul0r.
+Qed.
+
+Definition interpoint_s l1 l2 := interpoint_param \vec( l1 ) l1 l2.
+
+Definition interpoint_t l1 l2 := interpoint_param \vec( l2 ) l1 l2.
+
+Lemma interparamP l1 l2 : intersects l1 l2 ->
+  let v1 := \vec( l1 ) in let v2 := \vec( l2 ) in
+  \pt( l1 ) + interpoint_t l1 l2 *: v1 = \pt( l2 ) + interpoint_s l1 l2 *: v2.
+Proof.
+move=> Hinter v1 v2.
+rewrite /interpoint_t /interpoint_s /interpoint_param  -/v1 -/v2.
+do 2 rewrite -crossmul_triple (dot_crossmulC (\pt( l2) - \pt( l1 ))).
+apply/eqP; set v1v2 := v1 *v v2.
+rewrite -subr_eq -addrA eq_sym addrC -subr_eq.
+rewrite 2!(mulrC _ (_^-2)) -2!scalerA -scalerBr.
+rewrite dotmulC dot_crossmulC (dotmulC _ v1v2) (dot_crossmulC).
+rewrite -double_crossmul.
+rewrite crossmulC double_crossmul dotmulC -{2}(opprB _ \pt( l2 )) dotmulNv.
+case/andP: Hinter.
+rewrite skewE negbK /coplanar -2!Line.vectorE => /eqP -> ?.
+rewrite oppr0 scale0r add0r opprK dotmulvv scalerA mulVr ?scale1r //.
+by rewrite unitfE sqrf_eq0 norm_eq0.
+Qed.
+
+Lemma intersects_interpoint l1 l2 : intersects l1 l2 ->
+  {p | is_interpoint p l1 l2 /\
+   p = \pt( l1 ) + interpoint_t l1 l2 *: \vec( l1 ) /\
+   p = \pt( l2 ) + interpoint_s l1 l2 *: \vec( l2 )}.
+Proof.
+move=> Hinter.
+case/boolP : (\pt( l1 ) == \pt( l2 )) => [/eqP|]p1p2.
+  exists \pt( l1 ); split.
+    rewrite /is_interpoint; apply/andP; split; by [
+      rewrite inE eqxx !(orTb,orbT) | rewrite inE p1p2 eqxx orTb].
+  rewrite /interpoint_t /interpoint_s interpoint_param0 //.
+  by rewrite interpoint_param0 // 2!scale0r 2!addr0.
+exists (\pt( l1) + interpoint_t l1 l2 *: \vec( l1 )).
+split; last first.
+  split=> //; exact: interparamP.
+rewrite /is_interpoint; apply/andP; split.
+  apply/lineP; by exists (interpoint_t l1 l2).
+apply/lineP; eexists; exact: interparamP.
+Qed.
+
+Lemma interpoint_intersects l1 l2 : {p | is_interpoint p l1 l2} ->
+  ~~ skew l1 l2.
+Proof.
+case=> p; rewrite /is_interpoint => /andP[H1 H2].
+rewrite skewE negbK /coplanar -2!Line.vectorE.
+case/lineP : (H1) => k1 /eqP; rewrite -subr_eq => /eqP <-.
+case/lineP : (H2) => k2 /eqP; rewrite -subr_eq => /eqP <-.
+rewrite opprB -addrA addrC addrA subrK dotmulDl !(dotmulNv,dotmulZv).
+rewrite dot_crossmulC 2!dotmul_crossmul_shift 2!crossmulvv.
+by rewrite !(dotmul0v,dotmulv0,mulr0,oppr0,addr0).
+Qed.
+
+Lemma interpointE p l1 l2 : ~~ parallel l1 l2 -> is_interpoint p l1 l2 ->
+  let s := interpoint_s l1 l2 in let t := interpoint_t l1 l2 in
+  let v1 := \vec( l1 ) in let v2 := \vec( l2 ) in
+  \pt( l1 ) + t *: v1 = p /\ \pt( l2 ) + s *: v2 = p.
+Proof.
+move=> ?.
+case/andP => /lineP[t' Hs] /lineP[s' Ht] s t.
+move=> v1 v2.
+have H (a b va vb : 'rV[R]_3) (k l : R) :
+  a + k *: va = b + l *: vb -> k *: (va *v vb) = (b - a) *v vb.
+  clear.
+  move=> /(congr1 (fun x => x - a)).
+  rewrite addrAC subrr add0r addrAC => /(congr1 (fun x => x *v vb)).
+  by rewrite crossmulZv crossmulDl crossmulZv crossmulvv scaler0 addr0.
+have Ht' : t' = interpoint_t l1 l2.
+  have : t' *: (v1 *v v2) = (\pt( l2 ) - \pt( l1 )) *v v2.
+    by rewrite (H \pt( l1 ) \pt( l2 ) _ _ _ s') // -Hs -Ht.
+  move/(congr1 (fun x => x *d (v1 *v v2))).
+  rewrite dotmulZv dotmulvv.
+  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
+  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
+  by rewrite -dot_crossmulC crossmul_triple.
+have Hs' : s' = interpoint_s l1 l2.
+  have : s' *: (v1 *v v2) = (\pt( l2) - \pt( l1 )) *v v1.
+    move: (H \pt( l2 ) \pt( l1 ) v2 v1 s' t').
+    rewrite -Hs -Ht => /(_ erefl).
+    rewrite crossmulC scalerN -opprB crossmulNv => /eqP.
+    by rewrite eqr_opp => /eqP.
+  move/(congr1 (fun x => x *d (v1 *v v2))).
+  rewrite dotmulZv dotmulvv.
+  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
+  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
+  by rewrite -dot_crossmulC crossmul_triple.
+by rewrite /t /s -Ht' -Hs'.
+Qed.
+
+Lemma interpoint_unique p q l1 l2 : ~~ parallel l1 l2 ->
+  is_interpoint p l1 l2 -> is_interpoint q l1 l2 -> p = q.
+Proof.
+by move=> l1l2 /interpointE => /(_ l1l2) [<- _] /interpointE => /(_ l1l2) [<- _].
+Qed.
+
+Definition intersection l1 l2 : option point :=
+  if ~~ intersects l1 l2 then None
+  else Some (\pt( l1 ) + interpoint_t l1 l2 *: \vec( l1 )).
+
+End line_line_intersection.
+
+Section distance_line.
+
+Variable R : rcfType.
+Let point := 'rV[R]_3.
+
+Definition distance_point_line (p : point) l : R :=
+  norm ((p - \pt( l )) *v \vec( l )) / norm \vec( l ).
+
+Definition distance_between_lines (l1 l2 : Line.t R) : R :=
+  if intersects l1 l2 then
+    0
+  else if parallel l1 l2 then
+    distance_point_line \pt( l1 ) l2
+  else (* skew lines *)
+    let n := \vec( l1 ) *v \vec( l2 ) in
+    `| (\pt( l2 ) - \pt( l1 )) *d n | / norm n.
+
+End distance_line.

@@ -504,8 +504,8 @@ case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
   rewrite -ab iMi -cd => /(_ erefl erefl erefl) => HM.
   move: (rotation_det MSO).
   rewrite HM 2!det_mulmx det_Rx' detV -crossmul_triple.
-  move: (Frame.P f); rewrite /frame_sgn -/j -/k => -> /eqP.
-  by rewrite invr1 mulr1 mul1r -subr_eq0 -opprD eqr_oppLR oppr0 -(natrD _ 1 1) pnatr_eq0.
+  rewrite -/(NOFrame.sgn f) (Frame.P f) invr1 mulr1 mul1r => /eqP.
+  by rewrite -subr_eq0 -opprD eqr_oppLR oppr0 -(natrD _ 1 1) pnatr_eq0.
 Qed.
 
 Definition vaxis_of_SO M :=
@@ -733,9 +733,9 @@ Qed.
 (* table 1.1 of [springer] 
    'equivalent rotation matrices for various representations of orientation'
    angle-axis angle a, vector u *)
-Lemma eskewE a u : norm u = 1 ->
+Definition angle_axis_rot a u :=
   let va := 1 - cos a in let ca := cos a in let sa := sin a in
-  `e^(a, u) = col_mx3
+  col_mx3
   (row3 (u``_0 ^+2 * va + ca)
         (u``_0 * u``_1 * va + u``_2%:R * sa)
         (u``_0 * u``_2%:R * va - u``_1 * sa))
@@ -745,6 +745,10 @@ Lemma eskewE a u : norm u = 1 ->
   (row3 (u``_0 * u``_2%:R * va + u``_1 * sa)
         (u``_1 * u``_2%:R * va - u``_0 * sa)
         (u``_2%:R ^+2 * va + ca)).
+
+Lemma eskewE a u : norm u = 1 ->
+  let va := 1 - cos a in let ca := cos a in let sa := sin a in
+  `e^(a, u) = angle_axis_rot a u.
 Proof.
 move=> w1 va ca sa; apply/matrix3P.
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
@@ -817,7 +821,7 @@ Abort.
 
 Lemma Rz_eskew a : Rz a = `e^(a, 'e_2%:R).
 Proof.
-rewrite /Rz eskewE ?norm_delta_mx //.
+rewrite /Rz eskewE /angle_axis_rot ?norm_delta_mx //.
 rewrite !mxE /= expr0n /=. Simp.r.
 by rewrite expr1n mul1r subrK -e2row.
 Qed.
@@ -1466,3 +1470,33 @@ by rewrite /w /angle_axis_of_rot /= aaxis_of.
 Qed.
 
 End angle_axis_representation.
+
+Section euler_angles.
+
+Variable R : rcfType.
+
+Definition Rxyz (a b c : angle R) := Rx c * Ry b * Rz a.
+
+Definition euler_angles_rot (a b c : angle R) :=
+  let ca := cos a in let cb := cos b in let cc := cos c in
+  let sa := sin a in let sb := sin b in let sc := sin c in
+  col_mx3
+  (row3 (ca * cb) (sa * cb) (- sb))
+  (row3 (ca * sb * sc - sa * cc) (sa * sb * sc + ca * cc) (cb * sc))
+  (row3 (ca * sb * cc + sa * sc) (sa * sb * cc - ca * sc) (cb * cc)).
+
+Lemma euler_angles_rotE a b c : Rxyz a b c = euler_angles_rot a b c.
+Proof.
+rewrite /Rxyz.
+apply/matrix3P; rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
+by rewrite mulrC.
+by rewrite mulrC.
+by rewrite mulrAC -mulrA mulrC (mulrC (cos c)).
+by rewrite mulrC (mulrC (sin c)) mulrA (mulrC (cos c)).
+by rewrite mulrC.
+by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
+by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
+by rewrite mulrC.
+Qed.
+
+End euler_angles.

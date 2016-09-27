@@ -119,7 +119,7 @@ Lemma mulqA : associative mulq.
 Proof.
 move=> [a a'] [b b'] [c c']; congr mkQuat => /=.
 - rewrite mulrDr mulrDl mulrA -!addrA; congr (_ + _).
-  rewrite mulrN !dotmulDr !dotmulDl !opprD !addrA dotmul_crossmulA; congr (_ + _).
+  rewrite mulrN !dotmulDr !dotmulDl !opprD !addrA dot_crossmulC; congr (_ + _).
   rewrite addrC addrA; congr (_ + _ + _).
   by rewrite mulrC dotmulvZ mulrN.
   by rewrite dotmulZv.
@@ -274,9 +274,9 @@ Proof.
 apply/eqP; rewrite eq_quat; apply/andP; split; apply/eqP.
   rewrite [in LHS]/= scaleqE /=.
   rewrite !(mul0r,mulr0,addr0) scale0r !add0r !dotmulDl.
-  rewrite dotmulZv dotmulvv normeE expr1n mulr1 dotmulC dotmul_crossmulA crossmulvv dotmul0v addr0.
-  rewrite subrr add0r dotmulZv dotmulvv normeE expr1n mulr1 dotmulC dotmul_crossmulA crossmulvv.
-  rewrite dotmul0v addr0 dotmulZv dotmulvv normeE expr1n mulr1 opprD addrA dotmulC dotmul_crossmulA.
+  rewrite dotmulZv dotmulvv normeE expr1n mulr1 dotmulC dot_crossmulC crossmulvv dotmul0v addr0.
+  rewrite subrr add0r dotmulZv dotmulvv normeE expr1n mulr1 dotmulC dot_crossmulC crossmulvv.
+  rewrite dotmul0v addr0 dotmulZv dotmulvv normeE expr1n mulr1 opprD addrA dotmulC dot_crossmulC.
   rewrite crossmulvv dotmul0v subr0 -opprD mulrN mulNr opprK -mulr2n -(mulr_natl (a`0)) mulrA.
   by rewrite div1r mulVr ?mul1r // unitfE pnatr_eq0.
 rewrite /=.
@@ -545,7 +545,7 @@ Proof.
 case: a => a0 a1 /=.
 rewrite /quat_rot /= /conjq /= mulqE /mulq /=.
 rewrite mulr0 scale0r addr0 add0r; congr mkQuat.
-  rewrite dotmulvN opprK dotmulDl (dotmulC (_ *v _) a1) dotmul_crossmulA.
+  rewrite dotmulvN opprK dotmulDl (dotmulC (_ *v _) a1) dot_crossmulC.
   by rewrite crossmulvv dotmul0v addr0 dotmulZv mulrC mulrN dotmulC addrC subrr.
 rewrite scalerDr scalerA -expr2 addrCA scalerBl -!addrA; congr (_ + _).
 rewrite [in X in _ + X = _]linearN /= (crossmulC _ a1) linearD /= opprK.

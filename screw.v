@@ -785,13 +785,13 @@ Let vector := 'rV[R]_3.
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
 Definition screw_motion (s : Screw.t R) (p : point) :=
   let: (l, a, h) := (Screw.l s, Screw.a s, Screw.h s) in
-  let (p0, w) := (Line.point l, Line.vector l) in
+  let (p0, w) := (\pt( l ), \vec( l )) in
   p0 + (p - p0) *m `e^(a, w) + (h * Rad.f a) *: w.
 
 (* the rbt given by a screw *)
 Definition hom_screw_motion s : 'M[R]__ :=
   let l := Screw.l s in let a := Screw.a s in let h := Screw.h s in
-  let q := Line.point l in let w := Line.vector l in
+  let q := \pt( l ) in let w := \vec( l ) in
   hom (`e^(a, w)) (q *m (1 - `e^(a, w)) + (h * Rad.f a) *: w).
 
 Lemma hom_screwa0 s : Screw.a s = 0 -> hom_screw_motion s = hom 1 0.
@@ -801,12 +801,12 @@ rewrite /hom_screw_motion a0 emx30M subrr mulmx0 add0r.
 rewrite (_ : Rad.f 0 = 0) ?mulr0 ?scale0r //; by apply/eqP; rewrite Rad.f0.
 Qed.
 
-Lemma hom_screww0 s : Line.vector (Screw.l s) = 0 -> hom_screw_motion s = hom 1 0.
+Lemma hom_screww0 s : \vec( Screw.l s ) = 0 -> hom_screw_motion s = hom 1 0.
 Proof. move=> w0; by rewrite /hom_screw_motion w0 skew_mx0 emx3a0 subrr mulmx0 add0r scaler0. Qed.
 
-Lemma hom_screwE s (p : point) (w1 : norm (Line.vector (Screw.l s)) = 1) :
+Lemma hom_screwE s (p : point) (w1 : norm \vec( Screw.l s) = 1) :
   let l := Screw.l s in let a := Screw.a s in let h := Screw.h s in
-  let q := Line.point l in let w := Line.vector l in
+  let q := \pt( l ) in let w := \vec( l ) in
   SE.ap_point (SE.mk (q *m (1 - `e^(a, w)) + (h * Rad.f a) *: w)
                      (eskew_is_SO a w1)) p = screw_motion s p.
 Proof.
@@ -825,7 +825,7 @@ Qed.
 
 Lemma hom_screw_motion_etwist s :
   let: (l, a, h) := (Screw.l s, Screw.a s, Screw.h s) in
-  let (q, w) := (Line.point l, Line.vector l) in
+  let (q, w) := (\pt( l ), \vec( l )) in
   let v := - w *v q + h *: w in
   hom_screw_motion s = `e$(a, \T(v, w)) :> 'M_4.
 Proof.
@@ -833,8 +833,8 @@ rewrite /=.
 set l := Screw.l s.
 set a := Screw.a s.
 set h := Screw.h s.
-set q := Line.point l.
-set w := Line.vector l.
+set q := \pt( l ).
+set w := \vec( l ).
 set v := _ + _.
 rewrite /etwist /hom_twist.
 case: ifPn => [/eqP|]; rewrite ang_of_twistE => w0.
@@ -893,7 +893,7 @@ Definition axis (t : 'M[R]_4) : Line.t R :=
   else
     Line.mk ((norm w)^-2 *: (w *v v)) w.
 
-Lemma point_axis_nolin w : w != 0 -> Line.point (axis \T(0, w)) = 0.
+Lemma point_axis_nolin w : w != 0 -> \pt( axis \T(0, w) ) = 0.
 Proof.
 move=> w0; rewrite /axis ang_of_twistE (negbTE w0) /=.
 by rewrite lin_of_twistE /= crossmulv0 scaler0.
@@ -916,7 +916,7 @@ Definition pjoint_twist (v : 'rV[R]_3) := \T(v, 0).
 Lemma pitch_perp (w u : 'rV[R]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
 Proof.
 move=> w1; rewrite /pitch ang_of_twistE lin_of_twistE w1 expr1n invr1 scale1r.
-by rewrite {1}crossmulC crossmulvN opprK -dotmul_crossmulA crossmulvv dotmulv0.
+by rewrite {1}crossmulC crossmulvN opprK -dot_crossmulC crossmulvv dotmulv0.
 Qed.
 
 (* [murray] 2.44, p.48 *)
@@ -985,8 +985,8 @@ Proof.
 move=> a.
 set l := Screw.l s.
 set h := Screw.h s.
-set w := Line.vector l.
-set q := Line.point l.
+set w := \vec( l ).
+set q := \pt( l ).
 set v := - w *v q + h *: w.
 case/boolP : (w == 0) => [/eqP|]w0.
   exists \T(v, 0).
@@ -1009,7 +1009,7 @@ Lemma etwistE a (v w : 'rV[R]_3) :
   `e$(a , \T(v, w)) =
   hom (`e^(a, w)) (if w == 0 then (Rad.f a) *: v else
                   (Rad.f a * pitch \T(v, w)) *:  w +
-                    Line.point (axis \T(v, w)) *m (1 - `e^(a, w))).
+                    \pt( axis \T(v, w) ) *m (1 - `e^(a, w))).
 Proof.
 rewrite /etwist /hom_twist ang_of_twistE; case: ifPn => [/eqP ->|w0].
   by rewrite lin_of_twistE skew_mx0 emx3a0.

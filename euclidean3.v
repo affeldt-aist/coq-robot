@@ -700,23 +700,23 @@ rewrite -col_mx3_perm_01 xrowE det_mulmx det_perm /= odd_tperm /=.
 by rewrite expr1 mulrA mulrNN 2!mul1r -crossmul_triple.
 Qed.
 
-Lemma dotmul_crossmulA u v x : u *d (v *v x) = (u *v v) *d x.
+Lemma dot_crossmulC u v x : u *d (v *v x) = (u *v v) *d x.
 Proof. by rewrite dotmul_crossmul_shift dotmulC. Qed.
 
-Lemma dotmul_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
-Proof. do 2 rewrite dotmul_crossmulA; by rewrite crossmulNv crossmulC. Qed.
+Lemma dot_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
+Proof. do 2 rewrite dot_crossmulC; by rewrite crossmulNv crossmulC. Qed.
 
-Lemma det_col_mx3 u v x : \det (col_mx3 u v x) = (u *v v) *d x.
-Proof. by rewrite -crossmul_triple dotmul_crossmulA. Qed.
+(*Lemma det_col_mx3 u v x : \det (col_mx3 u v x) = (u *v v) *d x.
+Proof. by rewrite -crossmul_triple dotmul_crossmulA. Qed.*)
 
 Lemma det_crossmul_dotmul M u v x :
   (\det M *: (u *v v)) *d x = (((u *m M) *v (v *m M)) *m M^T) *d x.
 Proof.
 transitivity (\det M * \det (col_mx3 u v x)).
-  by rewrite dotmulZv -crossmul_triple dotmul_crossmulA.
+  by rewrite dotmulZv -dot_crossmulC crossmul_triple.
 transitivity (\det (col_mx3 (u *m M) (v *m M) (x *m M))).
   by rewrite mulrC -det_mulmx mulmx_col3.
-by rewrite det_col_mx3 dotmul_trmx.
+by rewrite -crossmul_triple dot_crossmulC dotmul_trmx.
 Qed.
 
 Lemma mulmx_crossmul' M u v : \det M *: (u *v v) = ((u *m M) *v (v *m M)) *m M^T.
@@ -751,8 +751,8 @@ Qed.
 
 Lemma dotmul_crossmul2 u v w : (u *v v) *v (u *v w) = (u *d (v *v w)) *: u.
 Proof.
-by rewrite double_crossmul (dotmulC _ u) dotmul_crossmulA crossmulvv dotmul0v
-  scale0r subr0 -dotmul_crossmulA.
+rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC crossmulvv.
+by rewrite dotmul0v scale0r subr0.
 Qed.
 
 Lemma jacobi u v w : u *v (v *v w) + v *v (w *v u) + w *v (u *v v) = 0.
@@ -1339,11 +1339,10 @@ move=> ni nj xy0 zxy0 /=.
 rewrite rotationE; apply/andP; split.
   apply matrix_is_orthogonal => //.
   by rewrite zxy0 norm_crossmul_normal.
-  by rewrite zxy0 dotmul_crossmulA crossmulvv dotmul0v.
-  by rewrite zxy0 dotmul_crossmulCA crossmulvv dotmulv0.
-rewrite (col_mx3_rowE M) det_col_mx3 zxy0 dotmul_crossmulA.
-rewrite crossmulC double_crossmul xy0 scale0r add0r opprK dotmulvv.
-by rewrite ni expr1n scale1r dotmulvv nj expr1n.
+  by rewrite zxy0 dot_crossmulC crossmulvv dotmul0v.
+  by rewrite zxy0 dot_crossmulCA crossmulvv dotmulv0.
+rewrite (col_mx3_rowE M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
+by rewrite scale1r (dotmulC (row 1 M)) xy0 scale0r subr0 dotmulvv ni expr1n.
 Qed.
 
 Section properties_of_canonical_vectors.
@@ -1375,7 +1374,6 @@ Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[R]__.
 Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 
 End properties_of_canonical_vectors.
-
 
 Section normalize.
 

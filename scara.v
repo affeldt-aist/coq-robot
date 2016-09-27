@@ -142,7 +142,7 @@ Qed.
 
 (* TODO: generalize *)
 Lemma point_axis_twist (d : R) :
-  Line.point (axis \T((- 'e_2%:R *v row3 d 0 0), 'e_2%:R)) = row3 d 0 0.
+  \pt( axis \T((- 'e_2%:R *v row3 d 0 0), 'e_2%:R) ) = row3 d 0 0.
 Proof.
 rewrite {1}/axis ang_of_twistE (negbTE (norm1_neq0 (normeE _ _))) /=.
 rewrite normeE expr1n invr1 scale1r lin_of_twistE crossmulNv crossmulvN.

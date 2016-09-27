@@ -27,138 +27,6 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B))
  (A at next level, at level 8,
  format "u  _|_  A , B ").
 
-Section line_line_intersection.
-
-Variable R : rcfType.
-Let point := 'rV[R]_3.
-Implicit Types l : Line.t R.
-
-Definition intersects : rel (Line.t R) :=
-  [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
-
-Definition distance_between_lines l1 l2 : R :=
-  if intersects l1 l2 then
-    0
-  else if parallel l1 l2 then
-    distance_point_line (Line.point l1) l2
-  else (* skew lines *)
-    let n := Line.vector l1 *v Line.vector l2 in
-    `| (Line.point l2 - Line.point l1) *d n | / norm n.
-
-Definition is_interpoint p l1 l2 :=
-  (p \in (l1 : pred _)) && (p \in (l2 : pred _)).
-
-Definition interpoint_param x l1 l2 :=
-  let p1 := Line.point l1 in let p2 := Line.point l2 in
-  let v1 := Line.vector l1 in let v2 := Line.vector l2 in
-  \det (col_mx3 (p2 - p1) x (v1 *v v2)) / norm (v1 *v v2) ^+ 2. 
-
-Definition interpoint_s l1 l2 := interpoint_param (Line.vector l1) l1 l2.
-
-Definition interpoint_t l1 l2 := interpoint_param (Line.vector l2) l1 l2.
-
-(* TODO: clean *)
-Lemma intersects_interpoint l1 l2 : ~~ parallel l1 l2 -> ~~ skew l1 l2 ->
-  {p | is_interpoint p l1 l2}.
-Proof.
-move=> l1l2 Hskew.
-rewrite /parallel /= in l1l2.
-move: Hskew.
-rewrite /skew /= negbK /coplanar.
-rewrite /Line.point2 addrAC subrr add0r addrAC subrr add0r => Hskew.
-move: l1l2 Hskew.
-set p1 := Line.point l1.
-set p2 := Line.point l2.
-set v1 := Line.vector l1.
-set v2 := Line.vector l2.
-move=> l1l2 Hskew.
-rewrite /colinear in l1l2.
-case/boolP : (p1 == p2) => p1p2.
-  exists p1.
-  rewrite /is_interpoint; apply/andP; split.
-    by rewrite inE eqxx orTb.
-  by rewrite (eqP p1p2) inE eqxx orTb.
-exists (p1 + interpoint_t l1 l2 *: v1).
-rewrite /is_interpoint; apply/andP; split.
-  apply/lineP.
-  by exists (interpoint_t l1 l2).
-rewrite /interpoint_t /interpoint_param -/p1 -/p2 -/v1 -/v2.
-rewrite det_col_mx3.
-apply/lineP.
-rewrite -/p2 -/v2.
-exists (interpoint_s l1 l2).
-rewrite /interpoint_s /interpoint_param -/p1 -/p2 -/v1 -/v2.
-rewrite det_col_mx3.
-apply/eqP.
-rewrite -subr_eq -addrA eq_sym addrC -subr_eq.
-rewrite 2!(mulrC _ (_^-2)) -2!scalerA -scalerBr.
-set c := v1 *v v2.
-rewrite dotmulC.
-rewrite (dotmul_crossmulA).
-rewrite (dotmulC _ c).
-rewrite (dotmul_crossmulA).
-rewrite -double_crossmul.
-rewrite crossmulC.
-rewrite double_crossmul.
-rewrite dotmulC.
-rewrite -{2}(opprB p1 p2) dotmulNv (eqP Hskew) oppr0 scale0r add0r opprK.
-rewrite dotmulvv scalerA mulVr ?scale1r //.
-by rewrite unitfE sqrf_eq0 norm_eq0.
-Qed.
-
-Lemma interpointP p l1 l2 : ~~ parallel l1 l2 -> is_interpoint p l1 l2 ->
-  let s := interpoint_s l1 l2 in let t := interpoint_t l1 l2 in
-  let p1 := Line.point l1 in let p2 := Line.point l2 in
-  let v1 := Line.vector l1 in let v2 := Line.vector l2 in
-  p1 + t *: v1 = p /\ p2 + s *: v2 = p.
-Proof.
-move=> ?.
-case/andP => /lineP[t' Hs] /lineP[s' Ht] s t.
-move=> p1 p2 v1 v2.
-have H (a b va vb : 'rV[R]_3) (k l : R) :
-  a + k *: va = b + l *: vb -> k *: (va *v vb) = (b - a) *v vb.
-  clear.
-  move=> /(congr1 (fun x => x - a)).
-  rewrite addrAC subrr add0r addrAC => /(congr1 (fun x => x *v vb)).
-  by rewrite crossmulZv crossmulDl crossmulZv crossmulvv scaler0 addr0.
-have Ht' : t' = interpoint_t l1 l2.
-  have : t' *: (v1 *v v2) = (p2 - p1) *v v2.
-    by rewrite (H p1 p2 _ _ _ s') // -Hs -Ht.
-  move/(congr1 (fun x => x *d (v1 *v v2))).
-  rewrite dotmulZv dotmulvv.
-  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
-  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
-  by rewrite -dotmul_crossmulA crossmul_triple.
-have Hs' : s' = interpoint_s l1 l2.
-  have : s' *: (v1 *v v2) = (p2 - p1) *v v1.
-    move: (H p2 p1 v2 v1 s' t').
-    rewrite -Hs -Ht => /(_ erefl).
-    rewrite crossmulC scalerN -opprB crossmulNv => /eqP.
-    by rewrite eqr_opp => /eqP.
-  move/(congr1 (fun x => x *d (v1 *v v2))).
-  rewrite dotmulZv dotmulvv.
-  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
-  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
-  by rewrite -dotmul_crossmulA crossmul_triple.
-by rewrite /t /s -Ht' -Hs'.
-Qed.
-
-Lemma interpointP' p l1 l2 s t :
-  let p1 := Line.point l1 in let p2 := Line.point l2 in
-  let v1 := Line.vector l1 in let v2 := Line.vector l2 in
-  p1 + t *: v1 = p /\ p2 + s *: v2 = p ->
-  is_interpoint p l1 l2.
-Proof.
-move=> p1 p2 v1 v2 [Hs Ht]; rewrite /is_interpoint; apply/andP; split;
-  apply/lineP; by [exists t | exists s].
-Qed.
-
-Definition intersection l1 l2 : option point :=
-  if ~~ intersects l1 l2 then None
-  else Some (Line.point l1 + interpoint_t l1 l2 *: Line.vector l1).
-
-End line_line_intersection.
-
 (* [ angeles2014: p.102-203] *)
 Module Plucker.
 Section plucker.
@@ -184,121 +52,100 @@ Variable R : rcfType.
 Implicit Types l : Line.t R.
 
 Definition normalized_plucker_direction l :=
-  let p1 := Line.point l in
-  let p2 := Line.point2 l in
+  let p1 := \pt( l ) in let p2 := \pt2( l ) in
   (norm (p2 - p1))^-1 *: (p2 - p1).
 
-Lemma normalized_plucker_directionP (l : Line.t R) : Line.vector l != 0 ->
+Lemma normalized_plucker_directionP (l : Line.t R) : \vec( l ) != 0 ->
   let e := normalized_plucker_direction l in e *d e == 1.
 Proof.
 move=> l0 /=.
 rewrite /normalized_plucker_direction dotmulZv dotmulvZ dotmulvv.
-rewrite /Line.point2 addrAC subrr add0r.
+rewrite -Line.vectorE.
 rewrite mulrA mulrAC expr2 mulrA mulVr ?unitfE ?norm_eq0 // mul1r.
 by rewrite divrr // unitfE norm_eq0.
 Qed.
 
 Definition normalized_plucker_position l :=
-  let p1 := Line.point l in
-  p1 *v normalized_plucker_direction l.
+  \pt( l ) *v normalized_plucker_direction l.
 
 Lemma normalized_plucker_positionP l :
   normalized_plucker_position l *d normalized_plucker_direction l == 0.
 Proof.
-rewrite /normalized_plucker_position /normalized_plucker_direction /Line.point2 addrAC subrr add0r crossmulvZ.
-by rewrite dotmulvZ dotmulZv -dotmul_crossmulA crossmulvv dotmulv0 2!mulr0.
+rewrite /normalized_plucker_position /normalized_plucker_direction -Line.vectorE crossmulvZ.
+by rewrite dotmulvZ dotmulZv -dot_crossmulC crossmulvv dotmulv0 2!mulr0.
 Qed.
 
 Definition normalized_plucker l : 'rV[R]_6 :=
   row_mx (normalized_plucker_direction l) (normalized_plucker_position l).
 
 Definition plucker_of_line l : 'rV[R]_6 :=
-  let p1 := Line.point l in
-  let p2 := Line.point2 l in
+  let p1 := \pt( l ) in let p2 := \pt2( l ) in
   row_mx (p2 - p1) (p1 *v (p2 - p1)).
 
 Lemma normalized_pluckerP l :
-  let p1 := Line.point l in
-  let p2 := Line.point2 l in
-  Line.vector l != 0 ->
+  let p1 := \pt( l ) in
+  let p2 := \pt2( l ) in
+  \vec( l ) != 0 ->
   plucker_of_line l = norm (p2 - p1) *: normalized_plucker l.
 Proof.
 move=> p1 p2 l0.
 rewrite /normalized_plucker /normalized_plucker_direction /normalized_plucker_position.
 rewrite -/p1 -/p2 crossmulvZ -scale_row_mx scalerA.
-by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 /Line.point2 -/p1 addrAC subrr add0r.
+by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 -Line.vectorE.
 Qed.
 
-Lemma plucker_of_lineE l (l0 : Line.vector l != 0) :
-  plucker_of_line l = norm (Line.point2 l - Line.point l) *:
+Lemma plucker_of_lineE l (l0 : \vec( l ) != 0) :
+  plucker_of_line l = norm (\pt2( l ) - \pt( l )) *:
   (Plucker.mkArray (normalized_plucker_directionP l0) (normalized_plucker_positionP l) : 'M__).
 Proof.
 rewrite /plucker_of_line /plucker_array_mx /=.
 rewrite /normalized_plucker_direction /normalized_plucker_position crossmulvZ -scale_row_mx.
-rewrite scalerA divrr ?scale1r //.
-by rewrite unitfE norm_eq0 /Line.point2 addrAC subrr add0r.
+by rewrite scalerA divrr ?scale1r // unitfE norm_eq0 -Line.vectorE.
 Qed.
 
 Definition plucker_eqn p l :=
-  let p1 := Line.point l in let p2 := Line.point2 l in
+  let p1 := \pt( l ) in let p2 := \pt2( l ) in
   p *m (\S( p2 ) - \S( p1 )) + p1 *v (p2 - p1).
 
-Lemma plucker_eqn0 p l : Line.vector l = 0 -> plucker_eqn p l = 0.
+Lemma plucker_eqn0 p l : \vec( l ) = 0 -> plucker_eqn p l = 0.
 Proof.
-move => l0; rewrite /plucker_eqn -skew_mxN -skew_mxD /Line.point2.
-by rewrite addrAC subrr add0r skew_mxE l0 crossmul0v crossmulv0 addr0.
+move => l0; rewrite /plucker_eqn -skew_mxN -skew_mxD -Line.vectorE.
+by rewrite skew_mxE l0 crossmul0v crossmulv0 addr0.
 Qed.
 
-Lemma plucker_eqn_self l : plucker_eqn (Line.point l) l = 0.
+Lemma plucker_eqn_self l : plucker_eqn \pt( l ) l = 0.
 Proof.
 rewrite /plucker_eqn -skew_mxN -skew_mxD skew_mxE crossmulC addrC.
 by rewrite -crossmulBl subrr crossmul0v.
 Qed.
 
-Lemma in_plucker p l : p \in (l : pred _)->
-  plucker_eqn p l = 0.
+Lemma in_plucker p l : p \in (l : pred _) -> plucker_eqn p l = 0.
 Proof.
 rewrite inE => /orP[/eqP ->|/andP[l0 H]]; first by rewrite plucker_eqn_self.
 rewrite /plucker_eqn -skew_mxN -skew_mxD skew_mxE crossmulC addrC -crossmulBl.
 apply/eqP.
 rewrite -/(colinear _ _) -colinearNv opprB colinear_sym.
 apply: (colinear_trans l0 _ H).
-by rewrite /Line.point2 addrAC subrr add0r colinear_refl.
+by rewrite -Line.vectorE colinear_refl.
 Qed.
 
 Definition homogeneous_plucker_eqn l :=
-  let p1 := Line.point l in let p2 := Line.point2 l in
+  let p1 := \pt( l ) in let p2 := \pt2( l ) in
   col_mx (\S( p2 ) - \S( p1 )) (p1 *v (p2 - p1)).
 
 Require Import rigid.
 
 Lemma homogeneous_in_plucker p (l : Line.t R) : p \is 'hP[R] ->
   from_h p \in (l : pred _) ->
-  let p1 := Line.point l in let p2 := Line.point2 l in
   p *m homogeneous_plucker_eqn l = 0.
 Proof.
-move=> hp /in_plucker Hp p1 p2 /=.
-rewrite /homogeneous_plucker_eqn -/p1 -/p2.
+move=> hp /in_plucker Hp /=.
+rewrite /homogeneous_plucker_eqn.
 move: (hp); rewrite hpoint_from_h => /eqP ->.
 by rewrite (mul_row_col (from_h p) 1) mul1mx.
 Qed.
 
 End plucker_of_line.
-
-(* TODO: move *)
-Lemma k_e2 (R : rcfType) (f : Frame.t R) : Frame.k f *m f^T = 'e_2%:R.
-Proof.
-case: f => -[i j k ni nj nk /= ij jk ik Hsgn].
-rewrite /Frame.k /= /matrix_of_noframe /= col_mx3_mul.
-by rewrite dotmulC ik dotmulC jk dotmulvv nk expr1n -e2row.
-Qed.
-
-Lemma i_e0 (R : rcfType) (f : Frame.t R) : Frame.i f = 'e_0%:R *m f.
-Proof.
-case: f => -[i j k ni nj nk /= ij jk ik Hsgn].
-rewrite /Frame.i /= /matrix_of_noframe /= e0row mulmx_row3_col3.
-by rewrite scale1r !scale0r !addr0.
-Qed.
 
 Section denavit_hartenberg_homogeneous_matrix.
 
@@ -315,7 +162,7 @@ Definition dh_rot (jangle ltwist : angle R) := col_mx3
 Lemma dh_rot_i (f1 f0 : Frame.t R) t a : f1 _R^ f0 = dh_rot t a ->
   Frame.i f1 *m f0^T = row3 (cos t) (sin t) 0.
 Proof.
-rewrite i_e0 -mulmxA FromToE noframe_inv => ->.
+rewrite Frame.i_e0 -mulmxA FromToE noframe_inv => ->.
 by rewrite /dh_rot e0row mulmx_row3_col3 !scale0r !addr0 scale1r.
 Qed.
 
@@ -345,7 +192,7 @@ Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[R]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_frame R) _R^ F0.
 
 Hypothesis dh1 : Frame.i F1 *d Frame.k F0 = 0.
-Hypothesis dh2 : exists p, is_interpoint p (xaxis F1) (zaxis F0).
+Hypothesis dh2 : intersects (xaxis F1) (zaxis F0).
 
 (* [spong] an homogeneous transformation that satisfies dh1 and dh2 
    can be represented by means of only four parameters *)
@@ -556,8 +403,8 @@ have H4 : From1To0 = dh_rot theta alpha.
   by rewrite -subr_eq0 -opprD eqr_oppLR oppr0 (_ : 1 + 1 = 2%:R) // pnatr_eq0.
 have [d [a H5]] : exists d a,
   TFrame.o F1 = TFrame.o F0 + d *: (Frame.k F0) + a *: (Frame.i F1).
-  case: dh2 => p.
-  rewrite /is_interpoint => /andP[/lineP[k1 /= Hk1] /lineP[k2 /= Hk2]].
+  case/intersects_interpoint : dh2 => p [].
+  rewrite /is_interpoint => /andP[/lineP[k1 /= Hk1] /lineP[k2 /= Hk2]] _.
   exists k2, (- k1).
   rewrite -Hk2.
   by apply/eqP; rewrite Hk1 scaleNr addrK.
@@ -571,7 +418,8 @@ move/eqP : H5.
 rewrite -addrA addrC -subr_eq.
 move/eqP.
 move/(congr1 (fun x => x *m F0^T)).
-rewrite [in X in _ = X -> _]mulmxDl -scalemxAl k_e2.
+rewrite [in X in _ = X -> _]mulmxDl -scalemxAl.
+rewrite Frame.k_e2 -mulmxA mulmxE -{2}noframe_inv divrr ?mulmx1 ?noframe_is_unit //.
 rewrite -scalemxAl (@dh_rot_i _ _ _ theta alpha); last first.
   by rewrite {1}/From1To0 -lock in H4.
 rewrite add0r => <-.
