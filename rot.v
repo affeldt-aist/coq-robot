@@ -39,6 +39,7 @@ Require Import aux angle euclidean3 skew vec_angle frame.
        sample lemmas:
          a rotation matrix has angle_aa M and normalize (vaxis_aa M) for exp. coor.
   7. section angle_axis_representation
+  8. section euler_angles
 *)
 
 Set Implicit Arguments.
@@ -1475,7 +1476,7 @@ Section euler_angles.
 
 Variable R : rcfType.
 
-Definition Rxyz (a b c : angle R) := Rx c * Ry b * Rz a.
+Definition Rxyz (c b a : angle R) := Rx c * Ry b * Rz a.
 
 Definition euler_angles_rot (a b c : angle R) :=
   let ca := cos a in let cb := cos b in let cc := cos c in
@@ -1485,7 +1486,7 @@ Definition euler_angles_rot (a b c : angle R) :=
   (row3 (ca * sb * sc - sa * cc) (sa * sb * sc + ca * cc) (cb * sc))
   (row3 (ca * sb * cc + sa * sc) (sa * sb * cc - ca * sc) (cb * cc)).
 
-Lemma euler_angles_rotE a b c : Rxyz a b c = euler_angles_rot a b c.
+Lemma euler_angles_rotE a b c : Rxyz c b a = euler_angles_rot a b c.
 Proof.
 rewrite /Rxyz.
 apply/matrix3P; rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
@@ -1498,5 +1499,90 @@ by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
 by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
 by rewrite mulrC.
 Qed.
+
+Definition euler_b (M : 'M[R]_3) : angle R :=
+  if `| M 0 2%:R | != 1 then
+    atan2 (- M 0 2%:R) (Num.sqrt (M 0 0 ^+2 + M 0 1 ^+ 2))
+  else if M 0 2%:R == 1 then
+    - pihalf R
+  else (* M 0 2%:R == - 1*) pihalf R.
+
+Definition euler_a (M : 'M[R]_3) : angle R :=
+  if `| M 0 2%:R | != 1 then
+    atan2 (M 0 1) (M 0 0)
+  else
+   0.
+
+Definition euler_c (M : 'M[R]_3) : angle R :=
+  if `| M 0 2%:R | != 1 then
+    atan2 (M 2%:R 1) (M 2%:R 2%:R)
+  else if M 0 2%:R == 1 then
+    atan2 (M 1 0) (M 1 1)
+  else
+    - atan2 (M 1 0) (M 1 1).
+
+Lemma sqr_Mi0E (M : 'M[R]_3) i : M \is 'O[R]_3 ->
+  M i 1 ^+ 2 + M i 2%:R ^+ 2 = 1 - M i 0 ^+ 2.
+Proof.
+move/norm_row_of_O => /(_ i)/(congr1 (fun x => x ^+ 2)).
+rewrite -dotmulvv dotmulE sum3E !mxE -!expr2 expr1n => /eqP.
+by rewrite -addrA addrC eq_sym -subr_eq => /eqP <-.
+Qed.
+
+Lemma sqr_Mi1E (M : 'M[R]_3) i : M \is 'O[R]_3 ->
+  M i 0 ^+ 2 + M i 2%:R ^+ 2 = 1 - M i 1 ^+ 2.
+Proof.
+move/norm_row_of_O => /(_ i)/(congr1 (fun x => x ^+ 2)).
+rewrite -dotmulvv dotmulE sum3E !mxE -!expr2 expr1n => /eqP.
+by rewrite addrAC eq_sym -subr_eq => /eqP <-.
+Qed.
+
+Lemma sqr_Mi2E (M : 'M[R]_3) i : M \is 'O[R]_3 ->
+  M i 0 ^+ 2 + M i 1 ^+ 2 = 1 - M i 2%:R ^+ 2.
+Proof.
+move/norm_row_of_O => /(_ i)/(congr1 (fun x => x ^+ 2)).
+rewrite -dotmulvv dotmulE sum3E !mxE -!expr2 expr1n => /eqP.
+by rewrite eq_sym -subr_eq => /eqP <-.
+Qed.
+
+Lemma rot_euler_anglesE (M : 'M[R]_3) : M \is 'SO[R]_3 ->
+  M = Rxyz (euler_c M) (euler_b M) (euler_a M).
+Proof.
+move=> MSO.
+rewrite euler_angles_rotE.
+have H : `|M 0 2%:R| != 1-> 0 < Num.sqrt (1 - M 0 2%:R ^+ 2).
+  move=> M02; rewrite sqrtr_gt0 subr_gt0 -sqr_normr ltr_neqAle.
+  rewrite -[X in (_ != X) && _](expr1n _ 2) eqr_expn2 // ?ler01 // {}M02 /=.
+  by rewrite exprn_ile1 // Oij_ub // rotation_sub.
+apply/matrix3P; rewrite !mxE /=.
+- rewrite /euler_a /euler_b; case: ifPn => [M02|].
+    move/H : (M02) => {H}H.
+    rewrite sqr_Mi2E ?rotation_sub // /atan2 H //.
+    case: ifPn => M00.
+      rewrite cos_atan.
+      rewrite cos_atan.
+      admit.
+    admit.
+  admit.
+- admit.
+- rewrite /euler_b; case: ifPn => [M02|].
+  + move/H : (M02) => {H}H.
+    rewrite /atan2 sqr_Mi2E ?rotation_sub // H //.
+    rewrite sin_atan !mulNr opprK -[LHS]mulr1 -mulrA; congr (_ * _).
+    set a := Num.sqrt _.
+    rewrite sqrrN exprMn exprVn -{2}(@divrr _ (a^+2)); last first.
+      by rewrite ?unitfE ?subr_eq0 /a expf_neq0 // gtr_eqF.
+    rewrite -mulrDl {2}/a sqr_sqrtr; last first.
+      by rewrite subr_ge0 -sqr_normr exprn_ile1 // Oij_ub // rotation_sub.
+    rewrite subrK div1r -invrM; last first.
+      by rewrite unitfE gtr_eqF.
+      by rewrite unitfE sqrtr_eq0 -ltrNge invr_gt0 -sqrtr_gt0.
+    rewrite -sqrtrM; last first.
+      by rewrite invr_ge0 subr_ge0 -sqr_normr exprn_ile1 // Oij_ub // rotation_sub.
+    by rewrite mulVr ?sqrtr1 ?invr1 // unitfE gtr_eqF // -sqrtr_gt0.
+  + rewrite negbK eqr_norml ler01 andbT => /orP[]/eqP ->.
+      by rewrite eqxx sinN opprK sin_pihalf.
+    by rewrite eq_sym -subr_eq0 opprK -(@natrD _ 1 1) pnatr_eq0 /= sin_pihalf.
+Abort.
 
 End euler_angles.

@@ -588,13 +588,11 @@ Lemma cos_atan_uquat q : q \is uquat -> ~~ pureq q ->
   cos a ^+ 2 = q`0 ^+ 2.
 Proof.
 move=> nq q00 a.
-rewrite /a cos_atan; last by rewrite atan_in // mulf_neq0 // ?invr_eq0.
-rewrite exprMn expr1n mul1r.
+rewrite /a cos_atan exprMn expr1n mul1r.
 have /divrr <- : q`0 ^+ 2 \in GRing.unit by rewrite unitfE sqrf_eq0.
-rewrite expr_div_n -mulrDl.
 rewrite uquatE' /sqrq in nq.
-rewrite (eqP nq) sqrtrM ?ler01 // sqrtr1 mul1r -exprVn sqrtr_sqr.
-by rewrite normrV ?unitfE // invrK sqr_normr.
+rewrite expr_div_n -mulrDl (eqP nq) sqrtrM ?ler01 // sqrtr1 mul1r.
+by rewrite -exprVn sqrtr_sqr normrV ?unitfE // invrK sqr_normr.
 Qed.
 
 Lemma sin_atan_uquat q : q \is uquat -> ~~ pureq q ->
@@ -602,10 +600,10 @@ Lemma sin_atan_uquat q : q \is uquat -> ~~ pureq q ->
   sin a ^+ 2 = norm q`1 ^+ 2.
 Proof.
 move=> nq q00 a.
-rewrite /a sin_atan2.
+rewrite /a sqr_sin_atan.
 have /divrr <- : q`0 ^+ 2 \in GRing.unit by rewrite unitfE sqrf_eq0.
-rewrite expr_div_n -mulrDl.
 rewrite uquatE' /sqrq in nq.
+rewrite expr_div_n -mulrDl.
 by rewrite (eqP nq) mul1r invrK -mulrA mulVr ?mulr1 // unitrX // unitfE.
 Qed.
 
@@ -621,8 +619,7 @@ Lemma polar_of_uquat_prop2 q : q \is uquat -> q`0 != 0 ->
   sin (a *+ 2) = (q`0 * norm q`1) *+ 2.
 Proof.
 move=> q_is_uquat q00.
-rewrite /= sin_mulr2n cos_atan; last by rewrite atan_in.
-rewrite sin_atan.
+rewrite /= sin_mulr2n cos_atan sin_atan.
 set k := Num.sqrt _; congr (_ *+ 2).
 have k0 : k \is a GRing.unit.
   by rewrite unitfE sqrtr_eq0 -ltrNge -(addr0 0) ltr_le_add // ?ltr01 // sqr_ge0.

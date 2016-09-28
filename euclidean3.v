@@ -1150,13 +1150,13 @@ rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv tr_col dotmulvv.
 by rewrite norm_row_of_O ?expr1n // orthogonalV.
 Qed.
 
-Lemma Oii_ub (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> forall i, M i i <= 1.
+Lemma Oij_ub (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> forall i j, `| M i j | <= 1.
 Proof.
-move=> /norm_row_of_O MO i; rewrite lerNgt; apply/negP => abs.
+move=> /norm_row_of_O MO i j; rewrite lerNgt; apply/negP => abs.
 move: (MO i) => /(congr1 (fun x => x ^+ 2)); apply/eqP.
-rewrite gtr_eqF // sqr_norm (bigD1 i) //= !mxE -(addr0 (1 ^+ 2)) ltr_le_add //.
-by rewrite ltr_expn2r.
-rewrite sumr_ge0 // => j ij; by rewrite sqr_ge0.
+rewrite gtr_eqF // sqr_norm (bigD1 j) //= !mxE -(addr0 (1 ^+ 2)) ltr_le_add //.
+by rewrite -(sqr_normr (M _ _)) ltr_expn2r.
+rewrite sumr_ge0 // => k ij; by rewrite sqr_ge0.
 Qed.
 
 Lemma O_tr_idmx (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> \tr M = n.+1%:R -> M = 1.
@@ -1170,11 +1170,11 @@ have Mdiag : forall i, M i i = 1.
     by move=> j _; congr (M _ _); apply val_inj => /=; rewrite inordK.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => M (inord i) (inord i))).
   rewrite -[in n.+1%:R](card_ord n.+1) -sum1_card (bigD1 i) //= natrD.
-  rewrite ltr_le_add //; first by rewrite ltr_neqAle Mii Oii_ub.
+  rewrite ltr_le_add //; first by rewrite ltr_neqAle Mii /= ler_norml1 // Oij_ub.
   rewrite [in X in _ <= X](@big_morph _ _ _ 0 (fun x y => x + y)%R) //; last first.
     by move=> x y; rewrite natrD.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => 1)).
-  apply ler_sum => j ji; by rewrite Oii_ub.
+  apply ler_sum => j ji; by rewrite ler_norml1 // Oij_ub.
 apply/matrixP => i j; rewrite !mxE.
 case/boolP : (i == j) => [/eqP ->|ij]; first by move : Mdiag => /(_ j).
 move: (MO' i) => /(congr1 (fun x => x ^+ 2)).

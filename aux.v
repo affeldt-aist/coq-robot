@@ -65,6 +65,9 @@ Qed.
 Lemma sqr_normr (R : realDomainType) (k : R) : `| k | ^+ 2 = k ^+ 2.
 Proof. by rewrite real_normK ?num_real. Qed.
 
+Lemma ler_norml1 (R : realDomainType) (x y : R) : `|x| <= y -> x <= y.
+Proof. by rewrite ler_norml => /andP[]. Qed.
+
 Lemma pnatf_unit {R : numFieldType} n : n.+1%:R \is a @GRing.unit R.
 Proof. by rewrite unitfE pnatr_eq0. Qed.
 
