@@ -65,6 +65,11 @@ Qed.
 Lemma sqr_normr (R : realDomainType) (k : R) : `| k | ^+ 2 = k ^+ 2.
 Proof. by rewrite real_normK ?num_real. Qed.
 
+Lemma Neqxx (R : realDomainType) (x : R) : (-x == x) = (x == 0).
+Proof.
+by rewrite -subr_eq0 -opprD -mulr2n -mulNrn mulrn_eq0 /= eqr_oppLR oppr0.
+Qed.
+
 Lemma ler_norml1 (R : realDomainType) (x y : R) : `|x| <= y -> x <= y.
 Proof. by rewrite ler_norml => /andP[]. Qed.
 

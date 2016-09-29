@@ -342,6 +342,13 @@ Proof. by rewrite mulr2n sinD mulrC -mulr2n. Qed.
 Lemma cosD a b : cos (a + b) = cos a * cos b - sin a * sin b.
 Proof. by rewrite {1}/cos expiD 2!expi_cos_sin /= addrC. Qed.
 
+Lemma cos_period a k :
+  (k == pi) || (k == - pi) -> cos (a + k) = - cos a.
+Proof.
+case/orP => [|] /eqP ->;
+  by rewrite cosD ?(cosN, sinN) cospi mulrN1 sinpi ?oppr0 mulr0 subr0.
+Qed.
+
 Lemma cosB a b : cos (a - b) = cos a * cos b + sin a * sin b.
 Proof. by rewrite cosD cosN sinN mulrN opprK. Qed.
 
