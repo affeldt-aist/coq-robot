@@ -336,6 +336,13 @@ Proof. move/eqP: (cos2Dsin2 a); by rewrite eq_sym -subr_eq => /eqP. Qed.
 Lemma sinD a b : sin (a + b) = sin a * cos b + cos a * sin b.
 Proof. by rewrite {1}/sin expiD 2!expi_cos_sin /= addrC. Qed.
 
+Lemma sin_period a k :
+  (k == pi) || (k == - pi) -> sin (a + k) = - sin a.
+Proof.
+case/orP => [|] /eqP ->;
+  by rewrite sinD ?(cosN, sinN) cospi mulrN1 sinpi ?oppr0 mulr0 addr0.
+Qed.
+
 Lemma sin_mulr2n a : sin (a *+ 2) = (cos a * sin a) *+ 2.
 Proof. by rewrite mulr2n sinD mulrC -mulr2n. Qed.
 
@@ -585,14 +592,14 @@ Qed.
 
 (* atan2 *)
 
-Definition atan2 y x :=
-  if x > 0 then atan (y / x) else
-  if x < 0 then
-     (if y >= 0 then atan (y / x) + pi else
-        (* y < 0 *) atan (y / x) - pi) else
-  (* x == 0 *)
-     (if y > 0 then pihalf else
-      if y < 0 then - pihalf else
+Definition atan2 x y :=
+  if y > 0 then atan (x / y) else
+  if y < 0 then
+     (if x >= 0 then atan (x / y) + pi else
+        (* x < 0 *) atan (x / y) - pi) else
+  (* y == 0 *)
+     (if x > 0 then pihalf else
+      if x < 0 then - pihalf else
         0) (* undefined *).
 
 Lemma atan2_11 : atan2 1 1 = piquarter.

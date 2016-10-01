@@ -632,23 +632,23 @@ rewrite uquatE' /sqrq in q_is_uquat.
 by rewrite exprMn exprVn -mulrDl (eqP q_is_uquat) -exprVn mul1r -exprVn invrK.
 Qed.
 
-Lemma quat_rot_is_Rot (q : quat) : q \is uquat -> ~~ pureq q ->
-  let: (u, a) := polar_of_quat q in
+Lemma quat_rot_is_Rot (a : quat) : a \is uquat -> ~~ pureq a ->
+  let: (u, theta) := polar_of_quat a in
   u != 0 ->
-  Rot u (a *+ 2) (Linear (quat_rot_is_linear q)).
+  Rot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
 Proof.
 move=> q_isuqat. rewrite /pureq => q00 u0.
 rewrite normalize_eq0 in u0.
-set a := atan _.
+set a' := atan _.
 split.
-- set u : 'rV_3 := normalize q`1.
+- set u : 'rV_3 := normalize a`1.
   by rewrite quat_rot_is_linearE quat_rot_axis.
 - rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
   rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
   move: (Base.frame u0).
-  rewrite -/(Base.j q`1) -/(Base.k q`1) => f.
+  rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /= (Base.udotj u0) scale0r mul0rn addr0.
-  rewrite (_ : q`1 *v Base.j q`1 = norm q`1 *: Base.k q`1); last first.
+  rewrite (_ : a`1 *v Base.j a`1 = norm a`1 *: Base.k a`1); last first.
     by rewrite (Base.icrossj u0) -crossmulZv norm_scale_normalize crossmulC.
   rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
   by rewrite polar_of_uquat_prop.
@@ -656,9 +656,9 @@ split.
 - rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
   rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
   move: (Base.frame u0).
-  rewrite -/(Base.j q`1) -/(Base.k q`1) => f.
+  rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /= (Base.udotk u0) scale0r mul0rn addr0.
-  rewrite (_ : q`1 *v Base.k q`1 = - norm q`1 *: Base.j q`1); last first.
+  rewrite (_ : a`1 *v Base.k a`1 = - norm a`1 *: Base.j a`1); last first.
     by rewrite scaleNr -scalerN -(Base.icrossk u0) -crossmulZv norm_scale_normalize.
  rewrite addrC; congr (_ + _ *: _); last first.
     by rewrite -polar_of_uquat_prop.
