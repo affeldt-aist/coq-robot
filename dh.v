@@ -191,7 +191,7 @@ Variable F0 F1 : TFrame.t R.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[R]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_frame R) _R^ F0.
 
-Hypothesis dh1 : Frame.i F1 *d Frame.k F0 = 0.
+Hypothesis dh1 : perpendicular (xaxis F1) (zaxis F0).
 Hypothesis dh2 : intersects (xaxis F1) (zaxis F0).
 
 (* [spong] an homogeneous transformation that satisfies dh1 and dh2 
@@ -200,7 +200,8 @@ Lemma dh_mat_correct : exists alpha theta d a,
   hom From1To0 p1_in_0 = dh_mat theta d a alpha.
 Proof.
 have H1 : From1To0 0 2%:R = 0.
-  by rewrite /From1To0 -lock /FromTo mxE row0_frame row2_frame.
+  rewrite /From1To0 -lock /FromTo mxE row0_frame row2_frame.
+  by move/eqP: dh1.
 have [H2a H2b] : From1To0 0 0 ^+ 2 + From1To0 0 1 ^+ 2 = 1 /\
   From1To0 1 2%:R ^+ 2 + From1To0 2%:R 2%:R ^+ 2 = 1.
   move: (norm_row_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).

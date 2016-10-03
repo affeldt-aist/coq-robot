@@ -20,7 +20,7 @@ Require Import boolp reals.
  3. section exponential_coordinates_rigid_using_taylor
  4. Module Rad (radian)
  5. section exponential_coordinates_rigid
- 6. Module Example
+ 6. Module TwistComputationExample
  7. section screw definition
  8. section screw_motion
  9. section screw_coordinates_of_a_twist_continued
@@ -656,25 +656,25 @@ End exponential_coordinates_rigid.
 Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'").
 
 (* [murray] example 2.6 *)
-Module Example.
+Module TwistComputationExample.
 Section example.
 Variable R : realType.
 Let vector := 'rV[R]_3.
-Variables l1 l2 : R.
+Variables a1 a2 : R.
 Variable a : angle R.
 Hypothesis a0 : a != 0.
 
-Definition TAB := row3 (l1 + l2 * cos a) (l2 * sin a) 0.
+Definition P20 := row3 (a1 + a2 * cos a) (a2 * sin a) 0.
 
 Definition w : vector := 'e_2%:R.
 
 Let A_inv := etwist_is_onto_SE_mat_inv a w.
 
-Definition v := ((norm w)^+2 *: TAB) *m A_inv.
+Definition v := ((norm w)^+2 *: P20) *m A_inv.
 
-Lemma vP : v = row3 ((l1 + l2) * sin a / (2%:R * (1 - cos a))) (- (l1 - l2) / 2%:R) 0 :> vector.
+Lemma vP : v = row3 ((a1 + a2) * sin a / (2%:R * (1 - cos a))) (- (a1 - a2) / 2%:R) 0 :> vector.
 Proof.
-rewrite /v normeE expr1n scale1r /TAB.
+rewrite /v normeE expr1n scale1r /P20.
 rewrite /A_inv /etwist_is_onto_SE_mat_inv.
 rewrite mulmxDr mulmxBr.
 rewrite mul_mx_scalar row3Z mulr0.
@@ -690,9 +690,9 @@ case/boolP : (a == pi) => [/eqP ->|api].
   by rewrite mulrC.
 congr row3; last first.
   rewrite mulrN mulrBl opprB -!addrA addrC !addrA -mulrA subrK.
-  rewrite cot_half_angle' -!mulrA (mulrCA _ l2) mulVr ?mulr1; last first.
+  rewrite cot_half_angle' -!mulrA (mulrCA _ a2) mulVr ?mulr1; last first.
     by rewrite unitfE sin_eq0 negb_or a0 api.
-  rewrite addrC -mulrBr opprD mulrDl mul1r -!addrA (addrCA _ (- l1)) (mulrC _ l2) subrr addr0.
+  rewrite addrC -mulrBr opprD mulrDl mul1r -!addrA (addrCA _ (- a1)) (mulrC _ a2) subrr addr0.
   by rewrite -mulNr opprB mulrC.
 rewrite mulrN mulrBl opprB -!addrA addrC !addrA -mulrA subrK.
 rewrite -(mulrA _ (cot _ )) -mulrDr.
@@ -702,7 +702,7 @@ rewrite invrM; last 2 first.
   by move/eqP/esym/cos1_angle0/eqP.
 rewrite ![in RHS]mulrA [in RHS]mulrC; congr (_ * _).
 rewrite -[in RHS]mulrA -cot_half_angle.
-rewrite mulrDr addrCA [in RHS]mulrDl (mulrC _ l1); congr (_ + _).
+rewrite mulrDr addrCA [in RHS]mulrDl (mulrC _ a1); congr (_ + _).
 rewrite mulrCA -mulrDr; congr (_ * _).
 apply/eqP.
 rewrite eq_sym -subr_eq.
@@ -712,59 +712,8 @@ rewrite cot_half_angle -mulrA mulVr ?mulr1 //.
   by move/eqP/esym/cos1_angle0/eqP.
 Qed.
 
-(*Definition TAB := row3 (- l2 * sin a) (l1 + l2 * cos a) 0.
-
-Definition w : vector := 'e_2%:R.
-
-Let A_inv := etwist_is_onto_SE_mat_inv a w.
-
-Definition v := ((norm w)^+2 *: TAB) *m A_inv.
-
-Lemma vP : v = row3 ((l1 - l2) / 2%:R) ((l1 + l2) * sin a / (2%:R * (1 - cos a))) 0 :> vector. 
-Proof.
-rewrite /v normeE expr1n scale1r /TAB.
-rewrite /A_inv /etwist_is_onto_SE_mat_inv.
-rewrite mulmxDr mulmxBr.
-rewrite mul_mx_scalar row3Z mulr0.
-rewrite -scalemxAr scalemxAl row3Z mulr0 skew_mxE crossmulE !mxE /=. Simp.r. rewrite /=.
-rewrite -scaleN1r row3Z !mulN1r opprK oppr0 row3D addr0.
-rewrite -scalemxAr scalemxAl expr2 -mulmxE mulmxA -scalemxAl.
-rewrite (skew_mxE (row3 _ _ _)) crossmulE !mxE /=. Simp.r.
-rewrite -scalemxAl skew_mxE crossmulE !mxE /=. Simp.r.
-rewrite row3Z mulr0 row3D addr0.
-case/boolP : (a == pi) => [/eqP ->|api].
-  rewrite cot_half_angle sinpi cospi !(mulr0,addr0,subr0,oppr0,add0r,mul0r,mulrN1).
-  rewrite mulrN subrr.
-  by rewrite mulrC addrC.
-congr row3.
-  rewrite mulrCA mulrBl -(mulrA 2%:R^-1 _ (sin a)) cot_half_angle'.
-  rewrite -(mulrA (1 + cos a)) mulVr ?mulr1; last first.
-    rewrite unitfE; apply: contra a0 => /eqP/sin0_inv[-> //|/eqP].
-    by rewrite (negbTE api).
-  rewrite mulrDr addrCA !addrA mulrCA mulrA subrr add0r.
-  rewrite mulrN.
-  rewrite 3!mulrDr mulr1 opprD.
-  rewrite addrCA mulrCA addrK.
-  by rewrite mulrC -mulrN -mulrDr addrC mulrC.
-rewrite cot_half_angle.
-rewrite -mulf_div.
-rewrite -cot_half_angle.
-rewrite mulrDl {1}opprD addrCA !addrA.
-rewrite -opprD {1}mulrN (addrC (- _)) subrr add0r.
-rewrite mulrN mulNr opprK.
-rewrite mulrDr -[in RHS]mulrA addrCA.
-rewrite mulrDl [in RHS]mulrCA [in RHS](mulrC l1) (mulrA _ _ l1); congr (_ + _).
-rewrite -!mulrA -mulrDr [in RHS]mulrCA; congr (_ * _).
-rewrite mulrCA -mulrDr; congr (_ * _).
-rewrite cot_half_angle.
-rewrite mulrAC -{1}(mulr1 (sin a)) -{1}(@divrr _ (1 - cos a)); last first.
-  by rewrite unitfE subr_eq0; apply: contra a0 => /eqP/esym/cos1_angle0 ->.
-rewrite mulrA -mulrDl; congr (_ / _).
-by rewrite mulrBr mulr1 subrK.
-Qed.*)
-
 End example.
-End Example.
+End TwistComputationExample.
 
 Module Screw.
 Section screw_definition.
@@ -908,10 +857,10 @@ Lemma pitch_nolin (w : 'rV[R]_3) : pitch \T(0, w) = 0.
 Proof. by rewrite /pitch ang_of_twistE lin_of_twistE scaler0 dotmul0v. Qed.
 
 (* twist of a revolute joint *)
-Definition rjoint_twist (w u : 'rV[R]_3) := \T(- w *v u, w).
+Definition rjoint_twist (w : vector) (q : point) := \T(- w *v q, w).
 
 (* twist of a prismatic joint *)
-Definition pjoint_twist (v : 'rV[R]_3) := \T(v, 0).
+Definition pjoint_twist (v : vector) := \T(v, 0).
 
 Lemma pitch_perp (w u : 'rV[R]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
 Proof.
@@ -1052,7 +1001,7 @@ Let api : a != pi.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sinpi. Qed.
 Let vaxis0 : Aa.vaxis Q != 0.
 Proof. 
-by rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0. 
+by rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0.
 Qed.
 Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
 
@@ -1088,18 +1037,7 @@ Lemma decomp_displacement p :
 Proof.
 rewrite (decomp (displacement f p) w) normD -dotmul_cos (axialnormal _ w1) // mul0rn addr0.
 by rewrite -/(normdisp p) -/(axialdisp p) axialdispE.
-(*
-rewrite (decomp (displacement f p) w) normD -dotmul_cos (axialnormal _ w1) //.
-rewrite mul0rn addr0 sqr_sqrtr. ; last by rewrite addr_ge0 // ?sqr_ge0.
-by rewrite -/(normdisp p) -/(axialdisp p) axialdispE.
-*)
 Qed.
-
-(*Lemma d0_is_a_lb_of_a_displacement p : d0 ^+ 2 <= norm (displacement f p) ^+ 2.
-Proof. by rewrite decomp_displacement normZ w1 mulr1 sqr_normr ler_addl sqr_ge0. Qed.*)
-
-(*Definition displacement_parallel_to_vaxis : pred point := 
-  [pred p0 | colinear (displacement f p0) w].*)
 
 Lemma MozziChasles_helper p : norm (displacement f p) = d0 -> normdisp p = 0.
 Proof.
@@ -1258,7 +1196,7 @@ rewrite -scalemxAl /N2cos [in RHS]scalerBl scale1r opprB; congr (_ + _).
 by rewrite mulNrn scaleNr opprK.
 Qed.
 
-Lemma screw_axis_point_Vmat (*(a0 : a != 0)*) :
+Lemma screw_axis_point_Vmat :
   screw_axis_point_mat_inv * screw_axis_point_mat = 1.
 Proof.
 rewrite /screw_axis_point_mat /screw_axis_point_mat_inv screw_axis_point_matE !scalemx1 -!mulmxE.
@@ -1274,7 +1212,7 @@ rewrite mulmxE -expr2 (mulmx_tr_uvect w1) // -scalerBl.
 by apply/eqP; rewrite scaler_eq0 (N2cosNcos2 a0) eqxx.
 Qed.
 
-Lemma screw_axis_point_matV (*(a0 : a != 0)*) :
+Lemma screw_axis_point_matV :
   screw_axis_point_mat * screw_axis_point_mat_inv = 1.
 Proof.
 rewrite /screw_axis_point_mat /screw_axis_point_mat_inv screw_axis_point_matE !scalemx1 -!mulmxE.
@@ -1291,14 +1229,14 @@ rewrite mulmxE -expr2 (mulmx_tr_uvect w1) // -scalerBl.
 by apply/eqP; rewrite scaler_eq0 (mulrC (N2cos a)) N2cosNcos2 // eqxx.
 Qed.
 
-Lemma screw_axis_point_mat_unit (*(a0 : a != 0)*) :
+Lemma screw_axis_point_mat_unit :
   screw_axis_point_mat \is a GRing.unit.
 Proof.
 apply/unitrP; exists screw_axis_point_mat_inv.
 by rewrite screw_axis_point_Vmat // screw_axis_point_matV.
 Qed.
 
-Lemma screw_axis_point_mat_invE (*(a0 : a != 0)*) :
+Lemma screw_axis_point_mat_invE :
   let A := row_mx (Q - 1) w^T in
   (A *m A^T)^-1 = screw_axis_point_mat_inv.
 Proof.
@@ -1317,11 +1255,11 @@ Qed.
 (* [angeles] Sect. 3.2.1 (the screw of a rigid-body motion) *)
 Lemma screw_axis_pointE p0 q :
   p0 *d w = 0 (* p0 is the closed point to the origin *) ->
-  norm (displacement f p0) = d0 f (*colinear (displacement f p0) w*) ->
+  norm (displacement f p0) = d0 f ->
   p0 = screw_axis_point f q.
 Proof.
 move=> p0e0 fp0e0.
-have _(*?*) : relative_displacement f (f p0) p0 = 0 (*displacement f p0 *m (Q - 1) = 0*).
+have _(*?*) : relative_displacement f (f p0) p0 = 0.
   rewrite /relative_displacement -/(displacement f p0).
   move: (MozziChasles w0 sina0 fp0e0).
   rewrite -(normalcomp_colinear _ w1) // => /eqP H1.

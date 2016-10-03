@@ -765,6 +765,9 @@ Qed.
 Definition parallel : rel (Line.t R) :=
   [rel l1 l2 | colinear \vec( l1 ) \vec( l2 )].
 
+Definition perpendicular : rel (Line.t R) :=
+  [rel l1 l2 | \vec( l1 ) *d \vec( l2 ) == 0].
+
 (* skew lines *)
 
 Definition coplanar (p1 p2 p3 p4 : point) : bool :=
