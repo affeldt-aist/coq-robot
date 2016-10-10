@@ -1511,7 +1511,7 @@ Definition euler_c (M : 'M[R]_3) : angle R :=
   else
     - atan2 (M 1 0) (M 1 1).
 
-Lemma sqr_Mi0E (M : 'M[R]_3) i : M \is 'O[R]_3 ->
+Lemma sqr_Mi0E M i : M \is 'O[R]_3 -> 
   M i 1 ^+ 2 + M i 2%:R ^+ 2 = 1 - M i 0 ^+ 2.
 Proof.
 move/norm_row_of_O => /(_ i)/(congr1 (fun x => x ^+ 2)).
@@ -1519,7 +1519,7 @@ rewrite -dotmulvv dotmulE sum3E !mxE -!expr2 expr1n => /eqP.
 by rewrite -addrA addrC eq_sym -subr_eq => /eqP <-.
 Qed.
 
-Lemma sqr_Mi1E (M : 'M[R]_3) i : M \is 'O[R]_3 ->
+Lemma sqr_Mi1E M i : M \is 'O[R]_3 ->
   M i 0 ^+ 2 + M i 2%:R ^+ 2 = 1 - M i 1 ^+ 2.
 Proof.
 move/norm_row_of_O => /(_ i)/(congr1 (fun x => x ^+ 2)).
@@ -1527,12 +1527,22 @@ rewrite -dotmulvv dotmulE sum3E !mxE -!expr2 expr1n => /eqP.
 by rewrite addrAC eq_sym -subr_eq => /eqP <-.
 Qed.
 
-Lemma sqr_Mi2E (M : 'M[R]_3) i : M \is 'O[R]_3 ->
+Lemma sqr_Mi2E M i : M \is 'O[R]_3 ->
   M i 0 ^+ 2 + M i 1 ^+ 2 = 1 - M i 2%:R ^+ 2.
 Proof.
 move/norm_row_of_O => /(_ i)/(congr1 (fun x => x ^+ 2)).
 rewrite -dotmulvv dotmulE sum3E !mxE -!expr2 expr1n => /eqP.
 by rewrite eq_sym -subr_eq => /eqP <-.
+Qed.
+
+Lemma Mi2_1 M i : M \is 'O[R]_3 -> 
+  (`| M i 2%:R | == 1) = (M i 0 == 0) && (M i 1 == 0).
+Proof.
+move=> MO; move/eqP: (sqr_Mi2E i MO) => {MO}MO.
+apply/idP/idP => [Mi2|/andP[/eqP Mi0 /eqP Mi1]]; last first.
+  move: MO; by rewrite Mi0 Mi1 expr2 mulr0 addr0 eq_sym subr_eq add0r eq_sym sqr_norm_eq1.
+move: MO; rewrite -(sqr_normr (M i 2%:R)) (eqP Mi2) expr1n subrr.
+by rewrite paddr_eq0 ?sqr_ge0 // => /andP[]; rewrite 2!sqrf_eq0 => /eqP -> /eqP ->; rewrite eqxx.
 Qed.
 
 Lemma sqrtr_sqrN2 (x : R) : x != 0 -> Num.sqrt (x ^- 2) = `|x|^-1.
@@ -1593,6 +1603,16 @@ rewrite sqr_yarc // -{2}(@divrr _ (1 - x ^+ 2)); last first.
 by rewrite -mulrDl subrK !mul1r -inv_yarc // invrK.
 Qed.
 
+Lemma sin_atan2_yarc (x : R) : `| x | < 1 -> sin (atan2 (- x) (yarc x)) = - x.
+Proof.
+move=> x1.
+rewrite /atan2 yarc_gt0 // sin_atan [(_/_)^+2]expr_div_n sqrrN.
+rewrite sqr_yarc // -{1}(@divrr _ (1 - x ^+ 2)); last first.
+  by rewrite unitfE gtr_eqF // N1x2_gt0.
+rewrite -mulrDl subrK !mul1r -inv_yarc // invrK.
+by rewrite -mulrA mulVr ?unitfE ?yarc_neq0 // mulr1.
+Qed.
+
 Lemma cos_atan2_0 (x : R) : cos (atan2 x 0) = (x == 0)%:R.
 Proof.
 rewrite /atan2 ltrr; case: ifPn => [x0|]; first by rewrite cos_pihalf gtr_eqF.
@@ -1607,7 +1627,7 @@ rewrite -lerNgt ler_eqVlt => /orP[/eqP ->| x0]; first by rewrite ltrr sin0 sgr0.
 by rewrite x0 sinN sin_pihalf ltr0_sg.
 Qed.
 
-Lemma rot_euler_anglesE (M : 'M[R]_3) : M \is 'SO[R]_3 ->
+Lemma rot_euler_anglesE M : M \is 'SO[R]_3 ->
   M = Rxyz (euler_c M) (euler_b M) (euler_a M).
 Proof.
 move=> MSO.
@@ -1641,11 +1661,7 @@ apply/matrix3P; rewrite !mxE /=.
       rewrite atan2_lt0_lt0E // cos_period ?eqxx ?orbT // H ?ltr_eqF //.
       by rewrite ltr0_norm // 3!mulNr opprK -mulrA mulVr ?mulr1 // unitfE yarc_neq0.
   rewrite negbK cos0 mul1r => M02.
-  have -> : M 0 0 = 0.
-    move: (norm_row_of_O (rotation_sub MSO) 0) => /(congr1 (fun x => x ^+ 2))/eqP.
-    rewrite sqr_norm sum3E !mxE -[M 0 2%:R ^+ 2]sqr_normr (eqP M02).
-    rewrite expr1n eq_sym -subr_eq subrr eq_sym.
-    by rewrite paddr_eq0 ?sqr_ge0 // sqrf_eq0 => /andP[/eqP].
+  have -> : M 0 0 = 0 by move: M02; rewrite Mi2_1 ?rotation_sub // => /andP[/eqP].
   move: M02; rewrite eqr_norml ler01 andbT => /orP[] /eqP ->.
     by rewrite eqxx cosN cos_pihalf.
   by rewrite Neqxx oner_eq0 cos_pihalf.
@@ -1683,30 +1699,24 @@ apply/matrix3P; rewrite !mxE /=.
       by rewrite ltr0_sg // mulrN1 opprK.
     rewrite atan2_lt0_lt0E // sin_period ?eqxx ?orbT // H ?ltr_eqF //.
     by rewrite mulNr -mulrA mulVr ?unitfE ?yarc_neq0 // mulr1 ltr0_sg // mulrN opprK mulr1.
-  rewrite negbK => M02.
-  rewrite sin0 mul0r.
-  move: (sqr_Mi2E 0 (rotation_sub MSO)).
-  rewrite -(sqr_normr (M 0 2%:R)) (eqP M02) expr1n subrr => /eqP.
-  by rewrite paddr_eq0 ?sqr_ge0 // 2!sqrf_eq0 => /andP[_ /eqP].
+  by rewrite negbK sin0 mul0r Mi2_1 ?rotation_sub // => /andP[_ /eqP].
 - (* 0 2 *) rewrite /euler_b; case: ifPn => [M02|].
   + have {M02}M02 : `|M 0 2%:R| < 1.
       by rewrite ltr_neqAle M02 andTb Oij_ub // ?rotation_sub.
-    rewrite sqr_Mi2E ?rotation_sub // -/(yarc (M 0 2%:R)).
-    rewrite /atan2 yarc_gt0 //.
-    rewrite sin_atan !mulNr opprK -[LHS]mulr1 -mulrA; congr (_ * _).
-    rewrite {1}inv_yarc // sqrrN expr_div_n sqr_sqrtr; last first.
-      by rewrite ltrW // N1x2_gt0.
-    rewrite -{3}(@divrr _ (1 - M 0 2%:R ^+ 2)); last first.
-      by rewrite unitfE gtr_eqF // N1x2_gt0.
-    by rewrite -mulrDl subrK div1r divrr // unitfE sqrtr_eq0 -ltrNge invr_gt0 N1x2_gt0.
+    by rewrite sqr_Mi2E ?rotation_sub // -/(yarc (M 0 2%:R)) sin_atan2_yarc // opprK.
   + rewrite negbK eqr_norml ler01 andbT => /orP[]/eqP ->.
       by rewrite eqxx sinN opprK sin_pihalf.
-   by rewrite Neqxx oner_eq0 sin_pihalf.
+     by rewrite Neqxx oner_eq0 sin_pihalf.
 - (* 1 0 *)
   rewrite /euler_a /euler_b /euler_c; case: ifPn => [M02|].
-    rewrite sqr_Mi2E ?rotation_sub // -/(yarc (M 0 2%:R)).
+    have {M02}M02 : `|M 0 2%:R| < 1.
+      by rewrite ltr_neqAle M02 andTb Oij_ub // rotation_sub.
+    rewrite sqr_Mi2E ?rotation_sub // -/(yarc (M 0 2%:R)) sin_atan2_yarc //.
     admit.
-  rewrite cos0 sin0 mul0r mul1r subr0 negbK => /eqP M02.
+  rewrite cos0 sin0 mul0r mul1r subr0 negbK => M02.
+  case: ifPn => {M02}M02.
+    rewrite sinN sin_pihalf mulN1r.
+    rewrite /atan2.
   admit.
 - (* 1 1 *) admit.
 - (* 1 2 *) admit.

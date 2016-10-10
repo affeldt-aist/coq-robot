@@ -1330,10 +1330,3 @@ set p0 := screw_axis_point f q.
 Abort.
 
 End screw_axis_point.
-
-(*
-TODO:
-- eskew_is_onto_SO / angle_axis_eskew
-- finir le rangement sur le screw axis point
-- regarder les series formelles de Cohen CPP 2016
-*)
