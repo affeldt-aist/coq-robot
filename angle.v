@@ -762,6 +762,13 @@ move=> Nx_le1; rewrite /sin /acos argK //; simpc; rewrite sqr_sqrtr.
 by rewrite subr_ge0 -[_ ^+ _]real_normK ?num_real // exprn_ile1.
 Qed.
 
+Lemma cos_asin (x : R) : `| x | < 1 -> cos (asin x) = Num.sqrt (1 - x ^+ 2).
+Proof.
+move=> x1.
+rewrite /asin /cos argK // normc_def /= sqr_sqrtr ?subr_ge0 ?subrK ?sqrtr1 //.
+by rewrite -sqr_normr expr_le1 // ltrW.
+Qed.
+
 Lemma cos_atan x : cos (atan x) = 1 / Num.sqrt (1 + x ^+ 2).
 Proof.
 move: (atan_in x); rewrite Npi2pi2_openP ltr_neqAle => /andP [H1 H2].
