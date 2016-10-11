@@ -27,24 +27,6 @@ Section scara.
 Variable R : realType.
 Let vector := 'rV[R]_3.
 
-(* TODO: move *)
-Definition adjoint (g : 'M[R]_4) :=
-  let r := rot_of_hom g in
-  let t := trans_of_hom g in
-  block_mx r 0 (\S(t) * r) r.
-
-Definition inv_adjoint (g : 'M[R]_4) :=
-  let r := rot_of_hom g in
-  let t := trans_of_hom g in
-  block_mx r^T 0 (- \S(t *m r^T) * r^T) r^T.
-
-Lemma inv_adjointE g : g \is 'SE3[R] -> inv_adjoint g = adjoint (inv_hom g).
-Proof.
-move/SE3E => ->.
-rewrite /inv_adjoint /adjoint !(rot_of_hom_hom,trans_of_hom_hom).
-by rewrite mulNmx skew_mxN.
-Qed.
-
 Variable theta1 : angle R.
 Variable a1 : R.
 Variable theta2 : angle R.

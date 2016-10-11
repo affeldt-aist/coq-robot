@@ -1462,6 +1462,7 @@ Qed.
 
 End angle_axis_representation.
 
+(* NB: work in progress *)
 Section euler_angles.
 
 Variable R : rcfType.
@@ -1791,6 +1792,11 @@ apply/matrix3P; rewrite !mxE /=.
       rewrite Hsx -cos2sin2 sqrtr_sqr divrr ?unitfE ?normr_eq0; last first.
         by rewrite -Hcx.
       rewrite divr1.
+      rewrite mulrCA.
+      rewrite -invr_sg -invrM; last 2 first.
+        by rewrite unitfE normr_eq0 -Hcx.
+        by rewrite unitfE sgr_eq0 -Hcx.
+      rewrite (mulrC (`| _|)) -numEsg -Hcx.
       admit.
     admit.
   rewrite negbK cos0 mul1r sin0 mul0r subr0.

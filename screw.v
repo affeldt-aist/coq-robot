@@ -226,6 +226,65 @@ Notation "''se3[' R ]" := (se3 R)
 Notation "'\w(' t ')'" := (ang_of_twist t) (format "'\w('  t  ')'", at level 3).
 Notation "'\v(' t ')'" := (lin_of_twist t) (format "'\v('  t  ')'", at level 3).
 
+(* NB: work in progress *)
+Section adjoint.
+
+Variable R : rcfType.
+
+(* NB: maybe move to rigid.v? *)
+Definition adjoint (g : 'M[R]_4) : 'M_6 :=
+  let r := rot_of_hom g in
+  let t := trans_of_hom g in
+  block_mx r 0 (\S(t) * r) r.
+
+Definition inv_adjoint (g : 'M[R]_4) : 'M_6 :=
+  let r := rot_of_hom g in
+  let t := trans_of_hom g in
+  block_mx r^T 0 (- \S(t *m r^T) * r^T) r^T.
+
+Lemma inv_adjointE g : g \is 'SE3[R] -> inv_adjoint g = adjoint (inv_hom g).
+Proof.
+move/SE3E => ->.
+rewrite /inv_adjoint /adjoint !(rot_of_hom_hom,trans_of_hom_hom).
+by rewrite mulNmx skew_mxN.
+Qed.
+
+Definition twist_to_6 (t : Twist.t R) : 'rV_6 := row_mx \v(t) \w(t).
+
+Definition twist_from_6 (M : 'rV[R]_6) : 'M[R]_4 :=
+  Twist.mk (@lsubmx _ 1 3 3 M) (@rsubmx _ 1 3 3 M).
+
+(* [murray] p.56 *)
+Lemma lem213 (t : Twist.t R) g : g \is 'SE3[R] ->
+  g * t * g^-1 \is 'se3[R] /\
+  g * t * g^-1 = twist_from_6 (twist_to_6 t *m adjoint g).
+Proof.
+move=> gSE; split.
+  rewrite se3E.
+  admit.
+rewrite /adjoint /twist_to_6.
+rewrite (mul_row_block \v(t) \w(t) (rot_of_hom g)) mulmx0 add0r.
+rewrite /twist_from_6 /= row_mxKl row_mxKr.
+rewrite {1 2}(SE3E gSE).
+rewrite {1}/Twistmx /= {1}/hom.
+rewrite -mulmxE.
+rewrite (mulmx_block (rot_of_hom g) 0 (trans_of_hom g) 1 \S(Twist.ang t)).
+rewrite !(mulmx0,add0r,mul1mx,mul0mx,addr0).
+rewrite -SE3E //.
+rewrite SE3_inv // {1}/inv_hom {1}/hom.
+rewrite (mulmx_block (rot_of_hom g *m \S(Twist.ang t)) 0 (trans_of_hom g *m \S(Twist.ang t) + Twist.lin t) 0 (rot_of_hom g)^T 0 _ 1).
+rewrite !(mul0mx,addr0,mulmx0).
+rewrite /Twistmx /=.
+f_equal.
+  rewrite ang_of_twistE.
+  admit.
+rewrite lin_of_twistE ang_of_twistE mulmxDl addrC; congr (_ + _).
+  admit.
+rewrite skew_mxE.
+Abort.
+
+End adjoint.
+
 Section sample_rigid_transformation.
 
 Variable R : rcfType.
@@ -596,7 +655,7 @@ have a0 : a != 0.
   apply: contra rotf => /eqP.
   rewrite fexp_skew => ->; by rewrite emx30M.
 set A : 'M_3 := \S(w) *m (1 - rot_of_hom f) + Rad.f a *: (w^T *m w).
-suff [v Hv] : exists v, p = (norm w)^-2 *: (v *m A).
+suff [v Hv] : { v | p = (norm w)^-2 *: (v *m A) }.
   exists \T(v, w), a.
   rewrite (SE3E fSE) /etwist /hom_twist ang_of_twistE.
   have /negbTE -> : w != 0.
@@ -605,6 +664,13 @@ suff [v Hv] : exists v, p = (norm w)^-2 *: (v *m A).
   rewrite fexp_skew -/p Hv; congr (hom _ (_ *: _)).
   by rewrite lin_of_twistE /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl fexp_skew.
 have HA : A = etwist_is_onto_SE_mat a w.
+
+(*
+Lemma etwist_is_onto_SE_matE a f :
+  let w := vaxis_of_SO (rot_of_hom f) in
+  \S(w) *m (1 - rot_of_hom f) + Rad.f a *: (w^T *m w) = etwist_is_onto_SE_mat a w.
+*)
+
   rewrite /A /etwist_is_onto_SE_mat.
   rewrite fexp_skew /emx3.
   rewrite mulmxBr mulmx1 -(addrA 1) mulmxDr mulmx1 -!addrA opprD !addrA subrr add0r.
@@ -621,7 +687,7 @@ have HA : A = etwist_is_onto_SE_mat a w.
   rewrite !scalemx1 scalar_mxM.
   rewrite mul_scalar_mx subrK.
   by rewrite scaleNr scalerN opprK scalerA.
-suff : exists A' : 'M_3 , A' * A = 1.
+suff : { A' : 'M_3 |  A' * A = 1 }.
   case => A' AA'.
   exists ((norm w) ^+2 *: p *m A').
   rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
