@@ -190,7 +190,7 @@ apply/rowP => i; rewrite !mxE /=.
 case: ifPn => // ?; case: ifPn => // ?; case: ifPn => // ?; by Simp.r.
 Qed.
 
-Lemma row3D a b c a' b' c' : 
+Lemma row3D a b c a' b' c' :
   row3 a b c + row3 a' b' c' = row3 (a + a') (b + b') (c + c').
 Proof.
 rewrite 3!row3_row_mx (add_row_mx a%:M) (add_row_mx b%:M).
@@ -819,6 +819,12 @@ Proof. by rewrite orthogonalEinv => /andP [_ /eqP]. Qed.
 Lemma orthogonalEC M : (M \is 'O[R]_n) = (M^T * M == 1).
 Proof. by rewrite -orthogonalV orthogonalE trmxK. Qed.
 
+Lemma orthogonal_mul_tr M : (M \is 'O[R]_n) -> M *m M^T = 1.
+Proof. by move/eqP. Qed.
+
+Lemma orthogonal_tr_mul M : (M \is 'O[R]_n) -> M^T *m M = 1.
+Proof. by rewrite orthogonalEC => /eqP. Qed.
+
 Lemma orthogonal_det M : M \is 'O[R]_n -> `|\det M| = 1.
 Proof.
 move=> /eqP /(congr1 determinant); rewrite detM det_tr det1 => /eqP.
@@ -856,6 +862,12 @@ Proof. apply/andP; by rewrite orthogonal1 det1. Qed.
 
 Lemma rotation_sub : {subset 'SO[R]_n <= 'O[R]_n}.
 Proof. by move=> M /andP []. Qed.
+
+Lemma rotation_mul_tr M : (M \is 'SO[R]_n) -> M *m M^T = 1.
+Proof. by move=> /rotation_sub /orthogonal_mul_tr. Qed.
+
+Lemma rotation_tr_mul M : (M \is 'SO[R]_n) -> M^T *m M = 1.
+Proof. by move=> /rotation_sub /orthogonal_tr_mul. Qed.
 
 Lemma rotation_divr_closed : divr_closed 'SO[R]_n.
 Proof.
@@ -996,33 +1008,23 @@ Qed.
 
 Lemma det_rotN1 (M : 'M[R]_3) : M \is 'SO[R]_3 -> \det (M - 1) = 0.
 Proof.
-move=> MSO.
-suff /eqP : \det (M - 1) = - \det (M - 1).
-  by rewrite -subr_eq0 opprK -mulr2n -mulr_natr mulf_eq0 pnatr_eq0 orbF => /eqP.
-rewrite -{1}det_tr.
-move/eqP : MSO; rewrite rotationE => /eqP/andP[].
-rewrite orthogonalEC => /eqP MMT /eqP detM.
-rewrite -{1}MMT -{1}(mul1r M) -mulrBl trmx_mul.
-rewrite linearD /= trmx1 linearN /= trmxK -opprB.
-rewrite mulmxN -scaleN1r detZ -signr_odd expr1 mulN1r.
-by rewrite det_mulmx det_tr detM mul1r.
+move=> MSO; apply/eqP; rewrite -[_ == 0](mulrn_eq0 _ 2) addr_eq0.
+have {1}-> : M - 1 = - (M *m (M - 1)^T).
+  rewrite raddfD /= raddfN /= trmx1 mulmxDr mulmxN mulmx1.
+  by rewrite rotation_mul_tr // opprB.
+rewrite -scaleN1r detZ -signr_odd detM det_tr.
+by rewrite [\det M]rotation_det // mulN1r mul1r.
 Qed.
 
 Lemma rot_eigen1 (M : 'M[R]_3) : M \is 'SO[R]_3 -> eigenspace M 1 != 0.
 Proof.
-move/det_rotN1 => /eqP/det0P[n n0]; rewrite mulmxBr mulmx1 => /eqP.
-rewrite subr_eq0 => /eqP nM.
-apply/rowV0Pn; exists n => //.
-apply/sub_kermxP.
-by rewrite mulmxBr mulmx1 nM subrr.
+by move=> MS0; rewrite kermx_eq0 row_free_unit unitmxE det_rotN1 ?unitr0.
 Qed.
 
 Lemma euler (M : 'M[R]_3) : M \is 'SO[R]_3 -> {x : 'rV[R]_3 | (x != 0) && (x *m M == x)}.
 Proof.
-move/rot_eigen1 => H; apply sigW.
-case/rowV0Pn : H => x /eigenspaceP Hx x0; exists x.
-rewrite scale1r in Hx.
-by rewrite x0 /= Hx.
+move=> MSO; apply: sigW; have /rot_eigen1 /rowV0Pn [v v_eigen v_neq0] := MSO.
+by exists v; rewrite v_neq0 (eigenspaceP v_eigen) scale1r eqxx.
 Qed.
 
 Lemma O3_O2 (M : 'M[R]_3) (P : 'M[R]_2) : M = block_mx (1 : 'M_1) 0 0 P ->

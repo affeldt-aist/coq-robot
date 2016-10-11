@@ -1605,7 +1605,7 @@ Proof.
 rewrite neqr_lt => /orP[] y0.
   move=> [:H].
   case: (lerP 0 x) => x0.
-    rewrite atan2_ge0_lt0E // cos_period ?eqxx // cos_atan mul1r expr_div_n.
+    rewrite atan2_ge0_lt0E // cosDpi ?eqxx // cos_atan mul1r expr_div_n.
     abstract: H.
     rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 ltr_eqF.
     rewrite -mulrDl sqrtrM; last by rewrite addr_ge0 // sqr_ge0.
@@ -1613,7 +1613,7 @@ rewrite neqr_lt => /orP[] y0.
       by rewrite unitfE sqrtr_eq0 -ltrNge ltr_paddr // ?sqr_ge0 // exprn_even_gt0 // orbC ltr_eqF.
       by rewrite unitfE invr_eq0 eqr_oppLR oppr0 ltr_eqF.
     by rewrite !invrN invrK mulNr opprK.
-  rewrite atan2_lt0_lt0E // cos_period ?eqxx ?orbT // cos_atan mul1r expr_div_n.
+  rewrite atan2_lt0_lt0E // -piNpi cosDpi ?eqxx ?orbT // cos_atan mul1r expr_div_n.
   exact: H.
 rewrite {1}atan2_x_gt0E // cos_atan mul1r.
 rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 gtr_eqF.
@@ -1633,7 +1633,7 @@ Proof.
 rewrite neqr_lt => /orP[] y0.
   move=> [:H].
   case: (lerP 0 x) => x0.
-    rewrite atan2_ge0_lt0E // sin_period ?eqxx // sin_atan expr_div_n.
+    rewrite atan2_ge0_lt0E // sinDpi ?eqxx // sin_atan expr_div_n.
     abstract: H.
     rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 ltr_eqF.
     rewrite -mulrDl sqrtrM; last by rewrite addr_ge0 // sqr_ge0.
@@ -1642,7 +1642,7 @@ rewrite neqr_lt => /orP[] y0.
       by rewrite unitfE invr_eq0 eqr_oppLR oppr0 ltr_eqF.
     rewrite !invrN invrK mulNr mulrN opprK -mulrA (mulrA _^-1) mulVr ?mul1r //.
     by rewrite unitfE ltr_eqF.
-  rewrite atan2_lt0_lt0E // sin_period ?eqxx ?orbT // sin_atan expr_div_n.
+  rewrite atan2_lt0_lt0E // -piNpi sinDpi ?eqxx ?orbT // sin_atan expr_div_n.
   exact: H.
 rewrite {1}atan2_x_gt0E // sin_atan.
 rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 gtr_eqF.
