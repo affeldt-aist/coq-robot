@@ -1,16 +1,16 @@
 rigid.v
 aux.v
+exterior.v
+cross_product.v
 angle.v
 quaternion.v
 euclidean3.v
 screw.v
 skew.v
-vec_angle.v
 rot.v
 frame.v
 dh.v
 scara.v
-reals.v
-boolp.v
+vec_angle.v
 
 -R . Robot
