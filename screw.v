@@ -231,6 +231,27 @@ Section adjoint.
 
 Variable R : rcfType.
 
+Definition vee (t : 'M[R]_4) : 'rV[R]_6 := 
+  row_mx (lin_of_twist t) (ang_of_twist t).
+
+Definition wedge (t : 'rV[R]_6) : 'M[R]_4 := 
+  let v := @lsubmx _ 1 3 3 t in 
+  let w := @rsubmx _ 1 3 3 t in
+  Twist.mk v w.
+
+Lemma veeK t : t \is 'se3[R] -> wedge (vee t) = t.
+Proof.
+move=> Ht.
+rewrite /vee /wedge /Twistmx /= row_mxKl row_mxKr -[RHS](@submxK _ 3 1 3 1 t).
+move: Ht; rewrite qualifE => /and3P[H1 /eqP H2 /eqP H3].
+by rewrite -H2 -H3 unskewK.
+Qed.
+
+Lemma wedgeK t : vee (wedge t) = t.
+Proof. by rewrite /vee /wedge lin_of_twistE ang_of_twistE hsubmxK. Qed.
+
+Definition TwistrV (t : Twist.t R) : 'rV_6 := row_mx \v(t) \w(t).
+
 (* NB: maybe move to rigid.v? *)
 Definition adjoint (g : 'M[R]_4) : 'M_6 :=
   let r := rot_of_hom g in
@@ -249,22 +270,17 @@ rewrite /inv_adjoint /adjoint !(rot_of_hom_hom,trans_of_hom_hom).
 by rewrite mulNmx skew_mxN.
 Qed.
 
-Definition twist_to_6 (t : Twist.t R) : 'rV_6 := row_mx \v(t) \w(t).
-
-Definition twist_from_6 (M : 'rV[R]_6) : 'M[R]_4 :=
-  Twist.mk (@lsubmx _ 1 3 3 M) (@rsubmx _ 1 3 3 M).
-
 (* [murray] p.56 *)
 Lemma lem213 (t : Twist.t R) g : g \is 'SE3[R] ->
   g * t * g^-1 \is 'se3[R] /\
-  g * t * g^-1 = twist_from_6 (twist_to_6 t *m adjoint g).
+  g * t * g^-1 = wedge (TwistrV t *m adjoint g).
 Proof.
 move=> gSE; split.
   rewrite se3E.
   admit.
-rewrite /adjoint /twist_to_6.
+rewrite /adjoint /TwistrV.
 rewrite (mul_row_block \v(t) \w(t) (rot_of_hom g)) mulmx0 add0r.
-rewrite /twist_from_6 /= row_mxKl row_mxKr.
+rewrite /wedge /= row_mxKl row_mxKr.
 rewrite {1 2}(SE3E gSE).
 rewrite {1}/Twistmx /= {1}/hom.
 rewrite -mulmxE.
@@ -664,13 +680,7 @@ suff [v Hv] : { v | p = (norm w)^-2 *: (v *m A) }.
   rewrite fexp_skew -/p Hv; congr (hom _ (_ *: _)).
   by rewrite lin_of_twistE /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl fexp_skew.
 have HA : A = etwist_is_onto_SE_mat a w.
-
-(*
-Lemma etwist_is_onto_SE_matE a f :
-  let w := vaxis_of_SO (rot_of_hom f) in
-  \S(w) *m (1 - rot_of_hom f) + Rad.f a *: (w^T *m w) = etwist_is_onto_SE_mat a w.
-*)
-
+  (* TODO: isolate as a lemma? *)
   rewrite /A /etwist_is_onto_SE_mat.
   rewrite fexp_skew /emx3.
   rewrite mulmxBr mulmx1 -(addrA 1) mulmxDr mulmx1 -!addrA opprD !addrA subrr add0r.
@@ -697,8 +707,7 @@ suff : { A' : 'M_3 |  A' * A = 1 }.
 (* NB: corresponds to [murray], exercise 9, p.75 *)
 (* NB: formula for the inverse matrix in
    [Introduction to Robotics: Mechanics, Planning, and Control,
-    F.C. Park, K. Lynch, Mar. 14 2012]
- *)
+    F.C. Park, K. Lynch, Mar. 14 2012] *)
 exists (etwist_is_onto_SE_mat_inv a w).
 rewrite HA.
 have w1 : norm w = 1 by rewrite norm_vaxis_of_SO // rot_of_hom_SO.
@@ -800,8 +809,8 @@ Let vector := 'rV[R]_3.
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
 Definition screw_motion (s : Screw.t R) (p : point) :=
   let: (l, a, h) := (Screw.l s, Screw.a s, Screw.h s) in
-  let (p0, w) := (\pt( l ), \vec( l )) in
-  p0 + (p - p0) *m `e^(a, w) + (h * Rad.f a) *: w.
+  let (q, w) := (\pt( l ), \vec( l )) in
+  q + (p - q) *m `e^(a, w) + (h * Rad.f a) *: w.
 
 (* the rbt given by a screw *)
 Definition hom_screw_motion s : 'M[R]__ :=
@@ -832,11 +841,6 @@ rewrite mxE [in RHS]mxE; congr (_ + _).
 rewrite mulmxBr mulmx1 addrCA mxE [in RHS]mxE; congr (_ + _).
 by rewrite mulmxBl.
 Qed.
-
-(* [murray] p. 47
-  in fact, if we choose v = - w x q + h w, then \xi = (v, w) generates the screw motion
-  in equation 2.40
-*)
 
 Lemma hom_screw_motion_etwist s :
   let: (l, a, h) := (Screw.l s, Screw.a s, Screw.h s) in
@@ -1177,7 +1181,6 @@ Let Q : 'M[R]_3 := ortho_of_iso f.
 Hypothesis w0 : axial_vec Q != 0.
 Let w : 'rV[R]_3 := normalize (Aa.vaxis Q).
 Let a := Aa.angle Q.
-(* TODO: on peut virer? *)
 Hypothesis sina0 : sin a != 0.
 Let a0 : a != 0.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sin0. Qed.

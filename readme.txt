@@ -1,21 +1,32 @@
-versions:
-- Coq 8.5pl2
-- a recent version (august 2016) of the Mathematical Component library
-  https://github.com/math-comp/math-comp
+This is an archive of the proof scripts discussed in the paper "Formal
+Foundations for Modeling Robot Manipulators" by Reynald Affeldt and
+Cyril Cohen (submitted for publication).
 
-installation:
-1. add to the _CoqProject file the position of the MathComp library
-   e.g., -R "~/math-comp/mathcomp" mathcomp
-2. generate the Makefile using coq_makefile
-   e.g., coq_makefile -f _CoqProject -o Make
-3. make -f Make
+NB: All the proofs discussed in the paper have been completed.  The
+archive contains a few proofs in "Abort state": this is work in
+progress and is not discussed in the paper.
 
 boolp.v, reals.v are included for convenience,
 they come from
 https://github.com/strub/coq-alternate-reals
 by P.-Y. Strub
 
-some references used in this work:
+Software version: the proof scripts require the following software to
+compile:
+- Coq 8.5pl2
+- a recent version (late August 2016) of the Mathematical Component
+  library
+  https://github.com/math-comp/math-comp
+
+Installation instructions:
+1. add to the _CoqProject file the position of the MathComp library if needed
+   e.g., -R "~/math-comp/mathcomp" mathcomp
+2. generate the Makefile using coq_makefile
+   e.g., coq_makefile -f _CoqProject -o Make
+3. compile using make
+   make -f Make
+
+Some references used in this work:
 [murray] Murray, Li, Shankar Sastry: A Mathematical Introduction to Robotic Manipulation
 [springer] Siciliano, Khatib (Eds.): Springer Handbook of Robotics
 [angeles] Angeles: Fundamentals of Robotic Mechanical Systems
