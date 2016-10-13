@@ -1045,26 +1045,17 @@ move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
 move=> {MSO}MSO; by case: euler => v /= /andP[_ /eqP].
 Qed.
 
-Lemma O3_O2 (M : 'M[R]_3) (P : 'M[R]_2) : M = block_mx (1 : 'M_1) 0 0 P ->
-  (M \is 'O[R]_3) = (P \is 'O[R]_2).
+Lemma OSn_On m n (P : 'M[R]_n) :
+  (block_mx (1%:M : 'M_m) 0 0 P \is 'O[R]_(m + n)) = (P \is 'O[R]_n).
 Proof.
-move=> HM.
-rewrite HM !orthogonalE (tr_block_mx (1 : 'M_1)) trmx1 2!trmx0.
-rewrite -mulmxE (mulmx_block (1 : 'M_1) _ _ _ 1) !(mulmx0,mul0mx,mulmx1,mul1mx,addr0,add0r).
-rewrite -[X in (_ == X) = _](@submxK _ 1 2 1 2).
-rewrite (_ : ulsubmx _ = 1); last by apply/rowP => i; rewrite !mxE.
-rewrite (_ : ursubmx _ = 0); last by apply/rowP => i; rewrite !mxE.
-rewrite (_ : dlsubmx _ = 0); last by apply/colP => i; rewrite !mxE.
-rewrite (_ : drsubmx _ = 1); last by apply/matrix2P; rewrite !mxE.
-rewrite mulmxE; apply/idP/idP => [|/eqP -> //].
-by case/eqP/(@eq_block_mx _ 1 2 1 2) => _ _ _ ->.
+rewrite !qualifE tr_block_mx trmx1 !trmx0 mulmx_block.
+rewrite !(mulmx0, mul0mx, mulmx1, mul1mx, addr0, add0r) scalar_mx_block.
+by apply/eqP/eqP => [/eq_block_mx[]|->//].
 Qed.
 
-Lemma SO3_SO2 (M : 'M[R]_3) (P : 'M[R]_2) : M = block_mx (1 : 'M_1) 0 0 P ->
-  (M \is 'SO[R]_3) = (P \is 'SO[R]_2).
-Proof.
-move=> ->; by rewrite rotationE (@O3_O2 _ P) // rotationE (@det_lblock _ 1 2) det1 mul1r.
-Qed.
+Lemma SOSn_SOn m n (P : 'M[R]_n) :
+  (block_mx (1%:M : 'M_m) 0 0 P \is 'SO[R]_(m + n)) = (P \is 'SO[R]_n).
+Proof. by rewrite qualifE OSn_On det_lblock det1 mul1r. Qed.
 
 End orthogonal_crossmul.
 

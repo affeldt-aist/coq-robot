@@ -1178,7 +1178,7 @@ have [P MP] : exists P : 'M[R]_2, M = block_mx (1 : 'M_1) 0 0 P.
   case/boolP : (i == 0) => [/eqP ->|].
     rewrite !mxE -[RHS]M010 M01; congr (M _ _); by apply val_inj.
   rewrite ifnot01 => /eqP ->; rewrite !mxE -[RHS]M020 M02; congr (M _ _); by apply val_inj.
-have PSO : P \is 'SO[R]_2 by rewrite -(SO3_SO2 MP).
+have PSO : P \is 'SO[R]_2 by have := MSO; rewrite MP (@SOSn_SOn _ 1 2).
 move=> [: Hangle].
 split.
   abstract: Hangle.
