@@ -1027,6 +1027,24 @@ move=> MSO; apply: sigW; have /rot_eigen1 /rowV0Pn [v v_eigen v_neq0] := MSO.
 by exists v; rewrite v_neq0 (eigenspaceP v_eigen) scale1r eqxx.
 Qed.
 
+Definition vaxis_euler M :=
+  match eqVneq (M \is 'SO[R]_3) true with
+  | left MSO => sval (euler MSO)
+  | right _ => 0
+  end.
+
+Lemma vaxis_euler_neq0 M : M \is 'SO[R]_3 -> vaxis_euler M != 0.
+Proof.
+move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
+move=> {MSO}MSO; by case: euler => v /= /andP[].
+Qed.
+
+Lemma vaxis_eulerP M : M \is 'SO[R]_3 -> vaxis_euler M *m M = vaxis_euler M.
+Proof.
+move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
+move=> {MSO}MSO; by case: euler => v /= /andP[_ /eqP].
+Qed.
+
 Lemma O3_O2 (M : 'M[R]_3) (P : 'M[R]_2) : M = block_mx (1 : 'M_1) 0 0 P ->
   (M \is 'O[R]_3) = (P \is 'O[R]_2).
 Proof.

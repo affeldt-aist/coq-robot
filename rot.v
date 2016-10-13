@@ -437,16 +437,19 @@ End properties_of_Rot.
 Section relation_with_rotation_matrices.
 
 Lemma SO_Rot M : M \is 'SO[R]_3 ->
-  {u | exists a, norm u = 1 /\ Rot a u (mx_lin1 M) }.
+  exists a, Rot a (vaxis_euler M) (mx_lin1 M).
 Proof.
 move=> MSO.
-case/boolP : (M == 1) => [/eqP ->|M1].
-  exists 'e_0, 0; split.
-    by rewrite norm_delta_mx.
-  exact: Rot1.
-case: (euler MSO) => v /andP[v0 /eqP vMv].
-set f := Base.frame v0. set i := Base.i v. set j := Base.j v. set k := Base.k v.
-have iMi : i *m M = i by rewrite /i /normalize -scalemxAl vMv.
+set e := vaxis_euler M.
+case/boolP : (M == 1) => [/eqP ->|M1]; first by exists 0; exact: Rot1.
+have v0 := vaxis_euler_neq0 MSO.
+rewrite -/e in v0.
+have vMv := vaxis_eulerP MSO.
+rewrite -/e in vMv.
+set f := Base.frame v0. set i := Base.i e. set j := Base.j e. set k := Base.k e.
+have iv : i = normalize e by rewrite /i /Base.i.
+have iMi : i *m M = i.
+  by rewrite iv /normalize -scalemxAl vMv.
 have iMj : i *d (j *m M) = 0.
   by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i j) (NOFrame.idotj f).
 have iMk : i *d (k *m M) = 0.
@@ -488,12 +491,11 @@ have PO : P \is 'O[R]_2.
   by rewrite dotmulE sum2E !mxE /= -!expr2.
 case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
 - case/eq_col_mx2 : phiRO => Ha Hb Hc Hd.
-  exists i, phi; split.
-    by rewrite norm_normalize.
-  apply: (proj1 (@RotZ _ phi (mx_lin1 M) (norm v) _ _)).
-  by rewrite /i normalize_eq0.
-  by rewrite norm_gt0.
-  rewrite /i norm_scale_normalize; split => //=.
+  exists phi.
+  apply: (proj1 (@RotZ _ phi (mx_lin1 M) 1 _ _)).
+  done.
+  by rewrite ltr01.
+  rewrite scale1r; split => //.
   by rewrite -!(Ha,Hb,Hc).
   by rewrite -!(Hb,Hc,Hd).
 - exfalso.
@@ -506,40 +508,6 @@ case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
   rewrite HM 2!det_mulmx det_Rx' detV -crossmul_triple.
   rewrite -/(NOFrame.sgn f) (Frame.P f) invr1 mulr1 mul1r => /eqP.
   by rewrite Neqxx oner_eq0.
-Qed.
-
-Definition vaxis_of_SO M :=
-  match eqVneq (M \is 'SO[R]_3) true with
-  | left HM => sval (SO_Rot HM)
-  | right _ => 0
-  end.
-
-(*Definition axis_of_rot_gen M (HM : M \is 'SO[R]_3) :=
-  sval (SO_is_around_axis HM).*)
-
-Lemma norm_vaxis_of_SO M (HM : M \is 'SO[R]_3) : norm (vaxis_of_SO M) = 1.
-Proof.
-rewrite /vaxis_of_SO; case: eqVneq => H.
-  rewrite (_ : H = HM) //; last by apply eq_irrelevance.
-  by case: (SO_Rot HM) => /= x; case=> a [].
-by rewrite HM in H.
-Qed.
-
-Lemma vaxis_of_SOP M (HM : M \is 'SO[R]_3) : 
-  exists a, Rot a (vaxis_of_SO M) (mx_lin1 M).
-Proof.
-rewrite /vaxis_of_SO; case: eqVneq => H.
-  rewrite (_ : H = HM) //; last by apply eq_irrelevance.
-  case: (SO_Rot HM) => /= x [a [? H']]; by exists a.
-by rewrite HM in H.
-Qed.
-
-Lemma vaxis_of_SO_invariant (M : 'M[R]_3) (MSO : M \is 'SO[R]_3) :
-  vaxis_of_SO M *m M = vaxis_of_SO M.
-Proof.
-rewrite /vaxis_of_SO.
-case: eqVneq => [MSO'|]; last by rewrite mul0mx.
-case: (SO_Rot MSO') => /= w' [a' [w'1]]; by case.
 Qed.
 
 End relation_with_rotation_matrices.
@@ -887,15 +855,15 @@ split => /=.
 Qed.
 
 Lemma eskew_is_onto_SO M : M \is 'SO[R]_3 ->
-  exists a, M = `e^(a, vaxis_of_SO M).
+  exists a, M = `e^(a, normalize (vaxis_euler M)).
 Proof.
 move=> MSO.
-case/vaxis_of_SOP : (MSO) => a Ha.
+set w : vector := normalize _.
+case: (SO_Rot MSO) => a Ha.
 exists a.
-move: (norm_vaxis_of_SO MSO) => u1.
-move: (Rot_eskew a (norm1_neq0 u1)).
-rewrite normalizeI //.
-by move/(@same_Rot _ _ _ _ _ 1 (norm1_neq0 u1) ltr01 _ (esym (scale1r _)) Ha).
+move: (Rot_eskew a (vaxis_euler_neq0 MSO)).
+rewrite -/w.
+by move/(@same_Rot _ _ _ _ _ 1 (vaxis_euler_neq0 MSO) ltr01 _ (esym (scale1r _)) Ha).
 Qed.
 
 Section alternative_definition_of_eskew.
@@ -1035,7 +1003,6 @@ Lemma sym_angle M : M \is 'SO[R]_3 ->
 Proof.
 move=> MSO Msym.
 case/eskew_is_onto_SO : (MSO) => a Ma.
-have w1 : norm (vaxis_of_SO M) = 1 by rewrite norm_vaxis_of_SO.
 move: (Msym).
 rewrite {1}Ma /emx3.
 rewrite symE !linearD /= trmx1 /= !linearZ /= skew_mx2 !linearD /= !linearN /=.
@@ -1044,11 +1011,13 @@ rewrite !addrA subr_eq subrK.
 rewrite [in X in _ == X]addrC -subr_eq0 !addrA !opprD !addrA addrK.
 rewrite scalerN opprK -addrA addrCA !addrA (addrC _ 1) subrr add0r.
 rewrite -mulr2n scalerMnl scaler_eq0 mulrn_eq0 /=.
-rewrite -skew_mx0 skew_inj -norm_eq0 w1 oner_eq0 orbF.
+rewrite -skew_mx0 skew_inj -norm_eq0 norm_normalize ?vaxis_euler_neq0 // oner_eq0 orbF.
 case/eqP/sin0_inv => [a0|api]; move: Ma.
 - rewrite a0 emx30M => ->; rewrite angle1; by left.
-- rewrite api -eskew'E // /eskew' cospi scaleN1r sinpi scale0r addr0 opprB.
-  rewrite addrA -mulr2n => ->; rewrite anglepi //; by right.
+- rewrite api -eskew'E ?norm_normalize // ?vaxis_euler_neq0 //. 
+  rewrite /eskew' cospi scaleN1r sinpi scale0r addr0 opprB.
+  rewrite addrA -mulr2n => ->; rewrite anglepi // ?norm_normalize // ?vaxis_euler_neq0 //.
+  by right.
 Qed.
 
 Lemma tr_angle M : angle M^T = angle M.
@@ -1107,15 +1076,15 @@ Lemma angle0_tr (M : 'M[R]_3) : M \is 'SO[R]_3 -> angle M = 0 -> \tr M = 3%:R.
 Proof.
 move=> MSO /(congr1 (fun x => cos x)).
 rewrite cos0 /angle acosK; last first.
-  case: (SO_Rot MSO) => u [a [u1 HM]].
+  case: (SO_Rot MSO) => a HM.
   case: (angle_in a).
-    move/(Rot_angle (norm1_neq0 u1))/(_ HM) => ?; subst a.
-    move/(mxtrace_Rot (norm1_neq0 u1)) : HM => ->.
+    move/(Rot_angle (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
+    move/(mxtrace_Rot (vaxis_euler_neq0 MSO)) : HM => ->.
     rewrite addrAC subrr add0r.
     rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
     by rewrite -ler_norml cos_max.
-  move/(Rot_angleN (norm1_neq0 u1))/(_ HM) => ?; subst a.
-  move/(mxtrace_Rot (norm1_neq0 u1)) : HM => ->.
+  move/(Rot_angleN (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
+  move/(mxtrace_Rot (vaxis_euler_neq0 MSO)) : HM => ->.
   rewrite addrAC subrr add0r.
   rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
   by rewrite -ler_norml cos_max.
@@ -1131,15 +1100,15 @@ Proof.
 move=> MSO /(congr1 (fun x => cos x)).
 rewrite cospi /angle acosK; last first.
   (* TODO: factorize with angle0_tr *)
-  case: (SO_Rot MSO) => u [a [u1 HM]].
+  case: (SO_Rot MSO) => a HM.
   case: (angle_in a).
-    move/(Rot_angle (norm1_neq0 u1))/(_ HM) => ?; subst a.
-    move/(mxtrace_Rot (norm1_neq0 u1)) : HM => ->.
+    move/(Rot_angle (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
+    move/(mxtrace_Rot (vaxis_euler_neq0 MSO)) : HM => ->.
     rewrite addrAC subrr add0r.
     rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
     by rewrite -ler_norml cos_max.
-  move/(Rot_angleN (norm1_neq0 u1))/(_ HM) => ?; subst a.
-  move/(mxtrace_Rot (norm1_neq0 u1)) : HM => ->.
+  move/(Rot_angleN (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
+  move/(mxtrace_Rot (vaxis_euler_neq0 MSO)) : HM => ->.
   rewrite addrAC subrr add0r.
   rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
   by rewrite -ler_norml cos_max.
@@ -1150,22 +1119,20 @@ by rewrite subrK mulN1r mulr2n opprD subrK.
 Qed.
 
 Lemma SO_pi_inv M : M \is 'SO[R]_3 -> angle M = pi ->
-  let u := vaxis_of_SO M in
-  M = (normalize u)^T *m normalize u *+ 2 - 1.
+  let u := normalize (vaxis_euler M) in
+  M = u^T *m u *+ 2 - 1.
 Proof.
 move=> MSO Mpi u.
-have [a H] : exists a, Rot a u (mx_lin1 M) by apply vaxis_of_SOP.
-have u1 : norm u = 1 by rewrite norm_vaxis_of_SO.
+have [a H] := SO_Rot MSO.
 have ? : a = pi.
   case: (angle_in a) => Ha.
-    by move/Rot_angle : H => /(_ (norm1_neq0 u1)) -> //.
-  by move/Rot_angleN : H => /(_ (norm1_neq0 u1)) -> //; rewrite piNpi Mpi.
+     by move/Rot_angle : H => /(_ (vaxis_euler_neq0 MSO)) -> //.
+  by move/Rot_angleN : H => /(_ (vaxis_euler_neq0 MSO)) -> //; rewrite piNpi Mpi.
 subst a.
-by move/Rot_pi_inv : H => /(_ (norm1_neq0 u1)) HM.
+by move/Rot_pi_inv : H => /(_ (vaxis_euler_neq0 MSO)).
 Qed.
 
-Lemma SO_pi_axial_vec M : M \is 'SO[R]_3 ->
-  angle M = pi -> axial_vec M = 0.
+Lemma SO_pi_axial_vec M : M \is 'SO[R]_3 -> angle M = pi -> axial_vec M = 0.
 Proof.
 move=> MSO.
 move/SO_pi_inv => /(_ MSO) ->.
@@ -1238,7 +1205,7 @@ Let vector := 'rV[R]_3.
 Definition vaxis M : 'rV[R]_3 :=
   let a := angle M in 
   if a == pi then 
-    vaxis_of_SO M
+    vaxis_euler M
   else
     1 / ((sin a) *+ 2) *: axial_vec M.
 
@@ -1246,8 +1213,7 @@ Lemma vaxis_ortho_of_iso (M : 'M[R]_3) (MSO : M \is 'SO[R]_3) :
   vaxis M *m M = vaxis M.
 Proof.
 rewrite /vaxis.
-case: ifPn => [_|pi].
-  by rewrite vaxis_of_SO_invariant.
+case: ifPn => [_|pi]; first by apply/eqP; rewrite vaxis_eulerP.
 move/axial_vec_vec_eigenspace : MSO => /eigenspaceP.
 rewrite -scalemxAl => ->; by rewrite scale1r.
 Qed.
@@ -1310,60 +1276,62 @@ Qed.
 Lemma angle_axis_eskew M : M \is 'SO[R]_3 ->
   M = `e^(Aa.angle M, normalize (Aa.vaxis M)).
 Proof.
-move=> HM. 
-case/boolP : (axial_vec M == 0) => [|M0].
+move=> MSO; case/boolP : (axial_vec M == 0) => [|M0].
   rewrite -axial_vec_sym => M0'.
-  case/(Aa.sym_angle HM) : (M0') => [a0|api].
+  case/(Aa.sym_angle MSO) : (M0') => [a0|api].
     clear M0'.
     rewrite /Aa.vaxis {1}a0 emx30M.
-    move/(Aa.angle0_tr HM): (a0).
+    move/(Aa.angle0_tr MSO): (a0).
     move/O_tr_idmx => M1; rewrite {1}M1 //; by apply rotation_sub.
-  move/(Aa.SO_pi_inv HM) : (api) => api'.
+  move/(Aa.SO_pi_inv MSO) : (api) => api'.
   rewrite /Aa.vaxis api eqxx.
   rewrite /emx3 sinpi scale0r addr0 cospi opprK -(natrD _ 1 1).
-  rewrite skew_mx2 normalizeI ?norm_vaxis_of_SO // expr1n scalerDl scale1r.
+  rewrite skew_mx2 norm_normalize // ?vaxis_euler_neq0 // expr1n scalerDl scale1r.
   rewrite [in RHS]addrC -![in RHS]addrA (addrC _ 1) scalemx1 subrr addr0.
-  rewrite [in RHS]addrCA -mulr2n [in RHS]addrC.
-  by rewrite {1}api' normalizeI // norm_vaxis_of_SO.
+  by rewrite [in RHS]addrCA -mulr2n [in RHS]addrC.
 case/boolP : (Aa.angle M == 0) => [/eqP H|a0].
   rewrite H.
-  move/(Aa.angle0_tr HM) : H.
+  move/(Aa.angle0_tr MSO) : H.
   move/O_tr_idmx => ->; by [rewrite emx30M | apply rotation_sub].
 case/boolP : (Aa.angle M == pi) => [/eqP H|api].
   rewrite -eskew'E; last first.
-    by rewrite /Aa.vaxis H eqxx normalizeI norm_vaxis_of_SO.
+    by rewrite /Aa.vaxis H eqxx norm_normalize // vaxis_euler_neq0.
   rewrite H /eskew' cospi scaleN1r sinpi scale0r addr0 opprB addrA -mulr2n.
-  rewrite /Aa.vaxis H eqxx; by apply Aa.SO_pi_inv.
+  rewrite /Aa.vaxis H eqxx //; by apply Aa.SO_pi_inv.
 have sina0 : sin (Aa.angle M) != 0.
   apply: contra a0 => /eqP/sin0_inv [->//|/eqP]; by rewrite (negbTE api).
 set w : 'rV_3 := normalize _.
-case: (vaxis_of_SOP HM) => a wa.
-have w0 : vaxis_of_SO M != 0 by rewrite -norm_eq0 norm_vaxis_of_SO // oner_neq0.
+have [a Rota] := SO_Rot MSO.
+have {Rota}Rota : Rot a (normalize (vaxis_euler M)) (mx_lin1 M).
+  apply/(RotZ a _ (vaxis_euler_neq0 MSO)) => //.
+  by rewrite invr_gt0 norm_gt0 vaxis_euler_neq0.
+have w0 : normalize (vaxis_euler M) != 0 by rewrite normalize_eq0 vaxis_euler_neq0.
 have Htmp0 : Aa.vaxis M != 0.
   rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or M0 andbT div1r.
   by rewrite invr_eq0 mulrn_eq0 /= sin_eq0 negb_or a0 api.
 have w1 : norm w = 1 by rewrite norm_normalize.
 case: (angle_in a) => Ha.
-- move: (Aa.Rot_angle w0 Ha wa) => a_angle_of_rot.
-  rewrite a_angle_of_rot in wa.
-  move: (Aa.Rot_vaxis w0 sina0 wa) => w'axial.
+- move: (Aa.Rot_angle w0 Ha Rota) => a_angle_of_rot.
+  rewrite a_angle_of_rot in Rota.
+  move: (Aa.Rot_vaxis w0 sina0 Rota) => w'axial.
   set k := (1 / _) in w'axial.
   have k0 : 0 < k.
     rewrite /k div1r invr_gt0 pmulrn_lgt0 // ltr_neqAle eq_sym sina0 /=.
     by rewrite inE a_angle_of_rot in Ha.
   apply: (@same_Rot _ _ _ _ (norm (Aa.vaxis M) *: w) ((sin (Aa.angle M) *+ 2) * k) w0 _ (Aa.angle M)) => //.
   - by rewrite pmulr_rgt0 // pmulrn_lgt0 // ltr_neqAle eq_sym sina0 -a_angle_of_rot.
-  - rewrite -(norm_scale_normalize (vaxis_of_SO M)) norm_vaxis_of_SO // w'axial.
+  - rewrite -(norm_scale_normalize (normalize (vaxis_euler M))).
+    rewrite norm_normalize ?vaxis_euler_neq0 // w'axial.
     rewrite scale1r {2}/k div1r divrr ?unitfE ?mulrn_eq0 //= scale1r.
     by rewrite /w norm_scale_normalize /Aa.vaxis (negbTE api).
   - move: (Rot_eskew (Aa.angle M) (norm1_neq0 w1)).
     rewrite {3}/w norm_scale_normalize (normalizeI w1) {1}/w {1}/normalize.
     apply: (proj1 (RotZ _ _ _ _)) => //; by rewrite invr_gt0 norm_gt0.
-- move: (Aa.Rot_angleN w0 Ha wa) => a_angle_of_rot.
+- move: (Aa.Rot_angleN w0 Ha Rota) => a_angle_of_rot.
   have : M \in unitmx by rewrite orthogonal_unit // rotation_sub // -rotationV.
   move/(@Rot_tr _ _ (Aa.angle M^T) w0 M).
-  rewrite {1}Aa.tr_angle -a_angle_of_rot => /(_ wa).
-  rewrite (rotation_inv HM) Aa.tr_angle.
+  rewrite {1}Aa.tr_angle -a_angle_of_rot => /(_ Rota).
+  rewrite (rotation_inv MSO) Aa.tr_angle.
   move/(Aa.Rot_vaxis w0 sina0) => w'axial.
   set k := (1 / _) in w'axial.
   have k0 : 0 < k.
@@ -1372,7 +1340,8 @@ case: (angle_in a) => Ha.
   apply: (@same_Rot _ _ _ _ (- norm (Aa.vaxis M) *: w) ((sin (Aa.angle M) *+ 2) * k) w0 _ (- Aa.angle M)).
   - rewrite pmulr_rgt0 // pmulrn_lgt0 //.
     by rewrite inE a_angle_of_rot sinN oppr_lt0 in Ha.
-  - rewrite -(norm_scale_normalize (vaxis_of_SO M)) norm_vaxis_of_SO // w'axial.
+  - rewrite -(norm_scale_normalize (normalize (vaxis_euler M))).
+    rewrite norm_normalize ?vaxis_euler_neq0 // w'axial.
     rewrite scale1r {2}/k div1r divrr ?unitfE ?mulrn_eq0 //= scale1r.
     rewrite /w scaleNr norm_scale_normalize /Aa.vaxis (negbTE api).
     by rewrite tr_axial_vec scalerN.
@@ -1398,8 +1367,7 @@ case/boolP : (Aa.angle Q == 0) => [|a0].
 case/boolP : (Aa.angle Q == pi) => [api|api].
   move/eqP/(Aa.SO_pi_inv QSO) : (api) => HQ.
   rewrite /Aa.vaxis api (eqP api) {2}HQ.
-  rewrite normalizeI ?norm_vaxis_of_SO //.
-  by apply Rotpi; rewrite norm_vaxis_of_SO.
+  apply Rotpi; by rewrite norm_normalize // vaxis_euler_neq0.
 move=> [:vaxis0].
 rewrite {3}H RotZ; last 2 first.
   abstract: vaxis0.

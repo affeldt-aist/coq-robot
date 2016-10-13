@@ -691,7 +691,7 @@ case/boolP : (Rad.angle_of (norm p) == 0) => p0.
   rewrite scalerA divrr; last by rewrite unitfE rad_eq0.
   by rewrite scale1r (SE3E fSE) (eqP rotf).
 case: (eskew_is_onto_SO (rot_of_hom_SO fSE)) => a fexp_skew.
-set w := vaxis_of_SO _ in fexp_skew.
+set w := normalize (vaxis_euler _) in fexp_skew.
 have a0 : a != 0.
   apply: contra rotf => /eqP.
   rewrite fexp_skew => ->; by rewrite emx30M.
@@ -699,9 +699,7 @@ set A : 'M_3 := \S(w) *m (1 - rot_of_hom f) + rad a *: (w^T *m w).
 suff [v Hv] : { v | p = (norm w)^-2 *: (v *m A) }.
   exists \T(v, w), a.
   rewrite (SE3E fSE) /etwist /hom_twist ang_of_twistE.
-  have /negbTE -> : w != 0.
-    apply: contra rotf; rewrite fexp_skew => /eqP ->.
-    by rewrite skew_mx0 emx3a0.
+  have /negbTE -> : w != 0 by rewrite normalize_eq0 vaxis_euler_neq0 // rot_of_hom_SO.
   rewrite fexp_skew -/p Hv; congr (hom _ (_ *: _)).
   by rewrite lin_of_twistE /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl fexp_skew.
 have HA : A = etwist_is_onto_SE_mat a w.
@@ -733,10 +731,9 @@ suff : { A' : 'M_3 |  A' * A = 1 }.
 (* NB: formula for the inverse matrix in
    [Introduction to Robotics: Mechanics, Planning, and Control,
     F.C. Park, K. Lynch, Mar. 14 2012] *)
-exists (etwist_is_onto_SE_mat_inv a w).
-rewrite HA.
-have w1 : norm w = 1 by rewrite norm_vaxis_of_SO // rot_of_hom_SO.
-exact: (etwist_is_onto_SE_matP a0 w1).
+exists (etwist_is_onto_SE_mat_inv a w); rewrite HA.
+apply: (etwist_is_onto_SE_matP a0 _).
+by rewrite norm_normalize // vaxis_euler_neq0 // rot_of_hom_SO.
 Qed.
 
 Lemma image_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (\S(w) == w^C)%MS.
