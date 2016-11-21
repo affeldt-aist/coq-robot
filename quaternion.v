@@ -632,15 +632,15 @@ rewrite uquatE' /sqrq in q_is_uquat.
 by rewrite exprMn exprVn -mulrDl (eqP q_is_uquat) -exprVn mul1r -exprVn invrK.
 Qed.
 
-Lemma quat_rot_is_Rot (a : quat) : a \is uquat -> ~~ pureq a ->
+Lemma quat_rot_isRot (a : quat) : a \is uquat -> ~~ pureq a ->
   let: (u, theta) := polar_of_quat a in
   u != 0 ->
-  Rot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
+  isRot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
 Proof.
 move=> q_isuqat. rewrite /pureq => q00 u0.
 rewrite normalize_eq0 in u0.
 set a' := atan _.
-split.
+apply/isRotP; split.
 - set u : 'rV_3 := normalize a`1.
   by rewrite quat_rot_is_linearE quat_rot_axis.
 - rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.

@@ -624,11 +624,23 @@ Proof. by rewrite /j /i normalizeZ. Qed.
 Lemma jN : j (- u) = j u.
 Proof. by rewrite /j /i normalizeN Base1.jN. Qed.
 
+Lemma jZN p (p0 : p < 0) : j (p *: u) = j u.
+Proof.
+by rewrite -(opprK p) scaleNr /j /i normalizeN Base1.jN normalizeZ //
+  -oppr_lt0 opprK.
+Qed.
+
 Lemma kZ p (p0 : 0 < p) : k (p *: u) = k u.
 Proof. by rewrite /k /i normalizeZ. Qed.
 
 Lemma kN : k (- u) = - k u.
 Proof. by rewrite /k /i normalizeN Base1.kN. Qed.
+
+Lemma kZN p (p0 : p < 0) : k (p *: u) = - k u.
+Proof.
+by rewrite /k /i -(opprK p) scaleNr normalizeN Base1.kN normalizeZ //
+  -oppr_lt0 opprK.
+Qed.
 
 Lemma iE : i u = Frame.i (frame u0).
 Proof. done. Qed.
