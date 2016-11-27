@@ -342,12 +342,43 @@ Lemma mxtrace_isRot a M (u0 : u != 0) :
 Proof.
 case/isRotP=> /= Hu [Hj Hk].
 move: (@basis_change _ M (Base.frame u0) (Rx a)).
+set i := NOFrame.i _.
+set j := NOFrame.j _.
+set k := NOFrame.k _.
 rewrite !mxE /= !scale1r !scale0r !add0r !addr0.
-rewrite {1 2}/Base.i {1 2}/normalize -scalemxAl Hu => /(_ erefl Hj Hk) ->.
+have H3 : Base.j u = j.
+  by rewrite /j /NOFrame.j rowK /=.
+have H2 : Base.k u = k.
+  by rewrite /k /NOFrame.k rowK /=.
+have H1 : i *m M = i.
+  by rewrite /i /NOFrame.i rowK /= /Base.i -scalemxAl Hu.
+rewrite -H2 -H3.
+move/(_ H1 Hj Hk) => ->.
 rewrite mxtrace_mulC mulmxA mulmxV ?mul1mx ?mxtrace_Rx //.
 rewrite unitmxE unitfE rotation_det ?oner_neq0 //.
-exact: (frame_is_rot (Base.frame u0)).
+rewrite /i /NOFrame.i rowK /=.
+
+(* TODO: move *)
+Lemma Base_is_frame (u0 : u != 0) : col_mx3 (Base.i u) (Base.j u) (Base.k u) \is 'SO[R]_3.
+Proof.
+move=> [:X].
+apply matrix_is_rotation; rewrite !rowK //=.
+abstract: X; by rewrite /Base.i norm_normalize.
+by rewrite /Base.j Base1.normj.
+by rewrite /Base.k Base1.idotj.
 Qed.
+
+exact: Base_is_frame.
+Qed.
+
+Lemma Frame_iE (u0 : u != 0) : Frame.i (Base.frame u0) = NOFrame.i (Base.frame u0).
+Proof. done. Qed.
+
+Lemma Frame_jE (u0 : u != 0) : Frame.j (Base.frame u0) = NOFrame.j (Base.frame u0).
+Proof. done. Qed.
+
+Lemma Frame_kE (u0 : u != 0) : Frame.k (Base.frame u0) = NOFrame.k (Base.frame u0).
+Proof. done. Qed.
 
 Lemma same_isRot M N v k (u0 : u != 0) (k0 : 0 < k) a :
   u = k *: v ->
@@ -356,12 +387,15 @@ Lemma same_isRot M N v k (u0 : u != 0) (k0 : 0 < k) a :
 Proof.
 move=> mkp /isRotP[/= HMi HMj HMk] /isRotP[/= HNi HNj HNk].
 apply/eqP/mulmxP => w.
-rewrite (orthogonal_expansion (Base.frame u0) w) !mulmxDl -!scalemxAl !scalerA.
+rewrite (orthogonal_expansion (Base.frame u0) w) !mulmxDl.
+rewrite -Frame_iE -Frame_jE -Frame_kE -Base.iE -Base.jE -Base.kE.
+rewrite -!scalemxAl.
 have v0 : v != 0 by apply: contra u0; rewrite mkp => /eqP ->; rewrite scaler0.
 congr (_ *: _ + _ *: _ + _ *: _).
-- by rewrite HMi mkp -scalemxAl HNi.
-- by rewrite HMj /= mkp (Base.jZ v0 k0) (Base.kZ v0 k0) -HNj -/(Base.j _) Base.jZ.
-- by rewrite HMk /= mkp (Base.jZ v0 k0) (Base.kZ v0 k0) -HNk -/(Base.k _) Base.kZ.
+- congr (_ *: _).
+  by rewrite HMi {1}mkp -HNi scalemxAl -mkp.
+- by rewrite HMj /= mkp (Base.jZ v0 k0) (Base.kZ v0 k0) -HNj.
+- by rewrite HMk /= mkp (Base.jZ v0 k0) (Base.kZ v0 k0) -HNk.
 Qed.
 
 Lemma isRot_0_inv (u0 : u != 0) M : isRot 0 u (mx_lin1 M) -> M = 1.
@@ -375,6 +409,7 @@ Proof.
 move=> Hf /isRotP[/= H1 H2 H3].
 have K1 : normalize u *m M = normalize u by rewrite /normalize -scalemxAl H1.
 move: (@basis_change _ M (Base.frame u0) (Rx (- a))).
+rewrite -Frame_iE -Frame_jE -Frame_kE -Base.iE -Base.jE -Base.kE.
 rewrite !mxE /= K1 !scale0r 2!add0r !addr0 -H2 -H3 scale1r => /(_ erefl erefl erefl).
 move=> fRx.
 have HfRx : M^-1 = (col_mx3 (normalize u) (Base.j u) (Base.k u))^T *m
@@ -391,7 +426,9 @@ apply/isRotP; split => /=.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.j u *m _ = 'e_1); last first.
     rewrite col_mx3_mul dotmulC /normalize dotmulZv (Base.udotj u0) mulr0 dotmulvv.
-    by rewrite (NOFrame.normj (Base.frame u0)) // expr1n (NOFrame.jdotk (Base.frame u0)) e1row.
+    rewrite Base.jE.
+    rewrite (NOFrame.normj (Base.frame u0)) // expr1n.
+    by rewrite Base.kE (NOFrame.jdotk (Base.frame u0)) e1row.
   rewrite (_ : 'e_1 *m _ = row3 0 (cos (- a)) (sin a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
@@ -399,7 +436,7 @@ apply/isRotP; split => /=.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.k u *m _ = 'e_2%:R); last first.
     rewrite col_mx3_mul dotmulC /normalize dotmulZv (Base.udotk u0) mulr0 dotmulC.
-    by rewrite (NOFrame.jdotk (Base.frame u0)) dotmulvv (NOFrame.normk (Base.frame u0)) // expr1n e2row.
+    by rewrite Base.jE Base.kE (NOFrame.jdotk (Base.frame u0)) dotmulvv (NOFrame.normk (Base.frame u0)) // expr1n e2row.
   rewrite (_ : 'e_2%:R *m _ = row3 0 (- sin a) (cos a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
@@ -411,6 +448,7 @@ Proof.
 move/isRotP=> [Hu Hj Hk].
 move: (@basis_change _ (lin1_mx f) (Base.frame u0) (Rx a)).
 rewrite !mxE /= !(scale1r,scale0r,add0r,addr0) 3!mul_rV_lin1.
+rewrite -Frame_iE -Frame_jE -Frame_kE -Base.iE -Base.jE -Base.kE.
 rewrite linearZ Hu => /(_ erefl).
 rewrite -/(Base.j _) -/(Base.k _) => /(_ Hj Hk) ->.
 move=> [:abs].
@@ -439,13 +477,17 @@ have iv : i = normalize e by rewrite /i /Base.i.
 have iMi : i *m M = i.
   by rewrite iv /normalize -scalemxAl vMv.
 have iMj : i *d (j *m M) = 0.
-  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i j) (NOFrame.idotj f).
+  rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i j).
+  rewrite /i /j Base.iE Base.jE.
+  by rewrite (NOFrame.idotj f).
 have iMk : i *d (k *m M) = 0.
-  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i k) (NOFrame.idotk f).
+  rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i k).
+  rewrite /i /k Base.iE Base.kE.
+  by rewrite (NOFrame.idotk f).
 set a := (j *m M) *d j.
 set b := (j *m M) *d k.
 have ab : j *m M = a *: j + b *: k.
-  by rewrite {1}(orthogonal_expansion f (j *m M)) -/j -/k dotmulC iMj scale0r add0r.
+  rewrite {1}(orthogonal_expansion f (j *m M)). -/j -/k dotmulC iMj scale0r add0r.
 set c := (k *m M) *d j.
 set d := (k *m M) *d k.
 have cd : k *m M = c *: j + d *: k.
