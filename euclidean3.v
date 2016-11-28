@@ -732,7 +732,7 @@ by rewrite -scalemxAr trmx_inv scalemxAl.
 Qed.
 
 Lemma double_crossmul u v w :
- u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
+  u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
 Proof.
 suff aux i : u *d w * v``_i - u *d v * w``_i =
    u``_(i + 1) * (v``_i * w``_(i + 1) - v``_(i + 1) * w``_i) -

@@ -637,30 +637,38 @@ Lemma quat_rot_isRot (a : quat) : a \is uquat -> ~~ pureq a ->
   u != 0 ->
   isRot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
 Proof.
-move=> q_isuqat. rewrite /pureq => q00 u0.
-rewrite normalize_eq0 in u0.
+move=> q_isuqat. rewrite /pureq => a00 a10.
+rewrite normalize_eq0 in a10.
 set a' := atan _.
 apply/isRotP; split.
 - set u : 'rV_3 := normalize a`1.
   by rewrite quat_rot_is_linearE quat_rot_axis.
 - rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
   rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
-  move: (Base.frame u0).
+  move: (Base.frame a10).
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
-  rewrite quat_rot_is_linearE quat_rotE /= (Base.udotj u0) scale0r mul0rn addr0.
+  rewrite quat_rot_is_linearE quat_rotE /=.
+  rewrite (_ : a`1 *d Base.j a`1 = 0); last first.
+    move: (Base.idotj a10) => /eqP.
+    by rewrite /Base.i dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
+  rewrite scale0r mul0rn addr0.
   rewrite (_ : a`1 *v Base.j a`1 = norm a`1 *: Base.k a`1); last first.
-    by rewrite (Base.icrossj u0) -crossmulZv norm_scale_normalize crossmulC.
+    by rewrite (Base.icrossj a10) -crossmulZv norm_scale_normalize crossmulC.
   rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
   by rewrite polar_of_uquat_prop.
   by rewrite mulrnAl polar_of_uquat_prop2.
 - rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
   rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
-  move: (Base.frame u0).
+  move: (Base.frame a10).
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
-  rewrite quat_rot_is_linearE quat_rotE /= (Base.udotk u0) scale0r mul0rn addr0.
+  rewrite quat_rot_is_linearE quat_rotE /=.
+  rewrite (_ : a`1 *d Base.k a`1 = 0); last first.
+    move: (Base.idotk a10) => /eqP.
+    by rewrite /Base.i dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
+  rewrite scale0r mul0rn addr0.
   rewrite (_ : a`1 *v Base.k a`1 = - norm a`1 *: Base.j a`1); last first.
-    by rewrite scaleNr -scalerN -(Base.icrossk u0) -crossmulZv norm_scale_normalize.
- rewrite addrC; congr (_ + _ *: _); last first.
+    by rewrite scaleNr -scalerN -(Base.icrossk a10) -crossmulZv norm_scale_normalize.
+  rewrite addrC; congr (_ + _ *: _); last first.
     by rewrite -polar_of_uquat_prop.
   rewrite scaleNr scalerN scalerA mulNrn scalerMnl -scaleNr; congr (_ *: _).
   by rewrite polar_of_uquat_prop2.

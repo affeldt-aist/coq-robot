@@ -346,39 +346,16 @@ set i := NOFrame.i _.
 set j := NOFrame.j _.
 set k := NOFrame.k _.
 rewrite !mxE /= !scale1r !scale0r !add0r !addr0.
-have H3 : Base.j u = j.
-  by rewrite /j /NOFrame.j rowK /=.
-have H2 : Base.k u = k.
-  by rewrite /k /NOFrame.k rowK /=.
-have H1 : i *m M = i.
-  by rewrite /i /NOFrame.i rowK /= /Base.i -scalemxAl Hu.
+have H3 : Base.j u = j by rewrite /j -Base.jE.
+have H2 : Base.k u = k by rewrite /k -Base.kE.
+have H1 : i *m M = i by rewrite /i -Base.iE -scalemxAl Hu.
 rewrite -H2 -H3.
 move/(_ H1 Hj Hk) => ->.
 rewrite mxtrace_mulC mulmxA mulmxV ?mul1mx ?mxtrace_Rx //.
 rewrite unitmxE unitfE rotation_det ?oner_neq0 //.
 rewrite /i /NOFrame.i rowK /=.
-
-(* TODO: move *)
-Lemma Base_is_frame (u0 : u != 0) : col_mx3 (Base.i u) (Base.j u) (Base.k u) \is 'SO[R]_3.
-Proof.
-move=> [:X].
-apply matrix_is_rotation; rewrite !rowK //=.
-abstract: X; by rewrite /Base.i norm_normalize.
-by rewrite /Base.j Base1.normj.
-by rewrite /Base.k Base1.idotj.
+exact: Base.is_SO.
 Qed.
-
-exact: Base_is_frame.
-Qed.
-
-Lemma Frame_iE (u0 : u != 0) : Frame.i (Base.frame u0) = NOFrame.i (Base.frame u0).
-Proof. done. Qed.
-
-Lemma Frame_jE (u0 : u != 0) : Frame.j (Base.frame u0) = NOFrame.j (Base.frame u0).
-Proof. done. Qed.
-
-Lemma Frame_kE (u0 : u != 0) : Frame.k (Base.frame u0) = NOFrame.k (Base.frame u0).
-Proof. done. Qed.
 
 Lemma same_isRot M N v k (u0 : u != 0) (k0 : 0 < k) a :
   u = k *: v ->
@@ -387,9 +364,8 @@ Lemma same_isRot M N v k (u0 : u != 0) (k0 : 0 < k) a :
 Proof.
 move=> mkp /isRotP[/= HMi HMj HMk] /isRotP[/= HNi HNj HNk].
 apply/eqP/mulmxP => w.
-rewrite (orthogonal_expansion (Base.frame u0) w) !mulmxDl.
-rewrite -Frame_iE -Frame_jE -Frame_kE -Base.iE -Base.jE -Base.kE.
-rewrite -!scalemxAl.
+rewrite (orthogonal_expansion (Base.frame u0) w) (*NB*) -Base.iE -Base.jE -Base.kE.
+rewrite !mulmxDl -!scalemxAl.
 have v0 : v != 0 by apply: contra u0; rewrite mkp => /eqP ->; rewrite scaler0.
 congr (_ *: _ + _ *: _ + _ *: _).
 - congr (_ *: _).
@@ -408,8 +384,7 @@ Lemma isRot_tr a (u0 : u != 0) M : M \in unitmx ->
 Proof.
 move=> Hf /isRotP[/= H1 H2 H3].
 have K1 : normalize u *m M = normalize u by rewrite /normalize -scalemxAl H1.
-move: (@basis_change _ M (Base.frame u0) (Rx (- a))).
-rewrite -Frame_iE -Frame_jE -Frame_kE -Base.iE -Base.jE -Base.kE.
+move: (@basis_change _ M (Base.frame u0) (Rx (- a))); rewrite (* NB*) -Base.jE -Base.iE -Base.kE.
 rewrite !mxE /= K1 !scale0r 2!add0r !addr0 -H2 -H3 scale1r => /(_ erefl erefl erefl).
 move=> fRx.
 have HfRx : M^-1 = (col_mx3 (normalize u) (Base.j u) (Base.k u))^T *m
@@ -425,18 +400,14 @@ apply/isRotP; split => /=.
 - by rewrite -{1}H1 -mulmxA mulmxV // mulmx1.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.j u *m _ = 'e_1); last first.
-    rewrite col_mx3_mul dotmulC /normalize dotmulZv (Base.udotj u0) mulr0 dotmulvv.
-    rewrite Base.jE.
-    rewrite (NOFrame.normj (Base.frame u0)) // expr1n.
-    by rewrite Base.kE (NOFrame.jdotk (Base.frame u0)) e1row.
+    by rewrite col_mx3_mul dotmulC dotmulvv Base.normj // expr1n Base.idotj // Base.jdotk e1row.
   rewrite (_ : 'e_1 *m _ = row3 0 (cos (- a)) (sin a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
   by rewrite mulmx_row3_col3 scale0r add0r cosN.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.k u *m _ = 'e_2%:R); last first.
-    rewrite col_mx3_mul dotmulC /normalize dotmulZv (Base.udotk u0) mulr0 dotmulC.
-    by rewrite Base.jE Base.kE (NOFrame.jdotk (Base.frame u0)) dotmulvv (NOFrame.normk (Base.frame u0)) // expr1n e2row.
+    by rewrite col_mx3_mul dotmulC -/(Base.i u) Base.idotk // dotmulC Base.jdotk dotmulvv Base.normk // expr1n e2row.
   rewrite (_ : 'e_2%:R *m _ = row3 0 (- sin a) (cos a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
@@ -447,15 +418,9 @@ Lemma isRot_SO a f (u0 : u != 0) : isRot a u f -> lin1_mx f \is 'SO[R]_3.
 Proof.
 move/isRotP=> [Hu Hj Hk].
 move: (@basis_change _ (lin1_mx f) (Base.frame u0) (Rx a)).
-rewrite !mxE /= !(scale1r,scale0r,add0r,addr0) 3!mul_rV_lin1.
-rewrite -Frame_iE -Frame_jE -Frame_kE -Base.iE -Base.jE -Base.kE.
-rewrite linearZ Hu => /(_ erefl).
-rewrite -/(Base.j _) -/(Base.k _) => /(_ Hj Hk) ->.
-move=> [:abs].
-rewrite rpredM //; last first.
-  abstract: abs.
-  exact: (frame_is_rot (Base.frame u0)).
-by rewrite rpredM // ?Rx_is_SO // rotation_inv // rotationV.
+rewrite !mxE /= !(scale1r,scale0r,add0r,addr0) 3!mul_rV_lin1 (*NB*) -Base.iE -Base.jE -Base.kE.
+rewrite linearZ Hu => /(_ erefl Hj Hk) ->.
+by rewrite rpredM // ?Base.is_SO // rpredM // ?Rx_is_SO // rotation_inv // ?Base.is_SO // rotationV Base.is_SO.
 Qed.
 
 End properties_of_isRot.
@@ -477,41 +442,39 @@ have iv : i = normalize e by rewrite /i /Base.i.
 have iMi : i *m M = i.
   by rewrite iv /normalize -scalemxAl vMv.
 have iMj : i *d (j *m M) = 0.
-  rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i j).
-  rewrite /i /j Base.iE Base.jE.
-  by rewrite (NOFrame.idotj f).
+  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i j) Base.idotj.
 have iMk : i *d (k *m M) = 0.
-  rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i k).
-  rewrite /i /k Base.iE Base.kE.
-  by rewrite (NOFrame.idotk f).
+  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i k) Base.idotk.
 set a := (j *m M) *d j.
 set b := (j *m M) *d k.
 have ab : j *m M = a *: j + b *: k.
-  rewrite {1}(orthogonal_expansion f (j *m M)). -/j -/k dotmulC iMj scale0r add0r.
+  rewrite {1}(orthogonal_expansion f (j *m M)) (*NB*) -Base.iE -Base.jE -Base.kE.
+  by rewrite dotmulC iMj scale0r add0r.
 set c := (k *m M) *d j.
 set d := (k *m M) *d k.
 have cd : k *m M = c *: j + d *: k.
-  by rewrite {1}(orthogonal_expansion f (k *m M)) -/j -/k dotmulC iMk scale0r add0r.
+  rewrite {1}(orthogonal_expansion f (k *m M)) (*NB*) -Base.iE -Base.jE -Base.kE.
+  by rewrite dotmulC iMk scale0r add0r.
 have H1 : a ^+ 2 + b ^+ 2 = 1.
-  move: (NOFrame.normj f) => /eqP.
-  rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv -/j.
+  move: (Base.normj v0) => /eqP.
+  rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv.
   rewrite -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO) j j) ab.
   rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv.
-  rewrite (NOFrame.normj f) // (NOFrame.normk f) // !(expr1n,mulr1) -!expr2.
-  by rewrite dotmulC (NOFrame.jdotk f) !(mulr0,add0r,addr0) => /eqP.
+  rewrite Base.normj // Base.normk // !(expr1n,mulr1) -!expr2.
+  by rewrite dotmulC Base.jdotk !(mulr0,add0r,addr0) => /eqP.
 have H2 : a * c + b * d = 0.
-  move: (NOFrame.jdotk f).
+  move: (Base.jdotk e).
   rewrite -/j -/k -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO) j k) ab cd.
   rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv.
-  rewrite (NOFrame.normk f) // (NOFrame.normj f) //.
-  by rewrite expr1n !mulr1 dotmulC (NOFrame.jdotk f) 4!mulr0 add0r addr0 mulrC (mulrC d).
+  rewrite Base.normj // Base.normk //.
+  by rewrite expr1n !mulr1 dotmulC (Base.jdotk e) 4!mulr0 add0r addr0 mulrC (mulrC d).
 have H3 : c ^+ 2 + d ^+ 2 = 1.
-  move: (NOFrame.normk f) => /eqP.
+  move: (Base.normk v0) => /eqP.
   rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv -/j.
   rewrite -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO) k k) cd.
   rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv.
-  rewrite (NOFrame.normj f) // (NOFrame.normk f) //.
-  by rewrite expr1n 2!mulr1 -2!expr2 dotmulC (NOFrame.jdotk f) !(mulr0,addr0,add0r) => /eqP.
+  rewrite (Base.normj v0) // (Base.normk v0) //.
+  by rewrite expr1n 2!mulr1 -2!expr2 dotmulC (Base.jdotk e) !(mulr0,addr0,add0r) => /eqP.
 set P := col_mx2 (row2 a b) (row2 c d).
 have PO : P \is 'O[R]_2.
   apply/orthogonal2P.
@@ -527,13 +490,16 @@ case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
   by rewrite -!(Hb,Hc,Hd).
 - exfalso.
   case/eq_col_mx2 : phiRO' => Ha Hb Hc Hd.
-  move: (@basis_change _ M f (Rx' phi)).
+  move: (@basis_change _ M f (Rx' phi)); (*NB*) rewrite -Base.iE -Base.jE -Base.kE.
   rewrite !mxE /= !(addr0,add0r,scale0r,scale1r) -/i -/j -/k.
   rewrite -{1}Ha -{1}Hb -{1}Hc -{1}Hd.
   rewrite -ab iMi -cd => /(_ erefl erefl erefl) => HM.
   move: (rotation_det MSO).
   rewrite HM 2!det_mulmx det_Rx' detV -crossmul_triple.
-  rewrite -/(NOFrame.sgn f) (Frame.P f) invr1 mulr1 mul1r => /eqP.
+  move: (Frame.MSO f).
+  rewrite rotationE => /andP[_] /=.
+  rewrite -crossmul_triple => /eqP ->.
+  rewrite invr1 mulr1 mul1r => /eqP.
   by rewrite Neqxx oner_eq0.
 Qed.
 
@@ -868,12 +834,12 @@ apply/isRotP; split => /=.
   by rewrite subrK crossmulZv crossmulvv 2!scaler0 addr0.
 - rewrite -rodrigues_genP // /rodrigues_gen dotmulC.
   rewrite (_ : normalize w *d Base.j w = 0) ?mulr0 ?scale0r ?addr0; last first.
-    by move: (NOFrame.idotj f).
+    by rewrite Base.idotj.
   rewrite (Base.icrossj w0) norm_normalize // expr1n scale1r scalerBl scale1r.
   by rewrite opprB addrCA subrr addr0.
 - rewrite -rodrigues_genP // /rodrigues_gen dotmulC.
   rewrite (_ : normalize w *d Base.k w = 0) ?mulr0 ?scale0r ?addr0; last first.
-    by move: (NOFrame.idotk f).
+    by rewrite Base.idotk.
   rewrite (norm_normalize w0) expr1n scale1r scalerBl scale1r opprB addrCA subrr.
   rewrite addr0 addrC; congr (_ + _).
   rewrite (_ : Base.j w = - Base.i w *v Base.k w); last first.
@@ -927,14 +893,11 @@ have H1 : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
     rewrite 2!dotmulZv -{2}H1.
     by rewrite (proj2 (orth_preserves_dotmul Q) QO u).
   case/isRotP: Maxis => /= H1 H2 H3.
-  move: (orthogonal_expansion (Base.frame (norm1_neq0 e1))) => /(_ (normalcomp p (Base.i u))) /= Hp.
+  move: (orthogonal_expansion (Base.frame (norm1_neq0 e1))) => /(_ (normalcomp p (Base.i u))) /=.
+  (* NB *) rewrite -Base.iE -Base.jE -Base.kE => Hp.
   rewrite (_ : Base.i u = u) in Hp; last by rewrite /Base.i normalizeI.
   rewrite dotmul_normalcomp // scale0r add0r in Hp.
   rewrite Hp mulmxDl -2!scalemxAl.
-  rewrite (_ : Base1.j u = Base.j u); last first.
-    by rewrite /Base.j /Base.i normalizeI.
-  rewrite (_ : Base1.k u = Base.k u); last first.
-    by rewrite /Base.k /Base.i normalizeI.
   rewrite H2 H3.
   rewrite (scalerDr (normalcomp p u *d Base.j u)) scalerA mulrC -scalerA.
   rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
@@ -943,9 +906,7 @@ have H1 : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
   rewrite scalerA mulrC -scalerA addrC scalerA mulrC -scalerA addrC.
   rewrite -{1}(opprK (sin a)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
   rewrite -double_crossmul.
-  (* TODO: shouldn't be using Base1... *)
-  move: (Frame.jcrossk (Base.frame (norm1_neq0 e1))).
-  rewrite -Base.jE -Base.kE -Base.iE => ->.
+  rewrite (Base.jcrossk (norm1_neq0 e1)).
   rewrite {2}(decomp p u) [in RHS]crossmulC linearD /=.
   rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
   by rewrite /Base.i normalizeI.
