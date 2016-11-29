@@ -98,13 +98,10 @@ Variable R : rcfType.
 
 Definition frame_central_iso (f : 'CIso[R]_3) (p : NOFrame.t R) : NOFrame.t R.
 apply: (@NOFrame.mk _ (col_mx3 (f (p|,0)) (f (p|,1)) (f (p|,2%:R)))).
-apply orthogonal3P; rewrite !rowK /=.
-by rewrite central_isometry_preserves_norm NOFrame.norm.
-by rewrite central_isometry_preserves_norm NOFrame.norm.
-by rewrite central_isometry_preserves_norm NOFrame.norm.
-by rewrite central_isometry_preserves_dotmul NOFrame.idotj.
-by rewrite central_isometry_preserves_dotmul NOFrame.idotk.
-by rewrite central_isometry_preserves_dotmul NOFrame.jdotk.
+apply/orthogonal3P.
+by rewrite !rowK /= 3!central_isometry_preserves_norm 3!NOFrame.norm
+  3!central_isometry_preserves_dotmul NOFrame.idotj NOFrame.idotk
+  NOFrame.jdotk !eqxx.
 Defined.
 
 (* [oneill] second part of lemma 1.6, p.101 *)
@@ -362,16 +359,11 @@ have Kv : f`* v = v1 *: vtvec e1 + v2 *: vtvec e2 + v3 *: vtvec e3 :> vector.
   by rewrite [in LHS]/= Hv 2!mulmxDl !scalemxAl [in RHS]/= 3!rowE !mulmx1.
 have @f' : NOFrame.t R.
 apply (@NOFrame.mk _ (col_mx3 e1 e2 e3)).
-  apply orthogonal3P; rewrite rowK /=.
-  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // !rowE !mulmx1 normeE.
-  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // !rowE !mulmx1 normeE.
-  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // !rowE !mulmx1 normeE.
-  rewrite -mulmx_col3 -col_mx3_rowE mul1mx !rowE !mulmx1.
-  by rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
-  rewrite -mulmx_col3 -col_mx3_rowE mul1mx !rowE !mulmx1.
-  by rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
-  rewrite -mulmx_col3 -col_mx3_rowE mul1mx !rowE !mulmx1.
-  by rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
+  apply/orthogonal3P; rewrite !rowK /=.
+  do 3! rewrite orth_preserves_norm ?ortho_of_iso_is_O //.
+  rewrite !rowE !mulmx1 3!normeE !eqxx /=.
+  do 3! rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
+  by rewrite !eqxx.
 have -> : iso_sgn f = NOFrame.sgn f'.
   (* TODO: move as a lemma? *)
   rewrite NOFrame.sgnE.

@@ -1308,51 +1308,6 @@ Qed.
 
 End norm3.
 
-Lemma orthogonal3P_old (R : rcfType) (M : 'M[R]_3) :
-  (row 0 M *d row 0 M = 1) -> (row 0 M *d row 1 M = 0) -> (row 0 M *d row 2%:R M = 0) ->
-  (row 1 M *d row 0 M = 0) -> (row 1 M *d row 1 M = 1) -> (row 1 M *d row 2%:R M = 0) ->
-  (row 2%:R M *d row 0 M = 0) -> (row 2%:R M *d row 1 M = 0) -> (row 2%:R M *d row 2%:R M = 1) ->
-  M \is 'O[R]_3.
-Proof.
-move=> H *.
-apply/orthogonalP => i j.
-case/boolP : (i == 0) => [/eqP ->|].
-  case/boolP : (j == 0) => [/eqP -> //|].
-  by rewrite ifnot0 => /orP [] /eqP ->.
-rewrite ifnot0 => /orP [] /eqP -> /=.
-  case/boolP : (j == 0) => [/eqP -> //|].
-  by rewrite ifnot0 => /orP [] /eqP ->.
-case/boolP : (j == 0) => [/eqP -> //|].
-by rewrite ifnot0 => /orP [] /eqP ->.
-Qed.
-
-Lemma orthogonal3P (R : rcfType) (M : 'M[R]_3) :
-  norm (row 0 M) = 1 -> norm (row 1 M) = 1 -> norm (row 2%:R M) = 1 ->
-  row 0 M *d row 1 M = 0 -> row 0 M *d row 2%:R M = 0 -> row 1 M *d row 2%:R M = 0 ->
-  M \is 'O[R]_3.
-Proof.
-move=> ni nj nk xy0 xz0 yz0 /=.
-apply/orthogonal3P_old => //; rewrite ?dotmulvv; try by rewrite dotmulC.
-by rewrite ni expr1n.
-by rewrite nj expr1n.
-by rewrite nk expr1n.
-Qed.
-
-Lemma rotation3P (R : rcfType) (M : 'M[R]_3) :
-  norm (row 0 M) = 1 -> norm (row 1 M) = 1 ->
-  row 0 M *d row 1 M = 0 ->
-  row 2%:R M = row 0 M *v row 1 M -> M \is 'SO[R]_3.
-Proof.
-move=> ni nj xy0 zxy0 /=.
-rewrite rotationE; apply/andP; split.
-  apply orthogonal3P => //.
-  by rewrite zxy0 norm_crossmul_normal.
-  by rewrite zxy0 dot_crossmulC crossmulvv dotmul0v.
-  by rewrite zxy0 dot_crossmulCA crossmulvv dotmulv0.
-rewrite (col_mx3_rowE M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
-by rewrite scale1r (dotmulC (row 1 M)) xy0 scale0r subr0 dotmulvv ni expr1n.
-Qed.
-
 Section properties_of_canonical_vectors.
 
 Variable R : rcfType.
@@ -1382,6 +1337,58 @@ Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[R]__.
 Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 
 End properties_of_canonical_vectors.
+
+(* TODO: move *)
+Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
+  And6 of P1 & P2 & P3 & P4 & P5 & P6.
+
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 & P6 ]" := (and6 P1 P2 P3 P4 P5 P6) : type_scope.
+
+Lemma and6P (b1 b2 b3 b4 b5 b6 : bool) :
+  reflect [/\ b1, b2, b3, b4, b5 & b6] [&& b1, b2, b3, b4, b5 & b6].
+Proof.
+by case b1; case b2; case b3; case b4; case b5; case b6; constructor; try by case.
+Qed.
+
+Lemma orthogonal3P (R : rcfType) (M : 'M[R]_3) :
+  reflect (M \is 'O[R]_3)
+  [&& norm (row 0 M) == 1, norm (row 1 M) == 1, norm (row 2%:R M) == 1,
+      row 0 M *d row 1 M == 0, row 0 M *d row 2%:R M == 0 & row 1 M *d row 2%:R M == 0].
+Proof.
+apply (iffP idP).
+- case/and6P => /eqP ni /eqP nj /eqP nk /eqP xy0 /eqP xz0 /eqP yz0 /=.
+  apply/orthogonalP => i j; case/boolP : (i == 0) => [/eqP ->|].
+    case/boolP : (j == 0) => [/eqP ->|]; first by rewrite dotmulvv ni expr1n.
+    rewrite ifnot0 => /orP [] /eqP ->; by [rewrite xy0 | rewrite xz0].
+  rewrite ifnot0 => /orP [] /eqP ->.
+    case/boolP : (j == 0) => [/eqP ->|]; first by rewrite dotmulC xy0.
+    rewrite ifnot0 => /orP [] /eqP ->; first by rewrite dotmulvv nj expr1n.
+    by rewrite yz0.
+  case/boolP : (j == 0) => [/eqP ->|]; first by rewrite dotmulC xz0.
+  rewrite ifnot0 => /orP [] /eqP ->; first by rewrite dotmulC yz0.
+  by rewrite dotmulvv nk expr1n.
+- move/orthogonalP => H; apply/and6P; split; first [
+    by rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv H |
+    by rewrite H ].
+Qed.
+
+Lemma rotation3P (R : rcfType) (M : 'M[R]_3) :
+  reflect (M \is 'SO[R]_3)
+  [&& norm (row 0 M) == 1, norm (row 1 M) == 1,
+      row 0 M *d row 1 M == 0 & row 2%:R M == row 0 M *v row 1 M].
+Proof.
+apply (iffP idP).
+- case/and4P => /eqP ni /eqP nj /eqP xy0 /eqP zxy0 /=.
+  rewrite rotationE; apply/andP; split.
+    apply/orthogonal3P.
+    rewrite ni nj /= zxy0 norm_crossmul_normal // xy0 !eqxx /= dot_crossmulC.
+    by rewrite crossmulvv dotmul0v dot_crossmulCA crossmulvv dotmulv0 !eqxx.
+  rewrite (col_mx3_rowE M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
+  by rewrite scale1r (dotmulC (row 1 M)) xy0 scale0r subr0 dotmulvv ni expr1n.
+- move=> MSO; move: (MSO).
+  rewrite rotationE => /andP[/orthogonal3P/and6P[ni nj nk ij ik jk]].
+  rewrite ni nj ij /= => _; by rewrite !rowE -mulmxr_crossmulr_SO // vecij.
+Qed.
 
 Section normalize.
 

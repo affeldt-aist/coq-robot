@@ -17,7 +17,7 @@ Require Import aux angle euclidean3 skew vec_angle.
   2. section oriented_frame
      mostly about positive frames
      also about positive frames with an origin (TFrame.t)
-  3. definition of the canonical frame (e_0, e_1, e_2)
+  3. definition of the canonical frame <e_0, e_1, e_2>
   4. Module Base1
      build a positive frame out of a unit vector
   5. Module Base
@@ -45,12 +45,15 @@ Local Open Scope ring_scope.
 
 Module NOFrame.
 Section non_oriented_frame_def.
+
 Variable R : rcfType.
 Record t := mk {
   M :> 'M[R]_3 ;
   MO : M \is 'O[R]_3 }.
+
 Variable f : t.
-Local Notation "f '|,' i" := (row i (M f)) (at level 3, i at level 2, left associativity, format "f '|,' i") : ring_scope.
+Local Notation "f '|,' i" := (row i (M f))
+  (at level 3, i at level 2, left associativity, format "f '|,' i") : ring_scope.
 Lemma norm (k : 'I_3) : norm f|,k = 1.
 Proof. apply norm_row_of_O; by case: f. Qed.
 Lemma idotj : f|,0 *d f|,1 = 0.
@@ -62,6 +65,7 @@ Proof. apply/orthogonalP; by case: f. Qed.
 Definition sgn := \det f.
 Lemma sgnE : sgn = f|,0 *d (f|,1 *v f|,2%:R).
 Proof. by rewrite crossmul_triple /sgn [in LHS](col_mx3_rowE f). Qed.
+
 End non_oriented_frame_def.
 End NOFrame.
 
@@ -348,7 +352,8 @@ Qed.
 
 Lemma frame_is_rot : matrix_of_noframe f \in 'SO[R]_3.
 Proof.
-apply rotation3P; rewrite ?NOFrame.norm // ?NOFrame.idotj //; exact: Frame.icrossj.
+apply/rotation3P;
+  by rewrite !NOFrame.norm !eqxx /= NOFrame.idotj eqxx /= Frame.icrossj.
 Qed.
 
 Definition frame_of_SO (M : 'M[R]_3) (HM : M \is 'SO[R]_3) : Frame.t R := 
@@ -483,14 +488,14 @@ Qed.
 
 Lemma MSO : col_mx3 i j k \is 'O[R]_3.
 Proof.
-by apply orthogonal3P; rewrite !rowK /= ?normi // ?normj // ?normk //
-  ?idotj // ?idotk // jdotk.
+apply/orthogonal3P;
+  by rewrite !rowK /= normi normj normk idotj idotk jdotk !eqxx.
 Qed.
 
 Definition noframe := NOFrame.mk MSO.
 
 Lemma is_SO : NOFrame.M noframe \is 'SO[R]_3.
-Proof. by apply rotation3P; rewrite !rowK //= ?normi // ?normj // idotj. Qed.
+Proof. by apply/rotation3P; rewrite !rowK /= normi normj idotj !eqxx. Qed.
 
 Definition frame := Frame.mk is_SO.
 
@@ -577,7 +582,7 @@ Lemma jcrossk : j *v k = i.
 Proof. move: (Frame.jcrossk frame); by rewrite iE jE kE. Qed.
 
 Lemma is_SO : col_mx3 i j k \is 'SO[R]_3.
-Proof. by apply rotation3P; rewrite !rowK //= ?normi // ?normj // idotj. Qed.
+Proof.  apply/rotation3P; by rewrite !rowK /= normi normj idotj !eqxx. Qed.
 
 End build_base.
 
@@ -878,8 +883,8 @@ Proof. by rewrite -norm_eq0 normk oner_neq0. Qed.
 
 Lemma MO : col_mx3 i j k \is 'O[R]_3.
 Proof.
-by apply orthogonal3P; rewrite !rowK /= ?normi // ?normj // ?normk //
-  ?idotj // ?idotk // jdotk.
+apply/orthogonal3P;
+  by rewrite !rowK /= normi normj normk idotj idotk jdotk !eqxx.
 Qed.
 
 Definition noframe := NOFrame.mk MO.

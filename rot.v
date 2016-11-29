@@ -188,11 +188,11 @@ Qed.
 Lemma Rx_is_SO a : Rx a \is 'SO[R]_3.
 Proof.
 (* TODO: pove using RO_is_SO? *)
-apply rotation3P.
-- apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+apply/rotation3P/and4P; split.
+- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
   rewrite -dotmulvv dotmulE sum3E !mxE /=. by Simp.r.
-- apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
-- rewrite -dotmulvv dotmulE sum3E !mxE /=. Simp.r. by rewrite -!expr2 cos2Dsin2.
+- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+  rewrite -dotmulvv dotmulE sum3E !mxE /=. Simp.r. by rewrite -!expr2 cos2Dsin2.
 - rewrite 2!rowK /= dotmulE sum3E !mxE /=. by Simp.r.
 - rewrite 3!rowK /= crossmulE !mxE /=. by Simp.r.
 Qed.
@@ -236,10 +236,10 @@ Qed.
 
 Lemma Rz_is_SO a : Rz a \is 'SO[R]_3.
 Proof.
-apply rotation3P.
-- apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+apply/rotation3P/and4P; split.
+- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
   by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 -2!expr2 cos2Dsin2.
-- apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
 - by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 mulrN mulNr opprK addrC cos2Dsin2.
 - by rewrite 2!rowK /= dotmulE sum3E !mxE /= mulrN mulr0 addr0 addrC mulrC subrr.
 - rewrite 3!rowK /= crossmulE !mxE /=. Simp.r. by rewrite -!expr2 cos2Dsin2 e2row.
