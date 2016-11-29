@@ -97,7 +97,7 @@ Section central_isometry_3.
 Variable R : rcfType.
 
 Definition frame_central_iso (f : 'CIso[R]_3) (p : NOFrame.t R) : NOFrame.t R.
-apply: (@NOFrame.mk _ (col_mx3 (f (NOFrame.i p)) (f (NOFrame.j p)) (f (NOFrame.k p)))).
+apply: (@NOFrame.mk _ (col_mx3 (f (p|,0)) (f (p|,1)) (f (p|,2%:R)))).
 apply orthogonal3P; rewrite !rowK /=.
 by rewrite central_isometry_preserves_norm NOFrame.norm.
 by rewrite central_isometry_preserves_norm NOFrame.norm.
@@ -115,9 +115,7 @@ have Hp : forall p, f p = p``_0 *: f 'e_0 + p``_1 *: f 'e_1 + p``_2%:R *: f 'e_2
   move=> p.
   have -> : f p = f p *d f 'e_0 *: f 'e_0 + f p *d f 'e_1 *: f 'e_1 + f p *d f 'e_2%:R *: f 'e_2%:R.
     move: (orthogonal_expansion (frame_central_iso f (can_noframe R)) (f p)).
-    rewrite /NOFrame.i rowK /= NOFrame_i_can_noframe.
-    rewrite /NOFrame.j rowK /= NOFrame_j_can_noframe.
-    by rewrite /NOFrame.k rowK /= NOFrame_k_can_noframe.
+    by rewrite 3!rowK /= NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
   by rewrite 3!central_isometry_preserves_dotmul // 3!coorE.
 rewrite Hp (Hp a) (Hp b) !mxE /= !(scalerDl, scalerDr).
 rewrite !scalerA -!addrA; congr (_ + _).
@@ -265,9 +263,9 @@ Definition vtvec p (v : tvec p) := let: TVec v := v in v.
 Local Notation "p .-vec" := (tvec p) (at level 5).
 Local Notation "u `@ p" := (TVec p u) (at level 11).
 
-Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.i f) `@ TFrame.o f.
-Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.j f) `@ TFrame.o f.
-Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := (Frame.k f) `@ TFrame.o f.
+Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := (f|,0) `@ TFrame.o f.
+Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := (f|,1) `@ TFrame.o f.
+Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := (f|,2%:R) `@ TFrame.o f.
 
 End tangent_vectors_and_frames.
 
@@ -313,28 +311,22 @@ Qed.
 
 (* [oneill] lemma 3.2, p.108 *)
 Lemma dmap_iso_sgnP (tf : TFrame.t R) f :
-  let e1 := Frame.i tf in
-  let e2 := Frame.j tf in
-  let e3 := Frame.k tf in
+  let e1 := tf|,0 in
+  let e2 := tf|,1 in
+  let e3 := tf|,2%:R in
   let p := TFrame.o tf in
   f`* (e1 `@ p) *d (f `* (e2 `@ p) *v f`* (e3 `@ p)) =
   iso_sgn f * (e1 *d (e2 *v e3)).
 Proof.
 move=> e1 e2 e3 p.
 move: (orthogonal_expansion (can_noframe R) e1).
-rewrite NOFrame_i_can_noframe.
-rewrite NOFrame_j_can_noframe.
-rewrite NOFrame_k_can_noframe.
+rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
 set a11 := _ *d 'e_0. set a12 := _ *d 'e_1. set a13 := _ *d 'e_2%:R => He1.
 move: (orthogonal_expansion (can_noframe R) e2).
-rewrite NOFrame_i_can_noframe.
-rewrite NOFrame_j_can_noframe.
-rewrite NOFrame_k_can_noframe.
+rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
 set a21 := _ *d 'e_0. set a22 := _ *d 'e_1. set a23 := _ *d 'e_2%:R => He2.
 move: (orthogonal_expansion (can_noframe R) e3).
-rewrite NOFrame_i_can_noframe.
-rewrite NOFrame_j_can_noframe.
-rewrite NOFrame_k_can_noframe.
+rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
 set a31 := _ *d 'e_0. set a32 := _ *d 'e_1. set a33 := _ *d 'e_2%:R => He3.
 have e1a : e1 = row3 a11 a12 a13.
   by rewrite (row3E e1) !row3D !(add0r,addr0) !coorE.
@@ -365,53 +357,37 @@ rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
 set v1 := _ *d 'e_0. set v2 := _ *d 'e_1. set v3 := _ *d 'e_2%:R => Hv.
 set e1 := f`* (u1p `@ p). set e2 := f`* (u2p `@ p). set e3 := f`* (u3p `@ p).
 have Ku : f`* u = u1 *: vtvec e1 + u2 *: vtvec e2 + u3 *: vtvec e3 :> vector.
-  rewrite [in LHS]/= Hu 2!mulmxDl !scalemxAl.
-  (* TODO *)
-  have <- : 'e_0 = u1p `@ p by rewrite /= /Frame.i NOFrame_i_can_noframe.
-  have <- : 'e_1 = u2p `@ p by rewrite /= /Frame.j NOFrame_j_can_noframe.
-  have <- : 'e_2%:R = u3p `@ p by rewrite /= /Frame.k NOFrame_k_can_noframe.
-  done.
+  by rewrite [in LHS]/= Hu 2!mulmxDl !scalemxAl [in RHS]/= 3!rowE !mulmx1.
 have Kv : f`* v = v1 *: vtvec e1 + v2 *: vtvec e2 + v3 *: vtvec e3 :> vector.
-  rewrite [in LHS]/= Hv 2!mulmxDl !scalemxAl.
-  have <- : 'e_0 = u1p `@ p by rewrite /= /Frame.i NOFrame_i_can_noframe.
-  have <- : 'e_1 = u2p `@ p by rewrite /= /Frame.j NOFrame_j_can_noframe.
-  have <- : 'e_2%:R = u3p `@ p by rewrite /= /Frame.k NOFrame_k_can_noframe.
-  done.
+  by rewrite [in LHS]/= Hv 2!mulmxDl !scalemxAl [in RHS]/= 3!rowE !mulmx1.
 have @f' : NOFrame.t R.
 apply (@NOFrame.mk _ (col_mx3 e1 e2 e3)).
-  apply orthogonal3P; rewrite !rowK /=.
-  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // (*NB*)/Frame.i NOFrame.norm.
-  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // /Frame.j NOFrame.norm.
-  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // /Frame.k NOFrame.norm.
-  rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O //.
-  by rewrite NOFrame.idotj.
-  rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O //.
-  by rewrite NOFrame.idotk.
-  rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O //.
-  by rewrite NOFrame.jdotk.
+  apply orthogonal3P; rewrite rowK /=.
+  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // !rowE !mulmx1 normeE.
+  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // !rowE !mulmx1 normeE.
+  by rewrite orth_preserves_norm ?ortho_of_iso_is_O // !rowE !mulmx1 normeE.
+  rewrite -mulmx_col3 -col_mx3_rowE mul1mx !rowE !mulmx1.
+  by rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
+  rewrite -mulmx_col3 -col_mx3_rowE mul1mx !rowE !mulmx1.
+  by rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
+  rewrite -mulmx_col3 -col_mx3_rowE mul1mx !rowE !mulmx1.
+  by rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
 have -> : iso_sgn f = NOFrame.sgn f'.
   (* TODO: move as a lemma? *)
   rewrite NOFrame.sgnE.
-  have -> : NOFrame.i f' = f`* (u1p `@ p) by rewrite /NOFrame.i rowK.
-  have -> : NOFrame.j f' = f`* (u2p `@ p) by rewrite /NOFrame.j rowK.
-  have -> : NOFrame.k f' = f`* (u3p `@ p) by rewrite /NOFrame.k rowK.
-  by rewrite dmap_iso_sgnP /= -NOFrame.sgnE /= /NOFrame.sgn /= det1 mulr1.
+  have -> : f'|,0 = f`* (u1p `@ p) by rewrite rowK.
+  have -> : f'|,1 = f`* (u2p `@ p) by rewrite rowK.
+  have -> : f'|,2%:R = f`* (u3p `@ p) by rewrite rowK.
+  by rewrite dmap_iso_sgnP /= !rowE !mulmx1 vecjk dote2 mulr1.
 have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
          NOFrame.sgn f' *: vtvec (f`* ((u *v v) `@ p)) :> vector.
   rewrite /=.
   rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //; last 2 first.
-    move: Ku.
-    rewrite /=.
-    (* NB *) by rewrite /NOFrame.i rowK /= /NOFrame.j rowK /= /NOFrame.k rowK /=.
-    move: Kv.
-    rewrite /=.
-    (* NB *) by rewrite /NOFrame.i rowK /= /NOFrame.j rowK /= /NOFrame.k rowK /=.
+    move: Ku; by rewrite /= !rowK.
+    move: Kv; by rewrite /= !rowK.
   rewrite /=.
   congr (_ *: _).
-  rewrite /NOFrame.i rowK /= /Frame.i NOFrame_i_can_noframe.
-  rewrite /NOFrame.j rowK /= /Frame.j NOFrame_j_can_noframe.
-  rewrite /NOFrame.k rowK /= /Frame.k NOFrame_k_can_noframe.
-  rewrite Hu Hv.
+  rewrite !rowK /= Hu Hv.
   do 2 rewrite linearD [in RHS]/=.
   rewrite 2!mulmxDl.
   (* on fait les remplacement veci *v vecj -> veck, veci *v veci -> 0, etc. *)
@@ -468,10 +444,13 @@ have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
   rewrite -![in RHS]addrA [in RHS]addrC -[in RHS]addrA [in RHS]addrCA -[in RHS]addrA [in RHS]addrC.
   rewrite ![in RHS]addrA -[in RHS]addrA.
   congr (_ + _); last first.
-    by rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u1).
+    rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u1).
+    by rewrite rowE mulmx1.
   rewrite scalerDr.
   rewrite -![in RHS]addrA [in RHS]addrCA [in RHS]addrC ![in RHS]addrA -addrA; congr (_ + _).
-  by rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u2).
+    rewrite rowE mulmx1.
+    by rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u2).
+  rewrite rowE mulmx1.
   by rewrite scalerN !scalerA -scalerBl -scaleNr opprB mulrC (mulrC u1).
 move=> ->; by rewrite scalerA -expr2 /iso_sgn -sqr_normr noframe_sgn expr1n scale1r.
 Qed.

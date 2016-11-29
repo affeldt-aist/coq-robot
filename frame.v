@@ -50,25 +50,25 @@ Record t := mk {
   M :> 'M[R]_3 ;
   MO : M \is 'O[R]_3 }.
 Variable f : t.
-Definition i := row 0 (M f).
-Definition j := row 1 (M f).
-Definition k := row 2%:R (M f).
-Lemma norm (k : 'I_3) : norm (row k (M f)) = 1.
+Local Notation "f '|,' i" := (row i (M f)) (at level 3, i at level 2, left associativity, format "f '|,' i") : ring_scope.
+Lemma norm (k : 'I_3) : norm f|,k = 1.
 Proof. apply norm_row_of_O; by case: f. Qed.
-Lemma idotj : i *d j = 0.
+Lemma idotj : f|,0 *d f|,1 = 0.
 Proof. apply/orthogonalP; by case: f. Qed.
-Lemma jdotk : j *d k = 0.
+Lemma jdotk : f|,1 *d f|,2%:R = 0.
 Proof. apply/orthogonalP; by case: f. Qed.
-Lemma idotk : i *d k = 0.
+Lemma idotk : f|,0 *d f|,2%:R = 0.
 Proof. apply/orthogonalP; by case: f. Qed.
 Definition sgn := \det f.
-Lemma sgnE : sgn = i *d (j *v k).
-Proof. by rewrite crossmul_triple /sgn (col_mx3_rowE f). Qed.
+Lemma sgnE : sgn = f|,0 *d (f|,1 *v f|,2%:R).
+Proof. by rewrite crossmul_triple /sgn [in LHS](col_mx3_rowE f). Qed.
 End non_oriented_frame_def.
 End NOFrame.
 
 Coercion matrix_of_noframe (R : rcfType) (f : NOFrame.t R) : 'M[R]_3 := 
   NOFrame.M f.
+
+Notation "f '|,' i" := (row i (NOFrame.M f)) (at level 3, i at level 2, left associativity, format "f '|,' i") : ring_scope.
 
 Lemma noframe_is_unit (R : rcfType) (f : NOFrame.t R) :
   matrix_of_noframe f \is a GRing.unit.
@@ -81,9 +81,9 @@ Let vector := 'rV[R]_3.
 Implicit Types p : 'rV[R]_3.
 
 Variable f : NOFrame.t R.
-Local Notation "'i'" := (NOFrame.i f).
-Local Notation "'j'" := (NOFrame.j f).
-Local Notation "'k'" := (NOFrame.k f).
+Local Notation "'i'" := (f |, 0).
+Local Notation "'j'" := (f |, 1).
+Local Notation "'k'" := (f |, 2%:R).
 
 Lemma norm_icrossj : norm (i *v j) = 1.
 Proof.
@@ -279,15 +279,11 @@ Record t := mk {
   noframe_of :> NOFrame.t R ;
   MSO : NOFrame.M noframe_of \is 'SO[R]_3}.
 
-Definition i (f : t) := NOFrame.i f.
-Definition j (f : t) := NOFrame.j f.
-Definition k (f : t) := NOFrame.k f.
-
 Variable f : t.
 
-Local Notation "'i'" := (i f).
-Local Notation "'j'" := (j f).
-Local Notation "'k'" := (k f).
+Local Notation "'i'" := (f |, 0).
+Local Notation "'j'" := (f |, 1).
+Local Notation "'k'" := (f |, 2%:R).
 
 Lemma icrossj : k = i *v j.
 Proof. by move: (MSO f); rewrite rotationE => /andP[_] /noframe_pos_crossmul. Qed.
@@ -330,9 +326,9 @@ Record nframe := mkNFrame {
   nframeP : NOFrame.sgn noframe_of_nframe = -1}.
 
 Variable f : Frame.t R.
-Local Notation "'i'" := (Frame.i f).
-Local Notation "'j'" := (Frame.j f).
-Local Notation "'k'" := (Frame.k f).
+Local Notation "'i'" := (f |, 0).
+Local Notation "'j'" := (f |, 1).
+Local Notation "'k'" := (f |, 2%:R).
 
 (*
 TODO: restor
@@ -379,9 +375,9 @@ End TFrame.
 Coercion frame_of_tframe (R : rcfType) (f : TFrame.t R) :=
   let: TFrame.mk _ f' := f in f'.
 
-Definition xaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (Frame.i f).
-Definition yaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (Frame.j f).
-Definition zaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (Frame.k f).
+Definition xaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f|,0).
+Definition yaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f|,1).
+Definition zaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f|,2%:R).
 
 Section canonical_frame.
 
@@ -405,22 +401,22 @@ Qed.
 
 Definition can_tframe := TFrame.mk 0 can_frame. 
 
-Lemma NOFrame_i_can_noframe : NOFrame.i can_noframe = 'e_0.
-Proof. by rewrite /can_noframe /NOFrame.i /= e0row row_row3 !mxE. Qed.
+Lemma NOFrame_i_can_noframe : can_noframe |, 0 = 'e_0.
+Proof. by rewrite /can_noframe /= e0row row_row3 !mxE. Qed.
 
-Lemma NOFrame_j_can_noframe : NOFrame.j can_noframe = 'e_1.
-Proof. by rewrite /can_noframe /NOFrame.j /= e1row row_row3 !mxE. Qed.
+Lemma NOFrame_j_can_noframe : can_noframe |, 1 = 'e_1.
+Proof. by rewrite /can_noframe /= e1row row_row3 !mxE. Qed.
 
-Lemma NOFrame_k_can_noframe : NOFrame.k can_noframe = 'e_2%:R.
-Proof. by rewrite /can_noframe /NOFrame.k /= e2row row_row3 !mxE. Qed.
+Lemma NOFrame_k_can_noframe : can_noframe |, 2%:R = 'e_2%:R.
+Proof. by rewrite /can_noframe /= e2row row_row3 !mxE. Qed.
 
 End canonical_frame.
 
 (* TODO: go to euclidean3.v? *)
 Lemma basis_change (R : rcfType) (M : 'M[R]_3) (f : NOFrame.t R) (A : 'M[R]_3) :
-  let i := NOFrame.i f in
-  let j := NOFrame.j f in
-  let k := NOFrame.k f in
+  let i := f |, 0 in
+  let j := f |, 1 in
+  let k := f |, 2%:R in
   i *m M = A 0 0 *: i + A 0 1 *: j + A 0 2%:R *: k ->
   j *m M = A 1 0 *: i + A 1 1 *: j + A 1 2%:R *: k ->
   k *m M = A 2%:R 0 *: i + A 2%:R 1 *: j + A 2%:R 2%:R *: k ->
@@ -562,14 +558,14 @@ Proof. by rewrite /i /k dotmulZv udotk mulr0. Qed.
 Lemma jdotk : j *d k = 0.
 Proof. by rewrite /j /k Base1.jdotk. Qed.
 
-Lemma iE : i = NOFrame.i frame.
-Proof. by rewrite /NOFrame.i rowK. Qed.
+Lemma iE : i = (*NOFrame.i*) frame |, 0.
+Proof. by rewrite (*/NOFrame.i*) rowK. Qed.
 
-Lemma jE : j = NOFrame.j frame.
-Proof. by rewrite /NOFrame.j /= rowK. Qed.
+Lemma jE : j = (*NOFrame.j*) frame |, 1.
+Proof. by rewrite (*/NOFrame.j*) /= rowK. Qed.
 
-Lemma kE : k = NOFrame.k frame.
-Proof. by rewrite /NOFrame.k /= rowK. Qed.
+Lemma kE : k = (*NOFrame.k *)frame |, 2%:R.
+Proof. by rewrite (*/NOFrame.k*) /= rowK. Qed.
 
 Lemma icrossj : k = i *v j.
 Proof. move: (Frame.icrossj frame); by rewrite iE jE kE. Qed.

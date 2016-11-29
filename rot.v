@@ -177,7 +177,7 @@ rewrite -(@submxK _ 1 2 1 2 (Rx a)).
 rewrite (_ : ulsubmx _ = 1); last first.
   apply/rowP => i; by rewrite (ord1 i) !mxE /=.
 rewrite (_ : ursubmx _ = 0); last first.
-  by apply/rowP => i; rewrite !mxE. (*; case: ifPn => //; by case: ifPn.*)
+  by apply/rowP => i; rewrite !mxE.
 rewrite (_ : dlsubmx _ = 0); last first.
   apply/colP => i; rewrite !mxE /=.
   case: ifPn; first by rewrite !mxE.
@@ -341,9 +341,7 @@ Lemma mxtrace_isRot a M (u0 : u != 0) :
 Proof.
 case/isRotP=> /= Hu [Hj Hk].
 move: (@basis_change _ M (Base.frame u0) (Rx a)).
-set i := NOFrame.i _.
-set j := NOFrame.j _.
-set k := NOFrame.k _.
+set i := _ |, 0. set j := _ |, 1. set k := _ |, 2%:R.
 rewrite !mxE /= !scale1r !scale0r !add0r !addr0.
 have H3 : Base.j u = j by rewrite /j -Base.jE.
 have H2 : Base.k u = k by rewrite /k -Base.kE.
@@ -352,8 +350,7 @@ rewrite -H2 -H3.
 move/(_ H1 Hj Hk) => ->.
 rewrite mxtrace_mulC mulmxA mulmxV ?mul1mx ?mxtrace_Rx //.
 rewrite unitmxE unitfE rotation_det ?oner_neq0 //.
-rewrite /i /NOFrame.i rowK /=.
-exact: Base.is_SO.
+rewrite /i rowK /=; exact: Base.is_SO.
 Qed.
 
 Lemma same_isRot M N v k (u0 : u != 0) (k0 : 0 < k) a :
@@ -417,7 +414,8 @@ Lemma isRot_SO a f (u0 : u != 0) : isRot a u f -> lin1_mx f \is 'SO[R]_3.
 Proof.
 move/isRotP=> [Hu Hj Hk].
 move: (@basis_change _ (lin1_mx f) (Base.frame u0) (Rx a)).
-rewrite !mxE /= !(scale1r,scale0r,add0r,addr0) 3!mul_rV_lin1 (*NB*) -Base.iE -Base.jE -Base.kE.
+rewrite !mxE /= !(scale1r,scale0r,add0r,addr0) 3!mul_rV_lin1.
+rewrite !rowK /=. (* -Base.iE -Base.jE -Base.kE.*)
 rewrite linearZ Hu => /(_ erefl Hj Hk) ->.
 by rewrite rpredM // ?Base.is_SO // rpredM // ?Rx_is_SO // rotation_inv // ?Base.is_SO // rotationV Base.is_SO.
 Qed.
@@ -893,7 +891,7 @@ have H1 : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
     by rewrite (proj2 (orth_preserves_dotmul Q) QO u).
   case/isRotP: Maxis => /= H1 H2 H3.
   move: (orthogonal_expansion (Base.frame (norm1_neq0 e1))) => /(_ (normalcomp p (Base.i u))) /=.
-  (* NB *) rewrite -Base.iE -Base.jE -Base.kE => Hp.
+  rewrite !rowK /= -/(Base.j _) -/(Base.k _) (* (* NB *) rewrite -Base.iE -Base.jE -Base.kE*) => Hp.
   rewrite (_ : Base.i u = u) in Hp; last by rewrite /Base.i normalizeI.
   rewrite dotmul_normalcomp // scale0r add0r in Hp.
   rewrite Hp mulmxDl -2!scalemxAl.
