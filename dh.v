@@ -200,8 +200,7 @@ Lemma dh_mat_correct : exists alpha theta d a,
   hom From1To0 p1_in_0 = dh_mat theta d a alpha.
 Proof.
 have H1 : From1To0 0 2%:R = 0.
-  rewrite /From1To0 -lock /FromTo mxE row0_frame row2_frame.
-  by move/eqP: dh1.
+  rewrite /From1To0 -lock /FromTo mxE; by move/eqP: dh1 => /=.
 have [H2a H2b] : From1To0 0 0 ^+ 2 + From1To0 0 1 ^+ 2 = 1 /\
   From1To0 1 2%:R ^+ 2 + From1To0 2%:R 2%:R ^+ 2 = 1.
   move: (norm_row_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).

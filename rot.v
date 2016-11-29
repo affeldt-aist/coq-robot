@@ -188,7 +188,7 @@ Qed.
 Lemma Rx_is_SO a : Rx a \is 'SO[R]_3.
 Proof.
 (* TODO: pove using RO_is_SO? *)
-apply matrix_is_rotation.
+apply rotation3P.
 - apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
   rewrite -dotmulvv dotmulE sum3E !mxE /=. by Simp.r.
 - apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
@@ -203,8 +203,7 @@ Proof. by rewrite /Rx /mxtrace sum3E !mxE /= -addrA -mulr2n. Qed.
 Lemma inv_Rx a : (Rx a)^-1 = Rx (- a).
 Proof.
 move/rotation_inv : (Rx_is_SO a) => ->.
-rewrite /Rx cosN sinN opprK.
-by apply/matrix3P; rewrite !mxE.
+rewrite /Rx cosN sinN opprK; by apply/matrix3P; rewrite !mxE.
 Qed.
 
 Definition Rx' a := col_mx3
@@ -237,7 +236,7 @@ Qed.
 
 Lemma Rz_is_SO a : Rz a \is 'SO[R]_3.
 Proof.
-apply matrix_is_rotation.
+apply rotation3P.
 - apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
   by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 -2!expr2 cos2Dsin2.
 - apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
@@ -937,7 +936,7 @@ Proof.
 rewrite /eskew' 2!axial_vecD (_ : axial_vec _ = 0) ?add0r; last first.
   apply/eqP; by rewrite -axial_vec_sym mul_tr_vec_sym.
 rewrite (_ : axial_vec _ = 0) ?add0r; last first.
-  apply/eqP; rewrite -axial_vec_sym sym_scaler_closed (* TODO: delcare the right canonical to be able to use rpredZ *) //.
+  apply/eqP; rewrite -axial_vec_sym sym_scaler_closed (* TODO: declare the right canonical to be able to use rpredZ *) //.
   by rewrite rpredD // ?sym_cst // rpredN mul_tr_vec_sym.
 rewrite axial_vecZ axial_vecE scalerMnr; congr (_ *: _).
 by rewrite unskewD skew_mxK unskewN tr_skew unskewN skew_mxK opprK mulr2n.

@@ -706,9 +706,6 @@ Proof. by rewrite dotmul_crossmul_shift dotmulC. Qed.
 Lemma dot_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
 Proof. do 2 rewrite dot_crossmulC; by rewrite crossmulNv crossmulC. Qed.
 
-(*Lemma det_col_mx3 u v x : \det (col_mx3 u v x) = (u *v v) *d x.
-Proof. by rewrite -crossmul_triple dotmul_crossmulA. Qed.*)
-
 Lemma det_crossmul_dotmul M u v x :
   (\det M *: (u *v v)) *d x = (((u *m M) *v (v *m M)) *m M^T) *d x.
 Proof.
@@ -1311,7 +1308,7 @@ Qed.
 
 End norm3.
 
-Lemma orthogonal3P (R : rcfType) (M : 'M[R]_3) :
+Lemma orthogonal3P_old (R : rcfType) (M : 'M[R]_3) :
   (row 0 M *d row 0 M = 1) -> (row 0 M *d row 1 M = 0) -> (row 0 M *d row 2%:R M = 0) ->
   (row 1 M *d row 0 M = 0) -> (row 1 M *d row 1 M = 1) -> (row 1 M *d row 2%:R M = 0) ->
   (row 2%:R M *d row 0 M = 0) -> (row 2%:R M *d row 1 M = 0) -> (row 2%:R M *d row 2%:R M = 1) ->
@@ -1329,26 +1326,26 @@ case/boolP : (j == 0) => [/eqP -> //|].
 by rewrite ifnot0 => /orP [] /eqP ->.
 Qed.
 
-Lemma matrix_is_orthogonal {R : rcfType} (M : 'M[R]_3) :
+Lemma orthogonal3P (R : rcfType) (M : 'M[R]_3) :
   norm (row 0 M) = 1 -> norm (row 1 M) = 1 -> norm (row 2%:R M) = 1 ->
   row 0 M *d row 1 M = 0 -> row 0 M *d row 2%:R M = 0 -> row 1 M *d row 2%:R M = 0 ->
   M \is 'O[R]_3.
 Proof.
 move=> ni nj nk xy0 xz0 yz0 /=.
-apply/orthogonal3P => //; rewrite ?dotmulvv; try by rewrite dotmulC.
+apply/orthogonal3P_old => //; rewrite ?dotmulvv; try by rewrite dotmulC.
 by rewrite ni expr1n.
 by rewrite nj expr1n.
 by rewrite nk expr1n.
 Qed.
 
-Lemma matrix_is_rotation {R : rcfType} (M : 'M[R]_3) :
+Lemma rotation3P (R : rcfType) (M : 'M[R]_3) :
   norm (row 0 M) = 1 -> norm (row 1 M) = 1 ->
   row 0 M *d row 1 M = 0 ->
   row 2%:R M = row 0 M *v row 1 M -> M \is 'SO[R]_3.
 Proof.
 move=> ni nj xy0 zxy0 /=.
 rewrite rotationE; apply/andP; split.
-  apply matrix_is_orthogonal => //.
+  apply orthogonal3P => //.
   by rewrite zxy0 norm_crossmul_normal.
   by rewrite zxy0 dot_crossmulC crossmulvv dotmul0v.
   by rewrite zxy0 dot_crossmulCA crossmulvv dotmulv0.
