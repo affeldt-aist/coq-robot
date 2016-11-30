@@ -296,7 +296,7 @@ Proof.
 apply/isRotP; split => /=.
 - by rewrite mulmxBr mulmx1 mulr2n mulmxDr mulmxA dotmul1 // ?mul1mx addrK.
 - rewrite cospi sinpi scale0r addr0 scaleN1r mulmxBr mulmx1.
-  by rewrite mulmxDr mulmxA Base.j_tr_mul // 2!add0r.
+  by rewrite mulmxDr !mulmxA Base.j_tr_mul // mul0mx 2!add0r.
 - rewrite sinpi oppr0 scale0r add0r cospi scaleN1r mulmxBr mulmx1.
   by rewrite mulr2n mulmxDr mulmxA Base.k_tr_mul // 2!add0r.
 Qed.
@@ -345,7 +345,7 @@ set i := _ |, 0. set j := _ |, 1. set k := _ |, 2%:R.
 rewrite !mxE /= !scale1r !scale0r !add0r !addr0.
 have H3 : Base.j u = j by rewrite /j -Base.jE.
 have H2 : Base.k u = k by rewrite /k -Base.kE.
-have H1 : i *m M = i by rewrite /i -Base.iE -scalemxAl Hu.
+have H1 : i *m M = i. by rewrite /i -Base.iE -scalemxAl Hu.
 rewrite -H2 -H3.
 move/(_ H1 Hj Hk) => ->.
 rewrite mxtrace_mulC mulmxA mulmxV ?mul1mx ?mxtrace_Rx //.
@@ -391,19 +391,19 @@ have HfRx : M^-1 = (col_mx3 (normalize u) (Base.j u) (Base.k u))^T *m
   rewrite invrM; last 2 first.
     by rewrite unitrV (noframe_is_unit (Base.frame u0)).
     by rewrite orthogonal_unit // rotation_sub // Rx_is_SO.
-  by rewrite invrK (rotation_inv (frame_is_rot (Base.frame u0))) mulmxE mulrA.
+  by rewrite invrK (rotation_inv (Frame.MSO (Base.frame u0))) mulmxE mulrA.
 apply/isRotP; split => /=.
 - by rewrite -{1}H1 -mulmxA mulmxV // mulmx1.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.j u *m _ = 'e_1); last first.
-    by rewrite col_mx3_mul dotmulC dotmulvv Base.normj // expr1n Base.idotj // Base.jdotk e1row.
+    by rewrite col_mx3_mul dotmulC dotmulvv normj // expr1n -/(Base.i _) idotj // jdotk // e1row.
   rewrite (_ : 'e_1 *m _ = row3 0 (cos (- a)) (sin a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
   by rewrite mulmx_row3_col3 scale0r add0r cosN.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.k u *m _ = 'e_2%:R); last first.
-    by rewrite col_mx3_mul dotmulC -/(Base.i u) Base.idotk // dotmulC Base.jdotk dotmulvv Base.normk // expr1n e2row.
+    by rewrite col_mx3_mul dotmulC -/(Base.i u) idotk // dotmulC jdotk // dotmulvv normk // expr1n e2row.
   rewrite (_ : 'e_2%:R *m _ = row3 0 (- sin a) (cos a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
@@ -435,13 +435,12 @@ rewrite -/e in v0.
 have vMv := vaxis_eulerP MSO.
 rewrite -/e in vMv.
 set f := Base.frame v0. set i := Base.i e. set j := Base.j e. set k := Base.k e.
-have iv : i = normalize e by rewrite /i /Base.i.
 have iMi : i *m M = i.
-  by rewrite iv /normalize -scalemxAl vMv.
+  by rewrite /normalize -scalemxAl vMv.
 have iMj : i *d (j *m M) = 0.
-  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i j) Base.idotj.
+  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i j) idotj // normi.
 have iMk : i *d (k *m M) = 0.
-  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i k) Base.idotk.
+  by rewrite -iMi (proj2 (orth_preserves_dotmul M) (rotation_sub MSO) i k) idotk // normi.
 set a := (j *m M) *d j.
 set b := (j *m M) *d k.
 have ab : j *m M = a *: j + b *: k.
@@ -453,25 +452,22 @@ have cd : k *m M = c *: j + d *: k.
   rewrite {1}(orthogonal_expansion f (k *m M)) (*NB*) -Base.iE -Base.jE -Base.kE.
   by rewrite dotmulC iMk scale0r add0r.
 have H1 : a ^+ 2 + b ^+ 2 = 1.
-  move: (Base.normj v0) => /eqP.
+  move: (normj (base_is_noframe v0)) => /eqP.
   rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv.
-  rewrite -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO) j j) ab.
-  rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv.
-  rewrite Base.normj // Base.normk // !(expr1n,mulr1) -!expr2.
-  by rewrite dotmulC Base.jdotk !(mulr0,add0r,addr0) => /eqP.
+  rewrite -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO) j j) ab dotmulDr.
+  rewrite 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv normj // normk //.
+  by rewrite !(expr1n,mulr1) -!expr2 dotmulC jdotk // !(mulr0,add0r,addr0) => /eqP.
 have H2 : a * c + b * d = 0.
-  move: (Base.jdotk e).
+  move: (jdotk (base_is_noframe v0)).
   rewrite -/j -/k -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO) j k) ab cd.
-  rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv.
-  rewrite Base.normj // Base.normk //.
-  by rewrite expr1n !mulr1 dotmulC (Base.jdotk e) 4!mulr0 add0r addr0 mulrC (mulrC d).
+  rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv normj // normk //.
+  by rewrite expr1n !mulr1 dotmulC jdotk // 4!mulr0 add0r addr0 mulrC (mulrC d).
 have H3 : c ^+ 2 + d ^+ 2 = 1.
-  move: (Base.normk v0) => /eqP.
+  move: (normk (base_is_noframe v0)) => /eqP.
   rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv -/j.
   rewrite -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO) k k) cd.
-  rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv.
-  rewrite (Base.normj v0) // (Base.normk v0) //.
-  by rewrite expr1n 2!mulr1 -2!expr2 dotmulC (Base.jdotk e) !(mulr0,addr0,add0r) => /eqP.
+  rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv normj // normk //.
+  by rewrite expr1n 2!mulr1 -2!expr2 dotmulC jdotk // !(mulr0,addr0,add0r) => /eqP.
 set P := col_mx2 (row2 a b) (row2 c d).
 have PO : P \is 'O[R]_2.
   apply/orthogonal2P.
@@ -830,18 +826,14 @@ apply/isRotP; split => /=.
   rewrite dotmul_normalize_norm scalerA -mulrA divrr ?mulr1 ?unitfE ?norm_eq0 //.
   by rewrite subrK crossmulZv crossmulvv 2!scaler0 addr0.
 - rewrite -rodrigues_genP // /rodrigues_gen dotmulC.
-  rewrite (_ : normalize w *d Base.j w = 0) ?mulr0 ?scale0r ?addr0; last first.
-    by rewrite Base.idotj.
-  rewrite (Base.icrossj w0) norm_normalize // expr1n scale1r scalerBl scale1r.
+  rewrite -{2}/(Base.i _) idotj // mulr0 scale0r addr0.
+  rewrite -icrossj /= norm_normalize // expr1n scale1r scalerBl scale1r.
   by rewrite opprB addrCA subrr addr0.
-- rewrite -rodrigues_genP // /rodrigues_gen dotmulC.
-  rewrite (_ : normalize w *d Base.k w = 0) ?mulr0 ?scale0r ?addr0; last first.
-    by rewrite Base.idotk.
+- rewrite -rodrigues_genP /rodrigues_gen dotmulC.
+  rewrite -{2}/(Base.i w) idotk // mulr0 scale0r addr0.
   rewrite (norm_normalize w0) expr1n scale1r scalerBl scale1r opprB addrCA subrr.
   rewrite addr0 addrC; congr (_ + _).
-  rewrite (_ : Base.j w = - Base.i w *v Base.k w); last first.
-    by rewrite crossmulNv (Base.icrossk w0) opprK.
-  by rewrite crossmulNv scalerN scaleNr opprK.
+  by rewrite -/(Base.i w) Base.icrossk // scalerN scaleNr.
 Qed.
 
 Lemma eskew_is_onto_SO M : M \is 'SO[R]_3 ->

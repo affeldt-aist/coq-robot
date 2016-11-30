@@ -550,12 +550,11 @@ Proof.
 by move=> uv0; rewrite /normalcomp dotmulC dotmulvZ uv0 mulr0 scale0r subr0.
 Qed.
 
-Lemma normalcomp_mul_tr u (u1 : norm u = 1) : 
-  normalcomp 'e_0 u *m u^T *m u == 0.
+Lemma normalcomp_mul_tr u (u1 : norm u = 1) : normalcomp 'e_0 u *m u^T == 0.
 Proof.
 rewrite /normalcomp mulmxBl -scalemxAl -scalemxAl dotmul1 // dotmulC /dotmul.
-rewrite u1 invr1 scalemx1 scalemx1.
-by rewrite normalizeI // -(mx11_scalar (_ *m u^T)) subrr mul0mx.
+rewrite u1 invr1 scalemx1 scalemx1 normalizeI // -(mx11_scalar (_ *m u^T)).
+by rewrite subrr.
 Qed.
 
 Lemma dotmul_normalcomp u v : norm u = 1 -> normalcomp v u *d u = 0.

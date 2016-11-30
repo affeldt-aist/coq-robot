@@ -162,7 +162,7 @@ Definition dh_rot (jangle ltwist : angle R) := col_mx3
 Lemma dh_rot_i (f1 f0 : Frame.t R) t a : f1 _R^ f0 = dh_rot t a ->
   f1|,0 *m f0^T = row3 (cos t) (sin t) 0.
 Proof.
-rewrite Frame.i_e0 -mulmxA FromToE noframe_inv => ->.
+rewrite (rowE 0 f1) -mulmxA FromToE noframe_inv => ->.
 by rewrite /dh_rot e0row mulmx_row3_col3 !scale0r !addr0 scale1r.
 Qed.
 
@@ -419,7 +419,7 @@ rewrite -addrA addrC -subr_eq.
 move/eqP.
 move/(congr1 (fun x => x *m F0^T)).
 rewrite [in X in _ = X -> _]mulmxDl -scalemxAl.
-rewrite Frame.k_e2 -mulmxA mulmxE -{2}noframe_inv divrr ?mulmx1 ?noframe_is_unit //.
+rewrite (rowE 2%:R F0) -mulmxA mulmxE -{2}noframe_inv divrr ?mulmx1 ?noframe_is_unit //.
 rewrite -scalemxAl (@dh_rot_i _ _ _ theta alpha); last first.
   by rewrite {1}/From1To0 -lock in H4.
 rewrite add0r => <-.

@@ -99,9 +99,8 @@ Variable R : rcfType.
 Definition frame_central_iso (f : 'CIso[R]_3) (p : NOFrame.t R) : NOFrame.t R.
 apply: (@NOFrame.mk _ (col_mx3 (f (p|,0)) (f (p|,1)) (f (p|,2%:R)))).
 apply/orthogonal3P.
-by rewrite !rowK /= 3!central_isometry_preserves_norm 3!NOFrame.norm
-  3!central_isometry_preserves_dotmul NOFrame.idotj NOFrame.idotk
-  NOFrame.jdotk !eqxx.
+by rewrite !rowK /= 3!central_isometry_preserves_norm 3!noframe_norm
+  3!central_isometry_preserves_dotmul idotj noframe_idotk jdotk !eqxx.
 Defined.
 
 (* [oneill] second part of lemma 1.6, p.101 *)
@@ -112,7 +111,7 @@ have Hp : forall p, f p = p``_0 *: f 'e_0 + p``_1 *: f 'e_1 + p``_2%:R *: f 'e_2
   move=> p.
   have -> : f p = f p *d f 'e_0 *: f 'e_0 + f p *d f 'e_1 *: f 'e_1 + f p *d f 'e_2%:R *: f 'e_2%:R.
     move: (orthogonal_expansion (frame_central_iso f (can_noframe R)) (f p)).
-    by rewrite 3!rowK /= NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
+    by rewrite 3!rowK /= !row1.
   by rewrite 3!central_isometry_preserves_dotmul // 3!coorE.
 rewrite Hp (Hp a) (Hp b) !mxE /= !(scalerDl, scalerDr).
 rewrite !scalerA -!addrA; congr (_ + _).
@@ -317,13 +316,13 @@ Lemma dmap_iso_sgnP (tf : TFrame.t R) f :
 Proof.
 move=> e1 e2 e3 p.
 move: (orthogonal_expansion (can_noframe R) e1).
-rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
+rewrite !row1.
 set a11 := _ *d 'e_0. set a12 := _ *d 'e_1. set a13 := _ *d 'e_2%:R => He1.
 move: (orthogonal_expansion (can_noframe R) e2).
-rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
+rewrite !row1.
 set a21 := _ *d 'e_0. set a22 := _ *d 'e_1. set a23 := _ *d 'e_2%:R => He2.
 move: (orthogonal_expansion (can_noframe R) e3).
-rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
+rewrite !row1.
 set a31 := _ *d 'e_0. set a32 := _ *d 'e_1. set a33 := _ *d 'e_2%:R => He3.
 have e1a : e1 = row3 a11 a12 a13.
   by rewrite (row3E e1) !row3D !(add0r,addr0) !coorE.
@@ -347,10 +346,10 @@ Proof.
 set tf := TFrame.trans (can_tframe R) p.
 set u1p := tframe_i tf. set u2p := tframe_j tf. set u3p := tframe_k tf.
 move: (orthogonal_expansion tf u).
-rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
+rewrite !row1.
 set u1 := _ *d 'e_0. set u2 := _ *d 'e_1. set u3 := _ *d 'e_2%:R => Hu.
 move: (orthogonal_expansion tf v).
-rewrite NOFrame_i_can_noframe NOFrame_j_can_noframe NOFrame_k_can_noframe.
+rewrite !row1.
 set v1 := _ *d 'e_0. set v2 := _ *d 'e_1. set v3 := _ *d 'e_2%:R => Hv.
 set e1 := f`* (u1p `@ p). set e2 := f`* (u2p `@ p). set e3 := f`* (u3p `@ p).
 have Ku : f`* u = u1 *: vtvec e1 + u2 *: vtvec e2 + u3 *: vtvec e3 :> vector.
@@ -364,15 +363,15 @@ apply (@NOFrame.mk _ (col_mx3 e1 e2 e3)).
   rewrite !rowE !mulmx1 3!normeE !eqxx /=.
   do 3! rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
   by rewrite !eqxx.
-have -> : iso_sgn f = NOFrame.sgn f'.
+have -> : iso_sgn f = noframe_sgn f'.
   (* TODO: move as a lemma? *)
-  rewrite NOFrame.sgnE.
+  rewrite noframe_sgnE.
   have -> : f'|,0 = f`* (u1p `@ p) by rewrite rowK.
   have -> : f'|,1 = f`* (u2p `@ p) by rewrite rowK.
   have -> : f'|,2%:R = f`* (u3p `@ p) by rewrite rowK.
   by rewrite dmap_iso_sgnP /= !rowE !mulmx1 vecjk dote2 mulr1.
 have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
-         NOFrame.sgn f' *: vtvec (f`* ((u *v v) `@ p)) :> vector.
+         noframe_sgn f' *: vtvec (f`* ((u *v v) `@ p)) :> vector.
   rewrite /=.
   rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //; last 2 first.
     move: Ku; by rewrite /= !rowK.
@@ -444,7 +443,7 @@ have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
     by rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u2).
   rewrite rowE mulmx1.
   by rewrite scalerN !scalerA -scalerBl -scaleNr opprB mulrC (mulrC u1).
-move=> ->; by rewrite scalerA -expr2 /iso_sgn -sqr_normr noframe_sgn expr1n scale1r.
+move=> ->; by rewrite scalerA -expr2 /iso_sgn -sqr_normr abs_noframe_sgn expr1n scale1r.
 Qed.
 
 Definition preserves_orientation f :=

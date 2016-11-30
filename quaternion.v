@@ -649,11 +649,10 @@ apply/isRotP; split.
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /=.
   rewrite (_ : a`1 *d Base.j a`1 = 0); last first.
-    move: (Base.idotj a10) => /eqP.
-    by rewrite /Base.i dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
+    by rewrite -{1}(norm_scale_normalize a`1) dotmulZv -/(Base.i a`1) idotj // mulr0.
   rewrite scale0r mul0rn addr0.
   rewrite (_ : a`1 *v Base.j a`1 = norm a`1 *: Base.k a`1); last first.
-    by rewrite (Base.icrossj a10) -crossmulZv norm_scale_normalize crossmulC.
+   by rewrite -icrossj /= -crossmulZv norm_scale_normalize crossmulC.
   rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
   by rewrite polar_of_uquat_prop.
   by rewrite mulrnAl polar_of_uquat_prop2.
@@ -663,8 +662,7 @@ apply/isRotP; split.
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /=.
   rewrite (_ : a`1 *d Base.k a`1 = 0); last first.
-    move: (Base.idotk a10) => /eqP.
-    by rewrite /Base.i dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
+    by rewrite -{1}(norm_scale_normalize a`1) dotmulZv -/(Base.i a`1) idotk // mulr0.
   rewrite scale0r mul0rn addr0.
   rewrite (_ : a`1 *v Base.k a`1 = - norm a`1 *: Base.j a`1); last first.
     by rewrite scaleNr -scalerN -(Base.icrossk a10) -crossmulZv norm_scale_normalize.
