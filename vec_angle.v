@@ -518,13 +518,7 @@ Proof. by rewrite /normalcomp dotmulv0 scale0r subrr. Qed.
 Lemma normalcompv0 v : normalcomp v 0 = v.
 Proof. by rewrite /normalcomp /normalize scaler0 dotmul0v scaler0 subr0. Qed.
 
-Lemma crossmul_normalcomp u v : u *v normalcomp v u = u *v v.
-Proof.
-rewrite /normalcomp linearD /= crossmulvN dotmulC crossmulvZ.
-by rewrite crossmulvZ crossmulvv 2!scaler0 subr0.
-Qed.
-
-Lemma normalcompvN v u : normalcomp v (- u)  = normalcomp v u.
+Lemma normalcompvN v u : normalcomp v (- u) = normalcomp v u.
 Proof. 
 by rewrite /normalcomp normalizeN scalerN dotmulNv scaleNr opprK.
 Qed.
@@ -538,16 +532,45 @@ move/eqP; rewrite subr_eq0 => /eqP ->.
 by rewrite !colinearZv ?colinear_refl 2!orbT.
 Qed.
 
-Lemma normalcomp_colinear u v (u1 : norm u = 1) : (normalcomp v u == 0) = colinear v u.
+Lemma normalcomp_colinear u v (u0 : u != 0) :
+  (normalcomp v u == 0) = colinear v u.
 Proof.
 apply/idP/idP => [/eqP|/colinearP]; first by apply: normalcomp_colinear_helper.
-rewrite -norm_eq0 u1 -(negbK (1 == 0)) oner_neq0 => -[] // [] _ [k [Hk1 Hk2]].
-by rewrite /normalcomp Hk2 dotmulvZ dotmulZv dotmulvv u1 expr1n mulr1 normalizeI // divr1 subrr.
+case; first by rewrite (negbTE u0).
+case=> _ [k [Hk1 Hk2]].
+rewrite /normalcomp Hk2 dotmulvZ dotmulZv dotmulvv (exprD _ 1 1) expr1.
+rewrite (mulrA (_^-1)) mulVr ?unitfE ?norm_eq0 // mul1r.
+by rewrite scalerA -mulrA divrr ?unitfE ?norm_eq0 // mulr1 subrr.
 Qed.
 
-Lemma ortho_normalcomp u v : v *d u = 0 -> normalcomp v u = v.
+Lemma normalcomp_mulO u p Q : Q \is 'O[R]_3 -> u *m Q = u ->
+  normalcomp (p *m Q) u = normalcomp p u *m Q.
+Proof.
+move=> QO uQu.
+rewrite /normalcomp mulmxBl; congr (_ - _).
+rewrite -2!scalemxAl uQu; congr (_ *: _).
+by rewrite 2!dotmulZv -{2}uQu (proj2 (orth_preserves_dotmul Q) QO u).
+Qed.
+
+Lemma crossmul_normalcomp u v : u *v normalcomp v u = u *v v.
+Proof.
+rewrite /normalcomp linearD /= crossmulvN dotmulC crossmulvZ.
+by rewrite crossmulvZ crossmulvv 2!scaler0 subr0.
+Qed.
+
+Lemma dotmul_normalcomp u v : normalcomp v u *d u = 0.
+Proof.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite dotmulv0.
+rewrite /normalcomp dotmulBl !dotmulZv dotmulvv (exprD _ 1 1) expr1.
+rewrite (mulrA (_^-1)) mulVr ?unitfE ?norm_eq0 // mul1r mulrAC.
+by rewrite mulVr ?unitfE ?norm_eq0 // mul1r dotmulC subrr.
+Qed.
+
+Lemma ortho_normalcomp u v : (v *d u == 0) = (normalcomp v u == v).
 Proof. 
-by move=> uv0; rewrite /normalcomp dotmulC dotmulvZ uv0 mulr0 scale0r subr0.
+apply/idP/idP => [/eqP uv0|/eqP <-].
+  by rewrite /normalcomp dotmulC dotmulvZ uv0 mulr0 scale0r subr0.
+by rewrite dotmul_normalcomp.
 Qed.
 
 Lemma normalcomp_mul_tr u (u1 : norm u = 1) : normalcomp 'e_0 u *m u^T == 0.
@@ -557,16 +580,10 @@ rewrite u1 invr1 scalemx1 scalemx1 normalizeI // -(mx11_scalar (_ *m u^T)).
 by rewrite subrr.
 Qed.
 
-Lemma dotmul_normalcomp u v : norm u = 1 -> normalcomp v u *d u = 0.
+Lemma axialnormal v u : axialcomp v u *d normalcomp v u = 0.
 Proof.
-move=> u1.
-by rewrite /normalcomp dotmulBl !dotmulZv dotmulvv u1 expr1n invr1 !mulr1 !mul1r dotmulC subrr.
-Qed.
-
-Lemma axialnormal v u : norm u = 1 -> axialcomp v u *d normalcomp v u = 0.
-Proof.
-move=> ?.
-by rewrite /axialcomp !dotmulZv (dotmulC _ (normalcomp v u)) dotmul_normalcomp // !mulr0.
+by rewrite /axialcomp !dotmulZv (dotmulC _ (normalcomp v u))
+  dotmul_normalcomp // !mulr0.
 Qed.
 
 Lemma decomp v u : v = axialcomp v u + normalcomp v u.

@@ -113,12 +113,11 @@ Canonical noframe_is_noframe :=
   NOFrameInterface.mk (noframe_norm 0) (noframe_norm 1) (noframe_norm 2%:R)
   noframe_idotj noframe_jdotk noframe_idotk.
 
-Definition noframe_sgn := \det f.
-Lemma noframe_sgnE : noframe_sgn = i *d (j *v k).
-Proof. by rewrite crossmul_triple /noframe_sgn [in LHS](col_mx3_rowE f). Qed.
-
 Lemma noframe_is_unit : matrix_of_noframe f \is a GRing.unit.
 Proof. apply/orthogonal_unit. by case: f. Qed.
+
+Lemma noframe_inv : (matrix_of_noframe f)^-1 = f^T.
+Proof. rewrite -orthogonal_inv //; by case: f. Qed.
 
 Lemma norm_icrossj : norm (i *v j) = 1.
 Proof.
@@ -127,8 +126,10 @@ rewrite -(mul1r (cos _)) -(mul1r (1 * _)) mulrA.
 by rewrite -{1}(noframe_norm 0) -{1}(noframe_norm 1) -dotmul_cos idotj.
 Qed.
 
-Lemma noframe_inv : (matrix_of_noframe f)^-1 = f^T.
-Proof. rewrite -orthogonal_inv //; by case: f. Qed.
+Definition noframe_sgn := \det f.
+
+Lemma noframe_sgnE : noframe_sgn = i *d (j *v k).
+Proof. by rewrite crossmul_triple /noframe_sgn [in LHS](col_mx3_rowE f). Qed.
 
 Lemma abs_noframe_sgn : `| noframe_sgn | = 1.
 Proof. apply orthogonal_det; by case: f. Qed.
@@ -153,10 +154,15 @@ rewrite crossmulNv -eqr_oppLR noframe_sgnE dot_crossmulC => /eqP <-.
 by rewrite dotmulNv dotmulvv noframe_norm expr1n Neqxx oner_eq0.
 Qed.
 
-Lemma noframe_neg : k = - i *v j -> noframe_sgn = - 1.
+Lemma noframe_neg : (k == - i *v j) = (noframe_sgn == - 1).
 Proof.
-move=> H; rewrite noframe_sgnE H dot_crossmulC crossmulNv dotmulvN dotmulvv.
-by rewrite norm_icrossj expr1n.
+apply/idP/idP => [/eqP H|].
+- rewrite noframe_sgnE H dot_crossmulC crossmulNv dotmulvN dotmulvv.
+  by rewrite norm_icrossj expr1n.
+case: noframek => [|/eqP //] /eqP.
+rewrite noframe_sgnE => /eqP ->.
+rewrite double_crossmul dotmulvv normj expr1n scale1r (dotmulC j) idotj.
+by rewrite scale0r subr0 dotmulvv normi expr1n -eqr_oppLR Neqxx oner_eq0.
 Qed.
 
 Lemma noframe_posP : k = i *v j -> j = k *v i /\ i = j *v k.
@@ -219,26 +225,27 @@ rewrite !linearZ /=.
 rewrite (crossmulC _ i).
 rewrite (crossmulC _ j).
 rewrite (crossmulC _ k).
-rewrite !linearD /=.
+rewrite ![in LHS]linearD /=.
 rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= crossmulvv scaler0.
 rewrite oppr0 scaler0 add0r.
 case: noframek => e3e1e2.
-  case: (noframe_posP e3e1e2) => H1 H2.
+- case: (noframe_posP e3e1e2) => Hj Hi.
   rewrite (_ : _ *v _ = v2 *: k); last by rewrite linearZ /= -e3e1e2.
   rewrite scalerN (_ : _ *v _ = - v3 *: j); last first.
-    by rewrite linearZ /= crossmulC -H1 scalerN scaleNr.
+    by rewrite linearZ /= crossmulC -Hj scalerN scaleNr.
   rewrite scaleNr opprK (_ : _ *v _ = - v1 *: k); last first.
     by rewrite linearZ /= crossmulC e3e1e2 scalerN scaleNr.
-  rewrite scaleNr opprK (_ : _ *v _ = 0); last by rewrite linearZ /= crossmulvv scaler0.
-  rewrite scalerN scaler0 subr0.
-  rewrite (_ : _ *v _ = v3 *: i); last by rewrite linearZ /= -H2.
-  rewrite scalerN (_ : _ *v _ = v1 *: j); last by rewrite linearZ /= H1.
-  rewrite scalerN (_ : _ *v _ = - v2 *: i); last first.
-    by rewrite linearZ /= crossmulC -H2 scaleNr scalerN.
   rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
     by rewrite linearZ /= crossmulvv scaler0.
   rewrite scalerN scaler0 subr0.
-  move: noframe_pos; rewrite e3e1e2 eqxx => /esym/eqP ->.
+  rewrite (_ : _ *v _ = v3 *: i); last by rewrite linearZ /= -Hi.
+  rewrite scalerN (_ : _ *v _ = v1 *: j); last by rewrite linearZ /= Hj.
+  rewrite scalerN (_ : _ *v _ = - v2 *: i); last first.
+    by rewrite linearZ /= crossmulC -Hi scaleNr scalerN.
+  rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
+    by rewrite linearZ /= crossmulvv scaler0.
+  rewrite scalerN scaler0 subr0.
+  move/esym : noframe_pos; rewrite e3e1e2 eqxx => /eqP ->.
   rewrite !scale1r -![in LHS]addrA addrC.
   rewrite -![in LHS]addrA.
   rewrite addrCA.
@@ -249,38 +256,34 @@ case: noframek => e3e1e2.
   rewrite -addrA addrACA addrC; congr (_ + _).
     by rewrite -scaleNr !scalerA -scalerDl addrC mulrC mulNr (mulrC w2).
   by rewrite !scalerA -scalerBl scalerN -scaleNr opprB mulrC (mulrC w3).
-case: (noframe_negP e3e1e2) => H1 H2.
-rewrite (_ : _ *v _ = - v2 *: k); last first.
-  by rewrite linearZ /= e3e1e2 crossmulNv scalerN scaleNr opprK.
-rewrite scaleNr opprK.
-rewrite (_ : _ *v _ = v3 *: j); last first.
-  by rewrite linearZ /= -H1.
-rewrite scalerN.
-rewrite (_ : _ *v _ = v1 *: k); last first.
-  by rewrite linearZ /= crossmulC -crossmulNv -e3e1e2.
-rewrite scalerN.
-rewrite (_ : _ *v _ = 0); last first.
-  by rewrite linearZ /= crossmulvv scaler0.
-rewrite oppr0 scaler0 addr0.
-rewrite (_ : _ *v _ = - v3 *: i); last first.
-  by rewrite linearZ /= crossmulC -H2 scalerN scaleNr.
-rewrite scaleNr opprK.
-rewrite (_ : _ *v _ = - v1 *: j); last first.
-  by rewrite linearZ /= crossmulC -H1 scalerN scaleNr.
-rewrite scaleNr opprK.
-rewrite (_ : _ *v _ = v2 *: i); last first.
-  by rewrite linearZ /= -H2.
-rewrite scalerN.
-rewrite (_ : _ *v _ = 0); last first.
-  by rewrite linearZ /= crossmulvv scaler0.
-rewrite oppr0 scaler0 addr0.
-rewrite (noframe_neg e3e1e2).
-rewrite -![in LHS]addrA addrC -addrA.
-rewrite addrCA -addrA addrC ![in LHS]addrA -addrA; congr (_ + _); last first.
-  by rewrite !scalerA -scalerBl mulrN1 opprB mulrC (mulrC w2).
-rewrite -addrA addrACA; congr (_ + _).
-  by rewrite !scalerA -scalerBl mulrN1 opprB mulrC (mulrC w3).
-by rewrite !scalerA -scalerBl scalerN mulrN1 scaleNr opprK mulrC (mulrC w1).
+- case: (noframe_negP e3e1e2) => Hj Hi.
+  rewrite (_ : _ *v _ = - v2 *: k); last first.
+    by rewrite linearZ /= e3e1e2 crossmulNv scalerN scaleNr opprK.
+  rewrite scaleNr opprK.
+  rewrite (_ : _ *v _ = v3 *: j); last by rewrite linearZ /= -Hj.
+  rewrite scalerN.
+  rewrite (_ : _ *v _ = v1 *: k); last first.
+    by rewrite linearZ /= crossmulC -crossmulNv -e3e1e2.
+  rewrite scalerN.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= crossmulvv scaler0.
+  rewrite oppr0 scaler0 addr0.
+  rewrite (_ : _ *v _ = - v3 *: i); last first.
+    by rewrite linearZ /= crossmulC -Hi scalerN scaleNr.
+  rewrite scaleNr opprK.
+  rewrite (_ : _ *v _ = - v1 *: j); last first.
+    by rewrite linearZ /= crossmulC -Hj scalerN scaleNr.
+  rewrite scaleNr opprK.
+  rewrite (_ : _ *v _ = v2 *: i); last by rewrite linearZ /= -Hi.
+  rewrite scalerN.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= crossmulvv scaler0.
+  rewrite oppr0 scaler0 addr0.
+  move: noframe_neg; rewrite {1}e3e1e2 eqxx => /esym/eqP ->.
+  rewrite -![in LHS]addrA addrC -addrA.
+  rewrite addrCA -addrA addrC ![in LHS]addrA -addrA; congr (_ + _); last first.
+    by rewrite !scalerA -scalerBl mulrN1 opprB mulrC (mulrC w2).
+  rewrite -addrA addrACA; congr (_ + _).
+    by rewrite !scalerA -scalerBl mulrN1 opprB mulrC (mulrC w3).
+  by rewrite !scalerA -scalerBl scalerN mulrN1 scaleNr opprK mulrC (mulrC w1).
 Qed.
 
 End non_oriented_frame_properties.
@@ -388,9 +391,9 @@ End TFrame.
 Coercion frame_of_tframe (R : rcfType) (f : TFrame.t R) : Frame.t R :=
   TFrame.frame_of f.
 
-Definition xaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f|,0).
-Definition yaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f|,1).
-Definition zaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f|,2%:R).
+Definition xaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f |, 0).
+Definition yaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f |, 1).
+Definition zaxis R (f : TFrame.t R) := Line.mk (TFrame.o f) (f |, 2%:R).
 
 Section canonical_frame.
 
@@ -435,18 +438,6 @@ rewrite mulrA mulVr ?mul1r // unitmxE unitfE /P -crossmul_triple.
 by rewrite -normr_gt0 -noframe_sgnE (abs_noframe_sgn f) ltr01.
 Qed.
 
-(* TODO: useful? *)
-Lemma e1_colinear (R : rcfType) (i : 'rV[R]_3) (ie0 : colinear i 'e_0) :
-  norm i = 1 ->
-  normalcomp 'e_1 (normalize i) = 'e_1.
-Proof.
-move=> normi1.
-rewrite ortho_normalcomp // dotmulvZ normi1 invr1 mul1r.
-case/colinearP : ie0 => [|[_ [p [Hp ipe0]]]].
-  by rewrite -norm_eq0 normeE oner_eq0.
-by rewrite ipe0 dotmulvZ dote2 mulr0.
-Qed.
-
 Module Base1.
 Section base1.
 Variable R : rcfType.
@@ -476,7 +467,7 @@ Lemma normj : norm j = 1.
 Proof.
 rewrite /j; case: ifPn => iVi; first by rewrite norm_delta_mx.
 rewrite norm_normalize //; apply: contra iVi.
-by rewrite normalcomp_colinear // colinear_sym.
+by rewrite normalcomp_colinear // ?norm1_neq0 // colinear_sym.
 Qed.
 
 Lemma normk : norm k = 1.
@@ -541,6 +532,8 @@ Definition k := Base1.k i.
 
 Lemma normi : norm i = 1.
 Proof. by rewrite norm_normalize. Qed.
+
+Lemma iE_new : i = normalize u. Proof. done. Qed.
 
 Definition frame := Base1.frame normi.
 
@@ -850,7 +843,8 @@ Proof. by rewrite -norm_eq0 normi oner_neq0. Qed.
 
 Lemma normj : norm j = 1.
 Proof.
-rewrite /j norm_normalize // normalcomp_colinear ?normi //.
+rewrite /j norm_normalize // normalcomp_colinear; last first.
+  by rewrite -norm_eq0 normi oner_neq0.
 apply: contra (abc); rewrite colinearvZ invr_eq0 norm_eq0 subr_eq0.
 by rewrite eq_sym (negPf ab) /= colinear_sym.
 Qed.

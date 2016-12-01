@@ -1127,7 +1127,7 @@ Definition normdisp p := normalcomp (displacement f p) w.
 Lemma decomp_displacement p :
   norm (displacement f p) ^+ 2 = norm (d0 *: (norm w ^- 2 *: w)) ^+2 + norm (normdisp p) ^+ 2.
 Proof.
-rewrite (decomp (displacement f p) w) normD -dotmul_cos (axialnormal _ w1) // mul0rn addr0.
+rewrite (decomp (displacement f p) w) normD -dotmul_cos axialnormal // mul0rn addr0.
 by rewrite -/(normdisp p) -/(axialdisp p) axialdispE.
 Qed.
 
@@ -1145,7 +1145,7 @@ Lemma MozziChasles p : norm (displacement f p) = d0 ->
   colinear (displacement f p) w.
 Proof.
 move=> H.
-by rewrite -(normalcomp_colinear _ w1) -/(normdisp p) MozziChasles_helper.
+by rewrite -(normalcomp_colinear _ (norm1_neq0 w1)) -/(normdisp p) MozziChasles_helper.
 Qed.
 
 End Chasles.
@@ -1353,20 +1353,18 @@ move=> p0e0 fp0e0.
 have _(*?*) : relative_displacement f (f p0) p0 = 0.
   rewrite /relative_displacement -/(displacement f p0).
   move: (MozziChasles w0 sina0 fp0e0).
-  rewrite -(normalcomp_colinear _ w1) // => /eqP H1.
+  rewrite -(normalcomp_colinear _ (norm1_neq0 w1)) // => /eqP H1.
   rewrite (decomp (displacement f p0) w) H1 addr0.
   rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
   move: (angle_axis_isRot w0 (ortho_of_diso_is_SO f)); rewrite -/Q -/a -/w.
-  rewrite normalizeI //.
-  by case/isRotP => /= -> _ _; rewrite subrr scaler0.
+  rewrite normalizeI // => /isRot_axis ->; by rewrite subrr scaler0.
 have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).
     rewrite -(displacement_iso f p0 q) {1}(decomp (displacement f p0) w).
-    move/(MozziChasles w0 sina0) in fp0e0.
-    rewrite -normalcomp_colinear ?norm_normalize // in fp0e0.
-    rewrite (eqP fp0e0).
-    rewrite addr0 axialcompE.
-    by rewrite w1 expr1n invr1 scale1r.
+    move/(MozziChasles w0 sina0) : fp0e0.
+    rewrite -normalcomp_colinear; last by rewrite normalize_eq0.
+    move/eqP => ->.
+    by rewrite addr0 axialcompE w1 expr1n invr1 scale1r.
   rewrite (mx11_scalar (displacement f p0 *m w^T)) -/(dotmul _ _).
   rewrite mulmxA (mx11_scalar (displacement f q *m w^T)) -/(dotmul _ _).
   by rewrite 2!(displacement_proj w0).

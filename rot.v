@@ -62,22 +62,24 @@ Definition RO a := col_mx2 (row2 (cos a) (sin a)) (row2 (- sin a) (cos a)).
 Lemma tr_RO a : \tr (RO a) = (cos a) *+ 2.
  Proof. by rewrite /mxtrace sum2E !mxE /= mulr2n. Qed.
 
-Lemma orthogonal2P M :
-  (row 0 M *d row 0 M = 1) -> (row 0 M *d row 1 M = 0) ->
-  (row 1 M *d row 0 M = 0) -> (row 1 M *d row 1 M = 1) ->
-  M \is 'O[R]_2.
+Lemma orthogonal2P M : reflect (M \is 'O[R]_2)
+    [&& row 0 M *d row 0 M == 1, row 0 M *d row 1 M == 0,
+        row 1 M *d row 0 M == 0 & row 1 M *d row 1 M == 1].
 Proof.
-move=> H *; apply/orthogonalP => i j.
-case/boolP : (i == 0) => [/eqP ->|].
-  case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
-rewrite ifnot01 => /eqP ->; case/boolP : (j == 0) => [/eqP -> //|].
-by rewrite ifnot01 => /eqP ->; rewrite eqxx.
+apply (iffP idP) => [/and4P[] /eqP H1 /eqP H2 /eqP H3 /eqP H4|].
+  apply/orthogonalP => i j.
+  case/boolP : (i == 0) => [/eqP ->|].
+    case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
+  rewrite ifnot01 => /eqP ->; case/boolP : (j == 0) => [/eqP -> //|].
+  by rewrite ifnot01 => /eqP ->; rewrite eqxx.
+move/orthogonalP => H; by rewrite !H /= !eqxx.
 Qed.
 
 Lemma RO_is_O a : RO a \is 'O[R]_2.
 Proof.
-by apply/orthogonal2P; rewrite dotmulE sum2E !mxE /= -?expr2 ?sqrrN ?cos2Dsin2 //
-   ?(mulrC (cos a)) ?mulNr addrC ?subrr // ?cos2Dsin2.
+apply/orthogonal2P; rewrite !rowK /= !dotmulE !sum2E !mxE /= -!expr2 cos2Dsin2.
+by rewrite addrC mulrN mulrC subrr addrC mulNr mulrC subrr sqrrN addrC cos2Dsin2
+  !eqxx.
 Qed.
 
 Lemma RO_is_SO a : RO a \is 'SO[R]_2.
@@ -171,13 +173,11 @@ Proof.
 rewrite /Rx cospi sinpi oppr0; apply/matrix3P; by rewrite !mxE /= -?mulNrn ?mulr1n ?mulr0n.
 Qed.
 
-Lemma Rx_RO a : Rx a = block_mx (1 : 'M_1) (0 : 'M_(1, 2)) 0 (RO a).
+Lemma Rx_RO a : Rx a = block_mx (1 : 'M_1) 0 0 (RO a).
 Proof.
-rewrite -(@submxK _ 1 2 1 2 (Rx a)).
-rewrite (_ : ulsubmx _ = 1); last first.
+rewrite -(@submxK _ 1 2 1 2 (Rx a)) (_ : ulsubmx _ = 1); last first.
   apply/rowP => i; by rewrite (ord1 i) !mxE /=.
-rewrite (_ : ursubmx _ = 0); last first.
-  by apply/rowP => i; rewrite !mxE.
+rewrite (_ : ursubmx _ = 0); last by apply/rowP => i; rewrite !mxE.
 rewrite (_ : dlsubmx _ = 0); last first.
   apply/colP => i; rewrite !mxE /=.
   case: ifPn; first by rewrite !mxE.
@@ -186,16 +186,7 @@ rewrite (_ : drsubmx _ = RO a) //; by apply/matrix2P; rewrite !mxE.
 Qed.
 
 Lemma Rx_is_SO a : Rx a \is 'SO[R]_3.
-Proof.
-(* TODO: pove using RO_is_SO? *)
-apply/rotation3P/and4P; split.
-- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
-  rewrite -dotmulvv dotmulE sum3E !mxE /=. by Simp.r.
-- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
-  rewrite -dotmulvv dotmulE sum3E !mxE /=. Simp.r. by rewrite -!expr2 cos2Dsin2.
-- rewrite 2!rowK /= dotmulE sum3E !mxE /=. by Simp.r.
-- rewrite 3!rowK /= crossmulE !mxE /=. by Simp.r.
-Qed.
+Proof. by rewrite Rx_RO (SOSn_SOn 1) RO_is_SO. Qed.
 
 Lemma mxtrace_Rx a : \tr (Rx a) = 1 + cos a *+ 2.
 Proof. by rewrite /Rx /mxtrace sum3E !mxE /= -addrA -mulr2n. Qed.
@@ -225,6 +216,19 @@ Definition Rz a := col_mx3
   (row3 (cos a) (sin a) 0)
   (row3 (- sin a) (cos a) 0)
   'e_2%:R.
+
+Lemma Rz_RO a : Rz a = block_mx (RO a) 0 0 (1 : 'M_1).
+Proof.
+rewrite -(@submxK _ 2 1 2 1 (Rz a)) (_ : drsubmx _ = 1); last first.
+  apply/rowP => i; by rewrite (ord1 i) !mxE.
+rewrite (_ : ulsubmx _ = RO a); last by apply/matrix2P; rewrite !mxE.
+rewrite (_ : ursubmx _ = 0); last first.
+  apply/colP => i.
+  case/boolP : (i == 0) => [/eqP ->|]; first by rewrite !mxE.
+  rewrite ifnot01 => /eqP ->; by rewrite !mxE.
+rewrite (_ : dlsubmx _ = 0) //; apply/rowP => i; rewrite !mxE /=.
+case/boolP : (i == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
+Qed.
 
 Lemma RzM a b : Rz a * Rz b = Rz (a + b).
 Proof.
@@ -341,16 +345,14 @@ Lemma mxtrace_isRot a M (u0 : u != 0) :
 Proof.
 case/isRotP=> /= Hu [Hj Hk].
 move: (@basis_change _ M (Base.frame u0) (Rx a)).
-set i := _ |, 0. set j := _ |, 1. set k := _ |, 2%:R.
+rewrite -Base.iE -Base.jE -Base.kE.
 rewrite !mxE /= !scale1r !scale0r !add0r !addr0.
-have H3 : Base.j u = j by rewrite /j -Base.jE.
-have H2 : Base.k u = k by rewrite /k -Base.kE.
-have H1 : i *m M = i. by rewrite /i -Base.iE -scalemxAl Hu.
-rewrite -H2 -H3.
+have H1 : Base.i u *m M = Base.i u.
+  by rewrite Base.iE_new /normalize -scalemxAl Hu.
 move/(_ H1 Hj Hk) => ->.
 rewrite mxtrace_mulC mulmxA mulmxV ?mul1mx ?mxtrace_Rx //.
 rewrite unitmxE unitfE rotation_det ?oner_neq0 //.
-rewrite /i rowK /=; exact: Base.is_SO.
+exact: Base.is_SO.
 Qed.
 
 Lemma same_isRot M N v k (u0 : u != 0) (k0 : 0 < k) a :
@@ -360,12 +362,12 @@ Lemma same_isRot M N v k (u0 : u != 0) (k0 : 0 < k) a :
 Proof.
 move=> mkp /isRotP[/= HMi HMj HMk] /isRotP[/= HNi HNj HNk].
 apply/eqP/mulmxP => w.
-rewrite (orthogonal_expansion (Base.frame u0) w) (*NB*) -Base.iE -Base.jE -Base.kE.
+rewrite (orthogonal_expansion (Base.frame u0) w).
+rewrite (*NB*) -Base.iE -Base.jE -Base.kE.
 rewrite !mulmxDl -!scalemxAl.
 have v0 : v != 0 by apply: contra u0; rewrite mkp => /eqP ->; rewrite scaler0.
-congr (_ *: _ + _ *: _ + _ *: _).
-- congr (_ *: _).
-  by rewrite HMi {1}mkp -HNi scalemxAl -mkp.
+congr (_ *: (_ *: _) + _ *: _ + _ *: _).
+- by rewrite HMi {1}mkp -HNi scalemxAl -mkp.
 - by rewrite HMj /= mkp (Base.jZ v0 k0) (Base.kZ v0 k0) -HNj.
 - by rewrite HMk /= mkp (Base.jZ v0 k0) (Base.kZ v0 k0) -HNk.
 Qed.
@@ -379,12 +381,14 @@ Lemma isRot_tr a (u0 : u != 0) M : M \in unitmx ->
   isRot (- a) u (mx_lin1 M) -> isRot a u (mx_lin1 M^-1).
 Proof.
 move=> Hf /isRotP[/= H1 H2 H3].
-have K1 : normalize u *m M = normalize u by rewrite /normalize -scalemxAl H1.
-move: (@basis_change _ M (Base.frame u0) (Rx (- a))); rewrite (* NB*) -Base.jE -Base.iE -Base.kE.
+have K1 : Base.i u *m M = Base.i u.
+  by rewrite Base.iE_new /normalize -scalemxAl H1.
+move: (@basis_change _ M (Base.frame u0) (Rx (- a))).
+rewrite (* NB*) -Base.jE -Base.iE -Base.kE.
 rewrite !mxE /= K1 !scale0r 2!add0r !addr0 -H2 -H3 scale1r => /(_ erefl erefl erefl).
 move=> fRx.
-have HfRx : M^-1 = (col_mx3 (normalize u) (Base.j u) (Base.k u))^T *m
-   (Rx (- a))^-1 *m col_mx3 (normalize u) (Base.j u) (Base.k u).
+have HfRx : M^-1 = (col_mx3 (Base.i u) (Base.j u) (Base.k u))^T *m
+   (Rx (- a))^-1 *m col_mx3 (Base.i u) (Base.j u) (Base.k u).
   rewrite fRx invrM /= ?(noframe_is_unit (Base.frame u0)) //; last first.
     rewrite unitrMl ?unitrV ?(noframe_is_unit (Base.frame u0)) //.
     by rewrite orthogonal_unit // rotation_sub // Rx_is_SO.
@@ -396,27 +400,28 @@ apply/isRotP; split => /=.
 - by rewrite -{1}H1 -mulmxA mulmxV // mulmx1.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.j u *m _ = 'e_1); last first.
-    by rewrite col_mx3_mul dotmulC dotmulvv normj // expr1n -/(Base.i _) idotj // jdotk // e1row.
+    by rewrite col_mx3_mul dotmulC dotmulvv normj // expr1n idotj // jdotk // e1row.
   rewrite (_ : 'e_1 *m _ = row3 0 (cos (- a)) (sin a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
   by rewrite mulmx_row3_col3 scale0r add0r cosN.
 - rewrite HfRx !mulmxA.
   rewrite (_ : Base.k u *m _ = 'e_2%:R); last first.
-    by rewrite col_mx3_mul dotmulC -/(Base.i u) idotk // dotmulC jdotk // dotmulvv normk // expr1n e2row.
+    by rewrite col_mx3_mul dotmulC idotk // dotmulC jdotk // dotmulvv normk // expr1n e2row.
   rewrite (_ : 'e_2%:R *m _ = row3 0 (- sin a) (cos a)); last first.
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx col_mx3_mul.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
   by rewrite mulmx_row3_col3 scale0r add0r.
 Qed.
 
-Lemma isRot_SO a f (u0 : u != 0) : isRot a u f -> lin1_mx f \is 'SO[R]_3.
+Lemma isRot_SO a M (u0 : u != 0) : isRot a u (mx_lin1 M) -> M \is 'SO[R]_3.
 Proof.
-move/isRotP=> [Hu Hj Hk].
-move: (@basis_change _ (lin1_mx f) (Base.frame u0) (Rx a)).
-rewrite !mxE /= !(scale1r,scale0r,add0r,addr0) 3!mul_rV_lin1.
-rewrite !rowK /=. (* -Base.iE -Base.jE -Base.kE.*)
-rewrite linearZ Hu => /(_ erefl Hj Hk) ->.
+move/isRotP=> /= [Hu Hj Hk].
+move: (@basis_change _ M (Base.frame u0) (Rx a)).
+rewrite -Base.iE -Base.jE -Base.kE.
+rewrite !mxE /= !(scale1r,scale0r,add0r,addr0).
+rewrite {1 2}Base.iE_new {1 2}/normalize -scalemxAl Hu.
+move=> /(_ erefl Hj Hk) ->.
 by rewrite rpredM // ?Base.is_SO // rpredM // ?Rx_is_SO // rotation_inv // ?Base.is_SO // rotationV Base.is_SO.
 Qed.
 
@@ -434,7 +439,7 @@ have v0 := vaxis_euler_neq0 MSO.
 rewrite -/e in v0.
 have vMv := vaxis_eulerP MSO.
 rewrite -/e in vMv.
-set f := Base.frame v0. set i := Base.i e. set j := Base.j e. set k := Base.k e.
+set i := Base.i e. set j := Base.j e. set k := Base.k e.
 have iMi : i *m M = i.
   by rewrite /normalize -scalemxAl vMv.
 have iMj : i *d (j *m M) = 0.
@@ -444,12 +449,12 @@ have iMk : i *d (k *m M) = 0.
 set a := (j *m M) *d j.
 set b := (j *m M) *d k.
 have ab : j *m M = a *: j + b *: k.
-  rewrite {1}(orthogonal_expansion f (j *m M)) (*NB*) -Base.iE -Base.jE -Base.kE.
+  rewrite {1}(orthogonal_expansion (Base.frame v0) (j *m M)) (*NB*) -Base.iE -Base.jE -Base.kE.
   by rewrite dotmulC iMj scale0r add0r.
 set c := (k *m M) *d j.
 set d := (k *m M) *d k.
 have cd : k *m M = c *: j + d *: k.
-  rewrite {1}(orthogonal_expansion f (k *m M)) (*NB*) -Base.iE -Base.jE -Base.kE.
+  rewrite {1}(orthogonal_expansion (Base.frame v0) (k *m M)) (*NB*) -Base.iE -Base.jE -Base.kE.
   by rewrite dotmulC iMk scale0r add0r.
 have H1 : a ^+ 2 + b ^+ 2 = 1.
   move: (normj (base_is_noframe v0)) => /eqP.
@@ -470,11 +475,8 @@ have H3 : c ^+ 2 + d ^+ 2 = 1.
   by rewrite expr1n 2!mulr1 -2!expr2 dotmulC jdotk // !(mulr0,addr0,add0r) => /eqP.
 set P := col_mx2 (row2 a b) (row2 c d).
 have PO : P \is 'O[R]_2.
-  apply/orthogonal2P.
-  by rewrite rowK /= dotmulE sum2E !mxE /= -2!expr2.
-  by rewrite rowK /= dotmulE sum2E !mxE.
-  by rewrite 2!rowK /= dotmulE sum2E !mxE /= mulrC (mulrC d).
-  by rewrite dotmulE sum2E !mxE /= -!expr2.
+  apply/orthogonal2P; rewrite !rowK /= !dotmulE !sum2E !mxE /=.
+  by rewrite -!expr2 H1 H2 mulrC (mulrC d) H2 H3 !eqxx.
 case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
 - case/eq_col_mx2 : phiRO => Ha Hb Hc Hd.
   exists phi.
@@ -483,13 +485,13 @@ case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
   by rewrite -!(Hb,Hc,Hd).
 - exfalso.
   case/eq_col_mx2 : phiRO' => Ha Hb Hc Hd.
-  move: (@basis_change _ M f (Rx' phi)); (*NB*) rewrite -Base.iE -Base.jE -Base.kE.
+  move: (@basis_change _ M (Base.frame v0) (Rx' phi)); (*NB*) rewrite -Base.iE -Base.jE -Base.kE.
   rewrite !mxE /= !(addr0,add0r,scale0r,scale1r) -/i -/j -/k.
   rewrite -{1}Ha -{1}Hb -{1}Hc -{1}Hd.
   rewrite -ab iMi -cd => /(_ erefl erefl erefl) => HM.
   move: (rotation_det MSO).
   rewrite HM 2!det_mulmx det_Rx' detV -crossmul_triple.
-  move: (Frame.MSO f).
+  move: (Frame.MSO (Base.frame v0)).
   rewrite rotationE => /andP[_] /=.
   rewrite -crossmul_triple => /eqP ->.
   rewrite invr1 mulr1 mul1r => /eqP.
@@ -573,14 +575,6 @@ case/colinearP : uax => [/eqP ->| [_ [k [? ukv]]]].
   exists 0; by rewrite scale0r.
 exists (1 / k); rewrite ukv scalerA div1r mulVr ?scale1r // unitfE.
 apply: contra u0; rewrite ukv => /eqP ->; by rewrite scale0r.
-Qed.
-
-(* NB: useful? *)
-Lemma isRot_axial_vec M : M \is 'SO[R]_3 ->
-  forall u a, isRot a u (mx_lin1 M) -> colinear u (axial_vec M).
-Proof.
-move=> MSO u a /isRotP[/= H1 ? ?]; apply is_eigenvector1_colinear => //.
-apply/eigenspaceP; by rewrite H1 scale1r.
 Qed.
 
 End axial_vector.
@@ -850,62 +844,9 @@ Qed.
 
 Section alternative_definition_of_eskew.
 
-(* TODO: rename *)
+(* rotation of angle a around (unit) vector e *)
 Definition eskew' (a : angle R) (e : 'rV[R]_3) :=
   e^T *m e + (cos a) *: (1 - e^T *m e) + sin a *: \S( e ).
-
-(* [angeles] p.42, eqn 2.49 *)
-Lemma isRot_exp_eskew' a Q u : norm u = 1 ->
-  isRot a u (mx_lin1 Q) -> Q = eskew' a u.
-Proof.
-move=> e1 Maxis.
-apply/eqP/mulmxP => p.
-have QO : Q \is 'O[R]_3.
-  have : u != 0 by rewrite -norm_eq0 e1 oner_eq0.
-  by move/isRot_SO => /(_ _ _ Maxis); rewrite mx_lin1K rotationE => /andP[].
-rewrite (decomp (p *m Q) u).
-have -> : axialcomp (p *m Q) u = axialcomp p u.
-  rewrite axialcompE.
-  case/isRotP : (Maxis) => /= H2 _ _.
-  rewrite -{2}H2 trmx_mul mulmxA -(mulmxA p).
-  move: QO; rewrite orthogonalE mulmxE => /eqP ->.
-  by rewrite mulmx1 axialcompE.
-rewrite /eskew'.
-rewrite -[in RHS]addrA mulmxDr axialcompE mulmxA; congr (_ + _).
-  by rewrite e1 expr1n invr1 scale1r.
-have H1 : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
-  transitivity (normalcomp p u *m Q).
-    (* TODO: lemma? *)
-    rewrite /normalcomp mulmxBl; congr (_ - _).
-    case/isRotP: Maxis => /= H1 _ _.
-    rewrite -2!scalemxAl H1; congr (_ *: _).
-    rewrite 2!dotmulZv -{2}H1.
-    by rewrite (proj2 (orth_preserves_dotmul Q) QO u).
-  case/isRotP: Maxis => /= H1 H2 H3.
-  move: (orthogonal_expansion (Base.frame (norm1_neq0 e1))) => /(_ (normalcomp p (Base.i u))) /=.
-  rewrite !rowK /= -/(Base.j _) -/(Base.k _) (* (* NB *) rewrite -Base.iE -Base.jE -Base.kE*) => Hp.
-  rewrite (_ : Base.i u = u) in Hp; last by rewrite /Base.i normalizeI.
-  rewrite dotmul_normalcomp // scale0r add0r in Hp.
-  rewrite Hp mulmxDl -2!scalemxAl.
-  rewrite H2 H3.
-  rewrite (scalerDr (normalcomp p u *d Base.j u)) scalerA mulrC -scalerA.
-  rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
-  rewrite (scalerDr (normalcomp p u *d Base.k u)) addrA addrC.
-  rewrite scalerA mulrC -scalerA; congr (_ + _).
-  rewrite scalerA mulrC -scalerA addrC scalerA mulrC -scalerA addrC.
-  rewrite -{1}(opprK (sin a)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
-  rewrite -double_crossmul.
-  rewrite (Base.jcrossk (norm1_neq0 e1)).
-  rewrite {2}(decomp p u) [in RHS]crossmulC linearD /=.
-  rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
-  by rewrite /Base.i normalizeI.
-rewrite {}H1 /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
-rewrite scalerBr -2!addrA; congr (_ + _).
-rewrite -scalemxAr -(scalerN (sin a)) crossmulC opprK -(skew_mxE p u).
-congr (- (_ *: _) + _).
-rewrite normalizeI //.
-by rewrite dotmulC mulmxA (mx11_scalar (p *m _)) mul_scalar_mx.
-Qed.
 
 Lemma eskew'E w (a : angle R) : norm w = 1 -> eskew' a w = `e^(a, w).
 Proof.
@@ -915,6 +856,45 @@ rewrite -[in RHS]addrA [in RHS]addrCA; congr (_ + _).
 rewrite scalerBl scale1r addrCA -addrA; congr (_ + _).
 rewrite scalerBr [in RHS]scalerBr opprB !addrA; congr (_ - _).
 by rewrite addrC w1 expr1n !scalemx1 (addrC _ 1) subrr addr0.
+Qed.
+
+(* [angeles] p.42, eqn 2.49 *)
+Lemma isRot_exp_eskew' a Q u : norm u = 1 ->
+  isRot a u (mx_lin1 Q) -> Q = eskew' a u.
+Proof.
+move=> u1 H; apply/eqP/mulmxP => p.
+rewrite (decomp (p *m Q) u).
+have -> : axialcomp (p *m Q) u = axialcomp p u.
+  rewrite axialcompE -{2}(isRot_axis H) trmx_mul mulmxA -(mulmxA p).
+  rewrite orthogonal_mul_tr //; last first.
+    by apply/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
+  by rewrite mulmx1 axialcompE.
+rewrite /eskew' -[in RHS]addrA mulmxDr axialcompE mulmxA; congr (_ + _).
+  by rewrite u1 expr1n invr1 scale1r.
+have -> : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
+  rewrite normalcomp_mulO //; last 2 first.
+    by apply/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
+    exact (isRot_axis H).
+  move: (orthogonal_expansion (Base.frame (norm1_neq0 u1))).
+  (* NB*) rewrite -Base.iE -Base.jE -Base.kE.
+  move/(_ (normalcomp p (Base.i u))).
+  rewrite Base.iE_new normalizeI // dotmul_normalcomp // scale0r add0r => ->.
+  rewrite mulmxDl -2!scalemxAl.
+  case/isRotP: H => /= _ -> ->.
+  rewrite (scalerDr (normalcomp p u *d Base.j u)) scalerA mulrC -scalerA.
+  rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
+  rewrite (scalerDr (normalcomp p u *d Base.k u)) addrA addrC.
+  rewrite scalerA mulrC -scalerA; congr (_ + _).
+  rewrite scalerA mulrC -scalerA addrC scalerA mulrC -scalerA addrC.
+  rewrite -{1}(opprK (sin a)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
+  rewrite -double_crossmul (Base.jcrossk (norm1_neq0 u1)) Base.iE_new.
+  rewrite normalizeI // {2}(decomp p u) [in RHS]crossmulC linearD /=.
+  by rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
+rewrite /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
+rewrite scalerBr -2!addrA; congr (_ + _).
+rewrite -scalemxAr -(scalerN (sin a)) crossmulC opprK -(skew_mxE p u).
+congr (- (_ *: _) + _).
+by rewrite normalizeI // dotmulC mulmxA (mx11_scalar (p *m _)) mul_scalar_mx.
 Qed.
 
 Lemma isRot_skew' e (e0 : e != 0) (a : angle R) :
@@ -974,6 +954,28 @@ rewrite mxtrace_tr_mul u1 expr1n (_ : _ - 1 = - 2%:R); last first.
 by rewrite -mulr_natl mulNr divrr ?mulr1 ?unitfE ?pnatr_eq0 // acosN1.
 Qed.
 
+Lemma tr_angle M : angle M^T = angle M.
+Proof. by rewrite /angle mxtrace_tr. Qed.
+
+Lemma isRot_angle M u a : u != 0 -> a \in Opi_closed R ->
+  isRot a u (mx_lin1 M) -> a = angle M.
+Proof.
+move=> u0 Ha.
+move/(mxtrace_isRot u0); rewrite /angle => ->.
+rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divrr ?mulr1 ?cosK //.
+by rewrite unitfE pnatr_eq0.
+Qed.
+
+Lemma isRot_angleN M u a :
+  u != 0 -> a \in piO_closed R ->
+  isRot a u (mx_lin1 M) -> a = - angle M.
+Proof.
+move=> u0 Ha /(mxtrace_isRot u0); rewrite /angle=> ->.
+rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divrr; last first.
+  by rewrite unitfE pnatr_eq0.
+by rewrite mulr1 cosKN // opprK.
+Qed.
+
 Lemma sym_angle M : M \is 'SO[R]_3 ->
   M \is sym 3 R -> angle M = 0 \/ angle M = pi.
 Proof.
@@ -996,26 +998,19 @@ case/eqP/sin0_inv => [a0|api]; move: Ma.
   by right.
 Qed.
 
-Lemma tr_angle M : angle M^T = angle M.
-Proof. by rewrite /angle mxtrace_tr. Qed.
-
-Lemma isRot_angle M u a : u != 0 -> a \in Opi_closed R ->
-  isRot a u (mx_lin1 M) -> a = angle M.
+Lemma tr_interval M : M \is 'SO[R]_3 ->
+  -1 <= (\tr M - 1) / 2%:R <= 1.
 Proof.
-move=> u0 Ha.
-move/(mxtrace_isRot u0); rewrite /angle => ->.
-rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divrr ?mulr1 ?cosK //.
-by rewrite unitfE pnatr_eq0.
-Qed.
-
-Lemma isRot_angleN M u a :
-  u != 0 -> a \in piO_closed R ->
-  isRot a u (mx_lin1 M) -> a = - angle M.
-Proof.
-move=> u0 Ha /(mxtrace_isRot u0); rewrite /angle=> ->.
-rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divrr; last first.
-  by rewrite unitfE pnatr_eq0.
-by rewrite mulr1 cosKN // opprK.
+move=> MSO; case/SO_isRot : (MSO) => a HM.
+case: (angle_in a).
+- move/(isRot_angle (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
+  move/(mxtrace_isRot (vaxis_euler_neq0 MSO)) : HM => ->.
+  rewrite addrAC subrr add0r -(mulr_natl (cos _) 2) mulrC mulrA.
+  by rewrite mulVr ?unitfE ?pnatr_eq0 // mul1r -ler_norml cos_max.
+- move/(isRot_angleN (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
+  move/(mxtrace_isRot (vaxis_euler_neq0 MSO)) : HM => ->.
+  rewrite addrAC subrr add0r -(mulr_natl (cos _) 2) mulrC mulrA.
+  by rewrite mulVr ?unitfE ?pnatr_eq0 // mul1r -ler_norml cos_max.
 Qed.
 
 (* NB: useful? *)
@@ -1049,43 +1044,17 @@ Qed.
 Lemma angle0_tr M : M \is 'SO[R]_3 -> angle M = 0 -> \tr M = 3%:R.
 Proof.
 move=> MSO /(congr1 (fun x => cos x)).
-rewrite cos0 /angle acosK; last first.
-  case: (SO_isRot MSO) => a HM.
-  case: (angle_in a).
-    move/(isRot_angle (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
-    move/(mxtrace_isRot (vaxis_euler_neq0 MSO)) : HM => ->.
-    rewrite addrAC subrr add0r.
-    rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
-    by rewrite -ler_norml cos_max.
-  move/(isRot_angleN (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
-  move/(mxtrace_isRot (vaxis_euler_neq0 MSO)) : HM => ->.
-  rewrite addrAC subrr add0r.
-  rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
-  by rewrite -ler_norml cos_max.
+rewrite cos0 /angle acosK; last by apply tr_interval.
 move/(congr1 (fun x => x * 2%:R)).
 rewrite -mulrA mulVr ?unitfE ?pnatr_eq0 // mulr1 mul1r.
 move/(congr1 (fun x => x + 1)).
-rewrite subrK => ->.
-by rewrite (natrD _ 2 1).
+rewrite subrK => ->; by rewrite (natrD _ 2 1).
 Qed.
 
 Lemma angle_pi_tr M : M \is 'SO[R]_3 -> angle M = pi -> \tr M = - 1.
 Proof.
 move=> MSO /(congr1 (fun x => cos x)).
-rewrite cospi /angle acosK; last first.
-  (* TODO: factorize with angle0_tr *)
-  case: (SO_isRot MSO) => a HM.
-  case: (angle_in a).
-    move/(isRot_angle (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
-    move/(mxtrace_isRot (vaxis_euler_neq0 MSO)) : HM => ->.
-    rewrite addrAC subrr add0r.
-    rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
-    by rewrite -ler_norml cos_max.
-  move/(isRot_angleN (vaxis_euler_neq0 MSO))/(_ HM) => ?; subst a.
-  move/(mxtrace_isRot (vaxis_euler_neq0 MSO)) : HM => ->.
-  rewrite addrAC subrr add0r.
-  rewrite -(mulr_natl (cos _) 2) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
-  by rewrite -ler_norml cos_max.
+rewrite cospi /angle acosK; last by apply tr_interval.
 move/(congr1 (fun x => x * 2%:R)).
 rewrite -mulrA mulVr ?unitfE ?pnatr_eq0 // mulr1.
 move/(congr1 (fun x => x + 1)).
