@@ -14,25 +14,29 @@ Require Import aux.
 
 (*
  OUTLINE:
- 1. section SpecificsDim2And3
-    contains section row3
- 2. section dot_product
- 3. section triple_prod_mat (specialization of col_mx to row vectors of length 2, 3)
- 4. section normal
- 5. section crossmul
+ 1. section dot_product
+ 2. section norm
+    includes section norm1 (unit norm)
+ 3. section row2
+    section row3
+ 4. section extra_linear3
+    extra lemmas about linear algebra specialized to dimensions <= 3
+ 5. section triple_prod_mat
+    specialization of col_mx to row vectors of length 2, 3 (col_mx2, col_mx3)
+ 6. section normal
+ 7. section crossmul
     (sample lemma: double_crossmul)
- 6. section orthogonal_rotation_def
-    section orthogonal
+ 8. section orthogonal_rotation_def
+    section orthogonal_rotation_properties.
     section orthogonal_crossmul
-    (many lemmas specialized for dim 3)
+    (most lemmas specialized for dim 3)
     (sample lemma: Euler's theorem,
                    orth_preserves_dotmul)
- 7. section norm
     (sample lemma: multiplication by O_3[R] preserves norm)
-    section norm3
+ 9. section norm3
     (some specialized lemmas for dimension 3)
- 8. section properties_of_canonical_vectors
- 9. section normalize
+ 10. section properties_of_canonical_vectors
+ 11. section normalize
 *)
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -42,252 +46,6 @@ Import GRing.Theory.
 Import Num.Theory.
 
 Local Open Scope ring_scope.
-
-Section SpecificsDim2And3.
-
-Definition perm3_def (i j : 'I_3) : 'I_3 ^ 3 :=
-  [ffun x : 'I_3 => if i == j then x else
-    [fun z : 'I_3 => - (i + j) with 1 |-> i, 2%:R |-> j] x].
-
-Fact perm3_subproof (i j : 'I_3) : injective (perm3_def i j).
-Proof.
-move=> x y; rewrite ?ffunE; have [//|neq_ij /=] := altP (i =P j).
-move => hxy; apply/val_inj; move: x y i j hxy neq_ij.
-by do 4![move=> [[|[|[|?]]] ?] //=].
-Qed.
-
-Definition perm3 i j : 'S_3 := perm (@perm3_subproof i j).
-
-CoInductive I3_spec i j : bool -> bool -> 'I_3 -> Type :=
-  | I3Spec_i : I3_spec i j true false i
-  | I3Spec_j : I3_spec i j false true j
-  | I3Spec_k : I3_spec i j false false (- (i + j)).
-
-Lemma I3P i j k : i != j -> I3_spec i j (i == k) (j == k) k.
-Proof.
-move=> neq_ij.
-have -> : k = if i == k then i else if j == k then j else - (i + j).
-  by apply/val_inj; move: i j k neq_ij; do 3![case=> [[|[|[|?]]] ?]].
-by move: i j k neq_ij; do 3![case=> [[|[|[|?]]] ?] //=]; constructor.
-Qed.
-
-Lemma odd_perm312 : perm3 1 2%:R = false :> bool.
-Proof.
-suff ->: perm3 1 2%:R = 1%g by rewrite odd_perm1.
-by apply/permP=>-[[|[|[|//]]] ?]; apply/val_inj; rewrite ?permE ?ffunE.
-Qed.
-
-Lemma odd_perm310 : perm3 1 0 = true :> bool.
-Proof.
-suff -> : perm3 1 0 = tperm (0 : 'I__) 2%:R by rewrite odd_tperm.
-by apply/permP=>-[[|[|[|//]]] ?]; apply/val_inj; rewrite ?permE ?ffunE.
-Qed.
-
-Lemma odd_perm302 : perm3 0 2%:R = true :> bool.
-Proof.
-suff -> : perm3 0 2%:R = tperm (0 : 'I__) 1%R by rewrite !odd_tperm /=.
-by apply/permP=>-[[|[|[|//]]] ?]; apply/val_inj; rewrite ?permE ?ffunE.
-Qed.
-
-Lemma odd_perm321 : perm3 2%:R 1 = true :> bool.
-Proof.
-suff ->: perm3 2%:R 1 = tperm (1%R : 'I__) 2%:R by rewrite !odd_tperm /=.
-by apply/permP=>-[[|[|[|//]]] ?]; apply/val_inj; rewrite ?permE ?ffunE.
-Qed.
-
-Lemma odd_perm301 : perm3 0 1 = false :> bool.
-Proof.
-suff -> : perm3 0 1 = (tperm (1 : 'I__) 2%:R * tperm (0 : 'I__) 1%:R)%g.
-  by rewrite odd_permM !odd_tperm /=.
-by apply/permP => -[[|[|[|?]]] ?]; do !rewrite ?permE ?ffunE //=; Simp.ord.
-Qed.
-
-Lemma odd_perm320 : perm3 2%:R 0 = false :> bool.
-Proof.
-suff -> : perm3 2%:R 0 = (tperm (1 : 'I__) 1%:R * tperm (1 : 'I__) 2%:R)%g.
-  by rewrite odd_permM !odd_tperm /=.
-by apply/permP => -[[|[|[|?]]] ?]; do !rewrite ?permE ?ffunE //=; Simp.ord.
-Qed.
-
-Definition odd_perm3 :=
-  (odd_perm301, odd_perm302, odd_perm310, odd_perm312, odd_perm320, odd_perm321).
-
-Lemma thirdI3 (i j : 'I_3) : i != j -> exists k, (k != i) && (k != j).
-Proof.
-move=> neq_ij; exists (- i - j).
-by case: i j neq_ij => -[i0|[i1|[i2|//]]] [[|[|[]]]].
-Qed.
-
-Lemma ifnot0 (i : 'I_3) : (i != 0) = (i == 1) || (i == 2%:R).
-Proof. by move: i; do !case=>//. Qed.
-
-Lemma ifnot1 (i : 'I_3) : (i != 1) = (i == 0) || (i == 2%:R).
-Proof. by move: i; do !case=>//. Qed.
-
-Lemma ifnot2 (i : 'I_3) : (i != 2%:R) = (i == 0) || (i == 1).
-Proof. by move: i; do !case=>//. Qed.
-
-Lemma row_mx_col {R : ringType} n (A : 'M[R]_(n, 3)) :
-  A = row_mx (col 0 A) (row_mx (col 1 A) (col 2%:R A)).
-Proof.
-rewrite -[in LHS](@hsubmxK _ n 1 2 A) (_ : lsubmx _ = col 0 A); last first.
-  apply/colP => i; rewrite !mxE /= (_ : lshift 2 0 = 0) //; by apply val_inj.
-rewrite (_ : rsubmx _ = row_mx (col 1 A) (col 2%:R A)) //.
-set a := rsubmx _; rewrite -[in LHS](@hsubmxK _ n 1 1 a); congr row_mx.
-  apply/colP => i; rewrite !mxE /= (_ : rshift 1 _ = 1) //; by apply val_inj.
-apply/colP => i; rewrite !mxE /= (_ : rshift 1 (rshift 1 0) = 2%:R) //.
-by apply val_inj.
-Qed.
-
-Definition row2 {R : ringType} (a b : R) : 'rV[R]_2 :=
-  \row_p [eta \0 with 0 |-> a, 1 |-> b] p.
-
-Lemma row2_of_row {R : ringType} (M : 'M[R]_2) i : row i M = row2 (M i 0) (M i 1).
-Proof.
-apply/rowP => j; rewrite !mxE /=; case: ifPn => [/eqP -> //|].
-by rewrite ifnot01 => /eqP ->.
-Qed.
-
-Lemma matrix2P (T : Type) (A B : 'M[T]_2) :
-  A 0 0 = B 0 0 -> A 0 1 = B 0 1-> A 1 0 = B 1 0 -> A 1 1 = B 1 1 -> A = B.
-Proof.
-move=> *; apply/matrixP => i j.
-case/boolP : (i == 0) => [/eqP ->|].
-  case/boolP : (j == 0) => [/eqP -> //|]; first by rewrite ifnot01 => /eqP -> .
-rewrite ifnot01 => /eqP ->.
-case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
-Qed.
-
-Section row3.
-
-Variable R : ringType.
-Implicit Types a b c : R.
-
-Definition row3 a b c : 'rV[R]_3 :=
-  \row_p [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
-
-Lemma col_row3 a b c i : col i (row3 a b c) = ((row3 a b c) 0 i)%:M.
-Proof. by apply/rowP => k; rewrite (ord1 k) !mxE /= mulr1n. Qed.
-
-Lemma row3_row_mx a b c : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
-Proof. by rewrite [LHS]row_mx_col !col_row3 !mxE /=. Qed.
-
-Lemma row_row3 n (M : 'M[R]_(n, 3)) i : row i M = row3 (M i 0) (M i 1) (M i 2%:R).
-Proof.
-apply/rowP => k; rewrite !mxE /=; case: ifPn => [/eqP -> //|].
-by rewrite ifnot0 => /orP[]/eqP->.
-Qed.
-
-Lemma row3N a b c : - row3 a b c = row3 (- a) (- b) (- c).
-Proof.
-apply/rowP => i; rewrite !mxE /= ; case: ifPn; rewrite ?opprB // => ?.
-by case: ifPn; rewrite ?opprB // => ?; case: ifPn; rewrite ?opprB // oppr0.
-Qed.
-
-Lemma row3Z a b c k : k *: row3 a b c = row3 (k * a) (k * b) (k * c).
-Proof.
-apply/rowP => i; rewrite !mxE /=.
-case: ifPn => // ?; case: ifPn => // ?; case: ifPn => // ?; by Simp.r.
-Qed.
-
-Lemma row3D a b c a' b' c' :
-  row3 a b c + row3 a' b' c' = row3 (a + a') (b + b') (c + c').
-Proof.
-rewrite 3!row3_row_mx (add_row_mx a%:M) (add_row_mx b%:M).
-rewrite -(scalemx1 _ a) -(scalemx1 _ a') -(scalemx1 _ b) -(scalemx1 _ b').
-rewrite -(scalemx1 _ c) -(scalemx1 _ c'); by do 3! rewrite -scalerDl scalemx1.
-Qed.
-
-Lemma row30 : row3 0 0 0 = 0 :> 'rV[R]_3.
-Proof. by apply/rowP => a; rewrite !mxE /=; do 3 case: ifPn => //. Qed.
-
-Lemma e0row : 'e_0 = row3 1 0 0 :> 'rV_3.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => // _.
-case: ifPn => //; by case: ifPn.
-Qed.
-
-Lemma e1row : 'e_1 = row3 0 1 0.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
-by case: ifPn => // _; case: ifPn.
-Qed.
-
-Lemma e2row : 'e_2%:R = row3 0 0 1.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
-by case: ifPn => [/eqP -> //| _]; case: ifPn.
-Qed.
-
-Lemma row3E (u : 'rV[R]_3) :
-  u = row3 (u``_0) 0 0 + row3 0 (u``_1) 0 + row3 0 0 (u``_2%:R).
-Proof.
-rewrite 2!row3D !(addr0,add0r); apply/rowP => k; by rewrite -row_row3 mxE.
-Qed.
-
-End row3.
-
-Lemma vec3E (R : ringType) (u : 'rV[R]_3) :
-  u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
-Proof. rewrite [LHS]row3E e0row e1row e2row !row3Z. by Simp.r. Qed.
-
-Lemma matrix3P (T : Type) (A B : 'M[T]_3) :
-  A 0 0 = B 0 0 -> A 0 1 = B 0 1-> A 0 2%:R = B 0 2%:R ->
-  A 1 0 = B 1 0 -> A 1 1 = B 1 1-> A 1 2%:R = B 1 2%:R ->
-  A 2%:R 0 = B 2%:R 0 -> A 2%:R 1 = B 2%:R 1-> A 2%:R 2%:R = B 2%:R 2%:R ->
-  A = B.
-Proof.
-move=> *; apply/matrixP => i j.
-case/boolP : (i == 0) => [/eqP ->|].
-  case/boolP : (j == 0) => [/eqP -> //|]; first by rewrite ifnot0 => /orP [] /eqP ->.
-rewrite ifnot0 => /orP [] /eqP ->;
-  case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot0 => /orP [] /eqP ->.
-Qed.
-
-Definition mx_lin1 (R : ringType) (M : 'M[R]_3) : {linear 'rV[R]_3 -> 'rV[R]_3} :=
-  mulmxr_linear 1 M.
-
-Lemma mx_lin1K (R : ringType) (Q : 'M[R]__) : lin1_mx (mx_lin1 Q) = Q.
-Proof. by apply/matrix3P; rewrite !mxE sum3E !mxE !eqxx /=; Simp.r. Qed.
-
-Lemma det_mx11 (T : comRingType) (A : 'M[T]_1) : \det A = A 0 0.
-Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
-
-Lemma cofactor_mx22 (T : comRingType) (A : 'M[T]_2) i j :
-  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
-Proof.
-rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
-by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
-Qed.
-
-Lemma det_mx22 (T : comRingType) (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
-Proof.
-rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
-rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
-by rewrite !(lift0E, add0r) /= addrr_char2.
-Qed.
-
-Lemma cofactor_mx33 (T : comRingType) (A : 'M[T]_3) i j :
-  cofactor A i j = (-1) ^+ (i + j) *
-                   (A (i == 0)%:R (j == 0)%:R * A ((i <= 1).+1%:R) ((j <= 1).+1%:R) -
-                    A (i == 0)%:R ((j <= 1).+1%:R) * A ((i <= 1).+1%:R) (j == 0)%:R).
-Proof.
-rewrite /cofactor det_mx22 !mxE; congr (_ * (A _ _ * A _ _ - A _ _ * A _ _));
-  by rewrite (liftE0, liftE1).
-Qed.
-
-Lemma det_mx33 (T : comRingType) (M : 'M[T]_3) :
-  \det M = M 0 0 * (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R) +
-           M 0 1 * (M 2%:R 0 * M 1 2%:R - M 1 0 * M 2%:R 2%:R) +
-           M 0 2%:R * (M 1 0 * M 2%:R 1 - M 2%:R 0 * M 1 1).
-Proof.
-rewrite (expand_det_row M 0) sum3E -2!addrA; congr (_ * _ + (_ * _ + _ * _)).
-  by rewrite cofactor_mx33 /= expr0 mul1r [in X in _ - X]mulrC.
-by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
-by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
-Qed.
-
-End SpecificsDim2And3.
 
 Section dot_product.
 
@@ -367,6 +125,258 @@ End dot_product.
 Notation "*d%R" := (@dotmul _ _) : ring_scope.
 Notation "u *d w" := (dotmul u w) (at level 40) : ring_scope.
 
+Section norm.
+
+Variables (R : rcfType) (n : nat).
+Implicit Types u v : 'rV[R]_n.
+
+Definition norm u := Num.sqrt (u *d u).
+
+Lemma normN u : norm (- u) = norm u.
+Proof. by rewrite /norm dotmulNv dotmulvN opprK. Qed.
+
+Lemma norm0 : norm 0 = 0.
+Proof. by rewrite /norm dotmul0v sqrtr0. Qed.
+
+Lemma norm_delta_mx i : norm 'e_i = 1.
+Proof. by rewrite /norm /dotmul trmx_delta mul_delta_mx mxE !eqxx sqrtr1. Qed.
+
+Lemma norm_ge0 u : norm u >= 0.
+Proof. by apply sqrtr_ge0. Qed.
+Hint Resolve norm_ge0.
+
+Lemma normr_norm u : `|norm u| = norm u.
+Proof. by rewrite ger0_norm. Qed.
+
+Lemma norm_eq0 u : (norm u == 0) = (u == 0).
+Proof. by rewrite -sqrtr0 eqr_sqrt // ?dotmulvv0 // le0dotmul. Qed.
+
+Lemma norm_gt0 u : (0 < norm u) = (u != 0).
+Proof. by rewrite ltr_neqAle norm_ge0 andbT eq_sym norm_eq0. Qed.
+
+Lemma normZ (k : R) u : norm (k *: u) = `|k| * norm u.
+Proof.
+by rewrite /norm dotmulvZ dotmulZv mulrA sqrtrM -expr2 ?sqrtr_sqr // sqr_ge0.
+Qed.
+
+Lemma dotmulvv u : u *d u = norm u ^+ 2.
+Proof.
+rewrite /norm [_ ^+ _]sqr_sqrtr // dotmulE sumr_ge0 //.
+by move=> i _; rewrite sqr_ge0.
+Qed.
+
+Lemma polarization_identity v u :
+  v *d u = 1 / 4%:R * (norm (v + u) ^+ 2 - norm (v - u) ^+ 2).
+Proof.
+apply: (@mulrI _ 4%:R); first exact: pnatf_unit.
+rewrite [in RHS]mulrA div1r divrr ?pnatf_unit // mul1r.
+rewrite -2!dotmulvv dotmulD dotmulD mulr_natl (addrC (v *d v)).
+rewrite (_ : 4 = 2 + 2)%N // mulrnDr -3![in RHS]addrA; congr (_ + _).
+rewrite opprD addrCA 2!addrA -(addrC (v *d v)) subrr add0r.
+by rewrite addrC opprD 2!dotmulvN dotmulNv opprK subrK -mulNrn opprK.
+Qed.
+
+Lemma sqr_norm u : norm u ^+ 2 = \sum_i u``_i ^+ 2.
+Proof. rewrite -dotmulvv dotmulE; apply/eq_bigr => /= i _; by rewrite expr2. Qed.
+
+(* TODO: move? *)
+Lemma mulmx_trE v i j : (v^T *m v) i j = v 0 i * v 0 j.
+Proof.
+by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
+Qed.
+
+Lemma mxtrace_tr_mul u : \tr (u^T *m u) = norm u ^+ 2.
+Proof.
+rewrite /mxtrace sqr_norm; apply/eq_bigr => /= i _; by rewrite mulmx_trE -expr2.
+Qed.
+
+Section norm1.
+
+Variable u : 'rV[R]_n.
+Hypothesis u1 : norm u = 1.
+
+Lemma norm1_neq0 : u != 0.
+Proof. move: u1; rewrite -norm_eq0 => ->; exact: oner_neq0. Qed.
+
+Lemma dotmul1 : u *m u^T = 1.
+Proof.
+by rewrite (mx11_scalar 1) mxE eqxx -(expr1n _ 2) -u1 mulr1n -dotmulvv
+  -mx11_scalar.
+Qed.
+
+End norm1.
+
+End norm.
+
+Section row2.
+
+Variable R : ringType.
+
+Definition row2 (a b : R) : 'rV[R]_2 :=
+  \row_p [eta \0 with 0 |-> a, 1 |-> b] p.
+
+Lemma row2_of_row (M : 'M[R]_2) i : row i M = row2 (M i 0) (M i 1).
+Proof.
+apply/rowP => j; rewrite !mxE /=; case: ifPn => [/eqP -> //|].
+by rewrite ifnot01 => /eqP ->.
+Qed.
+
+End row2.
+
+Section row3.
+
+Variable R : ringType.
+Implicit Types a b c : R.
+
+Definition row3 a b c : 'rV[R]_3 :=
+  \row_p [eta \0 with 0 |-> a, 1 |-> b, 2%:R |-> c] p.
+
+Lemma col_row3 a b c i : col i (row3 a b c) = ((row3 a b c) 0 i)%:M.
+Proof. by apply/rowP => k; rewrite (ord1 k) !mxE /= mulr1n. Qed.
+
+(* TODO: rename. move? *)
+Lemma row_mx_col n (A : 'M[R]_(n, 3)) :
+  A = row_mx (col 0 A) (row_mx (col 1 A) (col 2%:R A)).
+Proof.
+rewrite -[in LHS](@hsubmxK _ n 1 2 A) (_ : lsubmx _ = col 0 A); last first.
+  apply/colP => i; rewrite !mxE /= (_ : lshift 2 0 = 0) //; by apply val_inj.
+rewrite (_ : rsubmx _ = row_mx (col 1 A) (col 2%:R A)) //.
+set a := rsubmx _; rewrite -[in LHS](@hsubmxK _ n 1 1 a); congr row_mx.
+  apply/colP => i; rewrite !mxE /= (_ : rshift 1 _ = 1) //; by apply val_inj.
+apply/colP => i; rewrite !mxE /= (_ : rshift 1 (rshift 1 0) = 2%:R) //.
+by apply val_inj.
+Qed.
+
+Lemma row3_row_mx a b c : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
+Proof. by rewrite [LHS]row_mx_col !col_row3 !mxE /=. Qed.
+
+Lemma row_row3 n (M : 'M[R]_(n, 3)) i : row i M = row3 (M i 0) (M i 1) (M i 2%:R).
+Proof.
+apply/rowP => k; rewrite !mxE /=; case: ifPn => [/eqP -> //|].
+by rewrite ifnot0 => /orP[]/eqP->.
+Qed.
+
+Lemma row3N a b c : - row3 a b c = row3 (- a) (- b) (- c).
+Proof.
+apply/rowP => i; rewrite !mxE /= ; case: ifPn; rewrite ?opprB // => ?.
+by case: ifPn; rewrite ?opprB // => ?; case: ifPn; rewrite ?opprB // oppr0.
+Qed.
+
+Lemma row3Z a b c k : k *: row3 a b c = row3 (k * a) (k * b) (k * c).
+Proof.
+apply/rowP => i; rewrite !mxE /=.
+case: ifPn => // ?; case: ifPn => // ?; case: ifPn => // ?; by Simp.r.
+Qed.
+
+Lemma row3D a b c a' b' c' :
+  row3 a b c + row3 a' b' c' = row3 (a + a') (b + b') (c + c').
+Proof.
+rewrite 3!row3_row_mx (add_row_mx a%:M) (add_row_mx b%:M).
+rewrite -(scalemx1 _ a) -(scalemx1 _ a') -(scalemx1 _ b) -(scalemx1 _ b').
+rewrite -(scalemx1 _ c) -(scalemx1 _ c'); by do 3! rewrite -scalerDl scalemx1.
+Qed.
+
+Lemma row30 : row3 0 0 0 = 0 :> 'rV[R]_3.
+Proof. by apply/rowP => a; rewrite !mxE /=; do 3 case: ifPn => //. Qed.
+
+Lemma row3E (u : 'rV[R]_3) :
+  u = row3 (u``_0) 0 0 + row3 0 (u``_1) 0 + row3 0 0 (u``_2%:R).
+Proof.
+rewrite 2!row3D !(addr0,add0r); apply/rowP => k; by rewrite -row_row3 mxE.
+Qed.
+
+Lemma e0row : 'e_0 = row3 1 0 0 :> 'rV_3.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => // _.
+case: ifPn => //; by case: ifPn.
+Qed.
+
+Lemma e1row : 'e_1 = row3 0 1 0.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
+by case: ifPn => // _; case: ifPn.
+Qed.
+
+Lemma e2row : 'e_2%:R = row3 0 0 1.
+Proof.
+apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
+by case: ifPn => [/eqP -> //| _]; case: ifPn.
+Qed.
+
+End row3.
+
+Section extra_linear3.
+
+Lemma matrix2P (T : eqType) (A B : 'M[T]_2) :
+  reflect (A = B)
+    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 1 0 == B 1 0 & A 1 1 == B 1 1].
+Proof.
+apply (iffP idP); last by move=> ->; rewrite !eqxx.
+case/and4P => /eqP ? /eqP ? /eqP ? /eqP ?; apply/matrixP => i j.
+case/boolP : (i == 0) => [/eqP ->|].
+  case/boolP : (j == 0) => [/eqP -> //|]; last by rewrite ifnot01 => /eqP ->.
+rewrite ifnot01 => /eqP ->.
+case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
+Qed.
+
+Lemma matrix3P (T : eqType) (A B : 'M[T]_3) :
+  reflect (A = B)
+    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 0 2%:R == B 0 2%:R,
+        A 1 0 == B 1 0, A 1 1 == B 1 1, A 1 2%:R == B 1 2%:R,
+        A 2%:R 0 == B 2%:R 0, A 2%:R 1 == B 2%:R 1 & A 2%:R 2%:R == B 2%:R 2%:R].
+Proof.
+apply (iffP idP) => [|]; last by move=> ->; rewrite !eqxx.
+case/and9P; do 9 move/eqP => ?; apply/matrixP => i j.
+case/boolP : (i == 0) => [/eqP ->|].
+  case/boolP : (j == 0) => [/eqP -> //|]; first by rewrite ifnot0 => /orP [] /eqP ->.
+rewrite ifnot0 => /orP [] /eqP ->;
+  case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot0 => /orP [] /eqP ->.
+Qed.
+
+Lemma vec3E (R : ringType) (u : 'rV[R]_3) :
+  u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
+Proof. rewrite [LHS]row3E e0row e1row e2row !row3Z. by Simp.r. Qed.
+
+Lemma mx_lin1K (R : ringType) (Q : 'M[R]_3) : lin1_mx (mx_lin1 Q) = Q.
+Proof. apply/matrix3P; by rewrite !mxE !sum3E !mxE !eqxx /=; Simp.r. Qed.
+
+Lemma det_mx11 (T : comRingType) (A : 'M[T]_1) : \det A = A 0 0.
+Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
+
+Lemma cofactor_mx22 (T : comRingType) (A : 'M[T]_2) i j :
+  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
+Proof.
+rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
+by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
+Qed.
+
+Lemma det_mx22 (T : comRingType) (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
+Proof.
+rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
+rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
+by rewrite !(lift0E, add0r) /= addrr_char2.
+Qed.
+
+Lemma cofactor_mx33 (T : comRingType) (A : 'M[T]_3) i j :
+  cofactor A i j = (-1) ^+ (i + j) *
+                   (A (i == 0)%:R (j == 0)%:R * A ((i <= 1).+1%:R) ((j <= 1).+1%:R) -
+                    A (i == 0)%:R ((j <= 1).+1%:R) * A ((i <= 1).+1%:R) (j == 0)%:R).
+Proof.
+rewrite /cofactor det_mx22 !mxE; congr (_ * (A _ _ * A _ _ - A _ _ * A _ _));
+  by rewrite (liftE0, liftE1).
+Qed.
+
+Lemma det_mx33 (T : comRingType) (M : 'M[T]_3) :
+  \det M = M 0 0 * (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R) +
+           M 0 1 * (M 2%:R 0 * M 1 2%:R - M 1 0 * M 2%:R 2%:R) +
+           M 0 2%:R * (M 1 0 * M 2%:R 1 - M 2%:R 0 * M 1 1).
+Proof.
+rewrite (expand_det_row M 0) sum3E -2!addrA; congr (_ * _ + (_ * _ + _ * _)).
+  by rewrite cofactor_mx33 /= expr0 mul1r [in X in _ - X]mulrC.
+by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
+by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
+Qed.
+
 Lemma mxtrace_sqr (R : rcfType) (M : 'M[R]_3) : \tr (M ^+ 2) =
   \sum_i (M i i ^+2) + M 0 1 * M 1 0 *+ 2 + M 0 2%:R * M 2%:R 0 *+ 2 +
   M 1 2%:R * M 2%:R 1 *+ 2.
@@ -392,6 +402,9 @@ do 2 rewrite addrC -!addrA; congr (_ + _).
 do 2 rewrite addrC -!addrA; congr (_ + _).
 Qed.
 
+End extra_linear3.
+
+(* col_mx2, col_mx3 *)
 Section triple_prod_mat.
 
 Variable (T : ringType).
@@ -474,6 +487,7 @@ Qed.
 
 End triple_prod_mat.
 
+(* TODO: rename *)
 Lemma col_mx3_mul {R : rcfType} (x : 'rV[R]_3) a b c :
   x *m (col_mx3 a b c)^T = row3 (x *d a) (x *d b) (x *d c).
 Proof.
@@ -785,7 +799,7 @@ Notation "''O[' R ]_ n" := (orthogonal n R)
 Notation "''SO[' R ]_ n" := (rotation n R)
   (at level 8, n at level 2, format "''SO[' R ]_ n") : ring_scope.
 
-Section orthogonal.
+Section orthogonal_rotation_properties.
 
 Variables (n' : nat) (R : rcfType).
 Let n := n'.+1.
@@ -899,9 +913,34 @@ apply: (iffP idP) => [MSO i j|H] /=.
   apply/orthogonalP => i j; by rewrite -H 2!tr_col.
 Qed.
 
-End orthogonal.
+Lemma OSn_On m (P : 'M[R]_n) :
+  (block_mx (1%:M : 'M_m) 0 0 P \is 'O[R]_(m + n)) = (P \is 'O[R]_n).
+Proof.
+rewrite !qualifE tr_block_mx trmx1 !trmx0 mulmx_block.
+rewrite !(mulmx0, mul0mx, mulmx1, mul1mx, addr0, add0r) scalar_mx_block.
+by apply/eqP/eqP => [/eq_block_mx[]|->//].
+Qed.
 
-(* TODO: move? *)
+Lemma SOSn_SOn m (P : 'M[R]_n) :
+  (block_mx (1%:M : 'M_m) 0 0 P \is 'SO[R]_(m + n)) = (P \is 'SO[R]_n).
+Proof. by rewrite qualifE OSn_On det_lblock det1 mul1r. Qed.
+
+End orthogonal_rotation_properties.
+
+Lemma orthogonal2P (R : rcfType) M : reflect (M \is 'O[R]_2)
+    [&& row 0 M *d row 0 M == 1, row 0 M *d row 1 M == 0,
+        row 1 M *d row 0 M == 0 & row 1 M *d row 1 M == 1].
+Proof.
+apply (iffP idP) => [/and4P[] /eqP H1 /eqP H2 /eqP H3 /eqP H4|]; last first.
+  move/orthogonalP => H; by rewrite !H /= !eqxx.
+apply/orthogonalP => i j.
+case/boolP : (i == 0) => [/eqP ->|].
+  case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
+rewrite ifnot01 => /eqP ->; case/boolP : (j == 0) => [/eqP -> //|].
+by rewrite ifnot01 => /eqP ->; rewrite eqxx.
+Qed.
+
+(* TODO: move? use *d? *)
 Lemma dotmul_conjc_eq0 {R : rcfType} n (v : 'rV[R[i]]_n.+1) :
   (v *m map_mx conjc v^T == 0) = (v == 0).
 Proof.
@@ -937,6 +976,21 @@ rewrite -subr_eq0 -{1}(scale1r (v *m _)) -scalerBl scaler_eq0 => /orP [].
 by rewrite dotmul_conjc_eq0 (negbTE v0).
 Qed.
 
+Lemma norm_row_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (row i M) = 1.
+Proof.
+move=> MSO i.
+apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
+rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
+Qed.
+
+Lemma norm_col_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (col i M)^T = 1.
+Proof.
+move=> MSO i.
+apply/eqP.
+rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv tr_col dotmulvv.
+by rewrite norm_row_of_O ?expr1n // orthogonalV.
+Qed.
+
 Lemma orth_preserves_sqr_norm R n M : M \is 'O[R]_n.+1 ->
   {mono (fun u => u *m M) : x / x *d x}.
 Proof.
@@ -961,6 +1015,45 @@ move/(congr1 (fun x => - (u *d u) + x)).
 rewrite !addrA (addrC (- (u *d u))) subrr 2!add0r.
 rewrite -2!mulr2n => /eqP.
 by rewrite eqr_pmuln2r // => /eqP.
+Qed.
+
+Lemma orth_preserves_norm R n M : M \is 'O[R]_n.+1 ->
+  {mono (fun u => u *m M) : x / norm x }.
+Proof. move=> HM v; by rewrite /norm (proj2 (orth_preserves_dotmul M) HM). Qed.
+
+Lemma Oij_ub (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> forall i j, `| M i j | <= 1.
+Proof.
+move=> /norm_row_of_O MO i j; rewrite lerNgt; apply/negP => abs.
+move: (MO i) => /(congr1 (fun x => x ^+ 2)); apply/eqP.
+rewrite gtr_eqF // sqr_norm (bigD1 j) //= !mxE -(addr0 (1 ^+ 2)) ltr_le_add //.
+by rewrite -(sqr_normr (M _ _)) ltr_expn2r.
+rewrite sumr_ge0 // => k ij; by rewrite sqr_ge0.
+Qed.
+
+Lemma O_tr_idmx (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> \tr M = n.+1%:R -> M = 1.
+Proof.
+move=> MO; move: (MO) => /norm_row_of_O MO' tr3.
+have Mdiag : forall i, M i i = 1.
+  move=> i; apply/eqP/negPn/negP => Mii; move: tr3; apply/eqP.
+  rewrite ltr_eqF // /mxtrace.
+  rewrite (bigD1 i) //=.
+  rewrite (eq_bigr (fun i : 'I_n.+1 => M (inord i) (inord i))); last first.
+    by move=> j _; congr (M _ _); apply val_inj => /=; rewrite inordK.
+  rewrite -(big_mkord [pred x : nat | x != i] (fun i => M (inord i) (inord i))).
+  rewrite -[in n.+1%:R](card_ord n.+1) -sum1_card (bigD1 i) //= natrD.
+  rewrite ltr_le_add //; first by rewrite ltr_neqAle Mii /= ler_norml1 // Oij_ub.
+  rewrite [in X in _ <= X](@big_morph _ _ _ 0 (fun x y => x + y)%R) //; last first.
+    by move=> x y; rewrite natrD.
+  rewrite -(big_mkord [pred x : nat | x != i] (fun i => 1)).
+  apply ler_sum => j ji; by rewrite ler_norml1 // Oij_ub.
+apply/matrixP => i j; rewrite !mxE.
+case/boolP : (i == j) => [/eqP ->|ij]; first by move : Mdiag => /(_ j).
+move: (MO' i) => /(congr1 (fun x => x ^+ 2)).
+rewrite expr1n sqr_norm (bigD1 i) //= mxE.
+move: Mdiag => /(_ i) -> /eqP.
+rewrite expr1n addrC eq_sym -subr_eq subrr eq_sym psumr_eq0 /=; last first.
+  by move=> *; rewrite sqr_ge0.
+by move/allP => /(_ j (mem_index_enum _)); rewrite eq_sym ij implyTb mxE sqrf_eq0 => /eqP.
 Qed.
 
 Section orthogonal_crossmul.
@@ -1042,156 +1135,7 @@ move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
 move=> {MSO}MSO; by case: euler => v /= /andP[_ /eqP].
 Qed.
 
-Lemma OSn_On m n (P : 'M[R]_n) :
-  (block_mx (1%:M : 'M_m) 0 0 P \is 'O[R]_(m + n)) = (P \is 'O[R]_n).
-Proof.
-rewrite !qualifE tr_block_mx trmx1 !trmx0 mulmx_block.
-rewrite !(mulmx0, mul0mx, mulmx1, mul1mx, addr0, add0r) scalar_mx_block.
-by apply/eqP/eqP => [/eq_block_mx[]|->//].
-Qed.
-
-Lemma SOSn_SOn m n (P : 'M[R]_n) :
-  (block_mx (1%:M : 'M_m) 0 0 P \is 'SO[R]_(m + n)) = (P \is 'SO[R]_n).
-Proof. by rewrite qualifE OSn_On det_lblock det1 mul1r. Qed.
-
 End orthogonal_crossmul.
-
-Section norm.
-
-Variables (R : rcfType) (n : nat).
-Implicit Types u v : 'rV[R]_n.
-
-Definition norm u := Num.sqrt (u *d u).
-
-Lemma normN u : norm (- u) = norm u.
-Proof. by rewrite /norm dotmulNv dotmulvN opprK. Qed.
-
-Lemma norm0 : norm 0 = 0.
-Proof. by rewrite /norm dotmul0v sqrtr0. Qed.
-
-Lemma norm_delta_mx i : norm 'e_i = 1.
-Proof. by rewrite /norm /dotmul trmx_delta mul_delta_mx mxE !eqxx sqrtr1. Qed.
-
-Lemma norm_ge0 u : norm u >= 0.
-Proof. by apply sqrtr_ge0. Qed.
-Hint Resolve norm_ge0.
-
-Lemma normr_norm u : `|norm u| = norm u.
-Proof. by rewrite ger0_norm. Qed.
-
-Lemma norm_eq0 u : (norm u == 0) = (u == 0).
-Proof. by rewrite -sqrtr0 eqr_sqrt // ?dotmulvv0 // le0dotmul. Qed.
-
-Lemma norm_gt0 u : (0 < norm u) = (u != 0).
-Proof. by rewrite ltr_neqAle norm_ge0 andbT eq_sym norm_eq0. Qed.
-
-Lemma norm1_neq0 u : norm u = 1 -> u != 0.
-Proof. rewrite -norm_eq0 => ->; exact: oner_neq0. Qed.
-
-Lemma normZ (k : R) u : norm (k *: u) = `|k| * norm u.
-Proof.
-by rewrite /norm dotmulvZ dotmulZv mulrA sqrtrM -expr2 ?sqrtr_sqr // sqr_ge0.
-Qed.
-
-Lemma dotmulvv u : u *d u = norm u ^+ 2.
-Proof.
-rewrite /norm [_ ^+ _]sqr_sqrtr // dotmulE sumr_ge0 //.
-by move=> i _; rewrite sqr_ge0.
-Qed.
-
-Lemma polarization_identity v u :
-  v *d u = 1 / 4%:R * (norm (v + u) ^+ 2 - norm (v - u) ^+ 2).
-Proof.
-apply: (@mulrI _ 4%:R); first exact: pnatf_unit.
-rewrite [in RHS]mulrA div1r divrr ?pnatf_unit // mul1r.
-rewrite -2!dotmulvv dotmulD dotmulD mulr_natl (addrC (v *d v)).
-rewrite (_ : 4 = 2 + 2)%N // mulrnDr -3![in RHS]addrA; congr (_ + _).
-rewrite opprD addrCA 2!addrA -(addrC (v *d v)) subrr add0r.
-by rewrite addrC opprD 2!dotmulvN dotmulNv opprK subrK -mulNrn opprK.
-Qed.
-
-Section norm1.
-
-Variable u : 'rV[R]_n.
-Hypothesis u1 : norm u = 1.
-
-Lemma dotmul1 : u *m u^T = 1.
-Proof.
-by rewrite (mx11_scalar 1) mxE eqxx -(expr1n _ 2) -u1 mulr1n -dotmulvv
-  -mx11_scalar.
-Qed.
-
-End norm1.
-
-End norm.
-
-Lemma sqr_norm (R : rcfType) n (u : 'rV[R]_n) : norm u ^+ 2 = \sum_i u``_i ^+ 2.
-Proof. rewrite -dotmulvv dotmulE; apply/eq_bigr => /= i _; by rewrite expr2. Qed.
-
-Lemma mulmx_trE (R : rcfType) n (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
-Proof.
-by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
-Qed.
-
-Lemma mxtrace_tr_mul (R : rcfType) n (u : 'rV[R]_n) : \tr (u^T *m u) = norm u ^+ 2.
-Proof.
-rewrite /mxtrace sqr_norm; apply/eq_bigr => /= i _.
-by rewrite mulmx_trE -expr2.
-Qed.
-
-Lemma orth_preserves_norm R n M : M \is 'O[R]_n.+1 ->
-  {mono (fun u => u *m M) : x / norm x }.
-Proof. move=> HM v; by rewrite /norm (proj2 (orth_preserves_dotmul M) HM). Qed.
-
-Lemma norm_row_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (row i M) = 1.
-Proof.
-move=> MSO i.
-apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
-rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
-Qed.
-
-Lemma norm_col_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (col i M)^T = 1.
-Proof.
-move=> MSO i.
-apply/eqP.
-rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv tr_col dotmulvv.
-by rewrite norm_row_of_O ?expr1n // orthogonalV.
-Qed.
-
-Lemma Oij_ub (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> forall i j, `| M i j | <= 1.
-Proof.
-move=> /norm_row_of_O MO i j; rewrite lerNgt; apply/negP => abs.
-move: (MO i) => /(congr1 (fun x => x ^+ 2)); apply/eqP.
-rewrite gtr_eqF // sqr_norm (bigD1 j) //= !mxE -(addr0 (1 ^+ 2)) ltr_le_add //.
-by rewrite -(sqr_normr (M _ _)) ltr_expn2r.
-rewrite sumr_ge0 // => k ij; by rewrite sqr_ge0.
-Qed.
-
-Lemma O_tr_idmx (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> \tr M = n.+1%:R -> M = 1.
-Proof.
-move=> MO; move: (MO) => /norm_row_of_O MO' tr3.
-have Mdiag : forall i, M i i = 1.
-  move=> i; apply/eqP/negPn/negP => Mii; move: tr3; apply/eqP.
-  rewrite ltr_eqF // /mxtrace.
-  rewrite (bigD1 i) //=.
-  rewrite (eq_bigr (fun i : 'I_n.+1 => M (inord i) (inord i))); last first.
-    by move=> j _; congr (M _ _); apply val_inj => /=; rewrite inordK.
-  rewrite -(big_mkord [pred x : nat | x != i] (fun i => M (inord i) (inord i))).
-  rewrite -[in n.+1%:R](card_ord n.+1) -sum1_card (bigD1 i) //= natrD.
-  rewrite ltr_le_add //; first by rewrite ltr_neqAle Mii /= ler_norml1 // Oij_ub.
-  rewrite [in X in _ <= X](@big_morph _ _ _ 0 (fun x y => x + y)%R) //; last first.
-    by move=> x y; rewrite natrD.
-  rewrite -(big_mkord [pred x : nat | x != i] (fun i => 1)).
-  apply ler_sum => j ji; by rewrite ler_norml1 // Oij_ub.
-apply/matrixP => i j; rewrite !mxE.
-case/boolP : (i == j) => [/eqP ->|ij]; first by move : Mdiag => /(_ j).
-move: (MO' i) => /(congr1 (fun x => x ^+ 2)).
-rewrite expr1n sqr_norm (bigD1 i) //= mxE.
-move: Mdiag => /(_ i) -> /eqP.
-rewrite expr1n addrC eq_sym -subr_eq subrr eq_sym psumr_eq0 /=; last first.
-  by move=> *; rewrite sqr_ge0.
-by move/allP => /(_ j (mem_index_enum _)); rewrite eq_sym ij implyTb mxE sqrf_eq0 => /eqP.
-Qed.
 
 Section norm3.
 
@@ -1337,18 +1281,6 @@ Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[R]__.
 Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 
 End properties_of_canonical_vectors.
-
-(* TODO: move *)
-Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
-  And6 of P1 & P2 & P3 & P4 & P5 & P6.
-
-Notation "[ /\ P1 , P2 , P3 , P4 , P5 & P6 ]" := (and6 P1 P2 P3 P4 P5 P6) : type_scope.
-
-Lemma and6P (b1 b2 b3 b4 b5 b6 : bool) :
-  reflect [/\ b1, b2, b3, b4, b5 & b6] [&& b1, b2, b3, b4, b5 & b6].
-Proof.
-by case b1; case b2; case b3; case b4; case b5; case b6; constructor; try by case.
-Qed.
 
 Lemma orthogonal3P (R : rcfType) (M : 'M[R]_3) :
   reflect (M \is 'O[R]_3)

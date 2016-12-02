@@ -457,17 +457,18 @@ Lemma preserves_crossmul_is_diso f p (u v : p.-vec) :
   iso_sgn f = 1.
 Proof.
 move=> uv0.
-rewrite dmap_preserves_crossmul /iso_sgn => H.
+rewrite dmap_preserves_crossmul => H.
 move: (orthogonal_det (ortho_of_iso_is_O f)).
-case: (lerP 0 (\det (ortho_of_iso f))) => K; first by rewrite ger0_norm.
+rewrite -/(iso_sgn _).
+case: (lerP 0 (iso_sgn f)) => K; first by rewrite ger0_norm.
 rewrite ltr0_norm // => /eqP.
 rewrite eqr_oppLR => /eqP {K}K.
 exfalso.
 move: H.
-rewrite K scaleN1r => /esym/opp_self.
+rewrite K scaleN1r => /eqP; rewrite Neqxx_mat.
 move: (mulmxr_crossmulr (vtvec u) (vtvec v) (ortho_of_iso_is_O f)).
-rewrite K scaleN1r => /esym/eqP.
-rewrite eqr_oppLR => /eqP -> /eqP.
+rewrite -/(iso_sgn f) K scaleN1r => /esym/eqP.
+rewrite eqr_oppLR => /eqP ->.
 rewrite oppr_eq0 mul_mx_rowfree_eq0; last first.
   apply/row_freeP.
   exists (ortho_of_iso f)^T.

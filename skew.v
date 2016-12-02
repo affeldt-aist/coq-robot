@@ -160,7 +160,8 @@ Lemma sqr_antip (R : rcfType) (M : 'M[R]_3) : M \is 'so[R]_3 ->
   (row3 (- M 1 2%:R * M 0 2%:R) (- M 0 1 ^+ 2 - M 1 2%:R ^+ 2) (- M 0 1 * M 0 2%:R))
   (row3 (M 1 2%:R * M 0 1) (- M 0 2%:R * M 0 1) (- M 0 2%:R ^+ 2 - M 1 2%:R ^+ 2)).
 Proof.
-move=> a; apply/matrix3P; rewrite !mxE /= sum3E /a !anti_diag //; Simp.r => //.
+move=> a; apply/matrix3P; rewrite !mxE /= !sum3E /a !anti_diag //.
+apply/and9P; split; Simp.r => //=; apply/eqP.
 - rewrite {2}(eqP a) 2!mxE mulrN -expr2; congr (_ + _).
   by rewrite {2}(eqP a) !mxE mulrN -expr2.
 - by rewrite {2}(eqP a) 2!mxE mulrN mulrC.
@@ -273,7 +274,7 @@ Lemma unskewK M : M \is 'so[R]_3 -> \S( unskew M ) = M.
 Proof.
 move=> Mso.
 move: (Mso); rewrite antiE => /eqP MMT.
-apply/matrix3P; rewrite skewij ?anti_diag // mxE /=.
+apply/matrix3P/and9P; split; rewrite skewij ?anti_diag // mxE /=.
 - rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
   by rewrite unitfE pnatr_eq0.
 - rewrite {1}MMT !mxE -mulNr opprB opprK -mulr2n.
@@ -334,7 +335,7 @@ by rewrite !skewij sqrrN; Simp.r.
 Qed.
 
 Lemma sym_skew_mx2 u : \S( u ) ^+ 2 \is sym 3 R.
-Proof. rewrite symE skew_mx2'; by apply/eqP/matrix3P; rewrite !mxE. Qed.
+Proof. rewrite symE skew_mx2'; by apply/eqP/matrix3P/and9P; split; rewrite !mxE. Qed.
 
 Lemma skew_mx2 u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
 Proof.

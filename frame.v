@@ -121,9 +121,7 @@ Proof. rewrite -orthogonal_inv //; by case: f. Qed.
 
 Lemma norm_icrossj : norm (i *v j) = 1.
 Proof.
-rewrite norm_crossmul 2!noframe_norm !mul1r cos0sin1 //.
-rewrite -(mul1r (cos _)) -(mul1r (1 * _)) mulrA.
-by rewrite -{1}(noframe_norm 0) -{1}(noframe_norm 1) -dotmul_cos idotj.
+by rewrite norm_crossmul_normal // ?idotj // ?normi // normj.
 Qed.
 
 Definition noframe_sgn := \det f.
@@ -407,7 +405,7 @@ Proof. by rewrite /= rotationE det1 orthogonal1 eqxx. Qed.
 Definition can_frame := Frame.mk can_frame_is_SO.
 
 Lemma can_frame_1 : can_frame = 1 :> 'M_3.
-Proof. by apply/matrix3P; rewrite !mxE. Qed.
+Proof. by apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
 (* TODO: usful? *)
 Lemma rotation_can_frame (f : Frame.t R) i j : f i j = row j can_frame *d row i f.
@@ -691,7 +689,7 @@ Lemma FromToI A : A _R^ A = 1.
 Proof. by rewrite FromToE mulmxE mulrV // noframe_is_unit. Qed.
 
 Lemma trmx_FromTo A B : (A _R^ B)^T = B _R^ A.
-Proof. apply/matrix3P; rewrite !mxE /=; by rewrite dotmulC. Qed.
+Proof. apply/matrix3P/and9P; split; rewrite !mxE /=; by rewrite dotmulC. Qed.
 
 Lemma FromTo_is_O A B : A _R^ B \is 'O[R]_3.
 Proof.

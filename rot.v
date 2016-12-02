@@ -18,7 +18,8 @@ Require Import aux angle euclidean3 skew vec_angle frame.
      Rx, Ry, Rz
   3. section isRot_definition.
      definition of rotations w.r.t. a vector
-     properties of rotations
+     section properties_of_isRot
+     section relation_with_rotation_matrices
      sample lemmas:
        all rotations around a vector of angle a have trace "1 + 2 * cos a"
        equivalence SO[R]_3 <-> Rot
@@ -60,26 +61,12 @@ Implicit Types M : 'M[R]_2.
 Definition RO a := col_mx2 (row2 (cos a) (sin a)) (row2 (- sin a) (cos a)).
 
 Lemma tr_RO a : \tr (RO a) = (cos a) *+ 2.
- Proof. by rewrite /mxtrace sum2E !mxE /= mulr2n. Qed.
-
-Lemma orthogonal2P M : reflect (M \is 'O[R]_2)
-    [&& row 0 M *d row 0 M == 1, row 0 M *d row 1 M == 0,
-        row 1 M *d row 0 M == 0 & row 1 M *d row 1 M == 1].
-Proof.
-apply (iffP idP) => [/and4P[] /eqP H1 /eqP H2 /eqP H3 /eqP H4|].
-  apply/orthogonalP => i j.
-  case/boolP : (i == 0) => [/eqP ->|].
-    case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
-  rewrite ifnot01 => /eqP ->; case/boolP : (j == 0) => [/eqP -> //|].
-  by rewrite ifnot01 => /eqP ->; rewrite eqxx.
-move/orthogonalP => H; by rewrite !H /= !eqxx.
-Qed.
+Proof. by rewrite /mxtrace sum2E !mxE /= mulr2n. Qed.
 
 Lemma RO_is_O a : RO a \is 'O[R]_2.
 Proof.
 apply/orthogonal2P; rewrite !rowK /= !dotmulE !sum2E !mxE /= -!expr2 cos2Dsin2.
-by rewrite addrC mulrN mulrC subrr addrC mulNr mulrC subrr sqrrN addrC cos2Dsin2
-  !eqxx.
+by rewrite addrC mulrN mulrC subrr addrC mulNr mulrC subrr sqrrN addrC cos2Dsin2 !eqxx.
 Qed.
 
 Lemma RO_is_SO a : RO a \is 'SO[R]_2.
@@ -89,7 +76,7 @@ Qed.
 
 Lemma rot2d_helper M a b : a - b = - pihalf R ->
   M = col_mx2 (row2 (cos a) (sin a)) (row2 (cos b) (sin b)) ->
-  { a0 | M = RO a0}.
+  { a0 | M = RO a0 }.
 Proof.
 move=> abpi.
 have -> : sin b = cos a.
@@ -166,11 +153,12 @@ Definition Rx a := col_mx3
   (row3 0 (- sin a) (cos a)).
 
 Lemma Rx0 : Rx 0 = 1.
-Proof. by rewrite /Rx cos0 sin0 oppr0; apply/matrix3P; rewrite !mxE. Qed.
+Proof. by rewrite /Rx cos0 sin0 oppr0; apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
 Lemma Rxpi : Rx pi = diag_mx (row3 1 (-1) (-1)).
 Proof. 
-rewrite /Rx cospi sinpi oppr0; apply/matrix3P; by rewrite !mxE /= -?mulNrn ?mulr1n ?mulr0n.
+rewrite /Rx cospi sinpi oppr0; apply/matrix3P/and9P; split;
+  by rewrite !mxE /= -?mulNrn ?mulr1n ?mulr0n.
 Qed.
 
 Lemma Rx_RO a : Rx a = block_mx (1 : 'M_1) 0 0 (RO a).
@@ -182,7 +170,7 @@ rewrite (_ : dlsubmx _ = 0); last first.
   apply/colP => i; rewrite !mxE /=.
   case: ifPn; first by rewrite !mxE.
   by case: ifPn; rewrite !mxE.
-rewrite (_ : drsubmx _ = RO a) //; by apply/matrix2P; rewrite !mxE.
+rewrite (_ : drsubmx _ = RO a) //; by apply/matrix2P; rewrite !mxE /= !eqxx.
 Qed.
 
 Lemma Rx_is_SO a : Rx a \is 'SO[R]_3.
@@ -194,7 +182,7 @@ Proof. by rewrite /Rx /mxtrace sum3E !mxE /= -addrA -mulr2n. Qed.
 Lemma inv_Rx a : (Rx a)^-1 = Rx (- a).
 Proof.
 move/rotation_inv : (Rx_is_SO a) => ->.
-rewrite /Rx cosN sinN opprK; by apply/matrix3P; rewrite !mxE.
+rewrite /Rx cosN sinN opprK; by apply/matrix3P/and9P; split; rewrite !mxE.
 Qed.
 
 Definition Rx' a := col_mx3
@@ -221,7 +209,7 @@ Lemma Rz_RO a : Rz a = block_mx (RO a) 0 0 (1 : 'M_1).
 Proof.
 rewrite -(@submxK _ 2 1 2 1 (Rz a)) (_ : drsubmx _ = 1); last first.
   apply/rowP => i; by rewrite (ord1 i) !mxE.
-rewrite (_ : ulsubmx _ = RO a); last by apply/matrix2P; rewrite !mxE.
+rewrite (_ : ulsubmx _ = RO a); last by apply/matrix2P; rewrite !mxE !eqxx.
 rewrite (_ : ursubmx _ = 0); last first.
   apply/colP => i.
   case/boolP : (i == 0) => [/eqP ->|]; first by rewrite !mxE.
@@ -250,7 +238,7 @@ apply/rotation3P/and4P; split.
 Qed.
 
 Lemma RzE a : Rz a = (frame_of_SO (Rz_is_SO a)) _R^ (can_frame R).
-Proof. rewrite FromTo_to_can; by apply/matrix3P; rewrite !mxE. Qed.
+Proof. rewrite FromTo_to_can; by apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
 Lemma to_coord_Rz_e0 a :
   to_coord (can_frame R) (Vec (frame_of_SO (Rz_is_SO a)) 'e_0) = Vec _ (row 0 (Rz a)).
@@ -515,7 +503,7 @@ Proof. by rewrite /axial_vec !mxE row3N 3!opprB. Qed.
 
 Lemma skew_axial_vec M : \S( axial_vec M ) = M - M^T.
 Proof.
-by apply/matrix3P; rewrite ?skewii ![in RHS]mxE ?subrr // skewij !mxE /= ?opprB.
+by apply/matrix3P/and9P; split; apply/eqP; rewrite ?skewii ![in RHS]mxE ?subrr // skewij !mxE /= ?opprB.
 Qed.
 
 Lemma axial_vecE M : axial_vec M = unskew (M - M^T).
@@ -698,7 +686,7 @@ Lemma eskewE a u : norm u = 1 ->
   let va := 1 - cos a in let ca := cos a in let sa := sin a in
   `e^(a, u) = angle_axis_rot a u.
 Proof.
-move=> w1 va ca sa; apply/matrix3P.
+move=> w1 va ca sa; apply/matrix3P/and9P; split; apply/eqP.
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !skewij; Simp.r => /=.
   rewrite skew_mx2' !mxE /=.
   rewrite (_ : - _ - _ = u``_0 ^+ 2 - 1); last first.
@@ -1121,7 +1109,7 @@ have [P MP] : exists P : 'M[R]_2, M = block_mx (1 : 'M_1) 0 0 P.
   case/boolP : (i == 0) => [/eqP ->|].
     rewrite !mxE -[RHS]M010 M01; congr (M _ _); by apply val_inj.
   rewrite ifnot01 => /eqP ->; rewrite !mxE -[RHS]M020 M02; congr (M _ _); by apply val_inj.
-have PSO : P \is 'SO[R]_2 by have := MSO; rewrite MP (@SOSn_SOn _ 1 2).
+have PSO : P \is 'SO[R]_2 by have := MSO; rewrite MP (SOSn_SOn 1).
 move=> [: Hangle].
 split.
   abstract: Hangle.
@@ -1388,7 +1376,7 @@ Definition euler_angles_rot (a b c : angle R) :=
 Lemma euler_angles_rotE a b c : Rxyz c b a = euler_angles_rot a b c.
 Proof.
 rewrite /Rxyz.
-apply/matrix3P; rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
+apply/matrix3P/and9P; split; rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
 by rewrite mulrC.
 by rewrite mulrC.
 by rewrite mulrAC -mulrA mulrC (mulrC (cos c)).
@@ -1607,7 +1595,7 @@ Lemma rot_euler_anglesE M : M \is 'SO[R]_3 ->
 Proof.
 move=> MSO.
 rewrite euler_angles_rotE.
-apply/matrix3P; rewrite !mxE /=.
+apply/matrix3P/and9P; split; apply/eqP; rewrite !mxE /=.
 - (* 0 0 *) rewrite /euler_a /euler_b; case: ifPn => [M02|].
     rewrite M02.
     have M02' : `|M 0 2%:R| < 1.

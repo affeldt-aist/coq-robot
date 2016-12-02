@@ -1266,7 +1266,7 @@ rewrite addrA (addrC (1 - _)) addrA.
 rewrite (_ : 1 + 1 = 2%:R) //.
 rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
   rewrite scalemx1.
-  by apply/matrix3P; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
+  by apply/matrix3P/and9P; split; apply/eqP; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
 rewrite addrA.
 move: (isRot_exp_eskew' w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q -/a => HQ.
@@ -1282,7 +1282,7 @@ rewrite (scalerN (sin a) \S( w )) opprK.
 rewrite (addrC (- (sin a *: _))) subrK.
 rewrite linearN /= trmx_mul trmxK opprD addrA addrAC -scaleNr -scalerDl.
 rewrite -mulr2n scalerBr scalemx1 scalemx1 -addrA; congr (_ + _).
-  apply/matrix3P; by rewrite !mxE ?eqxx ?mulr1n ?mulr0n // ?oppr0 // mulNrn.
+  apply/matrix3P/and9P; split; apply/eqP; by rewrite !mxE ?eqxx ?mulr1n ?mulr0n // ?oppr0 // mulNrn.
 rewrite -scalemxAl /N2cos [in RHS]scalerBl scale1r opprB; congr (_ + _).
 by rewrite mulNrn scaleNr opprK.
 Qed.
