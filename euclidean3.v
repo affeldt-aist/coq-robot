@@ -55,6 +55,9 @@ Definition dotmul (u v : 'rV[R]_n) : R := (u *m v^T)``_0.
 Local Notation "*d%R" := (@dotmul _).
 Local Notation "u *d w" := (dotmul u w) (at level 40).
 
+Lemma dotmulP (u v : 'rV[R]_n) : u *m v^T = (u *d v)%:M.
+Proof. by rewrite /dotmul -mx11_scalar. Qed.
+
 Lemma dotmulE u v : u *d v = \sum_k u``_k * v``_k.
 Proof. by rewrite [LHS]mxE; apply: eq_bigr=> i; rewrite mxE. Qed.
 
@@ -199,10 +202,7 @@ Lemma norm1_neq0 : u != 0.
 Proof. move: u1; rewrite -norm_eq0 => ->; exact: oner_neq0. Qed.
 
 Lemma dotmul1 : u *m u^T = 1.
-Proof.
-by rewrite (mx11_scalar 1) mxE eqxx -(expr1n _ 2) -u1 mulr1n -dotmulvv
-  -mx11_scalar.
-Qed.
+Proof. by rewrite dotmulP dotmulvv u1 expr1n. Qed.
 
 End norm1.
 
@@ -492,7 +492,7 @@ Lemma col_mx3_mul {R : rcfType} (x : 'rV[R]_3) a b c :
   x *m (col_mx3 a b c)^T = row3 (x *d a) (x *d b) (x *d c).
 Proof.
 rewrite col_mx3E (tr_col_mx a) (tr_col_mx b) (mul_mx_row x a^T).
-by rewrite row3_row_mx (mul_mx_row x b^T) /dotmul -!mx11_scalar.
+by rewrite row3_row_mx (mul_mx_row x b^T) 3!dotmulP.
 Qed.
 
 Section normal.
@@ -525,7 +525,7 @@ Proof. by rewrite ![A _|_ _]normal_sym normalDm. Qed.
 Implicit Types u v w : 'rV[R]_3.
 
 Lemma normalvv u v : (u _|_ v) = (u *d v == 0).
-Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
+Proof. by rewrite (sameP sub_kermxP eqP) dotmulP fmorph_eq0. Qed.
 
 End normal.
 
@@ -1320,6 +1320,24 @@ apply (iffP idP).
 - move=> MSO; move: (MSO).
   rewrite rotationE => /andP[/orthogonal3P/and6P[ni nj nk ij ik jk]].
   rewrite ni nj ij /= => _; by rewrite !rowE -mulmxr_crossmulr_SO // vecij.
+Qed.
+
+Lemma SO_icrossj (R : rcfType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
+  row 0 r *v row 1 r = row 2%:R r.
+Proof. by case/rotation3P/and4P => _ _ _ /eqP ->. Qed.
+
+Lemma SO_icrossk (R : rcfType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
+  row 0 r *v row 2%:R r = - row 1 r.
+Proof.
+case/rotation3P/and4P => /eqP H1 _ /eqP H3 /eqP ->.
+by rewrite double_crossmul H3 scale0r add0r dotmulvv H1 expr1n scale1r.
+Qed.
+
+Lemma SO_jcrossk (R : rcfType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
+  row 1 r *v row 2%:R r = row 0 r.
+Proof.
+case/rotation3P/and4P => _ /eqP H1 /eqP H3 /eqP ->.
+by rewrite double_crossmul dotmulvv H1 expr1n scale1r dotmulC H3 scale0r subr0.
 Qed.
 
 Section normalize.

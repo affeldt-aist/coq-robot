@@ -498,8 +498,7 @@ Lemma axialcompE v u : axialcomp v u = (norm u) ^- 2 *: (v *m u^T *m u).
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0].
   by rewrite /axialcomp /normalize norm0 invr0 mulmx0 !scaler0.
-rewrite /axialcomp dotmulZv scalerA mulrAC.
-rewrite (mx11_scalar (v *m _)) mul_scalar_mx -/(dotmul v u) dotmulC.
+rewrite /axialcomp dotmulZv scalerA mulrAC dotmulP mul_scalar_mx dotmulC.
 by rewrite -invrM ?unitfE ?norm_eq0 // -expr2 scalerA.
 Qed.
 
@@ -576,8 +575,7 @@ Qed.
 Lemma normalcomp_mul_tr u (u1 : norm u = 1) : normalcomp 'e_0 u *m u^T == 0.
 Proof.
 rewrite /normalcomp mulmxBl -scalemxAl -scalemxAl dotmul1 // dotmulC /dotmul.
-rewrite u1 invr1 scalemx1 scalemx1 normalizeI // -(mx11_scalar (_ *m u^T)).
-by rewrite subrr.
+by rewrite u1 invr1 scalemx1 scalemx1 normalizeI // {1}dotmulP subrr.
 Qed.
 
 Lemma axialnormal v u : axialcomp v u *d normalcomp v u = 0.

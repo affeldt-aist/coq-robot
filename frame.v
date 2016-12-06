@@ -602,8 +602,7 @@ case: ifPn => [|_].
   case/colinearP => [|[_[k [Hk1 Hk2]]]].
     move/eqP/rowP/(_ ord0).
     rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
-  rewrite Hk2 !linearZ /= (mx11_scalar ('e_1 *m _)) -/('e_1 *d 'e_0) dote2.
-  by rewrite oner_eq0 /= scale_scalar_mx mulr0 [RHS]mx11_scalar !mxE.
+  by rewrite dotmulP Hk2 dotmulvZ dote2 oner_eq0 mulr0 (mx11_scalar 0) mxE.
 apply/eqP; by rewrite -scalemxAl scaler_eq0 normalcomp_mul_tr // orbT.
 Qed.
 
@@ -614,9 +613,8 @@ case: ifPn => [|_].
   case/colinearP => [|[_[k [Hk1 Hk2]]]].
     move/eqP/rowP/(_ ord0).
     rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
-  rewrite Hk2 !linearZ /= crossmulZv vecij -!scalemxAl.
-  rewrite (mx11_scalar ('e_2%:R *m _)) -/('e_2%:R *d _) dote2 /= mul_scalar_mx.
-  by rewrite !(scale0r, scaler0).
+  rewrite {1}Hk2 crossmulZv vecij -2!scalemxAl {1}Hk2 linearZ /= -scalemxAr.
+  by rewrite dotmulP dote2 scale_scalar_mx mulr0 mul_scalar_mx scale0r scaler0.
 apply/eqP.
 rewrite /normalize crossmulvZ -!scalemxAl scaler_eq0; apply/orP; right.
 rewrite /normalcomp linearD /= crossmulvN 2!crossmulvZ crossmulvv 2!scaler0 subr0.

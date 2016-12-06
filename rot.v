@@ -882,7 +882,7 @@ rewrite /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
 rewrite scalerBr -2!addrA; congr (_ + _).
 rewrite -scalemxAr -(scalerN (sin a)) crossmulC opprK -(skew_mxE p u).
 congr (- (_ *: _) + _).
-by rewrite normalizeI // dotmulC mulmxA (mx11_scalar (p *m _)) mul_scalar_mx.
+by rewrite normalizeI // mulmxA dotmulP mul_scalar_mx dotmulC.
 Qed.
 
 Lemma isRot_skew' e (e0 : e != 0) (a : angle R) :
