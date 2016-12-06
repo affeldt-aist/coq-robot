@@ -333,16 +333,15 @@ Local Notation "'i'" := (f |, 0).
 Local Notation "'j'" := (f |, 1).
 Local Notation "'k'" := (f |, 2%:R).
 
+(* TODO: useful? *)
 Lemma frame_icrossj : i *v j = k.
-Proof. 
-move: (Frame.MSO f); rewrite rotationE => /andP[_]; by rewrite -noframe_pos => /eqP.
-Qed.
+Proof. move: (Frame.MSO f); by move/SO_icrossj. Qed.
 
 Lemma frame_icrossk : i *v k = - j.
-Proof. by rewrite crossmulC -(proj1 (@noframe_posP _ f (esym frame_icrossj))). Qed.
+Proof. move: (Frame.MSO f); by move/SO_icrossk. Qed.
 
 Lemma frame_jcrossk : j *v k = i.
-Proof. by rewrite -(proj2 (@noframe_posP _ f (esym frame_icrossj))). Qed.
+Proof. move: (Frame.MSO f); by move/SO_jcrossk. Qed.
 
 Definition frame_of_SO (M : 'M[R]_3) (HM : M \is 'SO[R]_3) : Frame.t R :=
   @Frame.mk _ (NOFrame.mk (rotation_sub HM)) HM.

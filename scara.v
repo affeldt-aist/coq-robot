@@ -133,7 +133,7 @@ rewrite dotmulE sum3E !mxE /=. by Simp.r.
 Qed.
 
 Lemma S2_helper th d :
-  `e$(th, Twist.mk (- w2 *v row3 d 0 0) w2) =
+  `e$(th, TwistCoor.mk (- w2 *v row3 d 0 0) w2) =
   hom (Rz th) (row3 (d * (1 - cos th)) (- d * sin th) 0).
 Proof.
 rewrite etwistE (negbTE (norm1_neq0 (normeE _ _))).
