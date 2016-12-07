@@ -368,7 +368,7 @@ Lemma colinear_trans v u w : u != 0 -> colinear v u -> colinear u w -> colinear 
 Proof.
 move=> u0.
 rewrite /colinear => vu0 uw0.
-move: (jacobi u v w).
+move: (jacobi_crossmul u v w).
 rewrite (crossmulC u v) (eqP vu0) oppr0 crossmulv0 addr0.
 rewrite (crossmulC w u) (eqP uw0) oppr0 crossmulv0 addr0.
 rewrite double_crossmul => /eqP; rewrite subr_eq0.

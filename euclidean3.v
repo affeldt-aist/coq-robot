@@ -766,8 +766,13 @@ rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC crossmulvv.
 by rewrite dotmul0v scale0r subr0.
 Qed.
 
-Lemma jacobi u v w : u *v (v *v w) + v *v (w *v u) + w *v (u *v v) = 0.
+(* TODO: move *)
+Definition jacobi (T : zmodType) (op : T -> T -> T) := forall x y z,
+  op x (op y z) + op y (op z x) + op z (op x y) = 0.
+
+Lemma jacobi_crossmul : jacobi crossmul.
 Proof.
+move=> u v w.
 rewrite 3!double_crossmul.
 rewrite !addrA -(addrA (_ *: v)) (dotmulC u v) -(addrC (_ *: w)) subrr addr0.
 rewrite -!addrA addrC -!addrA (dotmulC w u) -(addrC (_ *: v)) subrr addr0.

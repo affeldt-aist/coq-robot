@@ -25,8 +25,10 @@ Require Import aux angle euclidean3 skew vec_angle rot frame.
  6. section homogeneous_points_and_vectors
  7. section SE3_def
  8. section SE3_prop
- 9. Module SE
- 8. section rigid_transformation_is_homogeneous_transformation
+ 9. section adjoint
+    adjoint representation
+ 10. Module SE
+ 11. section rigid_transformation_is_homogeneous_transformation
      (a direct isometry (i.e., cross-product preserving) can be expressed in homogeneous coordinates)
 *)
 
@@ -662,6 +664,16 @@ rewrite /hom -mulmxE (mulmx_block r _ _ _ r') !(mulmx0,mul0mx,addr0,add0r,mulmx1
 by rewrite mulmxE mul1mx.
 Qed.
 
+Lemma rot_of_homM (g1 g2 : 'M[R]_4) : g1 \is 'SE3[R] -> g2 \is 'SE3[R] ->
+  rot_of_hom (g1 * g2) = rot_of_hom g1 * rot_of_hom g2.
+Proof. move/SE3E => -> /SE3E ->; by rewrite homM !rot_of_hom_hom. Qed.
+
+Lemma trans_of_homM (g1 g2 : 'M[R]_4) : g1 \is 'SE3[R] -> g2 \is 'SE3[R] ->
+  trans_of_hom (g1 * g2) = trans_of_hom g1 *m rot_of_hom g2 + trans_of_hom g2.
+Proof.
+move/SE3E => -> /SE3E tmp; rewrite [in LHS]tmp; by rewrite homM 2!trans_of_hom_hom.
+Qed.
+
 Definition inv_hom (M : 'M[R]_4) :=
   hom (rot_of_hom M)^T (- trans_of_hom M *m (rot_of_hom M)^T).
 
@@ -750,6 +762,84 @@ Definition FromToDisp (R : rcfType) (B A : TFrame.t R) (x : 'rV[R]_3) : 'rV[R]_3
   x *m (B _R^ A) + TFrame.o B.
 
 End SE3_prop.
+
+Section adjoint.
+
+Variable R : rcfType.
+
+(* TODO: move *)
+Lemma conj_skew_mx (r : 'M[R]_3) (w : 'rV[R]_3) (t : 'rV[R]_3) : r \is 'SO[R]_3 ->
+  t *m (r^T * \S( w ) * r) = (w *m r) *v t.
+Proof.
+move=> rSO.
+rewrite mul_skew_mx (_ : _ * r = \S(w *m r)); first by rewrite skew_mxE.
+rewrite -mulmxE mulmx_col3.
+rewrite -{2 4 6}(trmxK r).
+rewrite [in LHS](col_mx3_rowE r^T) !rowK /=.
+rewrite !col_mx3_mul.
+have H i r' : w *v row i r' *d row i r' = 0.
+  by rewrite dotmulC dot_crossmulCA crossmulvv dotmulv0.
+rewrite 3!H.
+rewrite dotmulC dot_crossmulCA crossmulC dotmulvN dotmulNv opprK SO_icrossj ?rotationV //.
+rewrite (dotmulC (_ *v _)) dot_crossmulCA crossmulC dotmulvN dotmulNv opprK SO_icrossk ?rotationV // dotmulvN.
+rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_icrossj ?rotationV // dotmulNv.
+rewrite (dotmulC (_ *v _)) dot_crossmulCA crossmulC dotmulvN dotmulNv opprK SO_jcrossk ?rotationV //.
+rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_icrossk ?rotationV // dotmulvN dotmulNv opprK.
+rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_jcrossk ?rotationV // dotmulNv.
+apply/matrix3P/and9P; split; apply/eqP; rewrite ![in LHS]mxE /= !skewij //;
+  try congr (- _); by rewrite dotmulE mxE; apply/eq_bigr => /= j _; rewrite !mxE.
+Qed.
+
+Definition adjoint (g : 'M[R]_4) : 'M_6 :=
+  let r := rot_of_hom g in
+  let t := trans_of_hom g in
+  block_mx r 0 (r * \S(t)) r.
+
+Definition inv_adjoint (g : 'M[R]_4) : 'M_6 :=
+  let r := rot_of_hom g in
+  let t := trans_of_hom g in
+  block_mx r^T 0 (- r^T * \S(t *m r^T)) r^T.
+
+(* [murray] exercise 14 (a), p.77 *)
+Lemma inv_adjointE g : g \is 'SE3[R] -> inv_adjoint g = adjoint (inv_hom g).
+Proof.
+move/SE3E => ->.
+rewrite /inv_adjoint /adjoint !(rot_of_hom_hom,trans_of_hom_hom).
+by rewrite mulNmx mulNr skew_mxN !mulrN.
+Qed.
+
+Lemma adjointM_helper g1 g2 : g1 \is 'SE3[R] -> g2 \is 'SE3[R] ->
+  let r1 := rot_of_hom g1 in let r2 := rot_of_hom g2 in
+  let t1 := trans_of_hom g1 in let t2 := trans_of_hom g2 in
+  adjoint (g1 * g2) = block_mx (r1 * r2) 0 ((r1 * r2) * (\S(t2) + r2^T * \S(t1) * r2)) (r1 * r2).
+Proof.
+move=> Hg1 Hg2 r1 r2 t1 t2.
+rewrite /adjoint -rot_of_homM // trans_of_homM // skew_mxD.
+set a := rot_of_hom (_ * _) * _. set b := rot_of_hom (_ * _) * _.
+suff : a = b by move=> ->.
+rewrite {}/a {}/b; congr (_ * _).
+apply/eqP/mulmxP => t.
+rewrite 2!mulmxDr conj_skew_mx; last by rewrite rot_of_hom_SO.
+rewrite addrC; congr (_ + _); by rewrite skew_mxE.
+Qed.
+
+(* [murray] exercise 14 (b) , p. 77 *)
+Lemma adjointM g1 g2 : g1 \is 'SE3[R] -> g2 \is 'SE3[R] ->
+  let r1 := rot_of_hom g1 in let r2 := rot_of_hom g2 in
+  let t1 := trans_of_hom g1 in let t2 := trans_of_hom g2 in
+  adjoint (g1 * g2) = adjoint g1 * adjoint g2.
+Proof.
+move=> Hg1 Hg2 r1 r2 t1 t2.
+rewrite [in RHS]/adjoint -[in RHS]mulmxE -/r1 -/r2 -/t1 -/t2.
+rewrite (mulmx_block r1 _ _ _ r2) !(mul0mx,mulmx0,addr0,add0r).
+rewrite adjointM_helper // -/r1 -/r2 -/t1 -/t2; f_equal.
+rewrite mulmxE mulrDr [in RHS]addrC -mulrA; congr (_ + _).
+rewrite !mulrA; congr (_ * _ * _); rewrite -mulrA.
+move: (rot_of_hom_SO Hg2).
+rewrite rotationE orthogonalE => /andP[/eqP -> _]; by rewrite mulr1.
+Qed.
+
+End adjoint.
 
 Module SE.
 

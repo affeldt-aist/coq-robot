@@ -62,6 +62,12 @@ Lemma symE M : (M \is sym n R) = (M == M^T). Proof. by []. Qed.
 Lemma antiN M : (- M \is 'so[R]_n) = (M \is 'so[R]_n).
 Proof. apply/idP/idP; by rewrite !antiE linearN /= opprK eqr_oppLR. Qed.
 
+Lemma conj_so P M : M \is 'so[R]_n -> P^T *m M *m P \is 'so[R]_n.
+Proof.
+rewrite !antiE -eqr_oppLR => /eqP HM.
+by rewrite !trmx_mul trmxK -HM !(mulNmx,mulmxN) opprK mulmxA.
+Qed.
+
 Lemma anti_diag M (i : 'I_n) : M \is 'so[R]_n -> M i i = 0.
 Proof.
 rewrite antiE -addr_eq0 => /eqP/matrixP/(_ i i); rewrite !mxE.
@@ -214,6 +220,10 @@ Qed.
 
 Lemma tr_skew u : \S( u )^T = - \S( u ).
 Proof. by move: (anti_skew u); rewrite antiE -eqr_oppLR => /eqP <-. Qed.
+
+Lemma mul_skew_mx (r : 'M[R]_3) (w : 'rV[R]_3) :
+  r * \S( w ) = col_mx3 (w *v row 0 r) (w *v row 1 r) (w *v row 2%:R r).
+Proof. by rewrite {1}(col_mx3_rowE r) -mulmxE mulmx_col3 !skew_mxE. Qed.
 
 Lemma skew01 u : \S( u ) 0 1 = u``_2%:R.
 Proof. by rewrite /skew_mx mxE crossmulE !mxE /= !(mulr0, mulr1, addr0, subr0). Qed.
