@@ -126,8 +126,8 @@ Qed.
 Lemma point_axis_twist (d : R) :
   \pt( axis \T((- 'e_2%:R *v row3 d 0 0), 'e_2%:R) ) = row3 d 0 0.
 Proof.
-rewrite {1}/axis ang_of_twistE (negbTE (norm1_neq0 (normeE _ _))) /=.
-rewrite normeE expr1n invr1 scale1r lin_of_twistE crossmulNv crossmulvN.
+rewrite {1}/axis ang_tcoorE (negbTE (norm1_neq0 (normeE _ _))) /=.
+rewrite normeE expr1n invr1 scale1r lin_tcoorE crossmulNv crossmulvN.
 rewrite double_crossmul dotmulvv normeE expr1n scale1r /w2 /q2 e2row.
 rewrite dotmulE sum3E !mxE /=. by Simp.r.
 Qed.

@@ -151,10 +151,6 @@ Proof. by rewrite /ang /mk block_mxKur. Qed.
 End twist_coordinates_definition.
 End TwistCoor.
 
-(* forms a matrix in se(3) (i.e., a twist)
-   out of a given vector in R^6 (i.e., twist coordinates) *)
-Coercion wedge (R : rcfType) (x : TwistCoor.t R) : 'M_4 :=
-  block_mx \S(TwistCoor.ang x) 0 (TwistCoor.lin x) 0.
 Notation "'\T(' v , w ')'" := (TwistCoor.mk v w)
   (at level 3, w, v at next level, format "'\T(' v ,  w ')'") : ring_scope.
 Notation "'\w(' t ')'" := (TwistCoor.ang t) (format "'\w('  t  ')'", at level 3).
@@ -166,7 +162,8 @@ Definition bilinear (R : ringType) (T : lmodType R) (op : T -> T -> T) :=
 Module LieAlgebra.
 Section lie_algebra.
 Variable R : ringType.
-Structure t (T : lmodType R) := mk {
+Structure t := mk {
+  T : lmodType R ;
   bra : T -> T -> T ;
   liebilinear : bilinear bra ;
   alternative : forall x, bra x x = 0 ;
@@ -175,22 +172,22 @@ Structure t (T : lmodType R) := mk {
 End lie_algebra.
 End LieAlgebra.
 
-Notation "lie[ t1 , t2 ]" := (LieAlgebra.bra _ t1 t2) : ring_scope.
+Notation "lie[ t1 , t2 ]" := (@LieAlgebra.bra _ _ (t1 : LieAlgebra.T _) (t2 : LieAlgebra.T _)) : ring_scope.
 
 Section lie_algebra_properties.
 Variables (R : rcfType) (m n : nat).
-Variable A : LieAlgebra.t [lmodType R of 'M[R]_(m, n)].
+Variable A : LieAlgebra.t R.
 
-Local Notation "l[ t1 , t2 ]" := (LieAlgebra.bra A t1 t2).
+Local Notation "l[ t1 , t2 ]" := (@LieAlgebra.bra _ A t1 t2).
 
-Lemma anticommutativity x y : l[x, y] = - l[y, x].
+Lemma lie_anticommutativity x y : l[x, y] = - l[y, x].
 Proof.
 apply/eqP; rewrite -subr_eq0 opprK; apply/eqP.
 transitivity l[x + y, x + y]; last by rewrite LieAlgebra.alternative.
 apply/esym.
-move: (proj1 ((LieAlgebra.liebilinear A) (x + y)) 1 x y); rewrite !scale1r => ->.
-move: (proj2 (LieAlgebra.liebilinear A x) 1 x y); rewrite !scale1r => ->.
-move: (proj2 (LieAlgebra.liebilinear A y) 1 x y); rewrite !scale1r => ->.
+move: (proj1 (@LieAlgebra.liebilinear _ A (x + y)) 1 x y); rewrite !scale1r => ->.
+move: (proj2 (@LieAlgebra.liebilinear _ A x) 1 x y); rewrite !scale1r => ->.
+move: (proj2 (@LieAlgebra.liebilinear _ A y) 1 x y); rewrite !scale1r => ->.
 by rewrite !LieAlgebra.alternative !(addr0,add0r).
 Qed.
 
@@ -226,8 +223,8 @@ Qed.
 
 End lie_square_matrix.
 
-Canonical lie_algebra_square_matrix (R : rcfType) n : LieAlgebra.t [lmodType R of 'M[R]_n.+1] :=
-  LieAlgebra.mk (@lie_sqmat_bilinear R _) (@lie_sqmat_alternative R _) (@lie_sqmat_jacobi R _).
+Canonical lie_algebra_square_matrix (R : rcfType) (n : nat) : LieAlgebra.t R :=
+  @LieAlgebra.mk _ _ (@lie_sqmat R n) (@lie_sqmat_bilinear R _) (@lie_sqmat_alternative R _) (@lie_sqmat_jacobi R _).
 
 Section lie_euclidean_3.
 Variable (R : rcfType).
@@ -242,43 +239,20 @@ Definition lie_euclidean_3_jacobi := @jacobi_crossmul R.
 
 End lie_euclidean_3.
 
-(*Canonical lie_euclidean_3 (R : rcfType) :=
-  @LieAlgebra.mk R _ _ (@lie_euclidean_3_bilinear R) (@lie_euclidean_3_alternative R) (@lie_euclidean_3_jacobi R).*)
+Canonical lie_euclidean_3 (R : rcfType) :=
+  @LieAlgebra.mk R _ _ (@lie_euclidean_3_bilinear R) (@lie_euclidean_3_alternative R) (@lie_euclidean_3_jacobi R).
+
+Goal forall (R : rcfType) (u v : 'rV[R]_3), u *v v = - v *v u.
+Proof.
+move=> R u v.
+rewrite lie_anticommutativity.
+rewrite /=.
+Abort.
 
 Section twist_properties.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
-
-Lemma twistZ (a : R) v w : a *: (\T(v, w) : 'M_4) = \T((a *: v), (a *: w)).
-Proof.
-by rewrite /wedge !TwistCoor.ang_of !TwistCoor.lin_of (scale_block_mx a \S(w))
-  2!scaler0 skew_mxZ.
-Qed.
-
-Lemma ang_of_twist0 : \w( 0 ) = 0 :> 'rV[R]_3.
-Proof. by rewrite /TwistCoor.ang -(block_mx0 R 1 0 3 3) block_mxKur. Qed.
-
-Lemma ang_of_twistE v w : \w( \T(v, w) ) = w :> 'rV[R]_3.
-Proof. by rewrite /TwistCoor.ang /TwistCoor.mk block_mxKur. Qed.
-
-Lemma ang_of_twistZ k (t : TwistCoor.t R) : \w( (k *: t) ) = k *: \w( t ).
-Proof.
-rewrite /TwistCoor.ang -{1}(@submxK _ 1 0 3 3 t).
-by rewrite (@scale_block_mx _ 1 0 3 3) block_mxKur.
-Qed.
-
-Lemma lin_of_twist0 : \v( 0 ) = 0 :> 'rV[R]_3.
-Proof. by rewrite /TwistCoor.lin -(block_mx0 R 1 0 3 3) block_mxKul. Qed.
-
-Lemma lin_of_twistE v w : \v( \T(v, w) ) = v :> 'rV[R]_3.
-Proof. by rewrite /TwistCoor.lin /TwistCoor.mk block_mxKul. Qed.
-
-Lemma lin_of_twistZ k (t : TwistCoor.t R) : \v( (k *: t) ) = k *: \v( t ).
-Proof.
-rewrite /TwistCoor.lin -{1}(@submxK _ 1 _ 3 _ t).
-by rewrite (@scale_block_mx _ 1 _ 3) block_mxKul.
-Qed.
 
 Lemma mkE (t : TwistCoor.t R) : \T((\v( t )), (\w( t ))) = t.
 Proof.
@@ -286,15 +260,103 @@ rewrite /TwistCoor.mk /TwistCoor.ang /TwistCoor.lin -[RHS](@submxK R 1 0 3 3 t).
 f_equal; apply/matrixP; by do 2 case.
 Qed.
 
+(* forms a matrix in se(3) (i.e., a twist)
+   out of a given vector in R^6 (i.e., twist coordinates) *)
+Definition wedge (x : TwistCoor.t R) : 'M_4 :=
+  block_mx \S(TwistCoor.ang x) 0 (TwistCoor.lin x) 0.
+
+Lemma injective_wedge : injective wedge.
+Proof.
+move=> x y; rewrite /wedge => /(@eq_block_mx _ _ _ _ _ \S(\w( x )) 0 \v(x) 0).
+case => /eqP; rewrite skew_inj => /eqP Hw _ Hv _.
+by rewrite -(mkE x) Hv Hw mkE.
+Qed.
+
+Lemma twistZ (a : R) v w : a *: wedge \T(v, w) = wedge \T((a *: v), (a *: w)).
+Proof.
+by rewrite /wedge !TwistCoor.ang_of !TwistCoor.lin_of (scale_block_mx a \S(w))
+  2!scaler0 skew_mxZ.
+Qed.
+
+Lemma twistD v w v' w' : \T(v, w) + \T(v', w')= \T(v + v', w + w') :> TwistCoor.t R.
+Proof. by rewrite /TwistCoor.mk (add_block_mx v _ _ _ v') !addr0. Qed.
+
+Lemma ang_tcoor0 : \w( 0 ) = 0 :> 'rV[R]_3.
+Proof. by rewrite /TwistCoor.ang -(block_mx0 R 1 0 3 3) block_mxKur. Qed.
+
+Lemma ang_tcoorE v w : \w( \T(v, w) ) = w :> 'rV[R]_3.
+Proof. by rewrite /TwistCoor.ang /TwistCoor.mk block_mxKur. Qed.
+
+Lemma ang_tcoorZ k (t : TwistCoor.t R) : \w( (k *: t) ) = k *: \w( t ).
+Proof.
+rewrite /TwistCoor.ang -{1}(@submxK _ 1 0 3 3 t).
+by rewrite (@scale_block_mx _ 1 0 3 3) block_mxKur.
+Qed.
+
+Lemma ang_tcoorD (x y : TwistCoor.t R) : \w( x + y ) = \w( x ) + \w( y ).
+Proof.
+rewrite /TwistCoor.ang -{1}(@submxK _ 1 0 3 3 x) -{1}(@submxK _ 1 0 3 3 y).
+set a := ulsubmx _. by rewrite (add_block_mx a) block_mxKur.
+Qed.
+
+Lemma lin_tcoor0 : \v( 0 ) = 0 :> 'rV[R]_3.
+Proof. by rewrite /TwistCoor.lin -(block_mx0 R 1 0 3 3) block_mxKul. Qed.
+
+Lemma lin_tcoorE v w : \v( \T(v, w) ) = v :> 'rV[R]_3.
+Proof. by rewrite /TwistCoor.lin /TwistCoor.mk block_mxKul. Qed.
+
+Lemma lin_tcoorZ k (t : TwistCoor.t R) : \v( (k *: t) ) = k *: \v( t ).
+Proof.
+rewrite /TwistCoor.lin -{1}(@submxK _ 1 _ 3 _ t).
+by rewrite (@scale_block_mx _ 1 _ 3) block_mxKul.
+Qed.
+
+Lemma lin_tcoorD (x y : TwistCoor.t R) : \v( x + y ) = \v( x ) + \v( y ).
+Proof.
+rewrite /TwistCoor.lin -{1}(@submxK _ 1 0 3 3 x) -{1}(@submxK _ 1 0 3 3 y).
+set b := ursubmx _. set c := dlsubmx _. by rewrite (add_block_mx _ b c) block_mxKul.
+Qed.
+
+Lemma linear_wedge : linear wedge.
+Proof.
+move=> k x y.
+rewrite /wedge (scale_block_mx k \S(\w(x))) !scaler0.
+rewrite (add_block_mx _ _ _ _ \S(\w(y))) !addr0.
+by rewrite -skew_mxZ -skew_mxD -ang_tcoorZ ang_tcoorD -lin_tcoorZ lin_tcoorD.
+Qed.
+
 Definition lin_of_twist (M : 'M[R]_4) := @dlsubmx _ 3 1 3 1 M.
 
 Lemma lin_lin_of_twist t : \v( t ) = lin_of_twist (wedge t).
 Proof. by rewrite /TwistCoor.lin /lin_of_twist /wedge block_mxKdl. Qed.
 
+Lemma lin_of_twistD x y : lin_of_twist (x + y) = lin_of_twist x + lin_of_twist y :> 'rV[R]__.
+Proof.
+rewrite /lin_of_twist -{1}(@submxK _ 3 1 3 1 x) -{1}(@submxK _ 3 1 3 1 y).
+set a := ulsubmx _. set b := ursubmx _. by rewrite (add_block_mx a b) block_mxKdl.
+Qed.
+
+Lemma lin_of_twistZ k x : lin_of_twist (k *: x) = k *: lin_of_twist x :> 'rV[R]__.
+Proof.
+by rewrite /lin_of_twist -{1}(@submxK _ 3 1 3 1 x) (@scale_block_mx _ 3 1 3 1 k) block_mxKdl.
+Qed.
+
 Definition ang_of_twist (M : 'M[R]_4) := unskew (@ulsubmx _ 3 1 3 1 M).
 
 Lemma ang_ang_of_twist t : \w( t ) = ang_of_twist (wedge t).
 Proof. by rewrite /TwistCoor.ang /ang_of_twist /wedge block_mxKul skew_mxK. Qed.
+
+Lemma ang_of_twistD x y : ang_of_twist (x + y) = ang_of_twist x + ang_of_twist y :> 'rV[R]__.
+Proof.
+rewrite /ang_of_twist -{1}(@submxK _ 3 1 3 1 x) -{1}(@submxK _ 3 1 3 1 y).
+set b := ursubmx _. set c := dlsubmx _. by rewrite (add_block_mx _ b c) block_mxKul unskewD.
+Qed.
+
+Lemma ang_of_twistZ k x : ang_of_twist (k *: x) = k *: ang_of_twist x :> 'rV[R]__.
+Proof.
+rewrite /ang_of_twist -{1}(@submxK _ 3 1 3 1 x) (@scale_block_mx _ 3 1 3 1 k) block_mxKul.
+by rewrite unskewZ.
+Qed.
 
 (* the set of twists *)
 Definition se3 := [qualify M : 'M[R]_4 |
@@ -324,7 +386,7 @@ Qed.*)
 
 (* [murray] p.56, lem 2.13 (part 1) *)
 Lemma conj_SE3_se3 (t : TwistCoor.t R) g : g \is 'SE3[R] ->
-  g^-1 * t * g \is se3.
+  g^-1 * wedge t * g \is se3.
 Proof.
 move=> Hg; rewrite SE3_inv // /inv_hom /hom /wedge.
 rewrite [in X in _ * _ * X \is _](SE3E Hg) /hom -mulmxE.
@@ -339,10 +401,19 @@ Qed.
    which parameterizes a twist *)
 Definition vee (t : 'M[R]_4) : 'rV[R]_6 :=  \T(lin_of_twist t, ang_of_twist t).
 
+Lemma linear_vee : linear vee.
+Proof.
+move=> k x y.
+rewrite {1}/vee lin_of_twistD ang_of_twistD lin_of_twistZ ang_of_twistZ.
+apply injective_wedge.
+rewrite /vee linear_wedge twistZ -[X in _ = X + _]scale1r -linear_wedge.
+by rewrite scale1r -twistD.
+Qed.
+
 Lemma veeK t : t \is se3 -> wedge (vee t) = t.
 Proof.
 rewrite qualifE antiE => /and3P[/eqP H1 /eqP H2 /eqP H3].
-rewrite /wedge /vee ang_of_twistE lin_of_twistE /lin_of_twist.
+rewrite /wedge /vee ang_tcoorE lin_tcoorE /lin_of_twist.
 rewrite -[in RHS](@submxK _ 3 1 3 1 t) H1 H2 H3; f_equal.
 rewrite unskewK // antiE; by apply/eqP.
 Qed.
@@ -368,9 +439,8 @@ Lemma lie_bracketE (t1 t2 : TwistCoor.t R) :
   let v2 := TwistCoor.lin t2 in
   let w1 := TwistCoor.ang t1 in
   let w2 := TwistCoor.ang t2 in
-(*  lie[t1, t2] =*)
-  (* NB *) LieAlgebra.bra (@lie_algebra_square_matrix R 3) (wedge t1) (wedge t2) =
-  block_mx \S( w2 *v w1 ) 0 (w2 *v v1 + v2 *v w1) 0.
+  lie[wedge t1, wedge t2] =
+  block_mx \S( w2 *v w1 ) 0 (w2 *v v1 + v2 *v w1) 0 :> 'M[R]_4.
 Proof.
 move=> v1 v2 w1 w2.
 (* NB *) rewrite /LieAlgebra.bra /= /lie_sqmat.
@@ -389,8 +459,7 @@ Lemma lie_bracketE' (t1 t2 : TwistCoor.t R) :
   let v2 := TwistCoor.lin t2 in
   let w1 := TwistCoor.ang t1 in
   let w2 := TwistCoor.ang t2 in
-  (* NB: can't parse *) LieAlgebra.bra (@lie_algebra_square_matrix _ _) t1 t2 =
-  \T( w2 *v v1 + v2 *v w1, w2 *v w1).
+  lie[wedge t1, wedge t2] = wedge \T( w2 *v v1 + v2 *v w1, w2 *v w1).
 Proof.
 move=> v1 v2 w1 w2.
 by rewrite lie_bracketE -/v1 -/v2 -/w1 -/w2 /wedge TwistCoor.lin_of TwistCoor.ang_of.
@@ -400,54 +469,77 @@ End twist_properties.
 
 Notation "''se3[' R ]" := (se3 R)
   (at level 8, format "''se3[' R ]") : ring_scope.
-Notation "lie[ t1 , t2 ]" := (lie_bracket t1 t2).
 
 (* NB: work in progress *)
 Section twist_and_adjoint.
 
 Variable R : rcfType.
 
-(* [murray] p.56, lem 2.13 (part 2) *)
-Lemma conj_adjoint (t : TwistCoor.t R) g : g \is 'SE3[R] ->
-  g^-1 * t * g = wedge (t *m adjoint g).
+(* [murray] p.56, lem 2.13 (part 2)
+   action of 'SE3[R] on twist coordinates *)
+Lemma action_Adjoint g : g \is 'SE3[R] -> forall t : TwistCoor.t R,
+  wedge (t *m Adjoint g) = g^-1 * wedge t * g.
 Proof.
-move=> gSE.
-(* rhs *)
-rewrite /adjoint -{2}(mkE t) (mulmx_block \v(t) _ 0 0 (rot_of_hom g)).
-rewrite !(mulmx0,mul0mx,addr0,add0r).
+move=> gSE t.
 (* lhs *)
-rewrite {1}/wedge /= {2}(SE3E gSE) {1}/hom -mulrA -[in LHS]mulmxE.
+rewrite [in LHS]/Adjoint -[in LHS](mkE t) (mulmx_block \v(t) _ 0 0 (rot_of_hom g)).
+rewrite !(mulmx0,mul0mx,addr0,add0r).
+(* rhs *)
+rewrite [in RHS]/wedge /= [in X in _ = _ * _ * X](SE3E gSE) [in RHS]/hom -mulrA -[in RHS]mulmxE.
 rewrite (mulmx_block \S( \w( t ) ) 0 ( \v( t ) ) 0 (rot_of_hom g)).
 rewrite !(mulmx0,add0r,mul1mx,mul0mx,addr0).
 
-rewrite SE3_inv // {1}/inv_hom {1}/hom.
+rewrite [in RHS]SE3_inv // [in RHS]/inv_hom [in RHS]/hom.
 rewrite (mulmx_block (rot_of_hom g)^T 0 _ 1 (\S( \w( t ) ) *m rot_of_hom g)).
 rewrite !(mul0mx,addr0,mulmx0,mul1mx).
-set a := _ *m _. set b := _ + _.
 set a' := _ + _. set b' := _ *m _.
+set a := _ *m _. set b := _ + _.
 rewrite /wedge TwistCoor.ang_of TwistCoor.lin_of; f_equal.
 - rewrite {}/a {}/b'.
   rewrite mulmxA !mulmxE; apply/eqP/mulmxP => u.
-  by rewrite conj_skew_mx ?rot_of_hom_SO // skew_mxE.
+  by rewrite conj_skew_mx_crossmul ?rot_of_hom_SO // skew_mxE.
 - rewrite {}/a' {}/b.
-  rewrite addrC; congr (_ + _).
-  rewrite -mulmxE -mulmxA mulmxE mulNmx mulrA conj_skew_mx ?rot_of_hom_SO //.
-  by rewrite -!mulmxE mulmxA skew_mxE crossmulC opprK.
+  rewrite [in RHS]addrC; congr (_ + _).
+  rewrite -mulmxE -mulmxA mulmxE mulNmx mulrA conj_skew_mx_crossmul ?rot_of_hom_SO //.
+  by rewrite -!mulmxE mulmxA skew_mxE crossmulC.
 Qed.
 
-(* NB: wrong *)
-Lemma adjointE (x y : TwistCoor.t R) :
-  x *m adjoint y = (*NB: can't parse *)vee (LieAlgebra.bra (@lie_algebra_square_matrix _ _) x y).
+Definition SE3_action (g : 'M[R]_4) (t : TwistCoor.t R) : TwistCoor.t R :=
+  vee (wedge (t *m Adjoint g)).
+
+Lemma SE3_action_neutral (t : TwistCoor.t R) : SE3_action 1 t = t.
+Proof. by rewrite /SE3_action Adjoint1 mulmx1 wedgeK. Qed.
+
+Lemma SE3_action_comp (g1 g2 : 'M[R]_4) (t : TwistCoor.t R) :
+  g1 \is 'SE3[R] -> g2 \is 'SE3[R] ->
+  SE3_action g1 (SE3_action g2 t) = SE3_action (g2 * g1) t.
+Proof.
+move=> ? ?; rewrite /SE3_action [in LHS]wedgeK [in RHS]wedgeK action_Adjoint //.
+apply injective_wedge; rewrite action_Adjoint // action_Adjoint ?rpredM //.
+by rewrite veeK ?conj_SE3_se3 // invrM ?SE3_is_unitmx // !mulrA.
+Qed.
+
+Lemma linear_action_Adjoint g : g \is 'SE3[R] -> linear (SE3_action g).
+Proof.
+move=> Hg k y x.
+rewrite /SE3_action !action_Adjoint // linear_wedge mulrDr mulrDl -scalerAr -scalerAl.
+by rewrite linear_vee.
+Qed.
+
+(* NB: wrong? *)
+Lemma AdjointE (x y : TwistCoor.t R) :
+  x *m Adjoint (wedge y) = vee lie[wedge x, wedge y].
 Proof.
 rewrite lie_bracketE' /=.
-rewrite /vee -lin_lin_of_twist -ang_ang_of_twist lin_of_twistE ang_of_twistE.
-rewrite /adjoint.
+rewrite /vee -lin_lin_of_twist -ang_ang_of_twist lin_tcoorE ang_tcoorE.
+rewrite /Adjoint.
 rewrite -{1}(mkE x).
-rewrite (mulmx_block \v(x) _ _ _ (rot_of_hom y)) !(mulmx0,add0r,mul0mx).
+rewrite (mulmx_block \v(x) _ _ _ (rot_of_hom (wedge y))) !(mulmx0,add0r,mul0mx).
 rewrite /TwistCoor.mk; f_equal.
   rewrite -!skew_mxE; congr (_ + _).
-  by rewrite /wedge /rot_of_hom block_mxKul.
-  rewrite /wedge /trans_of_hom block_mxKdl /rot_of_hom block_mxKul; congr (_ *m _).
+    by rewrite /wedge /rot_of_hom block_mxKul.
+  rewrite /wedge /trans_of_hom block_mxKdl /rot_of_hom block_mxKul.
+  rewrite -mulmxE mulmxA !skew_mxE.
   admit.
 rewrite -skew_mxE.
 by rewrite /wedge /rot_of_hom block_mxKul.
@@ -501,7 +593,7 @@ Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Implicit Types w v : vector.
 
-Lemma exp_twist0v v n : (\T(v, 0) : 'M_4) ^+ n.+2 = 0.
+Lemma exp_twist0v v n : (wedge \T(v, 0)) ^+ n.+2 = 0.
 Proof.
 elim: n => [|n ih]; last by rewrite exprS ih mulr0.
 rewrite expr2.
@@ -511,7 +603,7 @@ by rewrite (mulmx_block a b v _ a b v _) /a /b !(mulmx0,addr0,mul0mx) block_mx0.
 Qed.
 
 (* [murray] eqn 2.32, p.41 *)
-Lemma emx_twist0E v k : emx \T(v, 0) k.+2 = hom 1 v.
+Lemma emx_twist0E v k : emx (wedge \T(v, 0)) k.+2 = hom 1 v.
 Proof.
 rewrite /emx 2!big_ord_recl big1 ?addr0; last first.
   move=> /= i _; by rewrite ecoefE exp_twist0v scaler0.
@@ -523,7 +615,7 @@ Qed.
 Lemma p41eq234 w v : norm w = 1 ->
   let g := rigid_trans w v in
   let h := w *d v in
-  g^-1 *m \T(v, w) *m g = \T(h *: w, w).
+  g^-1 *m wedge \T(v, w) *m g = wedge \T(h *: w, w).
 Proof.
 move=> w1 g h.
 rewrite inv_rigid_transE /inv_rigid_trans /rigid_trans.
@@ -536,8 +628,8 @@ Qed.
 
 Lemma p42eq235 w v a k :
   let g := rigid_trans w v in
-  let e' := g^-1 *m \T(v, w) *m g in
-  emx (a *: (\T(v, w) : 'M_4) ) k = g * emx (a *: e') k * g^-1.
+  let e' := g^-1 *m wedge \T(v, w) *m g in
+  emx (a *: wedge \T(v, w) ) k = g * emx (a *: e') k * g^-1.
 Proof.
 move=> g e'.
 rewrite -emx_mulmulV ?rigid_trans_unitmx //; congr (emx _ _).
@@ -548,7 +640,7 @@ Qed.
 
 Lemma p42eq2 w v : norm w = 1 ->
   let g := rigid_trans w v in
-  let e' := g^-1 *m \T(v, w) *m g in
+  let e' := g^-1 *m wedge \T(v, w) *m g in
   forall k, e' ^+ k.+2 = block_mx (\S( w ) ^+ k.+2) 0 0 0.
 Proof.
 move=> w1 g e' k.
@@ -566,7 +658,7 @@ Qed.
 Lemma emx2_twist w v a : norm w = 1 ->
   let g := rigid_trans w v in
   let h := w *d v in
-  emx (a *: (\T(v, w) : 'M_4) ) 2 = g *m hom (emx (a *: \S( w)) 2) (h *: (a *: w)) *m g^-1.
+  emx (a *: wedge \T(v, w) ) 2 = g *m hom (emx (a *: \S( w)) 2) (h *: (a *: w)) *m g^-1.
 Proof.
 move=> w1 g h.
 rewrite {1}/emx 2!big_ord_recl big_ord0 addr0 liftE0 eqxx /ecoef factS fact0 invr1 2!scale1r.
@@ -587,7 +679,7 @@ Qed.
 Lemma p42eq3 w v a : norm w = 1 ->
   let g := rigid_trans w v in
   let h := w *d v in 
-  let e' := g^-1 *m \T(v, w) *m g in
+  let e' := g^-1 *m wedge \T(v, w) *m g in
   forall k, emx (a *: e') k.+2 = hom (emx (a *: \S( w )) k.+2) (h *: (a *: w)).
 Proof.
 move=> w1 g h e'; rewrite /e'.
@@ -616,10 +708,10 @@ Definition emx_twist a t k : 'M_4 :=
 
 (* [murray] eqn 2.36, p.42 *)
 Lemma emx_twistE (t : TwistCoor.t R) a k :
-  emx (a *: (t : 'M_4)) k.+2 = emx_twist a t k.+2.
+  emx (a *: wedge t) k.+2 = emx_twist a t k.+2.
 Proof.
-set v := lin_of_twist t.
-set w := ang_of_twist t.
+set v := lin_of_twist (wedge t).
+set w := ang_of_twist (wedge t).
 rewrite (_ : t = \T(v, w)); last first.
   rewrite {}/v {}/w.
   rewrite -[in LHS](mkE t).
@@ -629,7 +721,7 @@ rewrite (_ : t = \T(v, w)); last first.
 (*  by case: t => v w; rewrite ang_of_twistE lin_of_twistE.*)
 case/boolP : (w == 0) => [/eqP ->|w0].
   rewrite twistZ /= scaler0 emx_twist0E.
-  by rewrite /emx_twist /hom_twist ang_of_twistE eqxx lin_of_twistE.
+  by rewrite /emx_twist /hom_twist ang_tcoorE eqxx lin_tcoorE.
 set w' : 'rV_3 := a *: w.
 rewrite -(norm_scale_normalize w) (_ : v = (norm w) *: ((norm w)^-1 *: v)); last first.
   by rewrite scalerA divrr ?scale1r // unitfE norm_eq0.
@@ -643,7 +735,7 @@ rewrite -scalerA norm_scale_normalize.
 
 rewrite /emx_twist /hom_twist.
 
-rewrite ang_of_twistE (negbTE w0) skew_mxZ; congr hom.
+rewrite ang_tcoorE (negbTE w0) skew_mxZ; congr hom.
 
 (*rewrite ang_of_twistZ ang_of_twistE norm_scale_normalize (negbTE w0).
 rewrite skew_mxZ; congr hom.*)
@@ -655,25 +747,25 @@ rewrite -scalemxAl -scalerDr -scalerBr; congr (_ *: _).
   by rewrite -invrM ?unitfE ?norm_eq0.
 rewrite -/w' /= [in X in _ = X + _]mulmxBr mulmx1.
 rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
-- rewrite lin_of_twistE crossmulC mulNmx.
+- rewrite lin_tcoorE crossmulC mulNmx.
   by rewrite scalerA divrr ?unitfE ?norm_eq0 ?scale1r.
-- rewrite lin_of_twistE.
+- rewrite lin_tcoorE.
   rewrite (scalerA (norm w)) divrr ?scale1r ?unitfE ?norm_eq0 //.
   rewrite -scalemxAl.
   rewrite mulmxA.
   rewrite dotmulP mul_scalar_mx dotmulC.
   by rewrite scalerA mulrC -scalerA.
 - rewrite crossmulC opprK; congr (_ *v _).
-  by rewrite lin_of_twistE scalerA divrr ?scale1r ?lin_of_twistE // unitfE norm_eq0.
+  by rewrite lin_tcoorE scalerA divrr ?scale1r ?lin_of_twistE // unitfE norm_eq0.
 Qed.
 
 (* [murray] proposition 2.8, p. 41 *)
 Lemma emx_twist_SE3 v w a k :
   emx \S(a *: w) k.+2 \is 'SO[R]_3 ->
-  emx (a *: (\T(v, w) : 'M_4)) k.+2 \is 'SE3[R].
+  emx (a *: wedge \T(v, w)) k.+2 \is 'SE3[R].
 Proof.
 move=> emx_SO; rewrite emx_twistE.
-rewrite /emx_twist /hom_twist ang_of_twistE.
+rewrite /emx_twist /hom_twist ang_tcoorE.
 case: ifPn => [_|w0]; by rewrite hom_is_SE // rpred1.
 Qed.
 
@@ -734,7 +826,7 @@ Definition etwist a (t : TwistCoor.t R) :=
 Local Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'").
 
 Lemma etwistv0 (a : angle R) : `e$(a, \T(0, 0)) = hom 1 0.
-Proof. by rewrite /etwist ang_of_twistE /hom_twist ang_of_twistE eqxx lin_of_twistE scaler0. Qed.
+Proof. by rewrite /etwist ang_tcoorE /hom_twist ang_tcoorE eqxx lin_tcoorE scaler0. Qed.
 
 Lemma etwist_is_SE (t : TwistCoor.t R) a : norm \w( t ) = 1 -> `e$(a, t) \in 'SE3[R].
 Proof. 
@@ -843,12 +935,12 @@ set p := trans_of_hom f.
 case/boolP: (rot_of_hom f == 1) => rotf fSE.
 case/boolP : (Rad.angle_of (norm p) == 0) => p0.
     exists \T(p, 0), (Rad.angle_of 1).
-    rewrite /etwist /hom_twist ang_of_twistE eqxx lin_of_twistE.
+    rewrite /etwist /hom_twist ang_tcoorE eqxx lin_tcoorE.
     rewrite Rad.angle_ofK; last by rewrite inE ler01 rad_2pi_gt1.
     by rewrite scale1r (SE3E fSE) (eqP rotf).
   exists \T((rad (Rad.angle_of (norm p)))^-1 *: p, 0),
          (Rad.angle_of (norm p)).
-  rewrite /etwist /hom_twist ang_of_twistE eqxx /= lin_of_twistE.
+  rewrite /etwist /hom_twist ang_tcoorE eqxx /= lin_tcoorE.
   rewrite scalerA divrr; last by rewrite unitfE rad_eq0.
   by rewrite scale1r (SE3E fSE) (eqP rotf).
 case: (eskew_is_onto_SO (rot_of_hom_SO fSE)) => a fexp_skew.
@@ -859,10 +951,10 @@ have a0 : a != 0.
 set A : 'M_3 := \S(w) *m (1 - rot_of_hom f) + rad a *: (w^T *m w).
 suff [v Hv] : { v | p = (norm w)^-2 *: (v *m A) }.
   exists \T(v, w), a.
-  rewrite (SE3E fSE) /etwist /hom_twist ang_of_twistE.
+  rewrite (SE3E fSE) /etwist /hom_twist ang_tcoorE.
   have /negbTE -> : w != 0 by rewrite normalize_eq0 vaxis_euler_neq0 // rot_of_hom_SO.
   rewrite fexp_skew -/p Hv; congr (hom _ (_ *: _)).
-  by rewrite lin_of_twistE /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl fexp_skew.
+  by rewrite lin_tcoorE /A mulmxDr mulmxA skew_mxE -scalemxAr -scalemxAl fexp_skew.
 have HA : A = etwist_is_onto_SE_mat a w.
   (* TODO: isolate as a lemma? *)
   rewrite /A /etwist_is_onto_SE_mat.
@@ -1039,13 +1131,13 @@ set q := \pt( l ).
 set w := \vec( l ).
 set v := _ + _.
 rewrite /etwist /hom_twist.
-case: ifPn => [/eqP|]; rewrite ang_of_twistE => w0.
-  by rewrite hom_screww0 // /v lin_of_twistE w0 crossmulNv crossmul0v oppr0 scaler0 addr0 scaler0.
+case: ifPn => [/eqP|]; rewrite ang_tcoorE => w0.
+  by rewrite hom_screww0 // /v lin_tcoorE w0 crossmulNv crossmul0v oppr0 scaler0 addr0 scaler0.
 rewrite /hom_screw_motion.
 rewrite -/l -/a -/h -/q -/w.
 congr hom.
 rewrite {1}/v.
-rewrite lin_of_twistE.
+rewrite lin_tcoorE.
 rewrite [w *v _]linearD /=.
 rewrite crossmulvZ crossmulvv scaler0 addr0.
 rewrite crossmulNv crossmulvN.
@@ -1097,8 +1189,8 @@ Definition axis (t : TwistCoor.t R) : Line.t R :=
 
 Lemma point_axis_nolin w : w != 0 -> \pt( axis \T(0, w) ) = 0.
 Proof.
-move=> w0; rewrite /axis ang_of_twistE (negbTE w0) /=.
-by rewrite lin_of_twistE /= crossmulv0 scaler0.
+move=> w0; rewrite /axis ang_tcoorE (negbTE w0) /=.
+by rewrite lin_tcoorE /= crossmulv0 scaler0.
 Qed.
 
 (* [murray] 2.42, p.47 *)
@@ -1107,7 +1199,7 @@ Definition pitch (t : TwistCoor.t R) : R :=
   (norm w)^-2 *: v *d w. 
 
 Lemma pitch_nolin (w : 'rV[R]_3) : pitch \T(0, w) = 0.
-Proof. by rewrite /pitch ang_of_twistE lin_of_twistE scaler0 dotmul0v. Qed.
+Proof. by rewrite /pitch ang_tcoorE lin_tcoorE scaler0 dotmul0v. Qed.
 
 (* twist of a revolute joint *)
 Definition rjoint_twist (w : vector) (q : point) := \T(- w *v q, w).
@@ -1117,7 +1209,7 @@ Definition pjoint_twist (v : vector) := \T(v, 0).
 
 Lemma pitch_perp (w u : 'rV[R]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
 Proof.
-move=> w1; rewrite /pitch ang_of_twistE lin_of_twistE w1 expr1n invr1 scale1r.
+move=> w1; rewrite /pitch ang_tcoorE lin_tcoorE w1 expr1n invr1 scale1r.
 by rewrite {1}crossmulC crossmulvN opprK -dot_crossmulC crossmulvv dotmulv0.
 Qed.
 
@@ -1132,10 +1224,10 @@ Proof.
 move=> a_gt0.
 rewrite /magnitude.
 case/boolP : (a == 0) => [/eqP ->|a0].
-  by rewrite scale0r mul0r ang_of_twist0 eqxx lin_of_twist0 norm0.
-rewrite ang_of_twistZ scaler_eq0 (negbTE a0) /=.
+  by rewrite scale0r mul0r ang_tcoor0 eqxx lin_tcoor0 norm0.
+rewrite ang_tcoorZ scaler_eq0 (negbTE a0) /=.
 case: ifPn => M0.
-  by rewrite lin_of_twistZ normZ gtr0_norm.
+  by rewrite lin_tcoorZ normZ gtr0_norm.
 by rewrite normZ gtr0_norm.
 Qed.
 
@@ -1192,10 +1284,10 @@ set q := \pt( l ).
 set v := - w *v q + h *: w.
 case/boolP : (w == 0) => [/eqP|]w0.
   exists \T(v, 0).
-  rewrite ang_of_twistE lin_of_twistE /v w0 crossmulNv crossmul0v oppr0 scaler0 addr0 etwistv0.
+  rewrite ang_tcoorE lin_tcoorE /v w0 crossmulNv crossmul0v oppr0 scaler0 addr0 etwistv0.
   by rewrite hom_screww0.
 exists \T(v, w).
-by rewrite lin_of_twistE ang_of_twistE hom_screw_motion_etwist.
+by rewrite lin_tcoorE ang_tcoorE hom_screw_motion_etwist.
 Qed.
 
 End screw_motion_utwist.
@@ -1213,26 +1305,26 @@ Lemma etwistE a (v w : 'rV[R]_3) :
                   (rad a * pitch \T(v, w)) *:  w +
                     \pt( axis \T(v, w) ) *m (1 - `e^(a, w))).
 Proof.
-rewrite /etwist /hom_twist ang_of_twistE; case: ifPn => [/eqP ->|w0].
-  by rewrite lin_of_twistE skew_mx0 emx3a0.
+rewrite /etwist /hom_twist ang_tcoorE; case: ifPn => [/eqP ->|w0].
+  by rewrite lin_tcoorE skew_mx0 emx3a0.
 congr hom.
-rewrite lin_of_twistE.
+rewrite lin_tcoorE.
 rewrite -scalemxAl mulmxA dotmulP scalemxAl scalerDr -scalemxAl.
 rewrite (scalerA _ (rad a)) (mulrC _ (rad a)).
 rewrite -(scalerA (rad a) (norm w ^+ 2)^-1).
 rewrite mul_scalar_mx (scalerA _ (v *d w) w) -(dotmulZv v _ w).
-rewrite (_ : _ *d _ = pitch \T(v, w)); last by rewrite /pitch lin_of_twistE ang_of_twistE.
+rewrite (_ : _ *d _ = pitch \T(v, w)); last by rewrite /pitch lin_tcoorE ang_tcoorE.
 rewrite addrC.
 rewrite scalerA.
-rewrite /axis ang_of_twistE (negbTE w0) /=.
-by rewrite lin_of_twistE -scalemxAl.
+rewrite /axis ang_tcoorE (negbTE w0) /=.
+by rewrite lin_tcoorE -scalemxAl.
 Qed.
 
 Lemma etwist_Rz a (w : 'rV[R]_3) : w != 0 ->
   `e$(a, \T(0, w)) = hom `e^(a, w) 0.
 Proof.
 move=> w0; rewrite etwistE (negbTE w0) pitch_nolin mulr0.
-by rewrite  scale0r add0r point_axis_nolin // mul0mx.
+by rewrite scale0r add0r point_axis_nolin // mul0mx.
 Qed.
 
 End etwist_alt.
