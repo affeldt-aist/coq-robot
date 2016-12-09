@@ -643,8 +643,8 @@ set a' := atan _.
 apply/isRotP; split.
 - set u : 'rV_3 := normalize a`1.
   by rewrite quat_rot_is_linearE quat_rot_axis.
-- rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
-  rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
+- rewrite -Base.jE /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
+  rewrite -Base.kE /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
   move: (Base.frame a`1).
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /=.
@@ -657,8 +657,8 @@ apply/isRotP; split.
   rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
   by rewrite polar_of_uquat_prop.
   by rewrite mulrnAl polar_of_uquat_prop2.
-- rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
-  rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
+- rewrite -Base.jE /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
+  rewrite -Base.kE /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
   move: (Base.frame a`1).
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /=.

@@ -76,14 +76,16 @@ Variable R : rcfType.
 Record t := mk {
   M :> 'M[R]_3 ;
   MO : M \is 'O[R]_3 }.
-
+Parameter rowframe : t -> 'I_3 -> 'rV[R]_3.
+Axiom rowframeE : forall f i, rowframe f i = row i (M f).
 End non_oriented_frame_def.
 End NOFrame.
 
 Coercion matrix_of_noframe (R : rcfType) (f : NOFrame.t R) : 'M[R]_3 := 
   NOFrame.M f.
 
-Notation "f '|,' i" := (row i (NOFrame.M f))
+Definition rowframeE := NOFrame.rowframeE.
+Notation "f '|,' i" := (NOFrame.rowframe f i)
   (at level 3, i at level 2, left associativity, format "f '|,' i") : ring_scope.
 
 Section non_oriented_frame_properties.
@@ -94,20 +96,20 @@ Implicit Types p : 'rV[R]_3.
 Variable f : NOFrame.t R.
 
 Lemma noframe_norm (k : 'I_3) : norm f|,k = 1.
-Proof. apply norm_row_of_O; by case: f. Qed.
+Proof. rewrite rowframeE; apply norm_row_of_O; by case: f. Qed.
 
 Local Notation "'i'" := (f |, 0).
 Local Notation "'j'" := (f |, 1).
 Local Notation "'k'" := (f |, 2%:R).
 
 Lemma noframe_idotj : i *d j = 0.
-Proof. apply/orthogonalP; by case: f. Qed.
+Proof. rewrite !rowframeE; apply/orthogonalP; by case: f. Qed.
 
 Lemma noframe_jdotk : j *d k = 0.
-Proof. apply/orthogonalP; by case: f. Qed.
+Proof. rewrite !rowframeE; apply/orthogonalP; by case: f. Qed.
 
 Lemma noframe_idotk : i *d k = 0.
-Proof. apply/orthogonalP; by case: f. Qed.
+Proof. rewrite !rowframeE; apply/orthogonalP; by case: f. Qed.
 
 Canonical noframe_is_noframe :=
   NOFrameInterface.mk (noframe_norm 0) (noframe_norm 1) (noframe_norm 2%:R)
@@ -127,7 +129,7 @@ Qed.
 Definition noframe_sgn := \det f.
 
 Lemma noframe_sgnE : noframe_sgn = i *d (j *v k).
-Proof. by rewrite crossmul_triple /noframe_sgn [in LHS](col_mx3_rowE f). Qed.
+Proof. by rewrite crossmul_triple /noframe_sgn [in LHS](col_mx3_rowE f) !rowframeE. Qed.
 
 Lemma abs_noframe_sgn : `| noframe_sgn | = 1.
 Proof. apply orthogonal_det; by case: f. Qed.
@@ -190,7 +192,7 @@ have /eqP : p *m (col_mx3 i j k) ^T = 0.
   by rewrite col_mx3_mul dotmulE sum3E H1 dotmulE sum3E H2 dotmulE sum3E H3 row30.
 rewrite mul_mx_rowfree_eq0; first by move/eqP.
 apply/row_freeP; exists (col_mx3 i j k).
-apply/eqP; by rewrite -orthogonalEC -col_mx3_rowE (NOFrame.MO _).
+apply/eqP; by rewrite -orthogonalEC !rowframeE -col_mx3_rowE (NOFrame.MO _).
 Qed.
 
 Lemma orthogonal_expansion p :
@@ -335,13 +337,13 @@ Local Notation "'k'" := (f |, 2%:R).
 
 (* TODO: useful? *)
 Lemma frame_icrossj : i *v j = k.
-Proof. move: (Frame.MSO f); by move/SO_icrossj. Qed.
+Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_icrossj. Qed.
 
 Lemma frame_icrossk : i *v k = - j.
-Proof. move: (Frame.MSO f); by move/SO_icrossk. Qed.
+Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_icrossk. Qed.
 
 Lemma frame_jcrossk : j *v k = i.
-Proof. move: (Frame.MSO f); by move/SO_jcrossk. Qed.
+Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_jcrossk. Qed.
 
 Definition frame_of_SO (M : 'M[R]_3) (HM : M \is 'SO[R]_3) : Frame.t R :=
   @Frame.mk _ (NOFrame.mk (rotation_sub HM)) HM.
@@ -532,18 +534,19 @@ rewrite /i; case: ifP => [_|/eqP/eqP ?]; first by rewrite normeE.
 by rewrite norm_normalize.
 Qed.
 
-Definition frame := Base1.frame normi.
+Parameter frame : 'rV[R]_3 -> Frame.t R.
+Axiom frameE : frame u = Base1.frame normi.
 
-Lemma iE : i = frame |, 0.
-Proof. by rewrite rowK. Qed.
-Lemma jE : j = frame |, 1.
+Lemma iE : i = (frame u) |, 0.
+Proof. by rewrite !rowframeE frameE rowK. Qed.
+Lemma jE : j = (frame u) |, 1.
 Proof.
-rewrite /= !rowK /= /j; case: ifP => // u0.
+rewrite !rowframeE frameE /= !rowK /= /j; case: ifP => // u0.
 by rewrite /Base1.j /i u0 colinear_refl.
 Qed.
-Lemma kE : k = frame |, 2%:R.
+Lemma kE : k = (frame u) |, 2%:R.
 Proof.
-rewrite /= !rowK /= /k; case: ifP => // u0.
+rewrite !rowframeE frameE /= !rowK /= /k; case: ifP => // u0.
 by rewrite /Base1.k /Base1.j /i u0 colinear_refl vecij.
 Qed.
 
@@ -576,18 +579,18 @@ Qed.
 
 Lemma icrossj : i *v j = k.
 Proof.
-move: (frame_icrossj frame).
-rewrite !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecij.
+move: (frame_icrossj (frame u)).
+rewrite !rowframeE frameE !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecij.
 Qed.
 Lemma icrossk : i *v k = - j.
 Proof.
-move: (frame_icrossk frame).
-rewrite !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecik.
+move: (frame_icrossk (frame u)).
+rewrite !rowframeE frameE !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecik.
 Qed.
 Lemma jcrossk : j *v k = i.
 Proof.
-move: (frame_jcrossk frame).
-rewrite !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecjk.
+move: (frame_jcrossk (frame u)).
+rewrite !rowframeE frameE !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecjk.
 Qed.
 
 Lemma is_SO : col_mx3 i j k \is 'SO[R]_3.

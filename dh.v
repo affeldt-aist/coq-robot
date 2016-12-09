@@ -162,7 +162,7 @@ Definition dh_rot (jangle ltwist : angle R) := col_mx3
 Lemma dh_rot_i (f1 f0 : Frame.t R) t a : f1 _R^ f0 = dh_rot t a ->
   f1|,0 *m f0^T = row3 (cos t) (sin t) 0.
 Proof.
-rewrite (rowE 0 f1) -mulmxA FromToE noframe_inv => ->.
+rewrite rowframeE (rowE 0 f1) -mulmxA FromToE noframe_inv => ->.
 by rewrite /dh_rot e0row mulmx_row3_col3 !scale0r !addr0 scale1r.
 Qed.
 
@@ -200,7 +200,9 @@ Lemma dh_mat_correct : exists alpha theta d a,
   hom From1To0 p1_in_0 = dh_mat theta d a alpha.
 Proof.
 have H1 : From1To0 0 2%:R = 0.
-  rewrite /From1To0 -lock /FromTo mxE; by move/eqP: dh1 => /=.
+  rewrite /From1To0 -lock /FromTo mxE.
+  move/eqP: dh1 => /=.
+  by rewrite !rowframeE.
 have [H2a H2b] : From1To0 0 0 ^+ 2 + From1To0 0 1 ^+ 2 = 1 /\
   From1To0 1 2%:R ^+ 2 + From1To0 2%:R 2%:R ^+ 2 = 1.
   move: (norm_row_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
@@ -419,7 +421,7 @@ rewrite -addrA addrC -subr_eq.
 move/eqP.
 move/(congr1 (fun x => x *m F0^T)).
 rewrite [in X in _ = X -> _]mulmxDl -scalemxAl.
-rewrite (rowE 2%:R F0) -mulmxA mulmxE -{2}noframe_inv divrr ?mulmx1 ?noframe_is_unit //.
+rewrite rowframeE (rowE 2%:R F0) -mulmxA mulmxE -{2}noframe_inv divrr ?mulmx1 ?noframe_is_unit //.
 rewrite -scalemxAl (@dh_rot_i _ _ _ theta alpha); last first.
   by rewrite {1}/From1To0 -lock in H4.
 rewrite add0r => <-.
