@@ -162,39 +162,47 @@ Definition bilinear (R : ringType) (T : lmodType R) (op : T -> T -> T) :=
 Module LieAlgebra.
 Section lie_algebra.
 Variable R : ringType.
-Structure t := mk {
+Structure t := Pack {
   T : lmodType R ;
   bra : T -> T -> T ;
-  liebilinear : bilinear bra ;
-  alternative : forall x, bra x x = 0 ;
-  jacobi : jacobi bra
-}.
+  _ : bilinear bra ;
+  _ : forall x, bra x x = 0 ;
+  _ : jacobi bra }.
+Definition op (a : t) : T a -> T a -> T a :=
+  let 'Pack _ the_op _ _ _ := a in the_op.
+Arguments op a x y : simpl never.
+Lemma alternative (a : t) : forall x, @op a x x = 0.
+Proof. by case: a. Qed.
+Lemma liebilinear a : bilinear (@op a).
+Proof. by case: a. Qed.
+Lemma jacobi a : jacobi (@op a).
+Proof. by case: a. Qed.
 End lie_algebra.
 End LieAlgebra.
 
-Notation "lie[ t1 , t2 ]" := (@LieAlgebra.bra _ _ (t1 : LieAlgebra.T _) (t2 : LieAlgebra.T _)) : ring_scope.
+Notation "lie[ t1 , t2 ]" := (@LieAlgebra.op _ _ t1 t2).
 
 Section lie_algebra_properties.
 Variables (R : rcfType) (m n : nat).
 Variable A : LieAlgebra.t R.
 
-Local Notation "l[ t1 , t2 ]" := (@LieAlgebra.bra _ A t1 t2).
+Local Notation "l[ t1 , t2 ]" := (@LieAlgebra.op _ A t1 t2).
 
-Lemma lie_anticommutativity x y : l[x, y] = - l[y, x].
+Lemma lie_anticommutative x y : l[x, y] = - l[y, x].
 Proof.
 apply/eqP; rewrite -subr_eq0 opprK; apply/eqP.
 transitivity l[x + y, x + y]; last by rewrite LieAlgebra.alternative.
 apply/esym.
-move: (proj1 (@LieAlgebra.liebilinear _ A (x + y)) 1 x y); rewrite !scale1r => ->.
-move: (proj2 (@LieAlgebra.liebilinear _ A x) 1 x y); rewrite !scale1r => ->.
-move: (proj2 (@LieAlgebra.liebilinear _ A y) 1 x y); rewrite !scale1r => ->.
+move: (proj1 (LieAlgebra.liebilinear (x + y)) 1 x y); rewrite !scale1r => ->.
+move: (proj2 (LieAlgebra.liebilinear x) 1 x y); rewrite !scale1r => ->.
+move: (proj2 (LieAlgebra.liebilinear y) 1 x y); rewrite !scale1r => ->.
 by rewrite !LieAlgebra.alternative !(addr0,add0r).
 Qed.
 
 End lie_algebra_properties.
 
 Section lie_square_matrix.
-Variables (R : rcfType) (n : nat).
+Variables (R : comRingType) (n : nat).
 
 Definition lie_sqmat (t1 t2 : 'M[R]_n.+1) := t1 * t2 - t2 * t1.
 
@@ -223,9 +231,6 @@ Qed.
 
 End lie_square_matrix.
 
-Canonical lie_algebra_square_matrix (R : rcfType) (n : nat) : LieAlgebra.t R :=
-  @LieAlgebra.mk _ _ (@lie_sqmat R n) (@lie_sqmat_bilinear R _) (@lie_sqmat_alternative R _) (@lie_sqmat_jacobi R _).
-
 Section lie_euclidean_3.
 Variable (R : rcfType).
 Let vector := 'rV[R]_3.
@@ -239,14 +244,18 @@ Definition lie_euclidean_3_jacobi := @jacobi_crossmul R.
 
 End lie_euclidean_3.
 
-Canonical lie_euclidean_3 (R : rcfType) :=
-  @LieAlgebra.mk R _ _ (@lie_euclidean_3_bilinear R) (@lie_euclidean_3_alternative R) (@lie_euclidean_3_jacobi R).
+Canonical lie_algebra_sqmat_type (R : comRingType) n := LieAlgebra.Pack 
+  (@lie_sqmat_bilinear R n) (@lie_sqmat_alternative _ _) (@lie_sqmat_jacobi _ _).
 
-Goal forall (R : rcfType) (u v : 'rV[R]_3), u *v v = - v *v u.
+Canonical lie_euclidean_3_type (R : rcfType) := LieAlgebra.Pack 
+  (@lie_euclidean_3_bilinear R) (@lie_euclidean_3_alternative R) (@lie_euclidean_3_jacobi R).
+
+Goal forall (R : rcfType) (u v : 'rV[R]_3), 
+  @LieAlgebra.op _ (lie_euclidean_3_type R) u v = - (v *v u).
+(* NB: lie[u, v] does not yet properly work *)
 Proof.
 move=> R u v.
-rewrite lie_anticommutativity.
-rewrite /=.
+by rewrite lie_anticommutative.
 Abort.
 
 Section twist_properties.
@@ -254,7 +263,7 @@ Section twist_properties.
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 
-Lemma mkE (t : TwistCoor.t R) : \T((\v( t )), (\w( t ))) = t.
+Lemma mkE (t : TwistCoor.t R) : \T(\v( t ), \w( t )) = t.
 Proof.
 rewrite /TwistCoor.mk /TwistCoor.ang /TwistCoor.lin -[RHS](@submxK R 1 0 3 3 t).
 f_equal; apply/matrixP; by do 2 case.

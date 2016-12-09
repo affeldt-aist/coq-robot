@@ -521,116 +521,176 @@ Canonical base1_is_noframe (R : rcfType) (u : 'rV[R]_3) (u1 : norm u = 1) :=
 Module Base.
 Section build_base.
 Variables (R : rcfType) (u : 'rV[R]_3).
-Hypothesis u0 : u != 0.
 
-Definition i := normalize u.
-Definition j := Base1.j i.
-Definition k := Base1.k i.
+Definition i := if u == 0 then 'e_0 else normalize u.
+Definition j := if u == 0 then 'e_1 else Base1.j i.
+Definition k := if u == 0 then 'e_2%:R else Base1.k i.
 
 Lemma normi : norm i = 1.
-Proof. by rewrite norm_normalize. Qed.
-
-Lemma iE_new : i = normalize u. Proof. done. Qed.
+Proof.
+rewrite /i; case: ifP => [_|/eqP/eqP ?]; first by rewrite normeE.
+by rewrite norm_normalize.
+Qed.
 
 Definition frame := Base1.frame normi.
 
 Lemma iE : i = frame |, 0.
 Proof. by rewrite rowK. Qed.
 Lemma jE : j = frame |, 1.
-Proof. by rewrite /= rowK. Qed.
+Proof.
+rewrite /= !rowK /= /j; case: ifP => // u0.
+by rewrite /Base1.j /i u0 colinear_refl.
+Qed.
 Lemma kE : k = frame |, 2%:R.
-Proof. by rewrite /= rowK. Qed.
+Proof.
+rewrite /= !rowK /= /k; case: ifP => // u0.
+by rewrite /Base1.k /Base1.j /i u0 colinear_refl vecij.
+Qed.
 
 Lemma normj : norm j = 1.
-Proof. by rewrite /j normj // normi. Qed.
+Proof.
+rewrite /j; case: ifP => [|/eqP/eqP u0]; first by rewrite normeE.
+by rewrite Base1.normj // normi.
+Qed.
 Lemma normk : norm k = 1.
-Proof. by rewrite /k normk // normi. Qed.
+Proof.
+rewrite /k; case: ifP => [|/eqP/eqP u0]; first by rewrite normeE.
+by rewrite /k normk // normi.
+Qed.
 
 Lemma idotj : i *d j = 0.
-Proof. by rewrite idotj // normi. Qed.
+Proof.
+rewrite /i /j; case: ifP => [|/eqP/eqP u0]; first by rewrite dote2.
+by rewrite Base1.idotj // norm_normalize.
+Qed.
 Lemma idotk : i *d k = 0.
-Proof. by rewrite idotk // normi. Qed.
+Proof.
+rewrite /i /k; case: ifP => [|/eqP/eqP u0]; first by rewrite dote2.
+by rewrite Base1.idotk // norm_normalize.
+Qed.
 Lemma jdotk : j *d k = 0.
-Proof. by rewrite jdotk // normi. Qed.
+Proof.
+rewrite /j /k; case: ifP => [|/eqP/eqP u0]; first by rewrite dote2.
+by rewrite Base1.jdotk // norm_normalize.
+Qed.
 
 Lemma icrossj : i *v j = k.
-Proof. move: (frame_icrossj frame); by rewrite !rowK. Qed.
+Proof.
+move: (frame_icrossj frame).
+rewrite !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecij.
+Qed.
 Lemma icrossk : i *v k = - j.
-Proof. move: (frame_icrossk frame); by rewrite !rowK. Qed.
+Proof.
+move: (frame_icrossk frame).
+rewrite !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecik.
+Qed.
 Lemma jcrossk : j *v k = i.
-Proof.  move: (frame_jcrossk frame); by rewrite !rowK. Qed.
+Proof.
+move: (frame_jcrossk frame).
+rewrite !rowK /= /i /j /k; case: ifP => // u0 _; by rewrite vecjk.
+Qed.
 
-Lemma is_SO : NOFrame.M frame \is 'SO[R]_3.
-Proof. exact: Base1.is_SO. Qed.
+Lemma is_SO : col_mx3 i j k \is 'SO[R]_3.
+Proof.
+rewrite /i /j /k; case/boolP : (u == 0) => u0.
+  apply/rotation3P; by rewrite !rowK /= !normeE !dote2 vecij !eqxx.
+rewrite /i /j (negbTE u0); exact: (Base1.is_SO (norm_normalize u0)).
+Qed.
 
 End build_base.
 
 Section build_base_lemmas.
 
 Variable (R : rcfType) (u : 'rV[R]_3).
-Hypothesis u0 : u != 0.
 
 Lemma jZ p (p0 : 0 < p) : j (p *: u) = j u.
-Proof. by rewrite /j /i normalizeZ. Qed.
+Proof.
+rewrite /j /i; case/boolP : (u == 0) => u0.
+  by rewrite scaler_eq0 u0 orbT.
+by rewrite scaler_eq0 gtr_eqF //= (negbTE u0) normalizeZ.
+Qed.
 
 Lemma jN : j (- u) = j u.
-Proof. by rewrite /j /i normalizeN Base1.jN. Qed.
+Proof.
+rewrite /j /i; case/boolP : (u == 0) => u0.
+  by rewrite eqr_oppLR oppr0 u0.
+by rewrite eqr_oppLR oppr0 (negbTE u0) normalizeN Base1.jN.
+Qed.
 
 Lemma jZN p (p0 : p < 0) : j (p *: u) = j u.
 Proof.
-by rewrite -(opprK p) scaleNr /j /i normalizeN Base1.jN normalizeZ //
-  -oppr_lt0 opprK.
+rewrite /j; case/boolP : (u == 0) => u0.
+  by rewrite scaler_eq0 u0 ltr_eqF //.
+rewrite scaler_eq0 ltr_eqF //= (negbTE u0).
+rewrite /i scaler_eq0 ltr_eqF; last assumption.
+by rewrite (negbTE u0) /= -(opprK p) scaleNr /j /i normalizeN Base1.jN
+  normalizeZ // -oppr_lt0 opprK.
 Qed.
 
 Lemma kZ p (p0 : 0 < p) : k (p *: u) = k u.
-Proof. by rewrite /k /i normalizeZ. Qed.
-
-Lemma kN : k (- u) = - k u.
-Proof. by rewrite /k /i normalizeN Base1.kN. Qed.
-
-Lemma kZN p (p0 : p < 0) : k (p *: u) = - k u.
 Proof.
-by rewrite /k /i -(opprK p) scaleNr normalizeN Base1.kN normalizeZ //
-  -oppr_lt0 opprK.
+rewrite /k scaler_eq0; case/boolP : (u == 0) => u0 /=.
+  by rewrite orbT.
+rewrite orbF gtr_eqF; last assumption.
+by rewrite /i scaler_eq0 (negbTE u0) orbF (gtr_eqF p0) normalizeZ.
+Qed.
+
+Lemma kN : k (- u) = if u == 0 then 'e_2%:R else - k u.
+Proof.
+rewrite /k /i eqr_oppLR oppr0.
+case/boolP : (u == 0) => // u0; by rewrite normalizeN Base1.kN.
+Qed.
+
+Lemma kZN p (p0 : p < 0) : k (p *: u) = if u == 0 then 'e_2%:R else - k u.
+Proof.
+rewrite /k /i scaler_eq0 (ltr_eqF p0) /=.
+case/boolP : (u == 0) => u0 //; rewrite -(opprK p) scaleNr normalizeN.
+by rewrite normalizeZ // -?oppr_lt0 ?opprK // Base1.kN.
 Qed.
 
 Lemma j_tr_mul (v : 'rV[R]_3) (v1 : norm v = 1) : j v *m v^T = 0.
 Proof.
-rewrite /j /i normalizeI // /Base1.j.
+rewrite /j (negbTE (norm1_neq0 v1)) /Base1.j.
 case: ifPn => [|_].
   case/colinearP => [|[_[k [Hk1 Hk2]]]].
     move/eqP/rowP/(_ ord0).
     rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
+  rewrite /i (negbTE (norm1_neq0 v1)) normalizeI // in Hk2.
   by rewrite dotmulP Hk2 dotmulvZ dote2 oner_eq0 mulr0 (mx11_scalar 0) mxE.
-apply/eqP; by rewrite -scalemxAl scaler_eq0 normalcomp_mul_tr // orbT.
+apply/eqP.
+rewrite -scalemxAl scaler_eq0 {2}/i (negbTE (norm1_neq0 v1)) normalizeI //.
+by rewrite normalcomp_mul_tr // orbT.
 Qed.
 
 Lemma k_tr_mul (v : 'rV[R]_3) (v1 : norm v = 1) : k v *m v^T *m v = 0.
 Proof.
-rewrite /Base.k /Base.i normalizeI // /Base1.k /Base1.j.
+rewrite /k (negbTE (norm1_neq0 v1)) /Base1.k /Base1.j.
 case: ifPn => [|_].
   case/colinearP => [|[_[k [Hk1 Hk2]]]].
     move/eqP/rowP/(_ ord0).
     rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
+  rewrite /i (negbTE (norm1_neq0 v1)) normalizeI // in Hk2.
+  rewrite /i (negbTE (norm1_neq0 v1)) normalizeI //.
   rewrite {1}Hk2 crossmulZv vecij -2!scalemxAl {1}Hk2 linearZ /= -scalemxAr.
   by rewrite dotmulP dote2 scale_scalar_mx mulr0 mul_scalar_mx scale0r scaler0.
 apply/eqP.
 rewrite /normalize crossmulvZ -!scalemxAl scaler_eq0; apply/orP; right.
 rewrite /normalcomp linearD /= crossmulvN 2!crossmulvZ crossmulvv 2!scaler0 subr0.
 move: (axialcompE (v *v 'e_0) v).
-rewrite v1 expr1n invr1 scale1r => <-; by rewrite axialcomp_crossmul.
+rewrite v1 expr1n invr1 scale1r /i (negbTE (norm1_neq0 v1)) normalizeI // => <-.
+by rewrite axialcomp_crossmul.
 Qed.
 
 End build_base_lemmas.
 
 End Base.
 
-Canonical base_is_noframe (R : rcfType) (u : 'rV[R]_3) (u0 : u != 0) :=
-  NOFrameInterface.mk (Base.normi u0) (Base.normj u0) (Base.normk u0)
-  (Base.idotj u0) (Base.jdotk u0) (Base.idotk u0).
+Canonical base_is_noframe (R : rcfType) (u : 'rV[R]_3) (*(u0 : u != 0)*) :=
+  NOFrameInterface.mk (Base.normi u) (Base.normj u) (Base.normk u)
+  (Base.idotj u) (Base.jdotk u) (Base.idotk u).
 
-Canonical frame_is_frame (R : rcfType) (u : 'rV[R]_3) (u0 : u != 0) :=
-  @FrameInterface.mk _ (base_is_noframe u0) (Base.icrossj u0).
+Canonical frame_is_frame (R : rcfType) (u : 'rV[R]_3) (*(u0 : u != 0)*) :=
+  @FrameInterface.mk _ (base_is_noframe u) (Base.icrossj u).
 
 (*Module Frame.
 Section frame_section.

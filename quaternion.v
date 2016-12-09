@@ -645,27 +645,31 @@ apply/isRotP; split.
   by rewrite quat_rot_is_linearE quat_rot_axis.
 - rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
   rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
-  move: (Base.frame a10).
+  move: (Base.frame a`1).
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /=.
   rewrite (_ : a`1 *d Base.j a`1 = 0); last first.
-    by rewrite -{1}(norm_scale_normalize a`1) dotmulZv -/(Base.i a`1) idotj // mulr0.
+    move/eqP: (Base.idotj a`1).
+    by rewrite /Base.i (negbTE a10) dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
   rewrite scale0r mul0rn addr0.
   rewrite (_ : a`1 *v Base.j a`1 = norm a`1 *: Base.k a`1); last first.
-   by rewrite -icrossj /= -crossmulZv norm_scale_normalize crossmulC.
+    by rewrite -icrossj /= -crossmulZv /Base.i (negbTE a10) norm_scale_normalize.
   rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
   by rewrite polar_of_uquat_prop.
   by rewrite mulrnAl polar_of_uquat_prop2.
 - rewrite /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
   rewrite /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
-  move: (Base.frame a10).
+  move: (Base.frame a`1).
   rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
   rewrite quat_rot_is_linearE quat_rotE /=.
   rewrite (_ : a`1 *d Base.k a`1 = 0); last first.
-    by rewrite -{1}(norm_scale_normalize a`1) dotmulZv -/(Base.i a`1) idotk // mulr0.
+    (* TODO: looks like the above *)
+    move/eqP: (Base.idotk a`1).
+    by rewrite /Base.i (negbTE a10) dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
   rewrite scale0r mul0rn addr0.
   rewrite (_ : a`1 *v Base.k a`1 = - norm a`1 *: Base.j a`1); last first.
-    by rewrite scaleNr -scalerN -(Base.icrossk a10) -crossmulZv norm_scale_normalize.
+    rewrite scaleNr -scalerN -(Base.icrossk a`1) -crossmulZv.
+    by rewrite /Base.i (negbTE a10) norm_scale_normalize.
   rewrite addrC; congr (_ + _ *: _); last first.
     by rewrite -polar_of_uquat_prop.
   rewrite scaleNr scalerN scalerA mulNrn scalerMnl -scaleNr; congr (_ *: _).
@@ -688,3 +692,12 @@ Notation "Q '_k'" := ((quatr Q)``_(2%:R : 'I_3)) (at level 1, format "Q '_k'") :
 Notation "'`i'" := ('e_0)%:v : quat_scope.
 Notation "'`j'" := ('e_1)%:v : quat_scope.
 Notation "'`k'" := ('e_2%:R)%:v : quat_scope.
+
+Section dual_quaternion.
+Variable R : rcfType.
+
+Record dquat := mkDquat {dquatl : quat R ; dquatr : quat R}.
+
+(* TODO: dual quaternions and rigid body transformations *)
+
+End dual_quaternion.
