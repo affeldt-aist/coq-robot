@@ -643,33 +643,30 @@ set a' := atan _.
 apply/isRotP; split.
 - set u : 'rV_3 := normalize a`1.
   by rewrite quat_rot_is_linearE quat_rot_axis.
-- rewrite -Base.jE /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
-  rewrite -Base.kE /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
-  move: (Base.frame a`1).
-  rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
+- rewrite /normalize Base.Z ?invr_gt0 ?norm_gt0 //.
+  set f := Base.frame a`1.
   rewrite quat_rot_is_linearE quat_rotE /=.
-  rewrite (_ : a`1 *d Base.j a`1 = 0); last first.
-    move/eqP: (Base.idotj a`1).
-    by rewrite /Base.i (negbTE a10) dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
+  rewrite (_ : a`1 *d f|,1 = 0); last first.
+    move/eqP: (dot_row_of_O (NOFrame.MO f) 0 1).
+    by rewrite -2!rowframeE Base.frame0E // dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
   rewrite scale0r mul0rn addr0.
-  rewrite (_ : a`1 *v Base.j a`1 = norm a`1 *: Base.k a`1); last first.
-    by rewrite -icrossj /= -crossmulZv /Base.i (negbTE a10) norm_scale_normalize.
+  rewrite (_ : a`1 *v f|,1 = norm a`1 *: f|,2%:R); last first.
+    rewrite -Base.kE -Base.icrossj Base.iE Base.jE -crossmulZv Base.frame0E //.
+    by rewrite norm_scale_normalize rowframeE.
   rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
   by rewrite polar_of_uquat_prop.
   by rewrite mulrnAl polar_of_uquat_prop2.
-- rewrite -Base.jE /normalize Base.jZ //; last by rewrite invr_gt0 norm_gt0.
-  rewrite -Base.kE /normalize Base.kZ //; last by rewrite invr_gt0 norm_gt0.
-  move: (Base.frame a`1).
-  rewrite -/(Base.j a`1) -/(Base.k a`1) => f.
+- rewrite /normalize Base.Z ?invr_gt0 ?norm_gt0 //.
+  set f := Base.frame a`1.
   rewrite quat_rot_is_linearE quat_rotE /=.
-  rewrite (_ : a`1 *d Base.k a`1 = 0); last first.
+  rewrite (_ : a`1 *d f|,2%:R = 0); last first.
     (* TODO: looks like the above *)
-    move/eqP: (Base.idotk a`1).
-    by rewrite /Base.i (negbTE a10) dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
+    move/eqP: (dot_row_of_O (NOFrame.MO f) 0 2%:R).
+    by rewrite -2!rowframeE Base.frame0E // dotmulZv mulf_eq0 invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
   rewrite scale0r mul0rn addr0.
-  rewrite (_ : a`1 *v Base.k a`1 = - norm a`1 *: Base.j a`1); last first.
-    rewrite scaleNr -scalerN -(Base.icrossk a`1) -crossmulZv.
-    by rewrite /Base.i (negbTE a10) norm_scale_normalize.
+  rewrite (_ : a`1 *v f|,2%:R = - norm a`1 *: f|,1); last first.
+    rewrite scaleNr -scalerN -Base.jE -Base.icrossk -crossmulZv -Base.kE; congr (_ *v _).
+    by rewrite Base.iE Base.frame0E // ?norm_scale_normalize.
   rewrite addrC; congr (_ + _ *: _); last first.
     by rewrite -polar_of_uquat_prop.
   rewrite scaleNr scalerN scalerA mulNrn scalerMnl -scaleNr; congr (_ *: _).

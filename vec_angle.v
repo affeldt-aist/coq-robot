@@ -471,6 +471,15 @@ Lemma sin_vec_angle_iff (u v : 'rV[R]_3) (u0 : u != 0) (v0 : v != 0) :
   0 <= sin (vec_angle u v) ?= iff (colinear u v).
 Proof. split; [exact: sin_vec_angle_ge0|by rewrite colinear_sin]. Qed.
 
+Lemma invariant_colinear (u : 'rV[R]_3) (M : 'M[R]_3) :
+  u != 0 -> u *m M = u -> forall v, colinear u v -> v *m M = v.
+Proof.
+move=> u0 uMu v /colinearP[/eqP->|[v0 [k [Hk1 Hk2]]]]; first by rewrite mul0mx.
+move: uMu; rewrite Hk2 -scalemxAl => /eqP.
+rewrite -subr_eq0 -scalerBr scaler_eq0 -normr_eq0 Hk1 mulf_eq0 invr_eq0.
+by rewrite 2!norm_eq0 (negbTE u0) (negbTE v0) /= subr_eq0 => /eqP.
+Qed.
+
 End colinear.
 
 Section axial_normal_decomposition.

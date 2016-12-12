@@ -988,6 +988,10 @@ apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
 rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
 Qed.
 
+Lemma dot_row_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i j,
+  row i M *d row j M = (i == j)%:R.
+Proof. by move/orthogonalP. Qed.
+
 Lemma norm_col_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (col i M)^T = 1.
 Proof.
 move=> MSO i.
