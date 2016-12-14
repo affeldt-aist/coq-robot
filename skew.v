@@ -17,9 +17,10 @@ Require vec_angle.
  OUTLINE:
  1. section on symmetric and antisymmetry matrices.
  2. section skew
-     (properties of skew matrices)
-     (sample lemma: eigenvalues of skew matrices)
-     Cayley transformation
+    properties of skew matrices
+    sample lemma: eigenvalues of skew matrices
+ 3. section cayley_transform
+ 4. wip
 *)
 
 Set Implicit Arguments.
@@ -407,99 +408,6 @@ case: i => [] [] // [] // i _ /=.
 by rewrite !mxE; Simp.ord.
 Qed.
 
-(* TODO: move to aux? *)
-Lemma char_poly3_coef1 (M : 'M[R]_3) :
-  let Z := 1 / 2%:R * (\tr M ^+ 2 - \tr (M ^+ 2)) in
-  (char_poly M)`_1 = Z.
-Proof.
-move=> Z.
-rewrite /char_poly /char_poly_mx det_mx33 !mxE mulr1n mulr0n !add0r.
-rewrite !mulNr !mulrN !opprK.
-rewrite !coefD.
-(* 1 *)
-rewrite [X in X + _ + _](_ : _ = M 0 0 * (M 2%:R 2%:R + M 1 1) +
-   (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R)); last first.
-  rewrite coefM sum2E coefD coefX add0r coefN coefC [- _]/=.
-  rewrite subn0 coefD.
-  rewrite coefM sum2E subn0 coefD coefX add0r coefN (_ : _`_0 = M 1 1); last by rewrite coefC.
-  rewrite coefD coefX coefN coefC subr0 mulr1.
-  rewrite coefD coefN coefX coefN coefC subr0 mul1r.
-  rewrite subnn coefD coefX add0r coefN coefC [in X in - M 1 1 - X]/=.
-  rewrite coefM sum2E coefC coefC mulr0 add0r coefC mul0r subr0.
-  rewrite coefD coefX coefN coefC subr0 mul1r.
-  rewrite coefD coefM sum1E coefD coefX add0r coefN coefC [in X in - X * _`_ _]/=.
-  rewrite coefD coefX add0r coefN coefC mulrN !mulNr opprK.
-  rewrite coefN coefM sum1E coefC coefC [in X in M 1 1 * _ - X]/=.
-  by rewrite -opprB mulrN 2!opprK.
-rewrite [X in _ + X + _](_ : _ = - M 0 1 * M 1 0); last first.
-  rewrite coefN coefM sum2E coefC [in X in X * _]/= subnn.
-  rewrite coefD subn0 coefM sum2E.
-  rewrite subn0 subnn coefC coefC mulr0 add0r.
-  rewrite coefC mul0r add0r.
-  rewrite coefM sum2E subn0 subnn coefC coefD coefX coefN coefC subr0 mulr1.
-  rewrite coefC mul0r addr0 coefC mul0r addr0.
-  by rewrite mulNr.
-rewrite [X in _ + _ + X](_ : _ = - M 0 2%:R * M 2%:R 0); last first.
-  rewrite coefN coefM sum2E subn0 subnn coefC.
-  rewrite [in X in X * _]/=.
-  rewrite coefD coefM sum2E subn0 coefC coefC mulr0 add0r.
-  rewrite coefC mul0r add0r coefM sum2E subn0 subnn coefC [in X in X * _`_1]/=.
-  by rewrite coefD coefX coefN coefC subr0 mulr1 coefC mul0r addr0 coefC mul0r addr0 mulNr.
-rewrite /Z.
-apply/(@mulrI _ 2%:R); first exact: pnatf_unit.
-rewrite mulrA div1r divrr ?pnatf_unit // mul1r.
-rewrite sqr_mxtrace.
-rewrite mxtrace_sqr.
-rewrite 3!opprD -[in RHS]addrAC [in RHS](addrC (\sum_ _ _)) 3![in RHS]addrA addrK.
-rewrite mulrDr addrC mulNr mulrN (mulrC 2%:R) mulr_natr.
-rewrite -2![in RHS]addrA [in RHS]addrC -[in RHS]addrA; congr (_ + _).
-rewrite mulrDr addrC mulNr mulrN (mulrC 2%:R) mulr_natr.
-rewrite [in RHS]addrA [in RHS]addrC; congr (_ + _).
-rewrite addrA mulrDr addrC mulrN (mulrC 2%:R) mulr_natr mulrC -addrA; congr (_ + _).
-rewrite (mulrC 2%:R) mulr_natr.
-rewrite mulrDr.
-rewrite mulrDl.
-rewrite mulr2n.
-rewrite [in RHS]mulr2n.
-rewrite [in X in _ = _ + X]mulr2n.
-rewrite -!addrA; congr (_ + _).
-rewrite addrC -!addrA; congr (_ + (_ + _)).
-by rewrite addrCA.
-Qed.
-
-(* TODO: move to aux? *)
-Lemma char_poly3 (M : 'M[R]_3) :
-  let Z := 1 / 2%:R * ((\tr M) ^+ 2 - \tr (M ^+ 2)) in
-  char_poly M = 'X^3 - (\tr M) *: 'X^2 + Z *: 'X - (\det M)%:P.
-Proof.
-move=> Z.
-rewrite -(coefK (char_poly M)) (size_char_poly M).
-apply/polyP.
-case. (* coef0 *)
-  rewrite coef_poly char_poly_det !coef_add_poly !coef_opp_poly !coefZ.
-  rewrite !coefX !coefXn add0r mulr0 oppr0 mulr0 add0r add0r coefC /=.
-  by rewrite exprS sqrrN expr1n mulr1 mulN1r.
-case; last first.
-  case. (* coef2 *)
-    rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
-    by rewrite add0r mulr0 mulr1 addr0 coefC subr0 char_poly_trace.
-  case; last first. (* coef n >= 4 *)
-    move=> n.
-    rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
-    by rewrite add0r mulr0 mulr0 coefC subr0 addr0 oppr0.
-  (* coef3 *)
-  rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
-  rewrite mulr0 subr0 mulr0 addr0 coefC subr0; apply/eqP.
-  rewrite (_ : _`_3 = lead_coef (char_poly M)); last first.
-    by rewrite lead_coefE size_char_poly.
-  by rewrite -monicE char_poly_monic.
-(* coef1 *)
-rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
-rewrite add0r mulr1 mulr0 oppr0 add0r coefC subr0.
-suff : (char_poly M)`_1 = Z by move=> ->.
-by rewrite char_poly3_coef1.
-Qed.
-
 Lemma char_poly_skew_mx u : char_poly \S( u ) = 'X^3 + norm u ^+2 *: 'X.
 Proof.
 rewrite char_poly3 det_skew_mx subr0 trace_anti ?anti_skew //.
@@ -538,10 +446,65 @@ rewrite !inE orbA; apply/orP; right.
 by rewrite eq_complex /= oppr0 !eqxx.
 Qed.
 
-(* TODO: move *)
+End skew.
+
+Notation "'\S(' w ')'" := (skew_mx w) (at level 3, format "'\S(' w ')'").
+
+Section cayley_transform.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Implicit Types u : vector.
+
+(* TODO: move? *)
+Lemma ortho_addr1 n M : M \is 'O[R]_n.+1 -> 
+  -1 \notin eigenvalue M -> M + 1 \is a GRing.unit.
+Proof.
+move=> MO N1.
+rewrite unitmxE unitfE.
+apply: contra N1 => /det0P[x x0 /eqP].
+rewrite mulmxDr mulmx1 addr_eq0 eq_sym eqr_oppLR => /eqP Hx.
+apply/eigenvalueP; exists x => //; by rewrite scaleN1r {2}Hx opprK.
+Qed.
+
+(* given an orthogonal matrix (-1 not eigenvalue), builds a skew-symmetric matrix *)
+Definition skew_of_ortho n (M : 'M[R]_n.+1) := (M + 1)^-1 * (M - 1).
+
+Lemma trmx_skew_of_orth n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 ->
+  -1 \notin eigenvalue M -> (skew_of_ortho M)^T = - skew_of_ortho M.
+Proof.
+move=> MO N1.
+rewrite /skew_of_ortho trmx_mul trmxV linearD /= [in X in _ *m X]linearD.
+rewrite linearN /= trmx1 -(orthogonal_inv MO) -(mul1mx (_ + _)^-1).
+rewrite -[X in _ *m (X *m _) = _](orthogonal_mul_tr MO).
+rewrite !mulmxA mulmxBl mul1mx mulVmx // ?orthogonal_unit //.
+rewrite -mulmxA -(orthogonal_inv MO) mulmxE -invrM; last 2 first.
+  suff : M + 1 \is a GRing.unit.
+    by rewrite !unitmxE !unitfE -det_tr linearD /= trmx1 orthogonal_inv.
+  by rewrite ortho_addr1.
+  by rewrite orthogonal_unit.
+rewrite (mulrDl _ _ M) mul1r mulVr ?orthogonal_unit // -opprB.
+have Htmp : M * (1 + M)^-1 = (1 + M)^-1 * M.
+  rewrite -{1}(invrK M) -invrM; last 2 first.
+    by rewrite addrC ortho_addr1.
+    by rewrite orthogonal_inv // unitr_trmx ?orthogonal_unit.
+  rewrite mulrDl divrr ?orthogonal_unit // div1r (orthogonal_inv MO).
+  rewrite -{1}(orthogonal_tr_mul MO) -{1}(mulr1 M^T) -mulrDr invrM; last 2 first.
+    by rewrite unitr_trmx orthogonal_unit.
+    by rewrite addrC ortho_addr1.
+  by rewrite -trmxV (orthogonal_inv MO) trmxK.
+by rewrite mulNr mulrBl Htmp mul1r -{2}(mulr1 (1 + M)^-1) -mulrBr addrC.
+Qed.
+
+Lemma skew_of_ortho_is_so n Q : Q \is 'O[R]_n.+1 ->
+  -1 \notin eigenvalue Q -> skew_of_ortho Q \is 'so[R]_n.+1.
+Proof. move=> HQ N1; by rewrite antiE trmx_skew_of_orth // ?opprK. Qed.
+
+(* TODO: move? *)
 Lemma sub1radd1r_comm n (M : 'M[R]_n.+1) : (1 - M) * (1 + M) = (1 + M) * (1 - M).
 Proof. by rewrite mulrDr mulr1 mulrBl mul1r mulrDl mul1r mulrBr mulr1. Qed.
 
+(* TODO: move? *)
 Lemma det_sub1skew_mx u : \det (1 - \S( u )) = 1 + norm u ^+ 2.
 Proof.
 set a := skew_mx u.
@@ -551,12 +514,14 @@ rewrite -!addrA; congr (_ + _); rewrite !addrA.
 by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC sqr_norm sum3E.
 Qed.
 
+(* TODO: move? *)
 Lemma skew_mx_inv u : 1 - \S( u ) \is a GRing.unit.
 Proof.
 set a := skew_mx u.
 by rewrite unitmxE unitfE det_sub1skew_mx paddr_eq0 // ?ler01 // ?sqr_ge0 // negb_and oner_neq0.
 Qed.
 
+(* TODO: move? *)
 Lemma det_add1skew_mx u : \det (1 + \S( u )) = 1 + norm u ^+ 2.
 Proof.
 set a := skew_mx u.
@@ -568,63 +533,61 @@ rewrite mulrDr -expr2 (addrC _ (_^+2)) -!addrA addrC; congr (_ + _).
 by rewrite mulrBr opprB -expr2 addrCA mulrCA subrr addr0.
 Qed.
 
+(* TODO: move? *)
 Lemma sym_add1r M : M \is 'so[R]_3 -> \det (1 + M) != 0.
 Proof.
 move/unskewK => <-.
 by rewrite det_add1skew_mx paddr_eq0 // ?sqr_ge0 // oner_eq0.
 Qed.
 
+(* TODO: move? *)
 Lemma sym_sub1r M : M \is 'so[R]_3 -> \det (1 - M) != 0.
 Proof.
 move/unskewK => <-.
 by rewrite det_sub1skew_mx paddr_eq0 // ?sqr_ge0 // oner_eq0.
 Qed.
 
-(* TODO: rename cayley_of_sym? *)
-Definition cayley_of_skew M := (1 + M) * (1 - M)^-1.
+(* given a skew-symmetric matrix, builds an orthogonal matrix *)
+Definition ortho_of_skew n (M : 'M[R]_n.+1) := (1 + M) * (1 - M)^-1.
 
-Lemma trmx_cayley_of_skew M : M \is 'so[R]_3 ->
-  (cayley_of_skew M)^T = (1 + M)^-1 * (1 - M).
+Lemma trmx_ortho_of_skew n M : M \is 'so[R]_n.+1 ->
+  (ortho_of_skew M)^T = (1 + M)^-1 * (1 - M).
 Proof.
 move=> Mso.
-rewrite /cayley_of_skew trmx_mul trmxV linearB /= trmx1 linearD /= trmx1.
+rewrite /ortho_of_skew trmx_mul trmxV linearB /= trmx1 linearD /= trmx1.
 move: (Mso); rewrite antiE => /eqP {1}<-.
 move: Mso; rewrite antiE => /eqP {2}->; by rewrite linearN /= trmxK.
 Qed.
 
-Lemma cayley_of_skew_is_O M : M \is 'so[R]_3 -> cayley_of_skew M \is 'O[R]_3.
+Lemma ortho_of_skew_is_O M : M \is 'so[R]_3 -> ortho_of_skew M \is 'O[R]_3.
 Proof.
 move=> Mso.
-rewrite orthogonalEC trmx_cayley_of_skew // /cayley_of_skew.
+rewrite orthogonalEC trmx_ortho_of_skew // /ortho_of_skew.
 rewrite -mulrA (mulrA (1 - M)) sub1radd1r_comm !mulrA.
 rewrite mulVr ?mul1r ?unitmxE ?unitfE ?sym_add1r //.
 by rewrite mulrV // unitmxE unitfE sym_sub1r.
 Qed.
 
-Lemma det_caley M : M \is 'so[R]_3 -> \det (cayley_of_skew M) = 1.
+Lemma det_ortho_of_skew M : M \is 'so[R]_3 -> \det (ortho_of_skew M) = 1.
 Proof.
 move/unskewK => <-.
-rewrite /cayley_of_skew det_mulmx det_inv det_add1skew_mx det_sub1skew_mx.
+rewrite /ortho_of_skew det_mulmx det_inv det_add1skew_mx det_sub1skew_mx.
 by rewrite divrr // unitfE paddr_eq0 ?oner_eq0 /= // sqr_ge0.
 Qed.
 
-Lemma cayley_of_skew_is_SO M : M \is 'so[R]_3 -> cayley_of_skew M \is 'SO[R]_3.
-Proof. move=> Mso; by rewrite rotationE cayley_of_skew_is_O //= det_caley. Qed.
-
-Definition skew_of_ortho (M : 'M[R]_3) := (M - 1) * (M + 1)^-1.
-
-Lemma skew_of_ortho_is_skew Q : Q \is 'O[R]_3 -> skew_of_ortho Q \is 'so[R]_3.
+(* [murray] exercise 5.(a), p.73 *)
+Lemma ortho_of_skew_is_SO M : M \is 'so[R]_3 -> ortho_of_skew M \is 'SO[R]_3.
 Proof.
-move=> HQ.
-rewrite antiE.
-rewrite /skew_of_ortho.
-rewrite trmx_mul.
-rewrite trmxV.
-rewrite linearD /= trmx1.
-rewrite linearB /= trmx1.
-Abort.
+move=> Mso; by rewrite rotationE ortho_of_skew_is_O //= det_ortho_of_skew.
+Qed.
 
-Definition lie_bracket w1 w2 := \S( w1 ) * \S( w2) - \S( w2 ) * \S( w1 ).
+End cayley_transform.
+
+Section wip.
+
+Variable R : rcfType.
+
+Definition lie_bracket (w1 w2 : 'rV[R]_3) := \S( w1 ) * \S( w2) - \S( w2 ) * \S( w1 ).
 
 Local Notation "[ w1 , w2 ]" := (lie_bracket w1 w2).
 
@@ -645,6 +608,4 @@ rewrite Hk2 scalerA mulVr ?scale1r // unitfE; apply: contra w0.
 rewrite Hk2 => /eqP ->; by rewrite scale0r.
 Qed.
 
-End skew.
-
-Notation "'\S(' w ')'" := (skew_mx w) (at level 3, format "'\S(' w ')'").
+End wip.

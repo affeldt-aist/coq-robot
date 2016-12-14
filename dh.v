@@ -191,6 +191,13 @@ Variable F0 F1 : TFrame.t R.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[R]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_frame R) _R^ F0.
 
+Goal Vec F0 p1_in_0 = to_coord F0 (Vec (can_frame R) (TFrame.o F1 - TFrame.o F0)).
+Proof.
+rewrite /p1_in_0.
+rewrite /to_coord.
+rewrite VecK.
+Abort.
+
 Hypothesis dh1 : perpendicular (xaxis F1) (zaxis F0).
 Hypothesis dh2 : intersects (xaxis F1) (zaxis F0).
 

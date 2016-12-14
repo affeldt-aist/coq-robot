@@ -327,7 +327,7 @@ Qed.
 Lemma isRotZN a f k (u0 : u != 0) (k0 : k < 0):
   isRot a (k *: u) (mx_lin1 f) = isRot (- a) u (mx_lin1 f).
 Proof.
-rewrite /isRot /= sinN cosN opprK Base.jZN // Base.kZN //.
+rewrite /isRot /= sinN cosN opprK Base.ZN // Base.jN (Base.kN u0).
 rewrite !scalerN !scaleNr mulNmx eqr_oppLR opprD !opprK -scalemxAl; congr andb.
 apply/idP/idP => [/eqP/scalerI ->//|/eqP ->//]; by move/ltr_eqF : k0 => /negbT.
 Qed.
