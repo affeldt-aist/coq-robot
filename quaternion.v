@@ -685,16 +685,118 @@ Notation "Q '`1'" := (quatr Q) (at level 1, format "Q '`1'") : quat_scope.
 Notation "Q '_i'" := ((quatr Q)``_0) (at level 1, format "Q '_i'") : quat_scope.
 Notation "Q '_j'" := ((quatr Q)``_1) (at level 1, format "Q '_j'") : quat_scope.
 Notation "Q '_k'" := ((quatr Q)``_(2%:R : 'I_3)) (at level 1, format "Q '_k'") : quat_scope.
+Notation "x '^*q'" := (conjq x) (at level 2, format "x '^*q'") : quat_scope.
 
 Notation "'`i'" := ('e_0)%:v : quat_scope.
 Notation "'`j'" := ('e_1)%:v : quat_scope.
 Notation "'`k'" := ('e_2%:R)%:v : quat_scope.
 
+Section dual_number.
+
+Variables (R : rcfType) (a b : R).
+
+Definition deps : 'M[quat R]_2 :=
+  \matrix_(i < 2, j < 2) ((i == 0) && (j == 1))%:R.
+
+Definition dual a b : 'M[quat R]_2 := a%:M + b *: deps.
+
+End dual_number.
+
+(* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
 Variable R : rcfType.
 
 Record dquat := mkDquat {dquatl : quat R ; dquatr : quat R}.
 
-(* TODO: dual quaternions and rigid body transformations *)
+Definition pair_of_dquat a := let: mkDquat a0 a1 := a in (a0, a1).
+Definition dquat_of_pair (x : quat R * quat R) := let: (x0, x1) := x in mkDquat x0 x1.
+
+Lemma dquat_of_pairK : cancel pair_of_dquat dquat_of_pair.
+Proof. by case. Qed.
+
+Definition dquat_eqMixin := CanEqMixin dquat_of_pairK.
+Canonical Structure dquat_eqType := EqType dquat dquat_eqMixin.
+Definition dquat_choiceMixin := CanChoiceMixin dquat_of_pairK.
+Canonical Structure dquat_choiceType := ChoiceType dquat dquat_choiceMixin.
+
+Definition dual_of (a : dquat) : 'M[quat R]_2 := dual (dquatl a) (dquatr a).
+Definition dquat_of (M : 'M[quat R]_2) : dquat := mkDquat (M 0 0) (M 0 1).
+
+Definition adddq_check (a b : dquat) : dquat :=
+  mkDquat (dquatl a + dquatl b) (dquatr a + dquatr b).
+
+Definition muldq_check (a b : dquat) : dquat :=
+  mkDquat (dquatl a * dquatl b) (dquatl a * dquatr b + dquatr a * dquatl b).
+
+Definition adddq (a b : dquat) : dquat := dquat_of (dual_of a + dual_of b).
+
+Lemma adddqE (a b : dquat) : adddq a b = adddq_check a b.
+Proof.
+move: a b => [a1 a2] [b1 b2].
+rewrite /adddq_check /adddq /dual_of /dquat_of /= !mxE.
+by rewrite !eqxx /= !(mulr1n,mulr0,addr0,mulr0n,add0r,mulr1).
+Qed.
+
+Definition muldq (a b : dquat) : dquat := dquat_of (dual_of a * dual_of b).
+
+Lemma muldqE (a b : dquat) : muldq a b = muldq_check a b.
+Proof.
+move: a b => [a1 a2] [b1 b2].
+rewrite /muldq_check /muldq /dual_of /= /dquat_of /= !mxE /= !sum2E !mxE.
+by rewrite !eqxx /= !(mulr1n,mulr0,addr0,mulr0n,add0r,mulr1).
+Qed.
+
+Lemma adddqA : associative adddq.
+Admitted.
+
+Lemma adddqC : commutative adddq.
+Admitted.
+
+Lemma add0dq : left_id (mkDquat 0 0) adddq.
+Admitted.
+
+Definition oppdq a := mkDquat (- dquatl a) (- dquatr a).
+
+Lemma addNdq : left_inverse (mkDquat 0 0) oppdq adddq.
+Admitted.
+
+Definition dquat_ZmodMixin := ZmodMixin adddqA adddqC add0dq addNdq.
+Canonical dquat_ZmodType := ZmodType dquat dquat_ZmodMixin.
+
+Lemma muldqA : associative muldq.
+Admitted.
+
+Lemma mul1dq : left_id (mkDquat 1 1) muldq.
+Admitted.
+
+Lemma muldq1 : right_id (mkDquat 1 1) muldq.
+Admitted.
+
+Lemma muldqDl : left_distributive muldq adddq.
+Admitted.
+
+Lemma muldqDr : right_distributive muldq adddq.
+Admitted.
+
+Lemma onedq_neq0 : mkDquat 1 1 != 0 :> dquat.
+Admitted.
+
+Definition dquat_RingMixin := RingMixin muldqA mul1dq muldq1 muldqDl muldqDr onedq_neq0.
+Canonical Structure dquat_Ring := Eval hnf in RingType dquat dquat_RingMixin.
+
+Local Open Scope quat_scope.
+
+Definition conjdq (a : dquat) := mkDquat (dquatl a)^*q (dquatr a)^*q.
+
+Notation "x '^*dq'" := (conjdq x) (at level 2, format "x '^*dq'").
+
+Lemma conjdqM (a b : dquat) : (a * b)^*dq = b^*dq * a^*dq.
+Admitted.
+
+(* norm *)
+
+(* inverse *)
+
+(* dual quaternions and spatial displacements... *)
 
 End dual_quaternion.
