@@ -747,39 +747,58 @@ by rewrite !eqxx /= !(mulr1n,mulr0,addr0,mulr0n,add0r,mulr1).
 Qed.
 
 Lemma adddqA : associative adddq.
-Admitted.
+Proof. move=> x y z; by rewrite !adddqE /adddq_check /= 2!addrA. Qed.
 
 Lemma adddqC : commutative adddq.
-Admitted.
+Proof.
+move=> x y.
+by rewrite 2!adddqE /adddq_check /= addrC [in X in mkDquat _ X = _]addrC.
+Qed.
 
 Lemma add0dq : left_id (mkDquat 0 0) adddq.
-Admitted.
+Proof. move=> x; rewrite adddqE /adddq_check /= 2!add0r; by case: x. Qed.
 
 Definition oppdq a := mkDquat (- dquatl a) (- dquatr a).
 
 Lemma addNdq : left_inverse (mkDquat 0 0) oppdq adddq.
-Admitted.
+Proof. move=> x; by rewrite adddqE /adddq_check /= 2!addNr. Qed.
 
 Definition dquat_ZmodMixin := ZmodMixin adddqA adddqC add0dq addNdq.
 Canonical dquat_ZmodType := ZmodType dquat dquat_ZmodMixin.
 
 Lemma muldqA : associative muldq.
-Admitted.
+Proof.
+move=> x y z.
+rewrite !muldqE /muldq_check /=; congr mkDquat; first by rewrite mulrA.
+by rewrite mulrDr mulrDl !mulrA addrA.
+Qed.
 
-Lemma mul1dq : left_id (mkDquat 1 1) muldq.
-Admitted.
+Lemma mul1dq : left_id (mkDquat 1 0) muldq.
+Proof.
+case=> x0 x1; by rewrite muldqE /muldq_check /= 2!mul1r mul0r addr0.
+Qed.
 
-Lemma muldq1 : right_id (mkDquat 1 1) muldq.
-Admitted.
+Lemma muldq1 : right_id (mkDquat 1 0) muldq.
+Proof.
+case=> x0 x1; by rewrite muldqE /muldq_check /= 2!mulr1 mulr0 add0r.
+Qed.
 
 Lemma muldqDl : left_distributive muldq adddq.
-Admitted.
+Proof.
+move=> x y z.
+rewrite !muldqE !adddqE /adddq_check /muldq_check /= mulrDl; congr mkDquat.
+rewrite mulrDl -!addrA; congr (_ + _); by rewrite mulrDl addrCA.
+Qed.
 
 Lemma muldqDr : right_distributive muldq adddq.
-Admitted.
+Proof.
+move=> x y z.
+rewrite !muldqE !adddqE /adddq_check /muldq_check /= mulrDr; congr mkDquat.
+rewrite mulrDr -!addrA; congr (_ + _); by rewrite mulrDr addrCA.
+Qed.
 
-Lemma onedq_neq0 : mkDquat 1 1 != 0 :> dquat.
-Admitted.
+Lemma onedq_neq0 : mkDquat 1 0 != 0 :> dquat.
+Proof. apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
 
 Definition dquat_RingMixin := RingMixin muldqA mul1dq muldq1 muldqDl muldqDr onedq_neq0.
 Canonical Structure dquat_Ring := Eval hnf in RingType dquat dquat_RingMixin.
@@ -791,6 +810,7 @@ Definition conjdq (a : dquat) := mkDquat (dquatl a)^*q (dquatr a)^*q.
 Notation "x '^*dq'" := (conjdq x) (at level 2, format "x '^*dq'").
 
 Lemma conjdqM (a b : dquat) : (a * b)^*dq = b^*dq * a^*dq.
+Proof.
 Admitted.
 
 (* norm *)
