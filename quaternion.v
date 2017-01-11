@@ -12,17 +12,19 @@ Require Import finset fingroup perm.
 
 Require Import aux euclidean3 angle vec_angle frame rot.
 
-(*************************************************************************)
-(*  section quaternion                                                   *)
-(* -     definition of quaternions                                       *)
-(* -     definition of addition, negation -> quaternions form a zmodtype *)
-(* -     definition of multiplication -> quaternions form a ring         *)
-(* -     definition of scaling -> quaternions form a lmodtype            *)
-(* -     definition of inverse -> quaternions form a unitringtype        *)
-(* -     definition of conjugate, norm                                   *)
-(* -     definition of unit quaternions                                  *)
-(* -     definition of rotation using unit quaternions                   *)
-(*************************************************************************)
+(*
+1. section quaternion
+  - definition of quaternions
+  - definition of addition, negation -> quaternions form a zmodtype
+  - definition of multiplication -> quaternions form a ring
+  - definition of scaling -> quaternions form a lmodtype
+  - definition of inverse -> quaternions form a unitringtype
+  - definition of conjugate, norm
+  - definition of unit quaternions
+  - definition of rotation using unit quaternions
+2. section dual_number
+3. section dual_quaternion
+*)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -248,6 +250,17 @@ Qed.
 
 Definition conjq (a : quat) := mkQuat (a`0) (- a`1).
 Notation "x '^*q'" := (conjq x) (at level 2, format "x '^*q'").
+
+Lemma conjq_linear : linear conjq.
+Proof.
+move=> /= k [a0 a1] [b0 b1] /=; rewrite [in LHS]/conjq /= [in RHS]/conjq /=.
+rewrite scaleqE /= addqE /= /addq /= !mxE !(mulr0,addr0,scaler0,add0r).
+congr mkQuat; rewrite opprD; congr (_ - _).
+by rewrite -2!scalerDr !scaleNr -!opprD -vec3E -scalerN.
+Qed.
+
+Canonical conjq_is_additive := Additive conjq_linear.
+Canonical conjq_is_linear := AddLinear conjq_linear.
 
 Lemma conjqI a : (a^*q)^*q = a.
 Proof. by case: a => a0 a1; rewrite /conjq /= opprK. Qed.
@@ -693,125 +706,127 @@ Notation "'`k'" := ('e_2%:R)%:v : quat_scope.
 
 Section dual_number.
 
-Variables (R : rcfType) (a b : R).
+Variables (R : ringType).
 
-Definition deps : 'M[quat R]_2 :=
+Record dual := mkDual {ldual : R ; rdual : R }.
+
+Definition dual0 : dual := mkDual 0 0.
+Definition dual1 : dual := mkDual 1 0.
+
+Local Notation "x '``0'" := (ldual x) (at level 1, format "x '``0'").
+Local Notation "x '``1'" := (rdual x) (at level 1, format "x '``1'").
+
+Definition pair_of_dual (a : dual) := let: mkDual a0 a1 := a in (a0, a1).
+Definition dual_of_pair (x : R * R) := let: (x0, x1) := x in mkDual x0 x1.
+
+Lemma dual_of_pairK : cancel pair_of_dual dual_of_pair.
+Proof. by case. Qed.
+
+Definition dual_eqMixin := CanEqMixin dual_of_pairK.
+Canonical Structure dual_eqType := EqType dual dual_eqMixin.
+Definition dual_choiceMixin := CanChoiceMixin dual_of_pairK.
+Canonical Structure dual_choiceType := ChoiceType dual dual_choiceMixin.
+
+Definition oppd a := mkDual (- a``0) (- a``1).
+
+Definition deps : 'M[R]_2 :=
   \matrix_(i < 2, j < 2) ((i == 0) && (j == 1))%:R.
 
-Definition dual a b : 'M[quat R]_2 := a%:M + b *: deps.
+Definition mat_of_dual (x : dual) : 'M[R]_2 := x``0%:M + x``1 *: deps.
+
+Definition dual_of_mat (M : 'M[R]_2) := mkDual (M 0 0) (M 0 1).
+
+Definition addd (x y : dual) := dual_of_mat (mat_of_dual x + mat_of_dual y).
+
+Definition muld (x y : dual) := dual_of_mat (mat_of_dual x * mat_of_dual y).
+
+Let adddE' (a b : dual) : addd a b = mkDual (a``0 + b``0) (a``1 + b``1).
+Proof.
+rewrite /addd /dual_of_mat /mat_of_dual /= !mxE; congr mkDual.
+by rewrite !eqxx !(mulr1n,andbF,mulr1,mulr0,addr0).
+by rewrite !mulr0n !eqxx !mulr1 !add0r.
+Qed.
+
+Let muldE' (a b : dual) : muld a b = mkDual (a``0 * b``0) (a``0 * b``1 + a``1 * b``0).
+Proof.
+rewrite /muld /dual_of_mat /mat_of_dual /= !mxE !sum2E !mxE; congr mkDual.
+by rewrite !eqxx !(mulr0n,mulr1n,mulr0,mulr1,addr0).
+by rewrite !eqxx !(mulr0n,mulr1n,mulr0,add0r,addr0,mulr1).
+Qed.
+
+Lemma adddA : associative addd.
+Proof. move=> x y z; by rewrite !adddE' /= 2!addrA. Qed.
+
+Lemma adddC : commutative addd.
+Proof. move=> x y; by rewrite !adddE' /= addrC [in X in mkDual _ X = _]addrC. Qed.
+
+Lemma add0d : left_id dual0 addd.
+Proof. move=> x; rewrite adddE' /= 2!add0r; by case: x. Qed.
+
+Lemma addNd : left_inverse dual0 oppd addd.
+Proof. move=> x; by rewrite adddE' /= 2!addNr. Qed.
+
+Definition dual_ZmodMixin := ZmodMixin adddA adddC add0d addNd.
+Canonical dual_ZmodType := ZmodType dual dual_ZmodMixin.
+
+Lemma muldA : associative muld.
+Proof.
+move=> x y z; rewrite !muldE' /=; congr mkDual; first by rewrite mulrA.
+by rewrite mulrDr mulrDl !mulrA addrA.
+Qed.
+
+Lemma mul1d : left_id dual1 muld.
+Proof. case=> x0 x1; by rewrite muldE' /= 2!mul1r mul0r addr0. Qed.
+
+Lemma muld1 : right_id dual1 muld.
+Proof. case=> x0 x1; by rewrite muldE' /= 2!mulr1 mulr0 add0r. Qed.
+
+Lemma muldDl : left_distributive muld addd.
+Proof.
+move=> x y z; rewrite !muldE' !adddE' /= mulrDl; congr mkDual.
+rewrite mulrDl -!addrA; congr (_ + _); by rewrite mulrDl addrCA.
+Qed.
+
+Lemma muldDr : right_distributive muld addd.
+Proof.
+move=> x y z; rewrite !muldE' !adddE' /= mulrDr; congr mkDual.
+rewrite mulrDr -!addrA; congr (_ + _); by rewrite mulrDr addrCA.
+Qed.
+
+Lemma oned_neq0 : dual1 != 0 :> dual.
+Proof. apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
+
+Definition dual_RingMixin := RingMixin muldA mul1d muld1 muldDl muldDr oned_neq0.
+Canonical Structure dual_Ring := Eval hnf in RingType dual dual_RingMixin.
+
+Lemma adddE (a b : dual) : a + b = mkDual (a``0 + b``0) (a``1 + b``1).
+Proof. exact: adddE'. Qed.
+
+Lemma muldE (a b : dual) : a * b = mkDual (a``0 * b``0) (a``0 * b``1 + a``1 * b``0).
+Proof. exact: muldE'. Qed.
 
 End dual_number.
+
+Notation "x '``0'" := (ldual x) (at level 1, format "x '``0'") : dual_scope.
+Notation "x '``1'" := (rdual x) (at level 1, format "x '``1'") : dual_scope.
 
 (* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
 Variable R : rcfType.
 
-Record dquat := mkDquat {dquatl : quat R ; dquatr : quat R}.
+Definition dquat := @dual (quat_Ring R).
 
-Definition pair_of_dquat a := let: mkDquat a0 a1 := a in (a0, a1).
-Definition dquat_of_pair (x : quat R * quat R) := let: (x0, x1) := x in mkDquat x0 x1.
+Local Open Scope dual_scope.
 
-Lemma dquat_of_pairK : cancel pair_of_dquat dquat_of_pair.
-Proof. by case. Qed.
-
-Definition dquat_eqMixin := CanEqMixin dquat_of_pairK.
-Canonical Structure dquat_eqType := EqType dquat dquat_eqMixin.
-Definition dquat_choiceMixin := CanChoiceMixin dquat_of_pairK.
-Canonical Structure dquat_choiceType := ChoiceType dquat dquat_choiceMixin.
-
-Definition dual_of (a : dquat) : 'M[quat R]_2 := dual (dquatl a) (dquatr a).
-Definition dquat_of (M : 'M[quat R]_2) : dquat := mkDquat (M 0 0) (M 0 1).
-
-Definition adddq_check (a b : dquat) : dquat :=
-  mkDquat (dquatl a + dquatl b) (dquatr a + dquatr b).
-
-Definition muldq_check (a b : dquat) : dquat :=
-  mkDquat (dquatl a * dquatl b) (dquatl a * dquatr b + dquatr a * dquatl b).
-
-Definition adddq (a b : dquat) : dquat := dquat_of (dual_of a + dual_of b).
-
-Lemma adddqE (a b : dquat) : adddq a b = adddq_check a b.
-Proof.
-move: a b => [a1 a2] [b1 b2].
-rewrite /adddq_check /adddq /dual_of /dquat_of /= !mxE.
-by rewrite !eqxx /= !(mulr1n,mulr0,addr0,mulr0n,add0r,mulr1).
-Qed.
-
-Definition muldq (a b : dquat) : dquat := dquat_of (dual_of a * dual_of b).
-
-Lemma muldqE (a b : dquat) : muldq a b = muldq_check a b.
-Proof.
-move: a b => [a1 a2] [b1 b2].
-rewrite /muldq_check /muldq /dual_of /= /dquat_of /= !mxE /= !sum2E !mxE.
-by rewrite !eqxx /= !(mulr1n,mulr0,addr0,mulr0n,add0r,mulr1).
-Qed.
-
-Lemma adddqA : associative adddq.
-Proof. move=> x y z; by rewrite !adddqE /adddq_check /= 2!addrA. Qed.
-
-Lemma adddqC : commutative adddq.
-Proof.
-move=> x y.
-by rewrite 2!adddqE /adddq_check /= addrC [in X in mkDquat _ X = _]addrC.
-Qed.
-
-Lemma add0dq : left_id (mkDquat 0 0) adddq.
-Proof. move=> x; rewrite adddqE /adddq_check /= 2!add0r; by case: x. Qed.
-
-Definition oppdq a := mkDquat (- dquatl a) (- dquatr a).
-
-Lemma addNdq : left_inverse (mkDquat 0 0) oppdq adddq.
-Proof. move=> x; by rewrite adddqE /adddq_check /= 2!addNr. Qed.
-
-Definition dquat_ZmodMixin := ZmodMixin adddqA adddqC add0dq addNdq.
-Canonical dquat_ZmodType := ZmodType dquat dquat_ZmodMixin.
-
-Lemma muldqA : associative muldq.
-Proof.
-move=> x y z.
-rewrite !muldqE /muldq_check /=; congr mkDquat; first by rewrite mulrA.
-by rewrite mulrDr mulrDl !mulrA addrA.
-Qed.
-
-Lemma mul1dq : left_id (mkDquat 1 0) muldq.
-Proof.
-case=> x0 x1; by rewrite muldqE /muldq_check /= 2!mul1r mul0r addr0.
-Qed.
-
-Lemma muldq1 : right_id (mkDquat 1 0) muldq.
-Proof.
-case=> x0 x1; by rewrite muldqE /muldq_check /= 2!mulr1 mulr0 add0r.
-Qed.
-
-Lemma muldqDl : left_distributive muldq adddq.
-Proof.
-move=> x y z.
-rewrite !muldqE !adddqE /adddq_check /muldq_check /= mulrDl; congr mkDquat.
-rewrite mulrDl -!addrA; congr (_ + _); by rewrite mulrDl addrCA.
-Qed.
-
-Lemma muldqDr : right_distributive muldq adddq.
-Proof.
-move=> x y z.
-rewrite !muldqE !adddqE /adddq_check /muldq_check /= mulrDr; congr mkDquat.
-rewrite mulrDr -!addrA; congr (_ + _); by rewrite mulrDr addrCA.
-Qed.
-
-Lemma onedq_neq0 : mkDquat 1 0 != 0 :> dquat.
-Proof. apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
-
-Definition dquat_RingMixin := RingMixin muldqA mul1dq muldq1 muldqDl muldqDr onedq_neq0.
-Canonical Structure dquat_Ring := Eval hnf in RingType dquat dquat_RingMixin.
-
-Local Open Scope quat_scope.
-
-Definition conjdq (a : dquat) := mkDquat (dquatl a)^*q (dquatr a)^*q.
+Definition conjdq (a : dquat) : dquat := mkDual (a``0)^*q (a``1)^*q.
 
 Notation "x '^*dq'" := (conjdq x) (at level 2, format "x '^*dq'").
 
 Lemma conjdqM (a b : dquat) : (a * b)^*dq = b^*dq * a^*dq.
 Proof.
-Admitted.
+rewrite /conjdq !muldE /= conjqM; congr mkDual.
+by rewrite linearD /= 2!conjqM [in LHS]addrC.
+Qed.
 
 (* norm *)
 
