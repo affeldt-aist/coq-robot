@@ -706,7 +706,7 @@ Notation "'`k'" := ('e_2%:R)%:v : quat_scope.
 
 Section dual_number.
 
-Variables (R : ringType).
+Variables (R : unitRingType).
 
 Record dual := mkDual {ldual : R ; rdual : R }.
 
@@ -805,20 +805,67 @@ Proof. exact: adddE'. Qed.
 Lemma muldE (a b : dual) : a * b = mkDual (a``0 * b``0) (a``0 * b``1 + a``1 * b``0).
 Proof. exact: muldE'. Qed.
 
+(*
+Definition scaled k (a : dual) := mkDual (k * a``0) (k * a``1).
+
+Lemma scaledA a b w : scaled a (scaled b w) = scaled (a * b) w.
+Admitted.
+
+Lemma scaled1 : left_id 1 scaled.
+Admitted.
+
+Lemma scaledDr : @right_distributive R dual scaled +%R.
+Admitted.
+
+Lemma scaledDl w : {morph (scaled^~ w : R -> dual) : a b / a + b}.
+Admitted.
+
+Definition dual_lmodMixin := LmodMixin scaledA scaled1 scaledDr scaledDl.
+Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
+*)
+
+Definition invd (a : dual) :=
+  dual_of_mat ((a``0)^-1%:M * (1 - deps * a``1%:M * (a``0)^-1%:M)).
+
+Definition unitd : pred dual := [pred a | a``0 \is a GRing.unit].
+
+Lemma mulVd : {in unitd, left_inverse 1 invd muld}.
+Proof.
+move=> a0 ua0.
+rewrite /invd /dual_of_mat; congr mkDual.
+  rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
+  by rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1) mulVr.
+rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
+rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1,mulr0n,add0r,mul1r).
+by rewrite !(mulrN,mulNr) -!mulrA mulVr // mulr1 subrr.
+Qed.
+
+Lemma muldV : {in unitd, right_inverse 1 invd muld}.
+Admitted.
+
+Lemma unitdP a b : b * a = 1 /\ a * b = 1 -> unitd a.
+Admitted.
+
+Lemma invd0id : {in [predC unitd], invd =1 id}.
+Admitted.
+
+Definition dual_UnitRingMixin := UnitRingMixin mulVd muldV unitdP invd0id.
+Canonical dual_unitRing := UnitRingType dual dual_UnitRingMixin.
+
 End dual_number.
 
-Notation "x '``0'" := (ldual x) (at level 1, format "x '``0'") : dual_scope.
-Notation "x '``1'" := (rdual x) (at level 1, format "x '``1'") : dual_scope.
+Notation "x '..1'" := (ldual x) (at level 1, format "x '..1'") : dual_scope.
+Notation "x '..2'" := (rdual x) (at level 1, format "x '..2'") : dual_scope.
 
 (* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
 Variable R : rcfType.
 
-Definition dquat := @dual (quat_Ring R).
+Definition dquat := @dual (quat_unitRing R).
 
 Local Open Scope dual_scope.
 
-Definition conjdq (a : dquat) : dquat := mkDual (a``0)^*q (a``1)^*q.
+Definition conjdq (a : dquat) : dquat := mkDual (a..1)^*q (a..2)^*q.
 
 Notation "x '^*dq'" := (conjdq x) (at level 2, format "x '^*dq'").
 
@@ -828,10 +875,31 @@ rewrite /conjdq !muldE /= conjqM; congr mkDual.
 by rewrite linearD /= 2!conjqM [in LHS]addrC.
 Qed.
 
-(* norm *)
+(* squared norm *)
+
+Definition sqrdq (a : dquat) : dquat := a * a^*dq.
 
 (* inverse *)
 
-(* dual quaternions and spatial displacements... *)
+Definition invdq (a : dquat) : dquat := a^-1.
+
+(* unit dual quaternions *)
+
+Definition udquat := [qualify x : dquat | sqrdq x == 1].
+Fact udquat_key : pred_key udquat. Proof. by []. Qed.
+Canonical udquat_keyed := KeyedQualifier udquat_key.
+
+Lemma udquatE (x : dquat) : (x \is udquat) = (sqrdq x == 1).
+Proof. done. Qed.
+
+(* dual quaternions and rbt's *)
+
+Definition dquat_from_rot_trans (r t : quat R)
+  (_ : r \is uquat R) (_ : ~~ pureq r) (_ : (polar_of_quat r).1 != 0)
+  (_ : pureq t)
+  : dquat := mkDual r t.
+
+Definition rot_trans_from_dquat (x : dquat) :=
+  (x..1, 2%:R *: (x..2 * x..1^*q)).
 
 End dual_quaternion.
