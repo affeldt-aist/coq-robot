@@ -35,6 +35,45 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
+Section nthroot.
+
+Lemma rootCD (C : numClosedFieldType) (m n : nat) (x : C) :
+  (m * n).-root (x) = m.-root (n.-root x).
+Proof.
+have [->|m_gt0] := posnP m; first by rewrite mul0n !root0C.
+have [->|n_gt0] := posnP n; first by rewrite muln0 root0C rootC0.
+have mn_gt0: (m * n > 0)%N by rewrite ?muln_gt0 ?m_gt0.
+wlog x_gt0 : x / x >= 0 => [hwlog_x_ge0|]; last first.
+  apply: (@pexpIrn _ (m * n)); rewrite // ?qualifE ?rootC_ge0 //.
+  by rewrite rootCK // exprM !rootCK.
+wlog nx_eq1 : x / `|x| = 1 => [hwlog_nx_eq1|].
+  have [->|x_neq0] := eqVneq x 0; first by rewrite !rootC0.
+  rewrite -[x](@mulfVK _ `|x|) ?normr_eq0 // rootCMr //.
+  rewrite hwlog_nx_eq1 ?normrM ?normfV ?normr_id ?divff ?normr_eq0 //.
+  by rewrite hwlog_x_ge0 //; do !rewrite -rootCMr ?rootC_ge0 //.
+ have [|m_gt1] := leqP m 1%N.
+   by case: m m_gt0 mn_gt0 hwlog_x_ge0 => [|[|m]] // _ _;
+     rewrite mul1n root1C.
+ have [|n_gt1] := leqP n 1%N.
+   by case: n n_gt0 mn_gt0 hwlog_x_ge0 => [|[|n]] // _ _;
+     rewrite muln1 root1C.
+ have mDn_gt1: (m * n > 1)%N.
+   by rewrite -subn_eq0; move: m n {n_gt0 m_gt0} n_gt1 m_gt1
+     mn_gt0 hwlog_x_ge0=> [|[|m]] [|[|n]].
+apply: eqC_semipolar => //; first 2 last.
+- by rewrite mulr_ge0 ?Im_rootC_ge0.
+- by rewrite !norm_rootC hwlog_x_ge0.
+apply/eqP; rewrite eqr_le !rootC_Re_max ?exprM ?rootCK ?Im_rootC_ge0 //.
+apply: eqC_semipolar; first 2 last.
+- rewrite mulr_ge0 ?Im_rootC_ge0 //. admit.
+- by rewrite normrX !norm_rootC hwlog_x_ge0 // rootCK.
+apply/eqP; rewrite eqr_le rootC_Re_max -?exprM ?rootCK //=; last first.
+  admit.
+admit.
+Admitted.
+
+End nthroot.
+
 Section angle_def.
 
 Variable R : rcfType.
