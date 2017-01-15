@@ -256,28 +256,28 @@ Let point := 'rV[R]_3.
 Implicit Types p : point.
 
 (* tangent vector *)
-Record tvec p := TVec {tvec_field :> vector}.
-Definition vtvec p (v : tvec p) := let: TVec v := v in v.
+(* Record tvec p := TVec {tvec_field :> vector}. *)
+(* Definition vtvec p (v : tvec p) := let: TVec v := v in v. *)
 
-Local Notation "p .-vec" := (tvec p) (at level 5).
-Local Notation "u `@ p" := (TVec p u) (at level 11).
+(* Local Notation "p .-vec" := (tvec p) (at level 5). *)
+(* Local Notation "u `@ p" := (TVec p u) (at level 11). *)
 
-Definition tframe_i (f : TFrame.t R) : (TFrame.o f).-vec := (f|,0) `@ TFrame.o f.
-Definition tframe_j (f : TFrame.t R) : (TFrame.o f).-vec := (f|,1) `@ TFrame.o f.
-Definition tframe_k (f : TFrame.t R) : (TFrame.o f).-vec := (f|,2%:R) `@ TFrame.o f.
+Definition tframe_i (f : TFrame.t R) : vector := (f|,0).
+Definition tframe_j (f : TFrame.t R) : vector := (f|,1).
+Definition tframe_k (f : TFrame.t R) : vector := (f|,2%:R).
 
 End tangent_vectors_and_frames.
 
-Coercion vtvec_field_coercion := vtvec.
-Notation "p .-vec" := (tvec p) (at level 5).
-Notation "u `@ p" := (TVec p u) (at level 11).
+(* Coercion vtvec_field_coercion := vtvec. *)
+(* Notation "p .-vec" := (tvec p) (at level 5). *)
+(* Notation "u `@ p" := (TVec p u) (at level 11). *)
 
 Lemma tvec_of_line (R : rcfType) (l : Line.t R) :
-  Line.vector l = (Line.vector l) `@ (Line.point l).
+  Line.vector l = (Line.vector l).
 Proof. by case: l. Qed.
 
-Lemma line_of_tvec (R : rcfType) (p : 'rV[R]_3) (v : p.-vec) :
-  Line.vector (Line.mk p v) `@ p = v.
+Lemma line_of_tvec (R : rcfType) p (v : 'rV[R]_3) :
+  Line.vector (Line.mk p v) = v.
 Proof. by case: v => v /=. Qed.
 
 Section derivative_map.
@@ -287,24 +287,24 @@ Let vector := 'rV[R]_3.
 Implicit Types f : 'Iso[R]_3.
 
 (* [oneill] theorem 2.1, p. 104 *)
-Definition dmap f p (v : p.-vec) :=
+Definition dmap f (v : vector) : vector :=
   let C := ortho_of_iso f in
-  (v *m C) `@ f p.
+  (v *m C).
 
-Local Notation "f '`*'" := (@dmap f _) (at level 5, format "f `*").
+Local Notation "f '`*'" := (@dmap f) (at level 5, format "f `*").
 
-Lemma dmap0 f p : f `* (0 `@ p) = 0 `@ (f p).
+Lemma dmap0 f : f `* 0 = 0.
 Proof. by rewrite /dmap /= mul0mx. Qed.
 
-Lemma dmapE f p (u : p.-vec) b a :
+Lemma dmapE f (u : vector) b a :
   u = b - a :> vector ->
   f `* u = f b - f a :> vector.
 Proof. move=> uab; by rewrite /dmap /= uab img_vec_iso. Qed.
 
-Lemma derivative_map_preserves_length f p :
-  {mono (fun x : p.-vec => f`* x) : u v / norm (vtvec u - vtvec v)}.
+Lemma derivative_map_preserves_length f :
+  {mono (fun x : vector => f`* x) : u v / norm (u - v)}.
 Proof.
-move=> u v; rewrite /dmap /= -(mulmxBl (vtvec u) (vtvec v) (ortho_of_iso f)).
+move=> u v; rewrite /dmap /= -(mulmxBl u v (ortho_of_iso f)).
 by rewrite orth_preserves_norm // ortho_of_iso_is_O.
 Qed.
 
@@ -314,7 +314,7 @@ Lemma dmap_iso_sgnP (tf : TFrame.t R) f :
   let e2 := tf|,1 in
   let e3 := tf|,2%:R in
   let p := TFrame.o tf in
-  f`* (e1 `@ p) *d (f `* (e2 `@ p) *v f`* (e3 `@ p)) =
+  f`* e1 *d (f `* e2 *v f`* e3) =
   iso_sgn f * (e1 *d (e2 *v e3)).
 Proof.
 move=> e1 e2 e3 p.
@@ -342,11 +342,11 @@ rewrite det_tr -crossmul_triple; by congr (_ *d (_ *v _)).
 Qed.
 
 (* [oneill] theorem 3.6, p.110 *)
-Lemma dmap_preserves_crossmul p (u v : p.-vec) f :
-  f`* ((u *v v) `@ p) =
-    iso_sgn f *: vtvec ((f`* u *v f`* v) `@ f p) :> vector.
+Lemma dmap_preserves_crossmul (u v : vector) f :
+  f`* (u *v v) =
+    iso_sgn f *: (f`* u *v f`* v) :> vector.
 Proof.
-set tf := TFrame.trans (can_tframe R) p.
+set tf := TFrame.trans (can_tframe R) 0.
 set u1p := tframe_i tf. set u2p := tframe_j tf. set u3p := tframe_k tf.
 move: (orthogonal_expansion tf u).
 rewrite !rowframeE !row1.
@@ -354,37 +354,46 @@ set u1 := _ *d 'e_0. set u2 := _ *d 'e_1. set u3 := _ *d 'e_2%:R => Hu.
 move: (orthogonal_expansion tf v).
 rewrite !rowframeE !row1.
 set v1 := _ *d 'e_0. set v2 := _ *d 'e_1. set v3 := _ *d 'e_2%:R => Hv.
-set e1 := f`* (u1p `@ p). set e2 := f`* (u2p `@ p). set e3 := f`* (u3p `@ p).
-have Ku : f`* u = u1 *: vtvec e1 + u2 *: vtvec e2 + u3 *: vtvec e3 :> vector.
-  by rewrite [in LHS]/= Hu 2!mulmxDl !scalemxAl [in RHS]/= 3!rowframeE 3!rowE !mulmx1.
-have Kv : f`* v = v1 *: vtvec e1 + v2 *: vtvec e2 + v3 *: vtvec e3 :> vector.
-  by rewrite [in LHS]/= Hv 2!mulmxDl !scalemxAl [in RHS]/= 3!rowframeE 3!rowE !mulmx1.
+set e1 := f`* u1p. set e2 := f`* u2p. set e3 := f`* u3p.
+have Ku : f`* u = u1 *: e1 + u2 *: e2 + u3 *: e3 :> vector.
+  rewrite [in LHS]/= Hu /dmap !mulmxDl.  
+  rewrite !scalemxAl [in RHS]/=.
+  rewrite /u1p /u2p /u3p /tframe_i /tframe_j /tframe_k.
+  by rewrite 3!rowframeE 3!rowE !mulmx1.
+have Kv : f`* v = v1 *: e1 + v2 *: e2 + v3 *: e3 :> vector.
+  rewrite [in LHS]/= Hv /dmap !mulmxDl.  
+  rewrite !scalemxAl [in RHS]/=.
+  rewrite /u1p /u2p /u3p /tframe_i /tframe_j /tframe_k.
+  by rewrite 3!rowframeE 3!rowE !mulmx1.
 have @f' : NOFrame.t R.
 apply (@NOFrame.mk _ (col_mx3 e1 e2 e3)).
   apply/orthogonal3P; rewrite !rowK /=.
   do 3! rewrite orth_preserves_norm ?ortho_of_iso_is_O //.
+  rewrite /u1p /u2p /u3p /tframe_i /tframe_j /tframe_k.
   rewrite !rowframeE !rowE !mulmx1 3!normeE !eqxx /=.
-  do 3! rewrite (proj2 (orth_preserves_dotmul (ortho_of_iso f)) _) ?ortho_of_iso_is_O // dote2.
-  by rewrite !eqxx.
+  rewrite !(proj2 (orth_preserves_dotmul _)) ?ortho_of_iso_is_O //.
+  rewrite /u1p /u2p /u3p /tframe_i /tframe_j /tframe_k.
+  by rewrite !rowframeE /= !rowE ?mulmx1 !dote2 //= eqxx.
 have -> : iso_sgn f = noframe_sgn f'.
   (* TODO: move as a lemma? *)
   rewrite noframe_sgnE.
-  have -> : f'|,0 = f`* (u1p `@ p) by rewrite rowframeE rowK.
-  have -> : f'|,1 = f`* (u2p `@ p) by rewrite rowframeE rowK.
-  have -> : f'|,2%:R = f`* (u3p `@ p) by rewrite rowframeE rowK.
+  have -> : f'|,0 = f`* u1p by rewrite rowframeE rowK.
+  have -> : f'|,1 = f`* u2p by rewrite rowframeE rowK.
+  have -> : f'|,2%:R = f`* u3p by rewrite rowframeE rowK.
   by rewrite dmap_iso_sgnP /= !rowframeE !rowE !mulmx1 vecjk dote2 mulr1.
-have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
-         noframe_sgn f' *: vtvec (f`* ((u *v v) `@ p)) :> vector.
+have : (((f`* u) *v (f`* v))) =
+         noframe_sgn f' *: (f`* (u *v v)) :> vector.
   rewrite /=.
   rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //; last 2 first.
     move: Ku.
-    by rewrite /= !rowframeE !rowK /= !rowframeE !row1.
+    by rewrite !rowframeE /= !rowK /=.
     move: Kv.
-    by rewrite /= !rowframeE !rowK /= !rowframeE !row1.
+    by rewrite /= !rowframeE !rowK /=.
   rewrite /=.
   congr (_ *: _).
   rewrite !rowframeE !rowK /= Hu Hv.
   do 2 rewrite linearD [in RHS]/=.
+  rewrite /dmap.
   rewrite 2!mulmxDl.
   (* on fait les remplacement veci *v vecj -> veck, veci *v veci -> 0, etc. *)
   rewrite [in RHS]linearZ [in RHS]/=.
@@ -441,25 +450,26 @@ have : vtvec (((f`* u) *v (f`* v)) `@ (f p)) =
   rewrite ![in RHS]addrA -[in RHS]addrA.
   congr (_ + _); last first.
     rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u1).
-    rewrite rowframeE.
-    by rewrite rowE mulmx1.
+    by rewrite /e3 /dmap /u3p /tframe_k rowframeE rowE mulmx1.
   rewrite scalerDr.
   rewrite -![in RHS]addrA [in RHS]addrCA [in RHS]addrC ![in RHS]addrA -addrA; congr (_ + _).
+    rewrite /e1 /dmap /u1p /tframe_i.
     rewrite rowframeE rowE mulmx1.
     by rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u2).
+  rewrite /e2 /dmap /u2p /tframe_j.
   rewrite rowframeE rowE mulmx1.
   by rewrite scalerN !scalerA -scalerBl -scaleNr opprB mulrC (mulrC u1).
 move=> ->; by rewrite scalerA -expr2 /iso_sgn -sqr_normr abs_noframe_sgn expr1n scale1r.
 Qed.
 
 Definition preserves_orientation f :=
-  forall p (u v : p.-vec),
-  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ f p
+  forall (u v : vector),
+  f`* (u *v v) = ((f`* u) *v (f`* v))
   :> vector.
 
-Lemma preserves_crossmul_is_diso f p (u v : p.-vec) : 
+Lemma preserves_crossmul_is_diso f (u v : vector) : 
   ~~ colinear u v ->
-  f`* ((u *v v) `@ p) = ((f`* u) *v (f`* v)) `@ f p :> vector ->
+  f`* (u *v v) = (f`* u) *v (f`* v) :> vector ->
   iso_sgn f = 1.
 Proof.
 move=> uv0.
@@ -472,7 +482,7 @@ rewrite eqr_oppLR => /eqP {K}K.
 exfalso.
 move: H.
 rewrite K scaleN1r => /eqP; rewrite Neqxx_mat.
-move: (mulmxr_crossmulr (vtvec u) (vtvec v) (ortho_of_iso_is_O f)).
+move: (mulmxr_crossmulr u v (ortho_of_iso_is_O f)).
 rewrite -/(iso_sgn f) K scaleN1r => /esym/eqP.
 rewrite eqr_oppLR => /eqP ->.
 rewrite oppr_eq0 mul_mx_rowfree_eq0; last first.
@@ -484,11 +494,11 @@ rewrite /colinear; by move/negbTE => ->.
 Qed.
 
 Lemma diso_preserves_orientation (df : 'DIso_3[R]) : preserves_orientation df.
-Proof. move=> p u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P df)) scale1r. Qed.
+Proof. move=> u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P df)) scale1r. Qed.
 
 End derivative_map.
 
-Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'").
+(* Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'"). *)
 
 Section homogeneous_points_and_vectors.
 
@@ -1044,7 +1054,8 @@ Qed.
 Lemma SE_preserves_orientation (T : SE.t R) :
   preserves_orientation (Iso.mk (SE_preserves_length T)).
 Proof.
-move=> p u v /=.
+move=> u v /=.
+rewrite /dmap.
 rewrite mulmxr_crossmulr ?ortho_of_iso_is_O // ortho_of_isoE.
 rewrite rotation_det ?scale1r //; by case: T.
 Qed.
