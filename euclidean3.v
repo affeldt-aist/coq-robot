@@ -1412,6 +1412,14 @@ Section characteristic_polynomial_dim3.
 
 Variable R : rcfType.
 
+(* Cyril: a shorter proof of this fact goes through the
+trigonalisation of complex matrice. Indeed, M = PTP^-1 with P unit and
+T triangular of diagonal x, y, z. Then
+char_poly M = (X - x)(X - y)(X - z) =
+X³ - (x + y + z)X² + (xy + yz + zx)X  - xyz.
+But tr M = tr T = x + y + z and tr M² = tr T² = x² + y² + z²,
+then (tr M)² = (x + y + z)² = tr M² + 2(xy + yz + zx)
+thus: xy + yz + zx = 1/2 * ((tr M)² - tr M²) *)
 Lemma char_poly3_coef1 (M : 'M[R]_3) :
   let Z := 1 / 2%:R * (\tr M ^+ 2 - \tr (M ^+ 2)) in
   (char_poly M)`_1 = Z.
