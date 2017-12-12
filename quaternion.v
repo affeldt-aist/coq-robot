@@ -10,7 +10,7 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux euclidean3 angle vec_angle frame rot.
+Require Import ssr_ext euclidean3 angle vec_angle frame rot.
 
 (*
 1. section quaternion

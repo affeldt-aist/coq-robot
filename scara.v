@@ -1,6 +1,6 @@
-Require Import mathcomp.ssreflect.ssreflect.
+From Coq Require Import ssreflect ssrfun ssrbool.
 From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
+Require Import eqtype ssrnat seq choice fintype tuple finfun.
 From mathcomp
 Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
 From mathcomp
@@ -9,8 +9,9 @@ From mathcomp
 Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
+From SsrReals Require Import reals.
 
-Require Import aux angle euclidean3 skew vec_angle rot frame rigid reals screw.
+Require Import ssr_ext angle euclidean3 skew vec_angle rot frame rigid screw.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

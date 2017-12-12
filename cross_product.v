@@ -8,7 +8,7 @@ Require Import matrix mxalgebra tuple mxpoly zmodp binomial.
 From mathcomp
 Require Import perm finset path fingroup.
 
-Require Import aux.
+Require Import ssr_ext.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

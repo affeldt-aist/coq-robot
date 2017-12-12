@@ -10,7 +10,7 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux.
+Require Import ssr_ext.
 
 (*
  OUTLINE:

@@ -1,5 +1,5 @@
 rigid.v
-aux.v
+ssr_ext.v
 angle.v
 quaternion.v
 euclidean3.v
@@ -10,7 +10,5 @@ rot.v
 frame.v
 dh.v
 scara.v
-reals.v
-boolp.v
 
--R . Robot
+-R . robot

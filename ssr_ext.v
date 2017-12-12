@@ -1,6 +1,6 @@
-Require Import mathcomp.ssreflect.ssreflect.
+From Coq Require Import ssreflect ssrfun ssrbool.
 From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
+Require Import eqtype ssrnat seq choice fintype tuple finfun.
 From mathcomp
 Require Import bigop ssralg ssrnum ssrint div rat poly closed_field polyrcf.
 From mathcomp

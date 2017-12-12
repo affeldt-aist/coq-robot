@@ -10,8 +10,8 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux angle euclidean3 skew vec_angle frame rot rigid.
-Require Import boolp reals.
+Require Import ssr_ext angle euclidean3 skew vec_angle frame rot rigid.
+From SsrReals Require Import boolp reals.
 
 (*
  OUTLINE:

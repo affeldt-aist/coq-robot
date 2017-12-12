@@ -10,7 +10,7 @@ Require Import complex.
 From mathcomp
 Require Import finset fingroup perm.
 
-Require Import aux angle euclidean3.
+Require Import ssr_ext angle euclidean3.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
