@@ -525,7 +525,8 @@ Proof.
 rewrite uquatE' => /eqP Hq; by rewrite invqE /invq Hq invr1 mul1r scale1r.
 Qed.
 
-Definition polar_of_quat (a : quat) := (normalize a`1, atan (norm a`1 / a`0)).
+Definition polar_of_quat (a : quat) : 'rV[R]_3 * angle R :=
+  (normalize a`1, atan (norm a`1 / a`0)).
 
 Lemma norm_polar_of_uquat q : q \is uquat ->
   let: (u, a) := polar_of_quat q in
@@ -686,6 +687,22 @@ apply/isRotP; split.
   by rewrite polar_of_uquat_prop2.
 Qed.
 
+Lemma quat_rot_isRot_test (u : 'rV[R]_3) (theta : angle R) : norm u = 1 ->
+  let a := mkQuat (cos (half_angle theta)) ((sin (half_angle theta)) *: u) in
+  isRot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
+Proof.
+move=> u1 /=.
+set a := mkQuat _ _.
+have a_uquat : a \is uquat.
+  by rewrite uquatE' /sqrq /= normZ exprMn u1 expr1n mulr1 sqr_normr cos2Dsin2.
+have a_not_pure : ~~ pureq a.
+  admit.
+have polar_of_quat1_neq_0 : (polar_of_quat a).1 != 0.
+  rewrite /= normalize_eq0 scaler_eq0 negb_or -norm_eq0 u1 oner_neq0 andbT.
+  admit.
+move: (quat_rot_isRot a_uquat a_not_pure polar_of_quat1_neq_0).
+Abort.
+
 End quaternion.
 
 Delimit Scope quat_scope with quat.
@@ -731,6 +748,12 @@ Definition oppd a := mkDual (- a``0) (- a``1).
 
 Definition deps : 'M[R]_2 :=
   \matrix_(i < 2, j < 2) ((i == 0) && (j == 1))%:R.
+
+Lemma deps2 : deps ^+2 = 0.
+Proof.
+rewrite expr2; apply/matrixP => i j.
+by rewrite !mxE sum2E !mxE /= mulr0 addr0 -ifnot01 eqxx andbF mul0r.
+Qed.
 
 Definition mat_of_dual (x : dual) : 'M[R]_2 := x``0%:M + x``1 *: deps.
 
@@ -805,34 +828,39 @@ Proof. exact: adddE'. Qed.
 Lemma muldE (a b : dual) : a * b = mkDual (a``0 * b``0) (a``0 * b``1 + a``1 * b``0).
 Proof. exact: muldE'. Qed.
 
-(*
 Definition scaled k (a : dual) := mkDual (k * a``0) (k * a``1).
 
 Lemma scaledA a b w : scaled a (scaled b w) = scaled (a * b) w.
-Admitted.
+Proof. by rewrite /scaled /=; congr mkDual; rewrite mulrA. Qed.
 
 Lemma scaled1 : left_id 1 scaled.
-Admitted.
+Proof. rewrite /left_id /scaled /=; case=> a1 a2 /=; by rewrite !mul1r. Qed.
 
 Lemma scaledDr : @right_distributive R dual scaled +%R.
-Admitted.
+Proof.
+move=> a b c; rewrite /scaled; congr mkDual; by rewrite !mxE /=
+  !(mulr0,addr0,mulr1n,mulr1,mulr0n,add0r) mxE mulrDr !mxE /=
+  !(eqxx,mulr1n,mulr0,addr0,mulr1,mulr0n,add0r).
+Qed.
 
 Lemma scaledDl w : {morph (scaled^~ w : R -> dual) : a b / a + b}.
-Admitted.
+Proof. move=> a b; by rewrite /scaled /= !mulrDl adddE. Qed.
 
 Definition dual_lmodMixin := LmodMixin scaledA scaled1 scaledDr scaledDl.
 Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
-*)
-
-Definition invd (a : dual) :=
-  dual_of_mat ((a``0)^-1%:M * (1 - deps * a``1%:M * (a``0)^-1%:M)).
 
 Definition unitd : pred dual := [pred a | a``0 \is a GRing.unit].
+
+Definition invd (a : dual) :=
+  if a \in unitd then
+    dual_of_mat ((a``0)^-1%:M * (1 - deps * a``1%:M * (a``0)^-1%:M))
+  else
+    a.
 
 Lemma mulVd : {in unitd, left_inverse 1 invd muld}.
 Proof.
 move=> a0 ua0.
-rewrite /invd /dual_of_mat; congr mkDual.
+rewrite /invd ua0 /dual_of_mat; congr mkDual.
   rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
   by rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1) mulVr.
 rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
@@ -841,13 +869,22 @@ by rewrite !(mulrN,mulNr) -!mulrA mulVr // mulr1 subrr.
 Qed.
 
 Lemma muldV : {in unitd, right_inverse 1 invd muld}.
-Admitted.
+Proof.
+move=> a0 ua0.
+rewrite /invd ua0 /dual_of_mat; congr mkDual.
+  rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
+  by rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1) divrr.
+rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
+rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1,mulr0n,add0r,mul1r).
+by rewrite !(mulrN,mulNr) mulrA divrr // mul1r addrC subrr.
+Qed.
 
 Lemma unitdP a b : b * a = 1 /\ a * b = 1 -> unitd a.
-Admitted.
+Proof. rewrite 2!muldE => -[[ba1 _] [ab1 _]]; apply/unitrP; by exists b``0. Qed.
 
+(* The inverse of a non-unit x is constrained to be x itself *)
 Lemma invd0id : {in [predC unitd], invd =1 id}.
-Admitted.
+Proof. move=> a; by rewrite inE /= /invd => /negbTE ->. Qed.
 
 Definition dual_UnitRingMixin := UnitRingMixin mulVd muldV unitdP invd0id.
 Canonical dual_unitRing := UnitRingType dual dual_UnitRingMixin.
@@ -883,6 +920,9 @@ Definition sqrdq (a : dquat) : dquat := a * a^*dq.
 
 Definition invdq (a : dquat) : dquat := a^-1.
 
+Lemma invdqE (a : dquat) : a..1 != 0 -> invdq a = 0 (*(sqrdq a)^-1*) *: (a^*dq).
+Abort.
+
 (* unit dual quaternions *)
 
 Definition udquat := [qualify x : dquat | sqrdq x == 1].
@@ -896,6 +936,7 @@ Proof. done. Qed.
 
 Definition dquat_from_rot_trans (r t : quat R)
   (_ : r \is uquat R) (_ : ~~ pureq r) (_ : (polar_of_quat r).1 != 0)
+  (* i.e., rotation around (polar_of_quat r).1 of angle (polar_of_quat r).2 *+ 2 *)
   (_ : pureq t)
   : dquat := mkDual r t.
 

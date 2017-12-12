@@ -19,7 +19,7 @@ Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
  3. section isometry_3_prop
  4. section diso_3_prop
  4. section tangent_vectors_and_frames
- 5. section derivativ_map
+ 5. section derivative_map
      definition of what it means to preserve the cross-product by a transformation
      (sample lemma: preservation of the cross-product by derivative maps)
  6. section homogeneous_points_and_vectors
