@@ -1,3 +1,4 @@
+(* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp
 Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
