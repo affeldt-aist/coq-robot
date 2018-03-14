@@ -52,4 +52,5 @@ Some references used in this work:
 [springer] Siciliano, Khatib (Eds.): Springer Handbook of Robotics;
 [angeles] Angeles: Fundamentals of Robotic Mechanical Systems;
 [oneill] O'Neill: Elementary Differential Geometry;
-[spong] Spong, Hutchinson, Vidyasagar: Robot Modeling and Control.
+[spong] Spong, Hutchinson, Vidyasagar: Robot Modeling and Control;
+[sciavicco] Sciavicco, L., Siciliano, B.: Modelling and Control of Robot Manipulators.
