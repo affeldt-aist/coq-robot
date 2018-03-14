@@ -1,18 +1,15 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-From Coq Require Import ssreflect ssrfun ssrbool.
-From mathcomp
-Require Import eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
-From SsrReals Require Import reals.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame rigid screw.
+
+From mathcomp.analysis Require Import boolp reals.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -31,8 +31,8 @@ see [FILES.md](FILES.md)
   https://coq.inria.fr/
 * The Mathematical Components library
   https://github.com/math-comp/math-comp
-* The coq-alternate-reals library 
-  https://github.com/strub/coq-alternate-reals
+* Analysis library compatible with Mathematical Components
+  https://github.com/math-comp/analysis
 
 ## Installation Procedure
 
@@ -53,4 +53,3 @@ Some references used in this work:
 [angeles] Angeles: Fundamentals of Robotic Mechanical Systems;
 [oneill] O'Neill: Elementary Differential Geometry;
 [spong] Spong, Hutchinson, Vidyasagar: Robot Modeling and Control.
-

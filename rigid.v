@@ -1,15 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
@@ -44,7 +40,7 @@ Local Open Scope ring_scope.
 
 Module Iso.
 Section isometry.
-Variables (R : rcfType) (n : nat).
+Variables (R : realType) (n : nat).
 Record t := mk {
   f :> 'rV[R]_n -> 'rV[R]_n ;
   P : {mono f : a b / norm (a - b)} }.
@@ -58,7 +54,7 @@ Coercion isometry_coercion : Iso.t >-> Funclass.
 
 Module CIso.
 Section central_isometry.
-Variable (R : rcfType) (n : nat).
+Variable (R : realType) (n : nat).
 Record t := mk {
   f : 'Iso[R]_n ;
   P : f 0 = 0 }.
@@ -72,7 +68,7 @@ Coercion cisometry_coercion : CIso.t >-> Iso.t.
 
 Section central_isometry_n.
 
-Variable (R : rcfType) (n : nat).
+Variable (R : realType) (n : nat).
 
 Lemma central_isometry_preserves_norm (f : 'CIso[R]_n) : {mono f : x / norm x}.
 Proof. by case: f => f f0 p; rewrite -(subr0 (f p)) -f0 Iso.P subr0. Qed.
@@ -97,7 +93,7 @@ End central_isometry_n.
 
 Section central_isometry_3.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Definition frame_central_iso (f : 'CIso[R]_3) (p : NOFrame.t R) : NOFrame.t R.
 apply: (@NOFrame.mk _ (col_mx3 (f (p|,0)) (f (p|,1)) (f (p|,2%:R)))).
@@ -126,7 +122,7 @@ Qed.
 
 End central_isometry_3.
 
-Definition lin1_mx' (R : rcfType) n (f : 'rV[R]_n -> 'rV[R]_n) : linear f ->
+Definition lin1_mx' (R : realType) n (f : 'rV[R]_n -> 'rV[R]_n) : linear f ->
   {M : {linear 'rV[R]_n -> 'rV[R]_n} & forall x, f x = M x}.
 Proof.
 move=> H.
@@ -137,13 +133,13 @@ Defined.
 
 Section isometry_3_prop.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Let point := 'rV[R]_3.
 Implicit Types f : 'Iso[R]_3.
 
 (* [oneill] theorem 1.7, p.101 *)
-(** every isometry of E^3 can be uniquely described as an orthogonal transformation 
+(** every isometry of E^3 can be uniquely described as an orthogonal transformation
     followed by a translation *)
 Lemma trans_ortho_of_iso f :
   { trans : 'rV[R]_3 & { rot : 'M[R]_3 |
@@ -210,7 +206,7 @@ Qed.
 
 Definition displacement f p : vector := f p - p.
 
-Definition relative_displacement f (p a : point) := 
+Definition relative_displacement f (p a : point) :=
   (p - a) *m (ortho_of_iso f - 1).
 
 (* NB: caused only by rotation *)
@@ -226,7 +222,7 @@ End isometry_3_prop.
 
 Module DIso.
 Section direct_isometry.
-Variable (R : rcfType).
+Variable (R : realType).
 Record t := mk {
   f :> 'Iso[R]_3 ;
   P : iso_sgn f == 1 }.
@@ -240,7 +236,7 @@ Coercion disometry_coercion : DIso.t >-> Iso.t.
 
 Section diso_3_prop.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Lemma ortho_of_diso_is_SO (f : 'DIso_3[R]) : ortho_of_iso f \is 'SO[R]_3.
 Proof.
@@ -251,7 +247,7 @@ End diso_3_prop.
 
 Section tangent_vectors_and_frames.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Let point := 'rV[R]_3.
 Implicit Types p : point.
@@ -273,17 +269,17 @@ End tangent_vectors_and_frames.
 (* Notation "p .-vec" := (tvec p) (at level 5). *)
 (* Notation "u `@ p" := (TVec p u) (at level 11). *)
 
-Lemma tvec_of_line (R : rcfType) (l : Line.t R) :
+Lemma tvec_of_line (R : realType) (l : Line.t R) :
   Line.vector l = (Line.vector l).
 Proof. by case: l. Qed.
 
-Lemma line_of_tvec (R : rcfType) p (v : 'rV[R]_3) :
+Lemma line_of_tvec (R : realType) p (v : 'rV[R]_3) :
   Line.vector (Line.mk p v) = v.
 Proof. by case: v => v /=. Qed.
 
 Section derivative_map.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Implicit Types f : 'Iso[R]_3.
 
@@ -357,12 +353,12 @@ rewrite !rowframeE !row1.
 set v1 := _ *d 'e_0. set v2 := _ *d 'e_1. set v3 := _ *d 'e_2%:R => Hv.
 set e1 := f`* u1p. set e2 := f`* u2p. set e3 := f`* u3p.
 have Ku : f`* u = u1 *: e1 + u2 *: e2 + u3 *: e3 :> vector.
-  rewrite [in LHS]/= Hu /dmap !mulmxDl.  
+  rewrite [in LHS]/= Hu /dmap !mulmxDl.
   rewrite !scalemxAl [in RHS]/=.
   rewrite /u1p /u2p /u3p /tframe_i /tframe_j /tframe_k.
   by rewrite 3!rowframeE 3!rowE !mulmx1.
 have Kv : f`* v = v1 *: e1 + v2 *: e2 + v3 *: e3 :> vector.
-  rewrite [in LHS]/= Hv /dmap !mulmxDl.  
+  rewrite [in LHS]/= Hv /dmap !mulmxDl.
   rewrite !scalemxAl [in RHS]/=.
   rewrite /u1p /u2p /u3p /tframe_i /tframe_j /tframe_k.
   by rewrite 3!rowframeE 3!rowE !mulmx1.
@@ -468,7 +464,7 @@ Definition preserves_orientation f :=
   f`* (u *v v) = ((f`* u) *v (f`* v))
   :> vector.
 
-Lemma preserves_crossmul_is_diso f (u v : vector) : 
+Lemma preserves_crossmul_is_diso f (u v : vector) :
   ~~ colinear u v ->
   f`* (u *v v) = (f`* u) *v (f`* v) :> vector ->
   iso_sgn f = 1.
@@ -503,7 +499,7 @@ End derivative_map.
 
 Section homogeneous_points_and_vectors.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 
@@ -591,7 +587,7 @@ Notation "''hV[' R ]" := (hvector R) (at level 8, format "''hV[' R ]").
 
 Section SE3_def.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Definition hom (r : 'M[R]_3) (t : 'rV[R]_3) : 'M[R]_4 :=
   block_mx r 0 t 1.
@@ -612,7 +608,7 @@ Notation "''SE3[' R ]" := (SE3 R)
 
 Section SE3_prop.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Lemma hom10 : hom 1 0 = 1 :> 'M[R]_4.
 Proof.
@@ -777,14 +773,14 @@ Definition hTx d : 'M[R]_4 := hom 1 (row3 d 0 0).
 Definition hTy d : 'M[R]_4 := hom 1 (row3 0 d 0).
 Definition hTz d : 'M[R]_4 := hom 1 (row3 0 0 d).
 
-Definition FromToDisp (R : rcfType) (B A : TFrame.t R) (x : 'rV[R]_3) : 'rV[R]_3 :=
+Definition FromToDisp (R : realType) (B A : TFrame.t R) (x : 'rV[R]_3) : 'rV[R]_3 :=
   x *m (B _R^ A) + TFrame.o B.
 
 End SE3_prop.
 
 Section Adjoint.
 
-Variable R : rcfType.
+Variable R : realType.
 
 (* TODO: move? *)
 Lemma conj_skew_mx_crossmul (r : 'M[R]_3) (w : 'rV[R]_3) (t : 'rV[R]_3) : r \is 'SO[R]_3 ->
@@ -869,7 +865,7 @@ Module SE.
 
 Section se.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Let point := 'rV[R]_3.
 
@@ -985,7 +981,7 @@ have Htmp0 : Aa.vaxis M != 0.
 
   rewrite /Aa.vaxis.
   rewrite (negbTE api).
-  
+
   rewrite scaler_eq0 negb_or axis0 andbT div1r invr_eq0 mulrn_eq0 /=.
   apply: contra a0 => /eqP/sin0_inv [/eqP -> //|/eqP]; by rewrite (negbTE api).
 have w1 : norm w = 1.
@@ -1008,7 +1004,7 @@ Record object (A : frame) := {
   body : (coor A ^ object_size)%type }.
 *)
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Let point := 'rV[R]_3.
 

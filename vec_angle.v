@@ -1,15 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext angle euclidean3.
 
@@ -17,8 +13,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory.
-Import Num.Theory.
+Import GRing.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 
@@ -38,7 +33,7 @@ Local Open Scope ring_scope.
       distance_between_lines
 *)
 
-Lemma norm1_cossin (R : rcfType) (v :'rV[R]_2) :
+Lemma norm1_cossin (R : realType) (v :'rV[R]_2) :
   norm v = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
 Proof.
 move=> v1.
@@ -48,7 +43,7 @@ Qed.
 
 Section vec_angle.
 
-Variable (R : rcfType).
+Variable R : realType.
 Implicit Types u v : 'rV[R]_3.
 
 Definition vec_angle v w : angle R := arg (v *d w +i* norm (v *v w))%C.
@@ -125,7 +120,7 @@ rewrite (_ : `| _ +i* norm (w *v _)| = `|v *d w +i* norm (v *v w)|)%C; last firs
 by rewrite /= mul0r oppr0 mulr0 expr0n /= addr0 subr0 mulr0 subr0 mulNr.
 Qed.
 
-Lemma sin_vec_angle_ge0 u v (u0 : u != 0) (v0 : v != 0) : 
+Lemma sin_vec_angle_ge0 u v (u0 : u != 0) (v0 : v != 0) :
   0 <= sin (vec_angle u v).
 Proof.
 rewrite /sin /vec_angle expi_arg /=; last first.
@@ -186,7 +181,7 @@ rewrite dotmul_cos mulf_eq0 => /orP [ | /eqP/cos0sin1 //].
 by rewrite mulf_eq0 2!norm_eq0 (negbTE u0) (negbTE v0).
 Qed.
 
-Lemma triine u v : 
+Lemma triine u v :
   (norm u * norm v * cos (vec_angle u v)) *+ 2 <= norm u ^+ 2 + norm v ^+ 2.
 Proof.
 move/eqP: (sqrrD (norm u) (norm v)); rewrite addrAC -subr_eq => /eqP <-.
@@ -196,7 +191,7 @@ apply (@ler_trans _ (norm u * norm v * 2%:R *+ 2)).
     by apply mulr_ge0; apply norm_ge0.
     rewrite -ler_subl_addr add0r; move: (cos_max (vec_angle u v)).
     by rewrite ler_norml => /andP[].
-  rewrite -ler_subr_addr {2}(_ : 1 = 1%:R) // -natrB //. 
+  rewrite -ler_subr_addr {2}(_ : 1 = 1%:R) // -natrB //.
   move: (cos_max (vec_angle u v)); by rewrite ler_norml => /andP[].
 rewrite sqrrD mulr2n addrAC; apply ler_add; last by rewrite mulr_natr.
 by rewrite -subr_ge0 addrAC mulr_natr -sqrrB sqr_ge0.
@@ -283,7 +278,7 @@ move/(_ isT) => /andP[].
 rewrite dotmul_cos -{2}(mulr1 (norm u * norm v)); move/eqP/mulrI.
 rewrite unitfE mulf_eq0 negb_or 2!norm_eq0 u1 v1 => /(_ isT) => uv1 ?.
 apply/eqP; rewrite -subr_eq0 -norm_eq0.
-  rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr0n /= normB. 
+  rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr0n /= normB.
   rewrite vec_anglevZ; last by rewrite divr_gt0 // norm_gt0.
 rewrite uv1 mulr1 !normZ ger0_norm; last by rewrite divr_ge0 // norm_ge0.
 by rewrite -!mulrA mulVr ?unitfE // ?norm_eq0 // mulr1 -expr2 addrAC -mulr2n subrr.
@@ -340,7 +335,7 @@ End vec_angle.
 
 Section colinear.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types u v : 'rV[R]_3.
 
 Definition colinear u v := u *v v == 0.
@@ -431,7 +426,7 @@ case/colinearP => [/eqP ->|[_ [k' [Hk'1 Hk'2]]]]; first by rewrite colinear0.
 by rewrite Hk2 Hk'2 -scalerDl colinearZv colinear_refl orbT.
 Qed.
 
-Lemma colinear_sin u v (u0 : u != 0) (v0 : v != 0) : 
+Lemma colinear_sin u v (u0 : u != 0) (v0 : v != 0) :
   (colinear u v) = (sin (vec_angle u v) == 0).
 Proof.
 apply/idP/idP.
@@ -468,7 +463,7 @@ apply/idP/idP.
   by rewrite norm_eq0.
 Qed.
 
-Lemma sin_vec_angle_iff (u v : 'rV[R]_3) (u0 : u != 0) (v0 : v != 0) : 
+Lemma sin_vec_angle_iff (u v : 'rV[R]_3) (u0 : u != 0) (v0 : v != 0) :
   0 <= sin (vec_angle u v) ?= iff (colinear u v).
 Proof. split; [exact: sin_vec_angle_ge0|by rewrite colinear_sin]. Qed.
 
@@ -485,7 +480,7 @@ End colinear.
 
 Section axial_normal_decomposition.
 
-Variables (R : rcfType).
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Implicit Types u v : vector.
 
@@ -514,7 +509,7 @@ Qed.
 
 Lemma crossmul_axialcomp u v : u *v axialcomp v u = 0.
 Proof.
-by apply/eqP; rewrite /axialcomp linearZ /= crossmulvZ crossmulvv 2!scaler0. 
+by apply/eqP; rewrite /axialcomp linearZ /= crossmulvZ crossmulvv 2!scaler0.
 Qed.
 
 (* normal component of v w.r.t. u *)
@@ -528,7 +523,7 @@ Lemma normalcompv0 v : normalcomp v 0 = v.
 Proof. by rewrite /normalcomp /normalize scaler0 dotmul0v scaler0 subr0. Qed.
 
 Lemma normalcompvN v u : normalcomp v (- u) = normalcomp v u.
-Proof. 
+Proof.
 by rewrite /normalcomp normalizeN scalerN dotmulNv scaleNr opprK.
 Qed.
 
@@ -576,7 +571,7 @@ by rewrite mulVr ?unitfE ?norm_eq0 // mul1r dotmulC subrr.
 Qed.
 
 Lemma ortho_normalcomp u v : (v *d u == 0) = (normalcomp v u == v).
-Proof. 
+Proof.
 apply/idP/idP => [/eqP uv0|/eqP <-].
   by rewrite /normalcomp dotmulC dotmulvZ uv0 mulr0 scale0r subr0.
 by rewrite dotmul_normalcomp.
@@ -614,7 +609,7 @@ End axial_normal_decomposition.
 
 Section law_of_sines.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 Implicit Types a b c : point.
@@ -661,7 +656,7 @@ rewrite scalerA normZ ltr0_norm; last first.
   rewrite mulr_lt0 invr_eq0 norm_eq0 v20 /= ltr_eqF //=.
   by rewrite invr_lt0 (ltrNge (norm v2)) norm_ge0 addbF.
 rewrite mulNr -(mulrA _ _ (norm v2)) mulVr ?mulr1 ?unitfE ?norm_eq0 //.
-rewrite vec_anglevZ // ?invr_gt0 ?norm_gt0 // sqrrN mulrN mulNr mulrN opprK.
+rewrite vec_anglevZ // ?invr_gt0 ?norm_gt0 // sqrrN mulrN mulrN mulNr opprK.
 rewrite dotmul_cos norm_normalize // mul1r vec_angleZv ?invr_gt0 ?norm_gt0 //.
 rewrite (vec_angleC v2) mulrA -expr2 exprMn addrAC -addrA -mulrA -mulrnAr.
 rewrite -mulrBr -{2}(mulr1 (norm v1 ^+ 2)) -mulrDr; congr (_ * _).
@@ -726,7 +721,7 @@ End law_of_sines.
 
 Module Line.
 Section line_def.
-Variable R : rcfType.
+Variable R : realType.
 Record t := mk {
   point : 'rV[R]_3 ;
   vector :> 'rV[R]_3
@@ -741,13 +736,13 @@ Notation "'\pt(' l ')'" := (Line.point l) (at level 3, format "'\pt(' l ')'").
 Notation "'\pt2(' l ')'" := (Line.point2 l) (at level 3, format "'\pt2(' l ')'").
 Notation "'\vec(' l ')'" := (Line.vector l) (at level 3, format "'\vec(' l ')'").
 
-Coercion line_pred (R : rcfType) (l : Line.t R) : pred 'rV[R]_3 :=
+Coercion line_pred (R : realType) (l : Line.t R) : pred 'rV[R]_3 :=
   [pred p | (p == \pt( l )) ||
     (\vec( l ) != 0) && colinear \vec( l ) (p - \pt( l ))].
 
 Section line.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 Implicit Types l : Line.t R.
@@ -808,7 +803,7 @@ End line.
 
 Section line_line_intersection.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 Implicit Types l : Line.t R.
 
@@ -934,7 +929,7 @@ End line_line_intersection.
 
 Section distance_line.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 
 Definition distance_point_line (p : point) l : R :=

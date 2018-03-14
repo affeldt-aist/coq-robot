@@ -1,18 +1,13 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext angle euclidean3 skew vec_angle frame rot rigid.
-From SsrReals Require Import boolp reals.
 
 (*
  OUTLINE:
@@ -39,7 +34,7 @@ Import Num.Theory.
 Local Open Scope ring_scope.
 
 (* TODO: move? *)
-Lemma mulmx_tr_uvect (R : rcfType) (w : 'rV[R]_3) :
+Lemma mulmx_tr_uvect (R : realType) (w : 'rV[R]_3) :
   norm w = 1 -> (w^T *m w) ^+ 2 = w^T *m w.
 Proof.
 move=> w1; rewrite expr2 -mulmxE -mulmxA (mulmxA w) dotmulP dotmulvv w1 expr1n.
@@ -48,7 +43,7 @@ Qed.
 
 Section taylor_exponential.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Variable n : nat.
 Implicit Type M : 'M[R]_n.+1.
@@ -140,7 +135,7 @@ End taylor_exponential.
 
 Module TwistCoor.
 Section twist_coordinates_definition.
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Definition t := 'rV[R]_6.
 Definition mk (v w : vector) : t := block_mx v w 0 0.
@@ -186,7 +181,7 @@ End LieAlgebra.
 Notation "lie[ t1 , t2 ]" := (@LieAlgebra.op _ _ t1 t2).
 
 Section lie_algebra_properties.
-Variables (R : rcfType) (m n : nat).
+Variables (R : realType) (m n : nat).
 Variable A : LieAlgebra.t R.
 
 Local Notation "l[ t1 , t2 ]" := (@LieAlgebra.op _ A t1 t2).
@@ -235,7 +230,7 @@ Qed.
 End lie_square_matrix.
 
 Section lie_euclidean_3.
-Variable (R : rcfType).
+Variable R : realType.
 Let vector := 'rV[R]_3.
 
 Lemma lie_euclidean_3_bilinear : bilinear (@crossmul R).
@@ -247,13 +242,13 @@ Definition lie_euclidean_3_jacobi := @jacobi_crossmul R.
 
 End lie_euclidean_3.
 
-Canonical lie_algebra_sqmat_type (R : comRingType) n := LieAlgebra.Pack 
+Canonical lie_algebra_sqmat_type (R : comRingType) n := LieAlgebra.Pack
   (@lie_sqmat_bilinear R n) (@lie_sqmat_alternative _ _) (@lie_sqmat_jacobi _ _).
 
-Canonical lie_euclidean_3_type (R : rcfType) := LieAlgebra.Pack 
+Canonical lie_euclidean_3_type (R : realType) := LieAlgebra.Pack
   (@lie_euclidean_3_bilinear R) (@lie_euclidean_3_alternative R) (@lie_euclidean_3_jacobi R).
 
-Goal forall (R : rcfType) (u v : 'rV[R]_3), 
+Goal forall (R : realType) (u v : 'rV[R]_3),
   @LieAlgebra.op _ (lie_euclidean_3_type R) u v = - (v *v u).
 (* TODO: lie[u, v] does not yet properly work *)
 Proof.
@@ -263,7 +258,7 @@ Abort.
 
 Section twist_properties.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 
 Lemma mkE (t : TwistCoor.t R) : \T(\v( t ), \w( t )) = t.
@@ -485,7 +480,7 @@ Notation "''se3[' R ]" := (se3 R)
 (* NB: work in progress *)
 Section twist_and_adjoint.
 
-Variable R : rcfType.
+Variable R : realType.
 
 (* [murray] p.56, lem 2.13 (part 2)
    action of 'SE3[R] on twist coordinates *)
@@ -561,7 +556,7 @@ End twist_and_adjoint.
 
 Section sample_rigid_transformation.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Implicit Types v w : vector.
 
@@ -601,7 +596,7 @@ End sample_rigid_transformation.
 (* [murray] proposition 2.8, p. 41-42 *)
 Section exponential_coordinates_rigid_using_taylor.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Implicit Types w v : vector.
 
@@ -690,7 +685,7 @@ Qed.
 
 Lemma p42eq3 w v a : norm w = 1 ->
   let g := rigid_trans w v in
-  let h := w *d v in 
+  let h := w *d v in
   let e' := g^-1 *m wedge \T(v, w) *m g in
   forall k, emx (a *: e') k.+2 = hom (emx (a *: \S( w )) k.+2) (h *: (a *: w)).
 Proof.
@@ -832,7 +827,7 @@ Lemma etwistv0 (a : angle R) : `e$(a, \T(0, 0)) = hom 1 0.
 Proof. by rewrite /etwist ang_tcoorE /hom_twist ang_tcoorE eqxx lin_tcoorE scaler0. Qed.
 
 Lemma etwist_is_SE (t : TwistCoor.t R) a : norm \w( t ) = 1 -> `e$(a, t) \in 'SE3[R].
-Proof. 
+Proof.
 move=> w1.
 by rewrite /etwist /hom_twist (negbTE (norm1_neq0 w1)) hom_is_SE // eskew_is_SO.
 Qed.
@@ -1067,7 +1062,7 @@ End TwistComputationExample.
 
 Module Screw.
 Section screw_definition.
-Variable R : rcfType.
+Variable R : realType.
 Record t := mk {
   l : Line.t R (* axis *) ;
   a : angle R (* magnitude *) ;
@@ -1157,7 +1152,7 @@ rewrite scalerDr.
 rewrite 2!scalerA.
 rewrite [in X in _ = X + _]mulrA.
 rewrite [in X in _ = X + _]mulrC.
-rewrite -2!(mulrA (rad a)) -(mulrA h) divrr ?mulr1; last by rewrite unitfE expf_eq0 /= norm_eq0.
+rewrite 2!mulrA divrr ?mul1r; last by rewrite unitfE expf_eq0 /= norm_eq0.
 rewrite mulrC -[LHS]addr0.
 congr (_ + _).
 rewrite mulmxBr mulmx1.
@@ -1175,7 +1170,7 @@ End screw_motion.
 
 Section screw_coordinates_of_a_twist.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 
@@ -1196,7 +1191,7 @@ Qed.
 (* [murray] 2.42, p.47 *)
 Definition pitch (t : TwistCoor.t R) : R :=
   let w := \w( t ) in let v := \v( t ) in
-  (norm w)^-2 *: v *d w. 
+  (norm w)^-2 *: v *d w.
 
 Lemma pitch_nolin (w : 'rV[R]_3) : pitch \T(0, w) = 0.
 Proof. by rewrite /pitch ang_tcoorE lin_tcoorE scaler0 dotmul0v. Qed.
@@ -1331,7 +1326,7 @@ End etwist_alt.
 
 Section Chasles.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Let point := 'rV[R]_3.
 
@@ -1344,12 +1339,12 @@ Hypothesis sina0 : sin a != 0.
 Let api : a != pi.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sinpi. Qed.
 Let vaxis0 : Aa.vaxis Q != 0.
-Proof. 
+Proof.
 by rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0.
 Qed.
 Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
 
-(* [angeles] theorem 3.2.1, p.97: 
+(* [angeles] theorem 3.2.1, p.97:
    the displacements of all the points of the body have the same projection onto e *)
 
 Definition d0 := displacement f 0 *d w.
@@ -1369,7 +1364,7 @@ Qed.
 Definition axialdisp p := axialcomp (displacement f p) w.
 
 Lemma axialdispE p : axialdisp p = d0 *: ((norm w)^-2 *: w).
-Proof. 
+Proof.
 rewrite /axialdisp /axialcomp dotmulC dotmulvZ displacement_proj mulrC -scalerA.
 by rewrite (scalerA (norm w)^-1) -expr2 exprVn.
 Qed.
@@ -1404,7 +1399,7 @@ End Chasles.
 
 Section screw_axis_point_helper.
 
-Variables (R : rcfType) (a : angle R).
+Variables (R : realType) (a : angle R).
 
 Definition Ncos2 := (1 - cos a) *+ 2.
 
@@ -1433,7 +1428,7 @@ End screw_axis_point_helper.
 
 Section screw_axis_point_def.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 Variable f : 'DIso_3[R].
 Let Q : 'M[R]_3 := ortho_of_iso f.
@@ -1446,7 +1441,7 @@ End screw_axis_point_def.
 
 Section screw_axis_point.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Let point := 'rV[R]_3.
 
@@ -1466,7 +1461,7 @@ rewrite /Aa.vaxis.
 rewrite (negbTE api).
 by rewrite scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0 //=.
 Qed.
-Let w1 : norm w = 1. 
+Let w1 : norm w = 1.
 Proof. rewrite norm_normalize //. Qed.
 
 Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
@@ -1672,7 +1667,7 @@ End screw_axis_point.
 (* [murray] exercise 13, p.77 *)
 Section murray_exercise_13.
 
-Variable R : rcfType.
+Variable R : realType.
 Variable s : Screw.t R.
 Let h := Screw.h s.
 Let l := Screw.l s.

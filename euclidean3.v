@@ -1,15 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext.
 
@@ -45,14 +41,13 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory.
-Import Num.Theory.
+Import GRing.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 
 Section dot_product.
 
-Variables (R : rcfType) (n : nat).
+Variables (R : realType) (n : nat).
 
 Definition dotmul (u v : 'rV[R]_n) : R := (u *m v^T)``_0.
 Local Notation "*d%R" := (@dotmul _).
@@ -133,7 +128,7 @@ Notation "u *d w" := (dotmul u w) (at level 40) : ring_scope.
 
 Section norm.
 
-Variables (R : rcfType) (n : nat).
+Variables (R : realType) (n : nat).
 Implicit Types u v : 'rV[R]_n.
 
 Definition norm u := Num.sqrt (u *d u).
@@ -380,7 +375,7 @@ by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
 by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
 Qed.
 
-Lemma mxtrace_sqr (R : rcfType) (M : 'M[R]_3) : \tr (M ^+ 2) =
+Lemma mxtrace_sqr (R : realType) (M : 'M[R]_3) : \tr (M ^+ 2) =
   \sum_i (M i i ^+2) + M 0 1 * M 1 0 *+ 2 + M 0 2%:R * M 2%:R 0 *+ 2 +
   M 1 2%:R * M 2%:R 1 *+ 2.
 Proof.
@@ -397,7 +392,7 @@ rewrite addrC -!addrA; congr (_ + _).
 by rewrite mulrC.
 Qed.
 
-Lemma sqr_mxtrace {R : rcfType} (M : 'M[R]_3) : (\tr M) ^+ 2 =
+Lemma sqr_mxtrace {R : realType} (M : 'M[R]_3) : (\tr M) ^+ 2 =
   \sum_i (M i i ^+2) + M 0 0 * M 1 1 *+ 2 + (M 0 0 + M 1 1) * M 2%:R 2%:R *+ 2.
 Proof.
 rewrite /mxtrace sum3E 2!sqrrD sum3E -!addrA; congr (_ + _).
@@ -491,7 +486,7 @@ Qed.
 End triple_prod_mat.
 
 (* TODO: rename *)
-Lemma col_mx3_mul {R : rcfType} (x : 'rV[R]_3) a b c :
+Lemma col_mx3_mul {R : realType} (x : 'rV[R]_3) a b c :
   x *m (col_mx3 a b c)^T = row3 (x *d a) (x *d b) (x *d c).
 Proof.
 rewrite col_mx3E (tr_col_mx a) (tr_col_mx b) (mul_mx_row x a^T).
@@ -500,7 +495,7 @@ Qed.
 
 Section normal.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Local Notation "A _|_ B" := (A%MS <= kermx B%MS^T)%MS (at level 69).
 
@@ -540,7 +535,7 @@ Local Notation "u _|_ A , B " := (u _|_ (col_mx A B))
 
 Section crossmul.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Implicit Types u v w : 'rV[R]_3.
 
@@ -789,7 +784,7 @@ Notation "u *v w" := (crossmul u w) (at level 40) : ring_scope.
 
 Section orthogonal_rotation_def.
 
-Variables (n : nat) (R : rcfType).
+Variables (n : nat) (R : realType).
 
 Definition orthogonal := [qualify M : 'M[R]_n | M *m M^T == 1%:M].
 Fact orthogonal_key : pred_key orthogonal. Proof. by []. Qed.
@@ -809,7 +804,7 @@ Notation "''SO[' R ]_ n" := (rotation n R)
 
 Section orthogonal_rotation_properties.
 
-Variables (n' : nat) (R : rcfType).
+Variables (n' : nat) (R : realType).
 Let n := n'.+1.
 
 Lemma orthogonalE M : (M \is 'O[R]_n) = (M * M^T == 1). Proof. by []. Qed.
@@ -935,7 +930,7 @@ Proof. by rewrite qualifE OSn_On det_lblock det1 mul1r. Qed.
 
 End orthogonal_rotation_properties.
 
-Lemma orthogonal2P (R : rcfType) M : reflect (M \is 'O[R]_2)
+Lemma orthogonal2P (R : realType) M : reflect (M \is 'O[R]_2)
     [&& row 0 M *d row 0 M == 1, row 0 M *d row 1 M == 0,
         row 1 M *d row 0 M == 0 & row 1 M *d row 1 M == 1].
 Proof.
@@ -949,7 +944,7 @@ by rewrite ifnot01 => /eqP ->; rewrite eqxx.
 Qed.
 
 (* TODO: move? use *d? *)
-Lemma dotmul_conjc_eq0 {R : rcfType} n (v : 'rV[R[i]]_n.+1) :
+Lemma dotmul_conjc_eq0 {R : realType} n (v : 'rV[R[i]]_n.+1) :
   (v *m map_mx conjc v^T == 0) = (v == 0).
 Proof.
 apply/idP/idP => [H|/eqP ->]; last by rewrite mul0mx.
@@ -965,7 +960,7 @@ rewrite -sqr_normc sqrf_eq0 normr_eq0 => /eqP ->; by rewrite mxE.
 Qed.
 
 (* eigenvalues of orthogonal matrices have norm 1 *)
-Lemma eigenvalue_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall k,
+Lemma eigenvalue_O (R : realType) n M : M \is 'O[R]_n.+1 -> forall k,
    k \in eigenvalue (map_mx (fun x => x%:C%C) M) -> `| k | = 1.
 Proof.
 move=> MSO /= k.
@@ -984,18 +979,18 @@ rewrite -subr_eq0 -{1}(scale1r (v *m _)) -scalerBl scaler_eq0 => /orP [].
 by rewrite dotmul_conjc_eq0 (negbTE v0).
 Qed.
 
-Lemma norm_row_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (row i M) = 1.
+Lemma norm_row_of_O (R : realType) n M : M \is 'O[R]_n.+1 -> forall i, norm (row i M) = 1.
 Proof.
 move=> MSO i.
 apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
 rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
 Qed.
 
-Lemma dot_row_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i j,
+Lemma dot_row_of_O (R : realType) n M : M \is 'O[R]_n.+1 -> forall i j,
   row i M *d row j M = (i == j)%:R.
 Proof. by move/orthogonalP. Qed.
 
-Lemma norm_col_of_O (R : rcfType) n M : M \is 'O[R]_n.+1 -> forall i, norm (col i M)^T = 1.
+Lemma norm_col_of_O (R : realType) n M : M \is 'O[R]_n.+1 -> forall i, norm (col i M)^T = 1.
 Proof.
 move=> MSO i.
 apply/eqP.
@@ -1010,7 +1005,7 @@ move=> HM u; rewrite dotmul_trmx -mulmxA (_ : M *m _ = 1%:M) ?mulmx1 //.
 by move: HM; rewrite orthogonalE => /eqP.
 Qed.
 
-Lemma orth_preserves_dotmul {R : rcfType} n (f : 'M[R]_n.+1) :
+Lemma orth_preserves_dotmul {R : realType} n (f : 'M[R]_n.+1) :
   {mono (fun u => u *m f) : x y / x *d y} <-> f \is 'O[R]_n.+1.
 Proof.
 split => H.
@@ -1033,7 +1028,7 @@ Lemma orth_preserves_norm R n M : M \is 'O[R]_n.+1 ->
   {mono (fun u => u *m M) : x / norm x }.
 Proof. move=> HM v; by rewrite /norm (proj2 (orth_preserves_dotmul M) HM). Qed.
 
-Lemma Oij_ub (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> forall i j, `| M i j | <= 1.
+Lemma Oij_ub (R : realType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> forall i j, `| M i j | <= 1.
 Proof.
 move=> /norm_row_of_O MO i j; rewrite lerNgt; apply/negP => abs.
 move: (MO i) => /(congr1 (fun x => x ^+ 2)); apply/eqP.
@@ -1042,7 +1037,7 @@ by rewrite -(sqr_normr (M _ _)) ltr_expn2r.
 rewrite sumr_ge0 // => k ij; by rewrite sqr_ge0.
 Qed.
 
-Lemma O_tr_idmx (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> \tr M = n.+1%:R -> M = 1.
+Lemma O_tr_idmx (R : realType) n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 -> \tr M = n.+1%:R -> M = 1.
 Proof.
 move=> MO; move: (MO) => /norm_row_of_O MO' tr3.
 have Mdiag : forall i, M i i = 1.
@@ -1070,7 +1065,7 @@ Qed.
 
 Section orthogonal_crossmul.
 
-Variable R : rcfType.
+Variable R : realType.
 
 (* "From the geometrical definition, the cross product is invariant under
    proper rotations about the axis defined by a × b"
@@ -1151,7 +1146,7 @@ End orthogonal_crossmul.
 
 Section norm3.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types u : 'rV[R]_3.
 
 Lemma norm_crossmul' u v :
@@ -1266,7 +1261,7 @@ End norm3.
 
 Section properties_of_canonical_vectors.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Lemma coorE (p : 'rV[R]_3) i : p``_i = p *d 'e_i.
 Proof. by rewrite dotmul_delta_mx. Qed.
@@ -1294,7 +1289,7 @@ Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
 
 End properties_of_canonical_vectors.
 
-Lemma orthogonal3P (R : rcfType) (M : 'M[R]_3) :
+Lemma orthogonal3P (R : realType) (M : 'M[R]_3) :
   reflect (M \is 'O[R]_3)
   [&& norm (row 0 M) == 1, norm (row 1 M) == 1, norm (row 2%:R M) == 1,
       row 0 M *d row 1 M == 0, row 0 M *d row 2%:R M == 0 & row 1 M *d row 2%:R M == 0].
@@ -1316,7 +1311,7 @@ apply (iffP idP).
     by rewrite H ].
 Qed.
 
-Lemma rotation3P (R : rcfType) (M : 'M[R]_3) :
+Lemma rotation3P (R : realType) (M : 'M[R]_3) :
   reflect (M \is 'SO[R]_3)
   [&& norm (row 0 M) == 1, norm (row 1 M) == 1,
       row 0 M *d row 1 M == 0 & row 2%:R M == row 0 M *v row 1 M].
@@ -1334,18 +1329,18 @@ apply (iffP idP).
   rewrite ni nj ij /= => _; by rewrite !rowE -mulmxr_crossmulr_SO // vecij.
 Qed.
 
-Lemma SO_icrossj (R : rcfType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
+Lemma SO_icrossj (R : realType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
   row 0 r *v row 1 r = row 2%:R r.
 Proof. by case/rotation3P/and4P => _ _ _ /eqP ->. Qed.
 
-Lemma SO_icrossk (R : rcfType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
+Lemma SO_icrossk (R : realType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
   row 0 r *v row 2%:R r = - row 1 r.
 Proof.
 case/rotation3P/and4P => /eqP H1 _ /eqP H3 /eqP ->.
 by rewrite double_crossmul H3 scale0r add0r dotmulvv H1 expr1n scale1r.
 Qed.
 
-Lemma SO_jcrossk (R : rcfType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
+Lemma SO_jcrossk (R : realType) (r : 'M[R]_3) : r \is 'SO[R]_3 ->
   row 1 r *v row 2%:R r = row 0 r.
 Proof.
 case/rotation3P/and4P => _ /eqP H1 /eqP H3 /eqP ->.
@@ -1354,7 +1349,7 @@ Qed.
 
 Section normalize.
 
-Variables (R : rcfType) (n : nat).
+Variables (R : realType) (n : nat).
 Implicit Type u v : 'rV[R]_3.
 
 Definition normalize v := (norm v)^-1 *: v.
@@ -1411,7 +1406,7 @@ End normalize.
 
 Section characteristic_polynomial_dim3.
 
-Variable R : rcfType.
+Variable R : realType.
 
 (* Cyril: a shorter proof of this fact goes through the
 trigonalisation of complex matrice. Indeed, M = PTP^-1 with P unit and

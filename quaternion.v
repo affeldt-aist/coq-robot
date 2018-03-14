@@ -1,15 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext euclidean3 angle vec_angle frame rot.
 
@@ -36,7 +32,7 @@ Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
 Section quaternion.
-Variable R : rcfType.
+Variable R : realType.
 
 Record quat := mkQuat {quatl : R ; quatr : 'rV[R]_3 }.
 
@@ -897,7 +893,7 @@ Notation "x '..2'" := (rdual x) (at level 1, format "x '..2'") : dual_scope.
 
 (* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
-Variable R : rcfType.
+Variable R : realType.
 
 Definition dquat := @dual (quat_unitRing R).
 

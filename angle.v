@@ -1,15 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext.
 
@@ -77,7 +73,7 @@ End nthroot.
 
 Section angle_def.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Record angle := Angle {
   expi : R[i];
@@ -214,7 +210,7 @@ Arguments pi {R}.
 
 Section angle_basic_prop.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types a b : angle R.
 
 Lemma add_angleE a b : a + b = add_angle a b.
@@ -772,7 +768,7 @@ End angle_basic_prop.
 
 Section half_angle.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Definition half_anglec (x : R[i]) :=
   (if 0 <= complex.Im x then
@@ -988,7 +984,7 @@ End half_angle.
 
 Section derived_trigonometric_functions.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types a : angle R.
 
 Definition cot a := (tan a)^-1.

@@ -1,15 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
@@ -31,7 +27,7 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B))
 (* [ angeles2014: p.102-203] *)
 Module Plucker.
 Section plucker.
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 
 Record array := mkArray {
@@ -43,13 +39,13 @@ Record array := mkArray {
 End plucker.
 End Plucker.
 
-Coercion plucker_array_mx (R : rcfType) (p : Plucker.array R) :=
+Coercion plucker_array_mx (R : realType) (p : Plucker.array R) :=
   row_mx (Plucker.e p) (Plucker.n p).
 
 (* wip *)
 Section plucker_of_line.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types l : Line.t R.
 
 Definition normalized_plucker_direction l :=
@@ -150,7 +146,7 @@ End plucker_of_line.
 
 Section denavit_hartenberg_homogeneous_matrix.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Definition dh_mat (jangle : angle R) loffset llength (ltwist : angle R) : 'M[R]_4 :=
   hRx ltwist * hTx llength * hTz loffset * hRz jangle.
@@ -187,7 +183,7 @@ End denavit_hartenberg_homogeneous_matrix.
 
 Section denavit_hartenberg_convention.
 
-Variable R : rcfType.
+Variable R : realType.
 Variable F0 F1 : TFrame.t R.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[R]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_frame R) _R^ F0.
@@ -202,7 +198,7 @@ Abort.
 Hypothesis dh1 : perpendicular (xaxis F1) (zaxis F0).
 Hypothesis dh2 : intersects (xaxis F1) (zaxis F0).
 
-(* [spong] an homogeneous transformation that satisfies dh1 and dh2 
+(* [spong] an homogeneous transformation that satisfies dh1 and dh2
    can be represented by means of only four parameters *)
 Lemma dh_mat_correct : exists alpha theta d a,
   hom From1To0 p1_in_0 = dh_mat theta d a alpha.
@@ -225,7 +221,7 @@ have [H2a H2b] : From1To0 0 0 ^+ 2 + From1To0 0 1 ^+ 2 = 1 /\
   move: (H1); rewrite {1}/From1To0 -lock => ->.
   by rewrite mulr0 add0r -!expr2 tr_col [_ 0 1]mxE [_ 0 2%:R]mxE /From1To0 -lock !mxE.
 have [theta [alpha [H00 [H01 [H22 H12]]]]] : exists theta alpha,
-  From1To0 0 0 = cos theta /\ From1To0 0 1 = sin theta /\ 
+  From1To0 0 0 = cos theta /\ From1To0 0 1 = sin theta /\
   From1To0 2%:R 2%:R = cos alpha /\ From1To0 1 2%:R = sin alpha.
   case/sqrD1_cossin : H2a => theta Htheta.
   rewrite addrC in H2b.
@@ -298,7 +294,7 @@ have H4 : From1To0 = dh_rot theta alpha.
     case/orP => /eqP ca1.
       rewrite ca1 !mul1r.
       move: Hrot; rewrite ca1 mulr1 => Hrot.
-      move: H10_H20_save; rewrite (eqP sqr_H20) expr0n addr0 => /eqP. 
+      move: H10_H20_save; rewrite (eqP sqr_H20) expr0n addr0 => /eqP.
       rewrite eq_sym addrC -subr_eq -sin2cos2 eq_sym eqf_sqr => /orP[] H10.
         move/eqP : Hrot.
         rewrite (eqP H10) -expr2.
@@ -401,7 +397,7 @@ have H4 : From1To0 = dh_rot theta alpha.
     by rewrite st0 !(mulr0,oppr0) (mulrC (cos theta)).
   rewrite {2}/From1To0 -lock (eqP H21).
   move: H11_H21.
-  rewrite (eqP H21) -mulrA -mulrN (mulrC _ (sin alpha)). 
+  rewrite (eqP H21) -mulrA -mulrN (mulrC _ (sin alpha)).
   move/(congr1 (fun x => (sin alpha)^-1 * x)).
   rewrite !mulrA mulVr ?mul1r ?unitfE // => H11.
   rewrite {1}/From1To0 -lock H11.
@@ -441,7 +437,7 @@ End denavit_hartenberg_convention.
 (* TODO: in progress, [angeles] p.141-142 *)
 Module Joint.
 Section joint.
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Record t := mk {
   vaxis : vector ;
@@ -452,7 +448,7 @@ End Joint.
 
 Module Link.
 Section link.
-Variable R : rcfType.
+Variable R : realType.
 Record t := mk {
   length : R ; (* nonnegative, distance between to successive joint axes *)
   offset : R ; (* between to successive X axes *)
@@ -464,7 +460,7 @@ End Link.
 
 Section open_chain.
 
-Variable R : rcfType.
+Variable R : realType.
 Let point := 'rV[R]_3.
 Let vector := 'rV[R]_3.
 Let frame := TFrame.t R.
@@ -482,18 +478,18 @@ Let n := n'.+1.
 
 (* 1. Zi is the axis of the ith joint *)
 Definition joint_axis (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
-  let i' := widen_ord (leqnSn _) i in 
+  let i' := widen_ord (leqnSn _) i in
   (Joint.vaxis (joints i) == (frames i')|,2%:R) ||
   (Joint.vaxis (joints i) == - (frames i')|,2%:R).
 
 (* 2. Xi is the common perpendicular to Zi-1 and Zi *)
 Definition X_Z (frames : frame ^ n.+1) (i : 'I_n) :=
-  let i' := widen_ord (leqnSn _) i in 
-  let predi : 'I_n.+1 := inord i.-1 in 
+  let i' := widen_ord (leqnSn _) i in
+  let predi : 'I_n.+1 := inord i.-1 in
   let: (o_predi, z_predi) := let f := frames predi in (TFrame.o f, f|,2%:R) in
   let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, f|,0, f|,2%:R) in
   if intersects (zaxis (frames predi)) (zaxis (frames i')) then
-    x_i == z_predi *v z_i 
+    x_i == z_predi *v z_i
   else if colinear z_predi z_i then
     o_predi \in (xaxis (frames i') : pred _)
   else
@@ -513,8 +509,8 @@ Definition link_length (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) 
 Definition link_offset (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, f|,0) in 
-  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, f|,0, f|,2%:R) in 
+  let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, f|,0) in
+  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, f|,0, f|,2%:R) in
   if intersection (zaxis (frames i')) (xaxis (frames succi)) is some o'_i then
     (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == Link.offset (links i')) &&
     (`| Link.offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))
@@ -524,16 +520,16 @@ Definition link_offset (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) 
 Definition link_twist (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  let: (x_succi, z_succi) := let f := frames succi in (f|,0, f|,2%:R) in 
-  let z_i := (frames i')|,2%:R in 
+  let: (x_succi, z_succi) := let f := frames succi in (f|,0, f|,2%:R) in
+  let z_i := (frames i')|,2%:R in
   Link.twist (links i') == angle_between_lines z_i z_succi x_succi.
   (*angle measured about the positive direction of Xi+1*)
 
 Definition joint_angle (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  let: x_succi := (frames succi)|,0 in 
-  let: (x_i, z_i) := let f := frames i' in (f|,0, f|,2%:R) in 
+  let: x_succi := (frames succi)|,0 in
+  let: (x_i, z_i) := let f := frames i' in (f|,0, f|,2%:R) in
   Joint.angle (joints i) = angle_between_lines x_i x_succi z_i.
   (*angle measured about the positive direction of Zi*)
 

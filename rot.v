@@ -1,15 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div ssrnum rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp
-Require Import complex.
-From mathcomp
-Require Import finset fingroup perm.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
+From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
+From mathcomp Require Import complex finset fingroup perm.
+
+From mathcomp.analysis Require Import reals.
 
 Require Import ssr_ext angle euclidean3 skew vec_angle frame.
 
@@ -25,14 +21,14 @@ Require Import ssr_ext angle euclidean3 skew vec_angle frame.
        all rotations around a vector of angle a have trace "1 + 2 * cos a"
        equivalence SO[R]_3 <-> Rot
   4. section axial_vector
-     definition of the axial vector 
+     definition of the axial vector
      proof that this vector is stable by rotation (like the vector of Rot)
   5. section exponential_map_rot
      specialized exponential map
-     sample lemmas: 
+     sample lemmas:
        inverse of the exponential map,
        exponential map of a skew matrix is a rotation
-     Rodrigues formula: 
+     Rodrigues formula:
        u * e^(phi,w) can be expressed using a lin. comb. of vectors u, (u *d w)w, u *v w)
   6. Module Aa (angle-axis representation)
      section angle_of_angle_axis_representation
@@ -55,10 +51,10 @@ Local Open Scope ring_scope.
 
 Section two_dimensional_rotation.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types a b : angle R.
 Implicit Types M : 'M[R]_2.
-  
+
 Definition RO a := col_mx2 (row2 (cos a) (sin a)) (row2 (- sin a) (cos a)).
 
 Lemma tr_RO a : \tr (RO a) = (cos a) *+ 2.
@@ -145,7 +141,7 @@ End two_dimensional_rotation.
 
 Section elementary_rotations.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types a : angle R.
 
 Definition Rx a := col_mx3
@@ -157,7 +153,7 @@ Lemma Rx0 : Rx 0 = 1.
 Proof. by rewrite /Rx cos0 sin0 oppr0; apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
 Lemma Rxpi : Rx pi = diag_mx (row3 1 (-1) (-1)).
-Proof. 
+Proof.
 rewrite /Rx cospi sinpi oppr0; apply/matrix3P/and9P; split;
   by rewrite !mxE /= -?mulNrn ?mulr1n ?mulr0n.
 Qed.
@@ -249,7 +245,7 @@ End elementary_rotations.
 
 Section isRot_definition.
 
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types a : angle R.
 
 Definition isRot (a : angle R)
@@ -496,7 +492,7 @@ End isRot_definition.
 
 Section axial_vector.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 
 Definition axial_vec (M : 'M[R]_3) : 'rV[R]_3 :=
@@ -573,7 +569,7 @@ End axial_vector.
 
 Section exponential_map_rot.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Implicit Type u v : vector.
 Implicit Type a b : angle R.
@@ -670,7 +666,7 @@ rewrite (_ : - _ = - 2%:R); last by rewrite expr1n mulr1.
 by rewrite mulrDl addrA mul1r -natrB // mulrC mulrN -mulNr opprK.
 Qed.
 
-(* table 1.1 of [springer] 
+(* table 1.1 of [springer]
    'equivalent rotation matrices for various representations of orientation'
    angle-axis angle a, vector u *)
 Definition angle_axis_rot a u :=
@@ -788,7 +784,7 @@ rewrite [in X in _ = _ - X]crossmulC.
 rewrite double_crossmul dotmulvv.
 rewrite scalerN opprK.
 rewrite scalerBr [in RHS]addrA [in RHS]addrC -!addrA; congr (_ + (_ + _)).
-by rewrite dotmulC scalerA. 
+by rewrite dotmulC scalerA.
 Qed.
 
 Definition rodrigues u a w :=
@@ -930,7 +926,7 @@ Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )) (format "'`e^(' a ','  w ')'")
 Module Aa.
 Section angle_of_angle_axis_representation.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Implicit Types M : 'M[R]_3.
 
@@ -989,7 +985,7 @@ rewrite -mulr2n scalerMnl scaler_eq0 mulrn_eq0 /=.
 rewrite -skew_mx0 skew_inj -norm_eq0 norm_normalize ?vaxis_euler_neq0 // oner_eq0 orbF.
 case/eqP/sin0_inv => [a0|api]; move: Ma.
 - rewrite a0 emx30M => ->; rewrite angle1; by left.
-- rewrite api -eskew'E ?norm_normalize // ?vaxis_euler_neq0 //. 
+- rewrite api -eskew'E ?norm_normalize // ?vaxis_euler_neq0 //.
   rewrite /eskew' cospi scaleN1r sinpi scale0r addr0 opprB.
   rewrite addrA -mulr2n => ->; rewrite anglepi // ?norm_normalize // ?vaxis_euler_neq0 //.
   by right.
@@ -1139,12 +1135,12 @@ End angle_of_angle_axis_representation.
 
 Section vector_axis_of_angle_axis_representation.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 
 Definition vaxis M : 'rV[R]_3 :=
-  let a := angle M in 
-  if a == pi then 
+  let a := angle M in
+  if a == pi then
     vaxis_euler M
   else
     1 / ((sin a) *+ 2) *: axial_vec M.
@@ -1176,7 +1172,7 @@ End Aa.
 
 Section angle_axis_of_rot.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 
 Definition log_rot (M : 'M[R]_3) : angle R * 'rV[R]_3 :=
@@ -1308,7 +1304,7 @@ case/boolP : (Aa.angle Q == pi) => [api|api].
 move=> [:vaxis0].
 rewrite {3}H isRotZ; last 2 first.
   abstract: vaxis0.
-  rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or Q0 andbT div1r. 
+  rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or Q0 andbT div1r.
   by rewrite invr_eq0 mulrn_eq0 /= sin_eq0 negb_or a0 api.
   by rewrite invr_gt0 norm_gt0.
 by apply isRot_eskew.
@@ -1318,7 +1314,7 @@ End angle_axis_of_rot.
 
 Section angle_axis_representation.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 
 Record angle_axis := AngleAxis {
@@ -1370,7 +1366,7 @@ End angle_axis_representation.
 (* NB: work in progress *)
 Section euler_angles.
 
-Variable R : rcfType.
+Variable R : realType.
 
 Definition Rxyz (c b a : angle R) := Rx c * Ry b * Rz a.
 
@@ -1396,7 +1392,7 @@ by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
 by rewrite mulrC.
 Qed.
 
-Lemma sqr_Mi0E M i : M \is 'O[R]_3 -> 
+Lemma sqr_Mi0E M i : M \is 'O[R]_3 ->
   M i 1 ^+ 2 + M i 2%:R ^+ 2 = 1 - M i 0 ^+ 2.
 Proof.
 move/norm_row_of_O => /(_ i)/(congr1 (fun x => x ^+ 2)).
@@ -1436,7 +1432,7 @@ rewrite -dotmulvv dotmulE sum3E !mxE -!expr2 expr1n => /eqP.
 by rewrite -addrA addrC eq_sym -subr_eq => /eqP <-.
 Qed.
 
-Lemma Mi2_1 M i : M \is 'O[R]_3 -> 
+Lemma Mi2_1 M i : M \is 'O[R]_3 ->
   (`| M i 2%:R | == 1) = (M i 0 == 0) && (M i 1 == 0).
 Proof.
 move=> MO; move/eqP: (sqr_Mi2E i MO) => {MO}MO.
