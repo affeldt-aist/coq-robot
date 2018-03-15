@@ -29,13 +29,33 @@ Lemma dotmul_is_linear u : GRing.linear (dotmul u : 'rV[R]_n -> R^o).
 Proof. move=> /= k v w; by rewrite dotmulDr dotmulvZ. Qed.
 Canonical dotmul_linear x := Linear (dotmul_is_linear x).
 
-Lemma dotmul_rev_is_linear v : GRing.linear ((fun u => dotmul u v) : 'rV[R]_n -> R^o).
-Proof. move=> /= k u w; by rewrite dotmulDl dotmulZv. Qed.
+Lemma dotmul_rev_is_linear v : GRing.linear (dotmul_rev v : 'rV[R]_n -> R^o).
+Proof. move=> /= k u w; by rewrite /dotmul_rev dotmulDl dotmulZv. Qed.
 Canonical dotmul_rev_linear v := Linear (dotmul_rev_is_linear v).
 
-Fail Canonical dotmul_bilinear := [bilinear of (@dotmul R n)].
+Canonical dotmul_bilinear := [bilinear of (@dotmul R n)].
 
 End dotmul_bilinear.
+
+Section crossmul_bilinear.
+
+Variables (R : realType).
+
+Definition crossmul_rev (v u : 'rV[R]_3) := u *v v.
+Canonical rev_crossmul := @RevOp _ _ _ crossmul_rev (@crossmul R)
+  (fun _ _ => erefl).
+
+Lemma crossmul_is_linear u : GRing.linear (crossmul u : 'rV[R]_3 -> 'rV[R]_3).
+Proof. move=> /= k v w; by rewrite crossmulDr crossmulvZ. Qed.
+Canonical crossmul_linear x := Linear (crossmul_is_linear x).
+
+Lemma crossmul_rev_is_linear v : GRing.linear (crossmul_rev v : 'rV[R]_3 -> 'rV[R]_3).
+Proof. move=> /= k u w; by rewrite /crossmul_rev crossmulDl crossmulZv. Qed.
+Canonical crossmul_rev_linear v := Linear (crossmul_rev_is_linear v).
+
+Canonical crossmul_bilinear := [bilinear of (@crossmul R)].
+
+End crossmul_bilinear.
 
 Section tmp.
 
