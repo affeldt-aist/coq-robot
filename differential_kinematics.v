@@ -6,7 +6,7 @@ Require Import Reals.
 From mathcomp.analysis Require Import Rstruct Rbar boolp reals topology.
 From mathcomp.analysis Require Import hierarchy landau forms derive.
 
-Require Import euclidean3 rot skew.
+Require Import ssr_ext euclidean3 rot skew.
 
 (* WIP *)
 
@@ -16,6 +16,26 @@ Unset Printing Implicit Defensive.
 Import GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
+
+Section dotmul_bilinear.
+
+Variables (R : realType) (n : nat).
+
+Definition dotmul_rev (v u : 'rV[R]_n) := u *d v.
+Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
+  (fun _ _ => erefl).
+
+Lemma dotmul_is_linear u : GRing.linear (dotmul u : 'rV[R]_n -> R^o).
+Proof. move=> /= k v w; by rewrite dotmulDr dotmulvZ. Qed.
+Canonical dotmul_linear x := Linear (dotmul_is_linear x).
+
+Lemma dotmul_rev_is_linear v : GRing.linear ((fun u => dotmul u v) : 'rV[R]_n -> R^o).
+Proof. move=> /= k u w; by rewrite dotmulDl dotmulZv. Qed.
+Canonical dotmul_rev_linear v := Linear (dotmul_rev_is_linear v).
+
+Fail Canonical dotmul_bilinear := [bilinear of (@dotmul R n)].
+
+End dotmul_bilinear.
 
 Section tmp.
 
@@ -63,7 +83,7 @@ Qed.
 
 End tmp.
 
-Section tmp2.
+Section technical.
 
 Lemma row_mx_betail {R : ringType} n (r : 'rV[R]_n.+1) :
   r = castmx (erefl, addnC n 1%N)
@@ -88,13 +108,12 @@ rewrite -dotmulDr; congr dotmul; apply/matrixP => i j; rewrite !(castmxE,mxE) /=
 case: fintype.splitP => [k /= jk|[] [] // ? /= jn]; by rewrite !(mxE,addr0,add0r,mul0rn).
 Qed.
 
-End tmp2.
+End technical.
 
 Section derivative_of_matrices.
 
 Lemma derive1mx_dotmul_betail n (u v : R^o -> 'rV[R^o]_n.+1) t :
-  let u' x := row_betail (u x) in
-  let v' x := row_betail (v x) in
+  let u' x := row_betail (u x) in let v' x := row_betail (v x) in
   u' t *d derive1mx v' t + (u t)``_ord_max *: derive (fun x => (v x)``_ord_max) t 1 =
   u t *d derive1mx v t.
 Proof.
@@ -133,15 +152,16 @@ set f := fun _ => _. set g := fun _ => _.
 by rewrite (_ : f = g) // funeqE => x; rewrite /f /g mxE.
 Qed.
 
+(* TODO: could be derived from more generic lemmas about bilinearity in derive.v? *)
 Lemma derive1mx_dotmul n (u v : R^o -> 'rV[R^o]_n) (t : R^o) :
   derivable_rV u t 1 -> derivable_rV v t 1 ->
   derive1 (fun x => (u x *d v x : R^o)) t =
   derive1mx u t *d v t + u t *d derive1mx v t.
 Proof.
 move=> Hu Hv.
-rewrite (_ : (fun x : R => _) = (fun x => \sum_k (u x)``_k * (v x)``_k)); last first.
-  rewrite funeqE => x; by rewrite dotmulE.
-rewrite derive1E.
+evar (f : R -> R); rewrite (_ : (fun x : R => _) = f); last first.
+  rewrite funeqE => x; rewrite /f; exact: dotmulE.
+rewrite derive1E {}/f.
 set f := fun i : 'I__ => (fun x : R^o => ((u x) ``_ i * (v x) ``_ i) : R^o).
 rewrite (_ : (fun x : R => _) = \sum_(k < _) f k); last first.
   by rewrite funeqE => x; rewrite /f /= -fct_sum.
@@ -149,10 +169,8 @@ rewrite derive_sum; last first.
   move=> i; rewrite {}/f.
   set f1 := fun x : R^o=> ((u x)``_ i) : R^o.
   set f2 := fun x : R^o=> ((v x)``_ i) : R^o.
-  rewrite (_ : (fun _ : R^o => _) = f1 * f2); last by rewrite funeqE.
-  apply derivableM; rewrite /f1 /f2.
-  apply Hu.
-  apply Hv.
+  rewrite (_ : (fun _ : R^o => _) = f1 * f2) ?funeqE //.
+  exact: derivableM (Hu i) (Hv i).
 rewrite {}/f.
 elim: n u v => [u v|n IH u v] in Hu Hv *.
   rewrite big_ord0 (_ : v t = 0) ?dotmulv0 ?add0r; last by apply/rowP => -[] [].
@@ -161,24 +179,46 @@ rewrite [LHS]big_ord_recr /=.
 set u' := fun x => row_betail (u x). set v' := fun x => row_betail (v x).
 transitivity (derive1mx u' t *d v' t + u' t *d derive1mx v' t +
   derive (fun x : R^o => (u x)``_ord_max * (v x)``_ord_max) t 1).
-  rewrite -IH; last 2 first.
-    by apply derivable_rV_betail.
-    by apply derivable_rV_betail.
+  rewrite -(IH _ _ (derivable_rV_betail Hu) (derivable_rV_betail Hv)).
   congr (_ + _); apply eq_bigr => i _; congr (derive _ t 1).
   by rewrite funeqE => x; rewrite !mxE.
-rewrite deriveM /=; last 2 first.
-  apply Hu.
-  apply Hv.
-rewrite -!addrA addrC addrA -(addrA (_ + _)) [in RHS]addrC.
-rewrite derive1mx_dotmul_betail; congr (_ + _).
+rewrite (deriveM (Hu ord_max) (Hv ord_max)) /= -!addrA addrC addrA.
+rewrite -(addrA (_ + _)) [in RHS]addrC derive1mx_dotmul_betail; congr (_ + _).
 by rewrite [in RHS]dotmulC -derive1mx_dotmul_betail addrC dotmulC.
 Qed.
 
-Lemma derive1mx_crossmul (r1 r2 : R^o -> 'rV[R^o]_3) t :
-  derive1mx (fun x => (r1 x *v r2 x) : 'rV[R^o]_3) t =
-  derive1mx r1 t *v r2 t + r1 t *v derive1mx r2 t.
+Lemma derive_row3 (f g h : R^o -> R^o) i t v :
+  derive (fun x : R^o => (row3 (f x) (g x) (h x)) ``_ i) t v =
+  (row3 (derive f t v) (derive g t v) (derive h t v)) ``_ i.
+Admitted.
+
+Lemma derive1mx_crossmul (u v : R^o -> 'rV[R^o]_3) t :
+  derive1mx (fun x => (u x *v v x) : 'rV[R^o]_3) t =
+  derive1mx u t *v v t + u t *v derive1mx v t.
 Proof.
-Abort.
+evar (f : R -> 'rV[R]_3); rewrite (_ : (fun x : R => _) = f); last first.
+  rewrite funeqE => x; rewrite /f; exact: crossmulE.
+rewrite {}/f {1}/derive1mx; apply/rowP => i; rewrite mxE derive1E.
+rewrite derive_row3 2!crossmulE !mxE /=.
+case: ifPn => [/eqP _|].
+  rewrite !derive1E deriveD /=; last 2 first.
+    admit.
+    admit.
+  rewrite deriveN /=; last by admit.
+  rewrite deriveM /=; last 2 first.
+    admit.
+    admit.
+  rewrite deriveM /=; last 2 first.
+    admit.
+    admit.
+  rewrite -!addrA addrC -addrA; congr (_ + _).
+    by rewrite mulrC.
+  rewrite opprD -!addrA addrC -addrA; congr (_ + _).
+  by rewrite mulrC.
+rewrite ifnot0 => /orP[|] /eqP -> /=.
+  admit.
+admit.
+Admitted.
 
 Lemma derive1mxM n m p (M : R^o -> 'M[R^o]_(n.+1, m.+1))
   (N : R^o -> 'M[R^o]_(m.+1, p.+1)) (t : R^o) :
