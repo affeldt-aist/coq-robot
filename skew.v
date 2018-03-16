@@ -351,23 +351,21 @@ apply (symP (sym_skew_mx2 u)); last move=> i j.
   rewrite rpredD //; last by rewrite rpredN sym_scaler_closed // sym_cst.
   by rewrite mul_tr_vec_sym.
 rewrite [in X in _ -> _ = X]mxE mulmx_trE.
-case/boolP : (i == 0) => [/eqP -> _|].
-  case/boolP : (j == 0) => [/eqP ->|].
-    rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
+case/boolP : (i == 0) => [/eqP-> _|/ifnot0P/orP[]/eqP->].
+- case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
+  + rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
     by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE
       sum3E -!expr2 -addrA addrCA addrAC -addrA.
-  rewrite ifnot0 => /orP [] /eqP ->; by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
-rewrite ifnot0 => /orP [] /eqP ->.
-  case/boolP : (j == 0) => [/eqP -> //|].
-  rewrite ifnot0 => /orP [] /eqP -> _.
-    rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
+  + by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
+  + by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
+- case/boolP : (j == 0) => [/eqP-> //|/ifnot0P/orP[]/eqP-> _].
+  + rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
     by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE
       sum3E -!expr2 addrAC.
-    by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
-case/boolP : (j == 0) => [/eqP -> //|].
-rewrite ifnot0 => /orP [] /eqP -> // _.
-rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
-by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE sum3E -!expr2.
+  + by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
+- case/boolP : (j == 0) => [/eqP-> //|/ifnot0P/orP[]/eqP-> // _].
+  rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
+  by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE sum3E -!expr2.
 Qed.
 
 Lemma skew_mx3 u : \S( u ) ^+ 3 = - (norm u) ^+ 2 *: \S( u ).

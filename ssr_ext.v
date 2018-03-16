@@ -62,6 +62,9 @@ Local Open Scope ring_scope.
 Lemma ifnot01 (i : 'I_2) : (i != 0) = (i == 1).
 Proof. by case: i => -[] // []. Qed.
 
+Lemma ifnot01P (i : 'I_2) : (i != 0) <-> (i == 1).
+Proof. by rewrite ifnot01. Qed.
+
 Lemma thirdI3 (i j : 'I_3) : i != j -> exists k, (k != i) && (k != j).
 Proof.
 move=> neq_ij; exists (- i - j).
@@ -70,6 +73,9 @@ Qed.
 
 Lemma ifnot0 (i : 'I_3) : (i != 0) = (i == 1) || (i == 2%:R).
 Proof. by move: i; do !case=>//. Qed.
+
+Lemma ifnot0P (i : 'I_3) : (i != 0) <-> (i == 1) || (i == 2%:R).
+Proof. by rewrite ifnot0. Qed.
 
 Lemma ifnot1 (i : 'I_3) : (i != 1) = (i == 0) || (i == 2%:R).
 Proof. by move: i; do !case=>//. Qed.

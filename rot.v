@@ -208,11 +208,9 @@ rewrite -(@submxK _ 2 1 2 1 (Rz a)) (_ : drsubmx _ = 1); last first.
   apply/rowP => i; by rewrite (ord1 i) !mxE.
 rewrite (_ : ulsubmx _ = RO a); last by apply/matrix2P; rewrite !mxE !eqxx.
 rewrite (_ : ursubmx _ = 0); last first.
-  apply/colP => i.
-  case/boolP : (i == 0) => [/eqP ->|]; first by rewrite !mxE.
-  rewrite ifnot01 => /eqP ->; by rewrite !mxE.
+  apply/colP => i; case/boolP : (i == 0) => [|/ifnot01P]/eqP->; by rewrite !mxE.
 rewrite (_ : dlsubmx _ = 0) //; apply/rowP => i; rewrite !mxE /=.
-case/boolP : (i == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
+by case/boolP : (i == 0) => [|/ifnot01P]/eqP->.
 Qed.
 
 Lemma RzM a b : Rz a * Rz b = Rz (a + b).
@@ -1106,14 +1104,14 @@ have [P MP] : exists P : 'M[R]_2, M = block_mx (1 : 'M_1) 0 0 P.
     rewrite (ord1 i) (ord1 j) !mxE /= -M001 mulr1n; congr (M _ _); by apply val_inj.
   rewrite (_ : ursubmx _ = 0); last first.
     apply/rowP => i.
-    case/boolP : (i == 0) => [/eqP ->|].
-      rewrite !mxE -[RHS]M010; congr (M _ _); by apply val_inj.
-    rewrite ifnot01 => /eqP ->; rewrite !mxE -[RHS]M020; congr (M _ _); by apply val_inj.
+    case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
+      [ rewrite !mxE -[RHS]M010; congr (M _ _); exact: val_inj |
+        rewrite !mxE -[RHS]M020; congr (M _ _); exact: val_inj ].
   rewrite (_ : dlsubmx _ = 0) //.
   apply/colP => i.
-  case/boolP : (i == 0) => [/eqP ->|].
-    rewrite !mxE -[RHS]M010 M01; congr (M _ _); by apply val_inj.
-  rewrite ifnot01 => /eqP ->; rewrite !mxE -[RHS]M020 M02; congr (M _ _); by apply val_inj.
+  case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
+    [ rewrite !mxE -[RHS]M010 M01; congr (M _ _); exact: val_inj |
+      rewrite !mxE -[RHS]M020 M02; congr (M _ _); exact: val_inj ].
 have PSO : P \is 'SO[R]_2 by have := MSO; rewrite MP (SOSn_SOn 1).
 move=> [: Hangle].
 split.
@@ -1194,19 +1192,18 @@ move: (sphi).
 rewrite sin_eq0 negb_or => /andP[_]/negbTE ->.
 
 rewrite 2!mxE /= => [:twosphi].
-case: ifPn => [/eqP ->|].
-  rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
+case: ifPn => [|/ifnot0P/orP[]]/eqP->/=.
+- rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
   rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
   rewrite mulrN opprK -mulr2n -mulrnAl div1r mulrA mulVr ?mul1r //.
   abstract: twosphi.
   by rewrite unitfE mulrn_eq0 negb_or.
-rewrite ifnot0 => /orP [] /eqP -> /=.
-  rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
+- rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
   rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
   by rewrite mulrN opprK -mulr2n -mulrnAl mulrA div1r mulVr // mul1r.
-rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
-rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
-by rewrite mulrN opprK -mulr2n -mulrnAl mulrA div1r mulVr // mul1r.
+- rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r.
+  rewrite 4!mxE /= skewij mxE skew_mx2' 2!mxE /= add0r opprD addrAC addrA subrK.
+  by rewrite mulrN opprK -mulr2n -mulrnAl mulrA div1r mulVr // mul1r.
 Qed.
 
 Lemma angle_axis_eskew M : M \is 'SO[R]_3 ->

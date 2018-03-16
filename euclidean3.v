@@ -214,10 +214,7 @@ Definition row2 (a b : R) : 'rV[R]_2 :=
   \row_p [eta \0 with 0 |-> a, 1 |-> b] p.
 
 Lemma row2_of_row (M : 'M[R]_2) i : row i M = row2 (M i 0) (M i 1).
-Proof.
-apply/rowP => j; rewrite !mxE /=; case: ifPn => [/eqP -> //|].
-by rewrite ifnot01 => /eqP ->.
-Qed.
+Proof. by apply/rowP=> j; rewrite !mxE /=; case: ifPn=> [|/ifnot01P]/eqP->. Qed.
 
 End row2.
 
@@ -250,8 +247,7 @@ Proof. by rewrite [LHS]row_mx_col !col_row3 !mxE /=. Qed.
 
 Lemma row_row3 n (M : 'M[R]_(n, 3)) i : row i M = row3 (M i 0) (M i 1) (M i 2%:R).
 Proof.
-apply/rowP => k; rewrite !mxE /=; case: ifPn => [/eqP -> //|].
-by rewrite ifnot0 => /orP[]/eqP->.
+by apply/rowP=> k; rewrite !mxE /=; case: ifPn=>[|/ifnot0P/orP[]]/eqP->.
 Qed.
 
 Lemma row3N a b c : - row3 a b c = row3 (- a) (- b) (- c).
@@ -311,10 +307,8 @@ Lemma matrix2P (T : eqType) (A B : 'M[T]_2) :
 Proof.
 apply (iffP idP); last by move=> ->; rewrite !eqxx.
 case/and4P => /eqP ? /eqP ? /eqP ? /eqP ?; apply/matrixP => i j.
-case/boolP : (i == 0) => [/eqP ->|].
-  case/boolP : (j == 0) => [/eqP -> //|]; last by rewrite ifnot01 => /eqP ->.
-rewrite ifnot01 => /eqP ->.
-case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
+case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
+  by case/boolP : (j == 0) => [|/ifnot01P]/eqP->.
 Qed.
 
 Lemma matrix3P (T : eqType) (A B : 'M[T]_3) :
@@ -325,10 +319,8 @@ Lemma matrix3P (T : eqType) (A B : 'M[T]_3) :
 Proof.
 apply (iffP idP) => [|]; last by move=> ->; rewrite !eqxx.
 case/and9P; do 9 move/eqP => ?; apply/matrixP => i j.
-case/boolP : (i == 0) => [/eqP ->|].
-  case/boolP : (j == 0) => [/eqP -> //|]; first by rewrite ifnot0 => /orP [] /eqP ->.
-rewrite ifnot0 => /orP [] /eqP ->;
-  case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot0 => /orP [] /eqP ->.
+case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->;
+  by case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
 Qed.
 
 Lemma vec3E (R : ringType) (u : 'rV[R]_3) :
@@ -421,8 +413,7 @@ Qed.
 
 Lemma col_mx2_rowE (M : 'M[T]_2) : M = col_mx2 (row 0 M) (row 1 M).
 Proof.
-apply/row_matrixP => i; rewrite rowK /=; case: ifPn => [/eqP -> //|].
-by rewrite ifnot01 => /eqP ->.
+apply/row_matrixP => i; by rewrite rowK /=; case: ifPn => [|/ifnot01P]/eqP->.
 Qed.
 
 Implicit Types u v w : 'rV[T]_3.
@@ -436,20 +427,18 @@ Proof. apply/rowP => n; by rewrite !mxE sum3E !mxE. Qed.
 
 Lemma col_mx3_rowE (M : 'M[T]_3) : M = col_mx3 (row 0 M) (row 1 M) (row 2%:R M).
 Proof.
-apply/row_matrixP => i; rewrite rowK /=; case: ifPn => [/eqP -> //|].
-by rewrite ifnot0 => /orP [] /eqP ->.
+apply/row_matrixP=> i; by rewrite rowK /=; case: ifPn=> [|/ifnot0P/orP[]]/eqP->.
 Qed.
 
 Lemma col_mx3E u v w : col_mx3 u v w = col_mx u (col_mx v w).
 Proof.
 rewrite [LHS]col_mx3_rowE; apply/row_matrixP => i; rewrite !rowK /=.
-case: ifPn => [/eqP ->|].
-  rewrite (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; by apply val_inj.
-rewrite ifnot0 => /orP [] /eqP -> /=.
-  rewrite (_ : 1 = @rshift 1 _ 0) ?(@rowKd _ 1); last by apply val_inj.
-  rewrite  (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; by apply val_inj.
-rewrite (_ : 2%:R = @rshift 1 _ 1) ?(@rowKd _ 1); last by apply val_inj.
-rewrite (_ : 1 = @rshift 1 1 0) ?(@rowKd _ 1) ?row_id //; by apply val_inj.
+case: ifPn => [|/ifnot0P/orP[]]/eqP->.
+- rewrite (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
+- rewrite (_ : 1 = @rshift 1 _ 0) ?(@rowKd _ 1); last exact: val_inj.
+  rewrite  (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
+- rewrite (_ : 2%:R = @rshift 1 _ 1) ?(@rowKd _ 1); last exact: val_inj.
+  rewrite (_ : 1 = @rshift 1 1 0) ?(@rowKd _ 1) ?row_id //; exact: val_inj.
 Qed.
 
 Lemma row'_col_mx3 (i : 'I_3) (u v w : 'rV[T]_3) :
@@ -937,10 +926,8 @@ Proof.
 apply (iffP idP) => [/and4P[] /eqP H1 /eqP H2 /eqP H3 /eqP H4|]; last first.
   move/orthogonalP => H; by rewrite !H /= !eqxx.
 apply/orthogonalP => i j.
-case/boolP : (i == 0) => [/eqP ->|].
-  case/boolP : (j == 0) => [/eqP -> //|]; by rewrite ifnot01 => /eqP ->.
-rewrite ifnot01 => /eqP ->; case/boolP : (j == 0) => [/eqP -> //|].
-by rewrite ifnot01 => /eqP ->; rewrite eqxx.
+case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
+  by case/boolP : (j == 0) => [|/ifnot01P]/eqP->.
 Qed.
 
 (* TODO: move? use *d? *)
@@ -1296,16 +1283,13 @@ Lemma orthogonal3P (R : realType) (M : 'M[R]_3) :
 Proof.
 apply (iffP idP).
 - case/and6P => /eqP ni /eqP nj /eqP nk /eqP xy0 /eqP xz0 /eqP yz0 /=.
-  apply/orthogonalP => i j; case/boolP : (i == 0) => [/eqP ->|].
-    case/boolP : (j == 0) => [/eqP ->|]; first by rewrite dotmulvv ni expr1n.
-    rewrite ifnot0 => /orP [] /eqP ->; by [rewrite xy0 | rewrite xz0].
-  rewrite ifnot0 => /orP [] /eqP ->.
-    case/boolP : (j == 0) => [/eqP ->|]; first by rewrite dotmulC xy0.
-    rewrite ifnot0 => /orP [] /eqP ->; first by rewrite dotmulvv nj expr1n.
-    by rewrite yz0.
-  case/boolP : (j == 0) => [/eqP ->|]; first by rewrite dotmulC xz0.
-  rewrite ifnot0 => /orP [] /eqP ->; first by rewrite dotmulC yz0.
-  by rewrite dotmulvv nk expr1n.
+  apply/orthogonalP => i j; case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->.
+  + case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->; by
+      [rewrite dotmulvv ni expr1n | rewrite xy0 | rewrite xz0].
+  + case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->; by
+      [rewrite dotmulC xy0 | rewrite dotmulvv nj expr1n | rewrite yz0].
+  + case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->; by
+      [rewrite dotmulC xz0 | rewrite dotmulC yz0 | rewrite dotmulvv nk expr1n].
 - move/orthogonalP => H; apply/and6P; split; first [
     by rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv H |
     by rewrite H ].

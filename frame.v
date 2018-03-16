@@ -585,11 +585,10 @@ Lemma frame0 : frame 0 = can_frame R.
 Proof.
 do 2 apply val_inj => /=.
 apply/row_matrixP => i; rewrite row1.
-case/boolP : (i == 0) => [/eqP ->|].
-  by rewrite frameE /= rowK /= /Base.i eqxx.
-rewrite ifnot0 => /orP[] /eqP ->; rewrite frameE rowK /= /Base.i eqxx.
-  by rewrite /Base1.j colinear_refl.
-by rewrite /Base1.k /Base1.j colinear_refl vecij.
+case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->;
+  rewrite frameE /= rowK /= /Base.i eqxx //.
+- by rewrite /Base1.j colinear_refl.
+- by rewrite /Base1.k /Base1.j colinear_refl vecij.
 Qed.
 
 Section scalar.
@@ -619,8 +618,8 @@ Lemma Z : frame (p *: u) = frame u.
 Proof.
 do 2 apply val_inj => /=.
 apply/row_matrixP => i; rewrite -!rowframeE.
-case/boolP : (i == 0) => [/eqP ->|]; first by rewrite iZ.
-rewrite ifnot0 => /orP[] /eqP ->; by [rewrite jZ | rewrite kZ].
+case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->; by
+  [rewrite iZ| rewrite jZ|rewrite kZ].
 Qed.
 End scalar_pos.
 
@@ -674,11 +673,11 @@ Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite scaler0 oppr0.
 do 2 apply val_inj => /=.
 apply/row_matrixP => i; rewrite -rowframeE.
-case/boolP : (i == 0) => [/eqP ->|].
-  rewrite frame0E ?scaler_eq0 ?negb_or ?u0 ?ltr_eqF // -rowframeE iN //.
+case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->.
+- rewrite frame0E ?scaler_eq0 ?negb_or ?u0 ?ltr_eqF // -rowframeE iN //.
   by rewrite frame0E // -(opprK p) scaleNr normalizeN normalizeZ // oppr_gt0.
-rewrite ifnot0 => /orP[] /eqP ->; rewrite -rowframeE;
-  by [rewrite jZN // jN | rewrite kZN // kN].
+- by rewrite -rowframeE jZN // jN.
+- by rewrite -rowframeE kZN // kN.
 Qed.
 
 End scalar_neg.
