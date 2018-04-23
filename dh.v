@@ -5,7 +5,7 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-From mathcomp.analysis Require Import reals.
+(*From mathcomp.analysis Require Import reals.*)
 
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
@@ -27,8 +27,8 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B))
 (* [ angeles2014: p.102-203] *)
 Module Plucker.
 Section plucker.
-Variable R : realType.
-Let vector := 'rV[R]_3.
+Variable T : rcfType (*realType*).
+Let vector := 'rV[T]_3.
 
 Record array := mkArray {
   e : vector ; (* direction *)
@@ -39,20 +39,20 @@ Record array := mkArray {
 End plucker.
 End Plucker.
 
-Coercion plucker_array_mx (R : realType) (p : Plucker.array R) :=
+Coercion plucker_array_mx (T : rcfType (*realType*)) (p : Plucker.array T) :=
   row_mx (Plucker.e p) (Plucker.n p).
 
 (* wip *)
 Section plucker_of_line.
 
-Variable R : realType.
-Implicit Types l : Line.t R.
+Variable T : rcfType (*realType*).
+Implicit Types l : Line.t T.
 
 Definition normalized_plucker_direction l :=
   let p1 := \pt( l ) in let p2 := \pt2( l ) in
   (norm (p2 - p1))^-1 *: (p2 - p1).
 
-Lemma normalized_plucker_directionP (l : Line.t R) : \vec( l ) != 0 ->
+Lemma normalized_plucker_directionP (l : Line.t T) : \vec( l ) != 0 ->
   let e := normalized_plucker_direction l in e *d e == 1.
 Proof.
 move=> l0 /=.
@@ -72,10 +72,10 @@ rewrite /normalized_plucker_position /normalized_plucker_direction -Line.vectorE
 by rewrite dotmulvZ dotmulZv -dot_crossmulC crossmulvv dotmulv0 2!mulr0.
 Qed.
 
-Definition normalized_plucker l : 'rV[R]_6 :=
+Definition normalized_plucker l : 'rV[T]_6 :=
   row_mx (normalized_plucker_direction l) (normalized_plucker_position l).
 
-Definition plucker_of_line l : 'rV[R]_6 :=
+Definition plucker_of_line l : 'rV[T]_6 :=
   let p1 := \pt( l ) in let p2 := \pt2( l ) in
   row_mx (p2 - p1) (p1 *v (p2 - p1)).
 
@@ -132,7 +132,7 @@ Definition homogeneous_plucker_eqn l :=
 
 Require Import rigid.
 
-Lemma homogeneous_in_plucker p (l : Line.t R) : p \is 'hP[R] ->
+Lemma homogeneous_in_plucker p (l : Line.t T) : p \is 'hP[T] ->
   from_h p \in (l : pred _) ->
   p *m homogeneous_plucker_eqn l = 0.
 Proof.
@@ -146,17 +146,17 @@ End plucker_of_line.
 
 Section denavit_hartenberg_homogeneous_matrix.
 
-Variable R : realType.
+Variable T : rcfType (*realType*).
 
-Definition dh_mat (jangle : angle R) loffset llength (ltwist : angle R) : 'M[R]_4 :=
+Definition dh_mat (jangle : angle T) loffset llength (ltwist : angle T) : 'M[T]_4 :=
   hRx ltwist * hTx llength * hTz loffset * hRz jangle.
 
-Definition dh_rot (jangle ltwist : angle R) := col_mx3
+Definition dh_rot (jangle ltwist : angle T) := col_mx3
   (row3 (cos jangle) (sin jangle) 0)
   (row3 (cos ltwist * - sin jangle) (cos ltwist * cos jangle) (sin ltwist))
   (row3 (sin ltwist * sin jangle) (- sin ltwist * cos jangle) (cos ltwist)).
 
-Lemma dh_rot_i (f1 f0 : Frame.t R) t a : f1 _R^ f0 = dh_rot t a ->
+Lemma dh_rot_i (f1 f0 : Frame.t T) t a : f1 _R^ f0 = dh_rot t a ->
   f1|,0 *m f0^T = row3 (cos t) (sin t) 0.
 Proof.
 rewrite rowframeE (rowE 0 f1) -mulmxA FromToE noframe_inv => ->.
@@ -183,16 +183,15 @@ End denavit_hartenberg_homogeneous_matrix.
 
 Section denavit_hartenberg_convention.
 
-Variable R : realType.
-Variable F0 F1 : TFrame.t R.
+Variable T : rcfType (*realType*).
+Variables F0 F1 : TFrame.t T.
 Definition From1To0 := locked (F1 _R^ F0).
-Definition p1_in_0 : 'rV[R]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_frame R) _R^ F0.
+Definition p1_in_0 : 'rV[T]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_tframe T) _R^ F0.
 
-Goal Vec F0 p1_in_0 = to_coord F0 (Vec (can_frame R) (TFrame.o F1 - TFrame.o F0)).
+Goal FreeVect.mk F0 p1_in_0 = to_coord F0 (FreeVect.mk (can_tframe T) (TFrame.o F1 - TFrame.o F0)).
 Proof.
 rewrite /p1_in_0.
-rewrite /to_coord.
-rewrite VecK.
+by rewrite /to_coord.
 Abort.
 
 Hypothesis dh1 : perpendicular (xaxis F1) (zaxis F0).
@@ -437,22 +436,22 @@ End denavit_hartenberg_convention.
 (* TODO: in progress, [angeles] p.141-142 *)
 Module Joint.
 Section joint.
-Variable R : realType.
-Let vector := 'rV[R]_3.
+Variable T : rcfType (*realType*).
+Let vector := 'rV[T]_3.
 Record t := mk {
   vaxis : vector ;
   norm_vaxis : norm vaxis = 1 ;
-  angle : angle R (* between to successive X axes *) }.
+  angle : angle T (* between to successive X axes *) }.
 End joint.
 End Joint.
 
 Module Link.
 Section link.
-Variable R : realType.
+Variable T : rcfType (*realType*).
 Record t := mk {
-  length : R ; (* nonnegative, distance between to successive joint axes *)
-  offset : R ; (* between to successive X axes *)
-  twist : angle R (* or twist angle, between two successive Z axes *) }.
+  length : T ; (* nonnegative, distance between to successive joint axes *)
+  offset : T ; (* between to successive X axes *)
+  twist : angle T (* or twist angle, between two successive Z axes *) }.
 End link.
 End Link.
 (* NB: Link.offset, Joint.angle, Link.length, Link.twist are called
@@ -460,18 +459,18 @@ End Link.
 
 Section open_chain.
 
-Variable R : realType.
-Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
-Let frame := TFrame.t R.
-Let joint := Joint.t R.
-Let link := Link.t R.
+Variable T : rcfType (*realType*).
+Let point := 'rV[T]_3.
+Let vector := 'rV[T]_3.
+Let frame := TFrame.t T.
+Let joint := Joint.t T.
+Let link := Link.t T.
 
 (* u is directed from p1 to p2 *)
 Definition directed_from_to (u : vector) (p1 p2 : point) : bool :=
   0 <= cos (vec_angle u (p2 - p1)).
 
-Axiom angle_between_lines : 'rV[R]_3 -> 'rV[R]_3 -> 'rV[R]_3 -> angle R.
+Axiom angle_between_lines : 'rV[T]_3 -> 'rV[T]_3 -> 'rV[T]_3 -> angle T.
 
 Variable n' : nat.
 Let n := n'.+1.

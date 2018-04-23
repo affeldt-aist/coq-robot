@@ -5,7 +5,7 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-From mathcomp.analysis Require Import reals.
+(*From mathcomp.analysis Require Import reals.*)
 
 Require Import ssr_ext euclidean3 angle vec_angle frame rot.
 
@@ -32,7 +32,7 @@ Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
 Section quaternion.
-Variable R : realType.
+Variable R : rcfType (*realType*).
 
 Record quat := mkQuat {quatl : R ; quatr : 'rV[R]_3 }.
 
@@ -893,7 +893,7 @@ Notation "x '..2'" := (rdual x) (at level 1, format "x '..2'") : dual_scope.
 
 (* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
-Variable R : realType.
+Variable R : rcfType (*realType*).
 
 Definition dquat := @dual (quat_unitRing R).
 

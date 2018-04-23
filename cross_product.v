@@ -20,40 +20,40 @@ Local Open Scope ring_scope.
 
 Section Normal.
 
-Variables (R : fieldType) (n : nat).
+Variables (F : fieldType) (n : nat).
 Local Open Scope ring_scope.
 
 Local Notation "A _|_ B" := (A%MS <= kermx B%MS^T)%MS (at level 69).
 
-Lemma normal_sym k m (A : 'M[R]_(k,n)) (B : 'M[R]_(m,n)) :
+Lemma normal_sym k m (A : 'M[F]_(k,n)) (B : 'M[F]_(m,n)) :
   A _|_ B = B _|_ A.
 Proof.
 rewrite !(sameP sub_kermxP eqP) -{1}[A]trmxK -trmx_mul.
 by rewrite -{1}trmx0 (inj_eq (@trmx_inj _ _ _)).
 Qed.
 
-Lemma normalNm k m (A : 'M[R]_(k,n)) (B : 'M[R]_(m,n)) : (- A) _|_ B = A _|_ B.
+Lemma normalNm k m (A : 'M[F]_(k,n)) (B : 'M[F]_(m,n)) : (- A) _|_ B = A _|_ B.
 Proof. by rewrite eqmx_opp. Qed.
 
-Lemma normalmN k m (A : 'M[R]_(k,n)) (B : 'M[R]_(m,n)) : A _|_ (- B) = A _|_ B.
+Lemma normalmN k m (A : 'M[F]_(k,n)) (B : 'M[F]_(m,n)) : A _|_ (- B) = A _|_ B.
 Proof. by rewrite ![A _|_ _]normal_sym normalNm. Qed.
 
-Lemma normalDm k m p (A : 'M[R]_(k,n)) (B : 'M[R]_(m,n)) (C : 'M[R]_(p,n)) :
+Lemma normalDm k m p (A : 'M[F]_(k,n)) (B : 'M[F]_(m,n)) (C : 'M[F]_(p,n)) :
   (A + B _|_ C) = (A _|_ C) && (B _|_ C).
 Proof. by rewrite addsmxE !(sameP sub_kermxP eqP) mul_col_mx col_mx_eq0. Qed.
 
-Lemma normalmD  k m p (A : 'M[R]_(k,n)) (B : 'M[R]_(m,n)) (C : 'M[R]_(p,n)) :
+Lemma normalmD  k m p (A : 'M[F]_(k,n)) (B : 'M[F]_(m,n)) (C : 'M[F]_(p,n)) :
   (A _|_ B + C) = (A _|_ B) && (A _|_ C).
 Proof. by rewrite ![A _|_ _]normal_sym normalDm. Qed.
 
-Definition dotmul (u v : 'rV[R]_n) : R := (u *m v^T) 0 0.
+Definition dotmul (u v : 'rV[F]_n) : F := (u *m v^T) 0 0.
 Local Notation "*d%R" := (@dotmul _).
 Local Notation "u *d w" := (dotmul u w) (at level 40).
 
-Lemma dotmulE (u v : 'rV[R]_n) : u *d v = \sum_k u 0 k * v 0 k.
+Lemma dotmulE (u v : 'rV[F]_n) : u *d v = \sum_k u 0 k * v 0 k.
 Proof. by rewrite [LHS]mxE; apply: eq_bigr=> i; rewrite mxE. Qed.
 
-Lemma normalvv (u v : 'rV[R]_n) : (u _|_ v) = (u *d v == 0).
+Lemma normalvv (u v : 'rV[F]_n) : (u _|_ v) = (u *d v == 0).
 Proof. by rewrite (sameP sub_kermxP eqP) [_ *m _^T]mx11_scalar fmorph_eq0. Qed.
 
 End Normal.
@@ -64,10 +64,10 @@ Local Notation "u *d w" := (dotmul u w) (at level 40).
 
 Section Crossproduct.
 
-Variable (R : fieldType) (n' : nat).
+Variable (F : fieldType) (n' : nat).
 Let n := n'.+1.
 
-Definition cross (u : 'M[R]_(n',n)) : 'rV_n  :=
+Definition cross (u : 'M[F]_(n',n)) : 'rV_n  :=
   \row_(k < n) \det (col_mx (@delta_mx _ 1%N _ 0 k) u).
 
 (*Definition crossmul (u v : vector) : vector :=
@@ -83,7 +83,7 @@ Ltac simp_ord :=
       |rewrite -[Ordinal _]natr_Zp /=].
 Ltac simpr := rewrite ?(mulr0,mul0r,mul1r,mulr1,addr0,add0r).
 
-Lemma cross_multilinear (A B C : 'M_(n',n)) (i0 : 'I_n') (b c : R) :
+Lemma cross_multilinear (A B C : 'M_(n',n)) (i0 : 'I_n') (b c : F) :
  row i0 A = b *: row i0 B + c *: row i0 C ->
  row' i0 B = row' i0 A ->
  row' i0 C = row' i0 A -> cross A = b *: cross B + c *: cross C.
@@ -96,7 +96,7 @@ do ?[apply/matrixP => i j; rewrite !mxE; case: splitP => //= l;
 (*   have := congr1 (fun M : 'M__ => M 0 j) rABC; rewrite !mxE. *)
 Admitted.
 
-Lemma dot_cross (u : 'rV[R]_n) (V : 'M[R]_(n',n)) :
+Lemma dot_cross (u : 'rV[F]_n) (V : 'M[F]_(n',n)) :
   u *d (cross V) = \det (col_mx u V).
 Proof.
 rewrite dotmulE (expand_det_row _ 0); apply: eq_bigr => k _; rewrite !mxE /=.
@@ -110,10 +110,10 @@ apply: eq_bigr => i; rewrite !mxE.
 by case: fintype.splitP => //= j'; rewrite ord1 {j'} -val_eqE => /= ->.
 Qed.
 
-Lemma dotmulC (u v : 'rV[R]_n) : u *d v = v *d u.
+Lemma dotmulC (u v : 'rV[F]_n) : u *d v = v *d u.
 Proof. by rewrite /dotmul -{1}[u]trmxK -trmx_mul mxE. Qed.
 
-Lemma crossmul_normal (A : 'M[R]_(n',n)) : A _|_ cross A.
+Lemma crossmul_normal (A : 'M[F]_(n',n)) : A _|_ cross A.
 Proof.
 apply/rV_subP => v /submxP [M ->]; rewrite normalvv dot_cross; apply/det0P.
 exists (row_mx (- 1) M); rewrite ?row_mx_eq0 ?oppr_eq0 ?oner_eq0 //.
@@ -144,17 +144,17 @@ Qed.
 (* Canonical crossmulr_is_additive u := Additive (crossmulr_linear u). *)
 (* Canonical crossmulr_is_linear u := AddLinear (crossmulr_linear u). *)
 
-Lemma det_mx11 (A : 'M[R]_1) : \det A = A 0 0.
+Lemma det_mx11 (A : 'M[F]_1) : \det A = A 0 0.
 Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
 
-Lemma cofactor_mx22 (A : 'M[R]_2) i j :
+Lemma cofactor_mx22 (A : 'M[F]_2) i j :
   cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
 Proof.
 rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
 by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
 Qed.
 
-Lemma det_mx22 (A : 'M[R]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
+Lemma det_mx22 (A : 'M[F]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
 Proof.
 rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
 rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).

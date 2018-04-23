@@ -5,7 +5,7 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-From mathcomp.analysis Require Import reals.
+(*From mathcomp.analysis Require Import reals.*)
 
 Require Import ssr_ext angle euclidean3.
 
@@ -33,7 +33,7 @@ Local Open Scope ring_scope.
       distance_between_lines
 *)
 
-Lemma norm1_cossin (R : realType) (v :'rV[R]_2) :
+Lemma norm1_cossin (T : rcfType (*realType*)) (v : 'rV[T]_2) :
   norm v = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
 Proof.
 move=> v1.
@@ -43,10 +43,10 @@ Qed.
 
 Section vec_angle.
 
-Variable R : realType.
-Implicit Types u v : 'rV[R]_3.
+Variable T : rcfType (*realType*).
+Implicit Types u v : 'rV[T]_3.
 
-Definition vec_angle v w : angle R := arg (v *d w +i* norm (v *v w))%C.
+Definition vec_angle v w : angle T := arg (v *d w +i* norm (v *v w))%C.
 
 Lemma vec_anglev0 v : vec_angle v 0 = vec_angle 0 0.
 Proof. by rewrite /vec_angle 2!dotmulv0 2!crossmulv0. Qed.
@@ -66,7 +66,7 @@ case/boolP : (v == 0) => [/eqP ->|v0 k0]; first by rewrite scaler0 !vec_angle0.
 by rewrite /vec_angle dotmulvZ linearZ normZ ger0_norm ?ltrW // complexZ argZ.
 Qed.
 
-Lemma vec_angleZv u v (k : R) : 0 < k -> vec_angle (k *: u) v = vec_angle u v.
+Lemma vec_angleZv u v (k : T) : 0 < k -> vec_angle (k *: u) v = vec_angle u v.
 Proof. move=> ?; rewrite vec_angleC vec_anglevZ; by [rewrite vec_angleC|]. Qed.
 
 Lemma vec_anglevZN u v k : k < 0 -> vec_angle u (k *: v) = vec_angle u (- v).
@@ -324,7 +324,7 @@ rewrite norm_crossmul mulrAC divrr // ?mul1r.
 by rewrite unitfE mulf_neq0 // norm_eq0.
 Qed.
 
-Lemma orth_preserves_vec_angle M : M \is 'O[R]_3 ->
+Lemma orth_preserves_vec_angle M : M \is 'O[T]_3 ->
   {mono (fun u => u *m M) : v w / vec_angle v w}.
 Proof.
 move=> MO v w; move/(proj2 (orth_preserves_dotmul _))/(_ v w) : (MO).
@@ -335,8 +335,8 @@ End vec_angle.
 
 Section colinear.
 
-Variable R : realType.
-Implicit Types u v : 'rV[R]_3.
+Variable T : rcfType (*realType*).
+Implicit Types u v : 'rV[T]_3.
 
 Definition colinear u v := u *v v == 0.
 
@@ -463,11 +463,11 @@ apply/idP/idP.
   by rewrite norm_eq0.
 Qed.
 
-Lemma sin_vec_angle_iff (u v : 'rV[R]_3) (u0 : u != 0) (v0 : v != 0) :
+Lemma sin_vec_angle_iff (u v : 'rV[T]_3) (u0 : u != 0) (v0 : v != 0) :
   0 <= sin (vec_angle u v) ?= iff (colinear u v).
 Proof. split; [exact: sin_vec_angle_ge0|by rewrite colinear_sin]. Qed.
 
-Lemma invariant_colinear (u : 'rV[R]_3) (M : 'M[R]_3) :
+Lemma invariant_colinear (u : 'rV[T]_3) (M : 'M[T]_3) :
   u != 0 -> u *m M = u -> forall v, colinear u v -> v *m M = v.
 Proof.
 move=> u0 uMu v /colinearP[/eqP->|[v0 [k [Hk1 Hk2]]]]; first by rewrite mul0mx.
@@ -480,8 +480,8 @@ End colinear.
 
 Section axial_normal_decomposition.
 
-Variable R : realType.
-Let vector := 'rV[R]_3.
+Variable T : rcfType (*realType*).
+Let vector := 'rV[T]_3.
 Implicit Types u v : vector.
 
 (*Definition axialcomp v u := u *d v *: u.*)
@@ -547,7 +547,7 @@ rewrite (mulrA (_^-1)) mulVr ?unitfE ?norm_eq0 // mul1r.
 by rewrite scalerA -mulrA divrr ?unitfE ?norm_eq0 // mulr1 subrr.
 Qed.
 
-Lemma normalcomp_mulO u p Q : Q \is 'O[R]_3 -> u *m Q = u ->
+Lemma normalcomp_mulO u p Q : Q \is 'O[T]_3 -> u *m Q = u ->
   normalcomp (p *m Q) u = normalcomp p u *m Q.
 Proof.
 move=> QO uQu.
@@ -609,9 +609,9 @@ End axial_normal_decomposition.
 
 Section law_of_sines.
 
-Variable R : realType.
-Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
+Variable T : rcfType (*realType*).
+Let point := 'rV[T]_3.
+Let vector := 'rV[T]_3.
 Implicit Types a b c : point.
 Implicit Types v : vector.
 
@@ -721,10 +721,10 @@ End law_of_sines.
 
 Module Line.
 Section line_def.
-Variable R : realType.
+Variable T : rcfType (*realType*).
 Record t := mk {
-  point : 'rV[R]_3 ;
-  vector :> 'rV[R]_3
+  point : 'rV[T]_3 ;
+  vector :> 'rV[T]_3
 }.
 Definition point2 (l : t) := point l + vector l.
 Lemma vectorE l : vector l = point2 l - point l.
@@ -736,16 +736,16 @@ Notation "'\pt(' l ')'" := (Line.point l) (at level 3, format "'\pt(' l ')'").
 Notation "'\pt2(' l ')'" := (Line.point2 l) (at level 3, format "'\pt2(' l ')'").
 Notation "'\vec(' l ')'" := (Line.vector l) (at level 3, format "'\vec(' l ')'").
 
-Coercion line_pred (R : realType) (l : Line.t R) : pred 'rV[R]_3 :=
+Coercion line_pred (T : rcfType (*realType*)) (l : Line.t T) : pred 'rV[T]_3 :=
   [pred p | (p == \pt( l )) ||
     (\vec( l ) != 0) && colinear \vec( l ) (p - \pt( l ))].
 
 Section line.
 
-Variable R : realType.
-Let point := 'rV[R]_3.
-Let vector := 'rV[R]_3.
-Implicit Types l : Line.t R.
+Variable T : rcfType (*realType*).
+Let point := 'rV[T]_3.
+Let vector := 'rV[T]_3.
+Implicit Types l : Line.t T.
 
 Lemma line_point_in l : \pt( l ) \in (l : pred _).
 Proof. by case: l => p v /=; rewrite inE /= eqxx. Qed.
@@ -781,10 +781,10 @@ case/lineP : pl => k' ->.
 exists (k' + k); by rewrite -addrA -scalerDl.
 Qed.
 
-Definition parallel : rel (Line.t R) :=
+Definition parallel : rel (Line.t T) :=
   [rel l1 l2 | colinear \vec( l1 ) \vec( l2 )].
 
-Definition perpendicular : rel (Line.t R) :=
+Definition perpendicular : rel (Line.t T) :=
   [rel l1 l2 | \vec( l1 ) *d \vec( l2 ) == 0].
 
 (* skew lines *)
@@ -792,7 +792,7 @@ Definition perpendicular : rel (Line.t R) :=
 Definition coplanar (p1 p2 p3 p4 : point) : bool :=
   (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
 
-Definition skew : rel (Line.t R) := [rel l1 l2 |
+Definition skew : rel (Line.t T) := [rel l1 l2 |
   ~~ coplanar \pt( l1 ) \pt2( l1 ) \pt( l2 ) \pt2( l2) ].
 
 Lemma skewE l1 l2 :
@@ -803,11 +803,11 @@ End line.
 
 Section line_line_intersection.
 
-Variable R : realType.
-Let point := 'rV[R]_3.
-Implicit Types l : Line.t R.
+Variable T : rcfType (*realType*).
+Let point := 'rV[T]_3.
+Implicit Types l : Line.t T.
 
-Definition intersects : rel (Line.t R) :=
+Definition intersects : rel (Line.t T) :=
   [rel l1 l2 | ~~ skew l1 l2 && ~~ parallel l1 l2 ].
 
 Definition is_interpoint p l1 l2 :=
@@ -887,7 +887,7 @@ Proof.
 move=> ?.
 case/andP => /lineP[t' Hs] /lineP[s' Ht] s t.
 move=> v1 v2.
-have H (a b va vb : 'rV[R]_3) (k l : R) :
+have H (a b va vb : 'rV[T]_3) (k l : T) :
   a + k *: va = b + l *: vb -> k *: (va *v vb) = (b - a) *v vb.
   clear.
   move=> /(congr1 (fun x => x - a)).
@@ -929,13 +929,13 @@ End line_line_intersection.
 
 Section distance_line.
 
-Variable R : realType.
-Let point := 'rV[R]_3.
+Variable T : rcfType (*realType*).
+Let point := 'rV[T]_3.
 
-Definition distance_point_line (p : point) l : R :=
+Definition distance_point_line (p : point) l : T :=
   norm ((p - \pt( l )) *v \vec( l )) / norm \vec( l ).
 
-Definition distance_between_lines (l1 l2 : Line.t R) : R :=
+Definition distance_between_lines (l1 l2 : Line.t T) : T :=
   if intersects l1 l2 then
     0
   else if parallel l1 l2 then

@@ -5,11 +5,9 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-From mathcomp.analysis Require Import reals.
-
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame rigid screw.
 
-From mathcomp.analysis Require Import boolp reals.
+From mathcomp.analysis Require Import reals.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

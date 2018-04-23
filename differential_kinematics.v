@@ -1,10 +1,10 @@
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype ssrnat seq choice.
 From mathcomp Require Import fintype tuple finfun bigop finset ssralg matrix.
-From mathcomp Require Import ssrnum.
+From mathcomp Require Import interval ssrnum.
 
 Require Import Reals.
-From mathcomp.analysis Require Import Rstruct Rbar boolp reals topology.
-From mathcomp.analysis Require Import hierarchy landau forms derive.
+From mathcomp.analysis Require Import boolp reals Rstruct Rbar set posnum.
+From mathcomp.analysis Require Import topology hierarchy landau forms derive.
 
 Require Import ssr_ext euclidean3 rot skew.
 
@@ -19,7 +19,7 @@ Local Open Scope ring_scope.
 
 Section dotmul_bilinear.
 
-Variables (R : realType) (n : nat).
+Variables (R : rcfType) (n : nat).
 
 Definition dotmul_rev (v u : 'rV[R]_n) := u *d v.
 Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
@@ -39,7 +39,7 @@ End dotmul_bilinear.
 
 Section crossmul_bilinear.
 
-Variables (R : realType).
+Variables (R : rcfType).
 
 Definition crossmul_rev (v u : 'rV[R]_3) := u *v v.
 Canonical rev_crossmul := @RevOp _ _ _ crossmul_rev (@crossmul R)
@@ -61,20 +61,13 @@ Section tmp.
 
 Variable (V W : normedModType R).
 
-Lemma fct_sum n (x : V) (f : 'I_n -> V -> W) :
-  \sum_(k < n) f k x = (\sum_(k < n) f k) x.
-Proof.
-elim: n f => [f|n IH f]; first by rewrite 2!big_ord0.
-by rewrite [in RHS]big_ord_recr /= -[RHS]/(_ x + _ x) -IH big_ord_recr.
-Qed.
-
 Definition derive1mx n m (M : R -> 'M[W]_(n, m)) := fun t =>
-  \matrix_(i < n, j < m) (derive1 (fun x => M x i j) t : W).
+  \matrix_(i < n, j < m) ((fun x => M x i j)^`() t : W).
 
 Lemma derive1mx_cst n m (M : 'M[W]_(n, m)) : derive1mx (cst M) = cst 0.
 Proof.
 rewrite /derive1mx funeqE => t; apply/matrixP => i j; rewrite !mxE.
-by rewrite derive1E (_ : (fun _ => _) = cst (M i j)) // derive_cst.
+by rewrite derive1E (_ : (fun _ => _) = cst (M i j)) // derive_val.
 Qed.
 
 Lemma derive1mx_tr n (M : R -> 'M[W]_(n, n)) t :
@@ -85,8 +78,8 @@ by rewrite (_ : (fun _ => _) = (fun t => M t j i)) // funeqE => ?; rewrite mxE.
 Qed.
 
 Lemma derive_mx n m (f : V -> 'I_n -> 'I_m -> W) i j (t : V) v :
-  derive (fun x => (\matrix_(i < n, j < m) (f x i j)) i j) t v =
-    (\matrix_(i < n, j < m) (derive (fun x => f x i j) t v : W)) i j.
+  'D_v[fun x => (\matrix_(i < n, j < m) (f x i j)) i j] t =
+    (\matrix_(i < n, j < m) ('D_v[fun x => f x i j] t : W)) i j.
 Proof.
 by rewrite (_ : (fun x => _) = (fun x => f x i j)) ?mxE // funeqE => ?; rewrite mxE.
 Qed.
@@ -139,7 +132,7 @@ set f := fun _ => _. set g := fun _ => _.
 by rewrite (_ : f = g) // funeqE => x; rewrite /f /g mxE.
 Qed.
 
-Lemma dotmul_belast {R : realType} n (u : 'rV[R]_n.+1) (v1 : 'rV[R]_n) v2 H :
+Lemma dotmul_belast {R : rcfType} n (u : 'rV[R]_n.+1) (v1 : 'rV[R]_n) v2 H :
   u *d castmx (erefl 1%nat, H) (row_mx v1 v2) =
     u *d castmx (erefl 1%nat, H) (row_mx v1 0%:M) +
     u *d castmx (erefl 1%nat, H) (row_mx 0 v2).
@@ -150,7 +143,7 @@ Qed.
 
 Lemma derive1mx_dotmul_belast n (u v : R^o -> 'rV[R^o]_n.+1) t :
   let u' x := row_belast (u x) in let v' x := row_belast (v x) in
-  u' t *d derive1mx v' t + (u t)``_ord_max *: derive (fun x => (v x)``_ord_max) t 1 =
+  u' t *d derive1mx v' t + (u t)``_ord_max *: 'D_1[fun x => (v x)``_ord_max] t =
   u t *d derive1mx v t.
 Proof.
 move=> u' v'.
@@ -184,16 +177,16 @@ Section product_rules.
 
 Lemma derive1mx_dotmul n (u v : R^o -> 'rV[R^o]_n) (t : R^o) :
   derivable_mx u t 1 -> derivable_mx v t 1 ->
-  derive1 (fun x => u x *d v x : R^o) t =
+  (fun x => u x *d v x : R^o)^`() t =
   derive1mx u t *d v t + u t *d derive1mx v t.
 Proof.
 move=> U V.
 evar (f : R -> R); rewrite (_ : (fun x : R => _) = f); last first.
-  rewrite funeqE => x; exact: dotmulE.
+  rewrite funeqE => x /=; exact: dotmulE.
 rewrite derive1E {}/f.
 set f := fun i : 'I__ => fun x => ((u x) ``_ i * (v x) ``_ i).
 rewrite (_ : (fun _ : R => _) = \sum_(k < _) f k); last first.
-  by rewrite funeqE => x; rewrite /f /= -fct_sum.
+  by rewrite funeqE => x; rewrite /f /= fct_sumE.
 rewrite derive_sum; last by move=> ?; exact: derivableM (U _ _) (V _ _).
 rewrite {}/f.
 elim: n u v => [|n IH] u v in U V *.
@@ -202,7 +195,7 @@ elim: n u v => [|n IH] u v in U V *.
 rewrite [LHS]big_ord_recr /=.
 set u' := fun x => row_belast (u x). set v' := fun x => row_belast (v x).
 transitivity (derive1mx u' t *d v' t + u' t *d derive1mx v' t +
-    derive (fun x => (u x)``_ord_max * (v x)``_ord_max) t 1).
+    'D_1[fun x => (u x)``_ord_max * (v x)``_ord_max] t).
   rewrite -(IH _ _ (derivable_row_belast U) (derivable_row_belast V)).
   congr (_ + _); apply eq_bigr => i _; congr (derive _ t 1).
   by rewrite funeqE => x; rewrite !mxE.
@@ -280,3 +273,180 @@ by rewrite /s trmx_mul trmxK mulNr.
 Qed.
 
 End derivative_of_a_rotation_matrix.
+
+Require Import frame.
+
+Section about_free_vectors.
+
+Variable T : rcfType.
+
+Definition FreeVect_add (F : TFrame.t T) (a b : FreeVect.t F) : FreeVect.t F :=
+  <| FreeVect.v a + FreeVect.v b $ F |>.
+
+Local Notation "a +fv b" := (FreeVect_add a b) (at level 39).
+
+Lemma fv_eq a b : a = b -> forall F : Frame.t T, <| a $ F |> = <| b $ F |>.
+Proof. by move=> ->. Qed.
+
+End about_free_vectors.
+
+Notation "a +fv b" := (FreeVect_add a b) (at level 39).
+
+Module BoundVect.
+Section bound_vector.
+Variable T : rcfType.
+Record t (F : TFrame.t T) := mk { endp : 'rV[T]_3 }.
+End bound_vector.
+End BoundVect.
+
+Section about_bound_vectors.
+
+Variable T : rcfType.
+Variable F : TFrame.t T.
+
+Definition startp (_ : BoundVect.t F) : 'rV[T]_3 :=
+  TFrame.o F.
+
+Definition FreeVect_of_Bound (p : BoundVect.t F) : FreeVect.t F :=
+  <| BoundVect.endp p $ F |>.
+
+Definition BoundVect_add (a b : BoundVect.t F) : BoundVect.t F :=
+  BoundVect.mk F (BoundVect.endp a + BoundVect.endp b).
+
+Definition BoundFree_add (a : BoundVect.t F) (b : FreeVect.t F) : BoundVect.t F :=
+  BoundVect.mk F (BoundVect.endp a + FreeVect.v b).
+
+Local Notation "a # b" := (BoundFree_add a b) (at level 39).
+
+Lemma BoundFree_addA (a : BoundVect.t F) (b c : FreeVect.t F) :
+  a # b # c = a # (b +fv c).
+Proof. by rewrite /BoundFree_add /= addrA. Qed.
+
+Definition Rsub (F : TFrame.t T) (a b : BoundVect.t F) : FreeVect.t F :=
+  <| BoundVect.endp a - BoundVect.endp b $ F |>.
+
+Local Notation "a (-) b" := (Rsub a b) (at level 39).
+
+(*Definition derive1bv (p : R -> BoundVect.t F) : R -> BoundVect.t F :=
+  fun t => BoundVect.mk F (derive1mx (fun t => BoundVect.endp (p t)) t).*)
+
+End about_bound_vectors.
+
+Notation "a # b" := (BoundFree_add a b) (at level 39).
+Notation "a (-) b" := (Rsub a b) (at level 39).
+
+Module RFrame.
+Section rframe.
+Variable T : rcfType.
+Record t (F : TFrame.t T) := mk {
+  o : BoundVect.t F ;
+  i : FreeVect.t F ;
+  j : FreeVect.t F ;
+  k : FreeVect.t F ;
+  f : TFrame.t T ;
+  _ : BoundVect.endp o = TFrame.o f ;
+  _ : FreeVect.v i = (f|,@Ordinal 3 0 isT) ;
+  _ : FreeVect.v j = (f|,@Ordinal 3 1 isT) ;
+  _ : FreeVect.v k = (f|,@Ordinal 3 2 isT) ;
+}.
+End rframe.
+End RFrame.
+
+Coercion tframe_of_rframe (R : rcfType) (F : TFrame.t R) (f : RFrame.t F) : TFrame.t R :=
+  RFrame.f f.
+
+Section motion.
+
+Variable T : rcfType.
+
+Variable F : TFrame.t T. (* fixed frame *)
+Variable G : R -> RFrame.t F. (* time-varying frame (origin and basis in F) *)
+Variable P' : forall t, BoundVect.t (G t). (* point with coordinates in G *)
+Hypothesis P'_fixed_in_G : forall t, BoundVect.endp (P' t) = BoundVect.endp (P' 0).
+
+Definition P (t : R) : BoundVect.t F :=
+  RFrame.o (G t) # to_coord F (FreeVect_of_Bound (P' t)).
+
+Variable Q' : forall t, BoundVect.t (RFrame.f (G t)).
+Hypothesis Q'_fixed_in_G : forall t, BoundVect.endp (Q' t) = BoundVect.endp (Q' 0).
+
+Definition Q (t : R) : BoundVect.t F :=
+  RFrame.o (G t) # to_coord F (FreeVect_of_Bound (Q' t)).
+
+Lemma p_p_Q (t : R) : P t = Q t # to_coord F (P' t (-) Q' t).
+Proof.
+rewrite /Q.
+rewrite BoundFree_addA.
+rewrite /P.
+congr (_ # _).
+apply fv_eq => /=.
+rewrite -mulmxDl.
+congr (_ *m _).
+rewrite addrC.
+apply/eqP.
+rewrite -subr_eq.
+done.
+Qed.
+
+(*Variable angular_velocity : R -> 'rV[T]_3.
+
+Lemma velocity_composition_rule (t : R) :
+  derive1mx P t = derive1mx Q t + angular_velocity t *v (P t - Q t).*)
+
+End motion.
+
+Section cross_product_matrix.
+
+Variable v : 'rV[R^o]_3.
+Let vector := [normedModType R of 'rV[R]_3].
+Let f : {linear vector -> vector} := crossmul_linear v.
+Let g : {bilinear vector -> vector -> vector } := @crossmul_bilinear _.
+
+Lemma continuous_crossmul : continuous (fun p => g p.1 p.2).
+Proof.
+move=> x.
+Admitted.
+
+Lemma diff_crossmul a (h : vector * vector) :
+  'd_a (fun x => g x.1 x.2) h = a.1 *v h.2 + h.1 *v a.2.
+Proof. rewrite diff_bilin //; exact: continuous_crossmul. Qed.
+
+Lemma test x : lin1_mx ('d_x (fun x => v *v x)) = \S( v ).
+Proof.
+Abort.
+
+End cross_product_matrix.
+
+(* NB: see also Section tangent_frames in rigid.v *)
+Section tangent_vectors.
+(* or "bound vectors": point of application prescribed *)
+
+Variable R : realType.
+Let vector := 'rV[R]_3.
+Let point := 'rV[R]_3.
+Implicit Types p : point.
+
+(* tangent vector *)
+Record tvec p := TVec {tvec_field :> vector}.
+Definition vtvec p (v : tvec p) := let: TVec v := v in v.
+
+Local Notation "p .-vec" := (tvec p) (at level 5).
+Local Notation "u :@ p" := (TVec p u) (at level 11).
+
+Definition addt (p : point) (u : p.-vec) (v : vector) : p.-vec :=
+  TVec p (tvec_field u + v).
+
+Local Notation "p +@ u" := (addt p u) (at level 41).
+
+End tangent_vectors.
+
+Coercion vtvec_field_coercion := vtvec.
+Notation "p .-vec" := (tvec p) (at level 5).
+Notation "u :@ p" := (TVec p u) (at level 11).
+Notation "p +@ u" := (addt p u) (at level 41).
+
+(* [sciavicco] eqn 3.9 *)
+Lemma rot_skew (M : 'M[R]_3) (w : 'rV[R]_3) :
+  M * \S( w ) * M^T = \S( w *m M).
+Proof.
+Abort.

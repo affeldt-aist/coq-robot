@@ -5,7 +5,7 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-From mathcomp.analysis Require Import reals.
+(*From mathcomp.analysis Require Import reals.*)
 
 Require Import ssr_ext.
 
@@ -73,13 +73,13 @@ End nthroot.
 
 Section angle_def.
 
-Variable R : realType.
+Variable T : rcfType (*realType*).
 
 Record angle := Angle {
-  expi : R[i];
+  expi : T[i];
   _ : `| expi | == 1 }.
 
-Fact angle0_subproof : `| 1 / `| 1 | | == 1 :> R[i].
+Fact angle0_subproof : `| 1 / `| 1 | | == 1 :> T[i].
 Proof. by rewrite normr1 divr1 normr1. Qed.
 
 Definition angle0 := Angle angle0_subproof.
@@ -98,10 +98,10 @@ Proof. move=> [a a1] [b b1] /= ab; by apply/val_inj. Qed.
 Lemma expi_is_unit a : expi a \is a GRing.unit.
 Proof. by rewrite unitfE -normr_eq0 normr_expi oner_eq0. Qed.
 
-Definition arg (x : R[i]) : angle :=
+Definition arg (x : T[i]) : angle :=
   insubd angle0 (x / `| x |).
 
-Lemma argZ x (k : R) : 0 < k -> arg (k %:C%C * x) = arg x.
+Lemma argZ x (k : T) : 0 < k -> arg (k %:C%C * x) = arg x.
 Proof.
 move=> k0; rewrite /arg; congr (insubd _ _).
 rewrite normrM gtr0_norm; last by rewrite ltcR.
@@ -109,7 +109,7 @@ rewrite -mulf_div divff ?mul1r //.
 by rewrite lt0r_neq0 // ltcR.
 Qed.
 
-Lemma argZ_neg x (k : R) : k < 0 -> arg (k %:C%C * x) = arg (- x).
+Lemma argZ_neg x (k : T) : k < 0 -> arg (k %:C%C * x) = arg (- x).
 Proof.
 move=> k0; rewrite /arg; congr (insubd _ _).
 rewrite normrM ltr0_norm; last by rewrite ltcR.
@@ -129,7 +129,7 @@ move=> Nx_neq0; rewrite insubdK //.
 by rewrite -topredE /= normrM normfV normr_id divff // normr_eq0.
 Qed.
 
-Lemma expi_conjc (a : R[i]) : a != 0 -> (expi (arg a))^-1 = expi (arg a^*).
+Lemma expi_conjc (a : T[i]) : a != 0 -> (expi (arg a))^-1 = expi (arg a^*).
 Proof.
 case: a => a b a0 /=; rewrite expi_arg // expi_arg //; last first.
   apply: contra a0 => a0; by rewrite -conjc_eq0.
@@ -204,14 +204,14 @@ Proof. apply expi_inj => //; by rewrite expi2pi -arg1 argK // normr1. Qed.
 
 End angle_def.
 
-Arguments expi {R} _.
-Arguments angle0 {R}.
-Arguments pi {R}.
+Arguments expi {T} _.
+Arguments angle0 {T}.
+Arguments pi {T}.
 
 Section angle_basic_prop.
 
-Variable R : realType.
-Implicit Types a b : angle R.
+Variable T : rcfType (*realType*).
+Implicit Types a b : angle T.
 
 Lemma add_angleE a b : a + b = add_angle a b.
 Proof. done. Qed.
@@ -219,7 +219,7 @@ Proof. done. Qed.
 Lemma opp_angleE a : - a = opp_angle a.
 Proof. done. Qed.
 
-Lemma argc (z : R[i]) : z != 0 -> arg z^* = - arg z.
+Lemma argc (z : T[i]) : z != 0 -> arg z^* = - arg z.
 Proof.
 case: z => a b z0 /=; by rewrite {2}/arg opp_angleE /opp_angle expi_conjc //= expiK.
 Qed.
@@ -274,7 +274,7 @@ case/andP => /eqP ac /eqP bd.
 apply/eqP/val_inj => /=; by rewrite ac bd.
 Qed.
 
-Lemma sqrD1_cossin (x y : R) :
+Lemma sqrD1_cossin (x y : T) :
   x ^+ 2 + y ^+ 2 = 1 -> {a | x = cos a /\ y = sin a}.
 Proof.
 move=> v1.
@@ -289,7 +289,7 @@ Qed.
 Lemma expi_cos_sin a : expi a = (cos a +i* sin a)%C.
 Proof. by case: a => -[a0 a1] Ha; rewrite /cos /sin. Qed.
 
-Lemma expi0 : expi 0 = 1 :> R[i].
+Lemma expi0 : expi 0 = 1 :> T[i].
 Proof. by rewrite expi_cos_sin cos0 sin0. Qed.
 
 Lemma expi_expr k a : expi a ^+ k = expi (a *+ k).
@@ -304,37 +304,37 @@ rewrite -!expi_cos_sin.
 elim: n => [|n ih]; by [rewrite expr0 mulr0n expi0 | rewrite expi_expr].
 Qed.
 
-Lemma pi_neq0 : pi != 0 :> angle R.
+Lemma pi_neq0 : pi != 0 :> angle T.
 Proof.
 apply/eqP => /(congr1 expi).
 rewrite argK ?expi0; last by rewrite normrN normr1.
 by move/eqP; rewrite eq_sym -subr_eq0 opprK (_ : 1 + 1 = 2%:R) // pnatr_eq0.
 Qed.
 
-Lemma expiNpi : expi (- pi) = - 1 :> R[i].
+Lemma expiNpi : expi (- pi) = - 1 :> T[i].
 Proof.
 rewrite expi_cos_sin cosN sinN cospi sinpi.
 by apply/eqP; rewrite eq_complex /= !eqxx.
 Qed.
 
-Lemma expiNi : expi (- arg 'i) = -'i :> R[i].
+Lemma expiNi : expi (- arg 'i) = -'i :> T[i].
 Proof.
-have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
+have i1 : `|'i| = 1 :> T[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
 rewrite expi_cos_sin sinN cosN /cos /sin expi_arg; last by rewrite -normr_eq0 i1 oner_neq0.
 rewrite i1 divr1 /=; apply/eqP; by rewrite eq_complex /= oppr0 2!eqxx.
 Qed.
 
-Lemma piNpi : pi = - pi :> angle R.
+Lemma piNpi : pi = - pi :> angle T.
 Proof. by apply expi_inj; rewrite expiNpi expipi. Qed.
 
-Lemma arg0_inv (x : R[i]) y : y != 0 -> `|x| = y -> arg x = 0 -> x = y.
+Lemma arg0_inv (x : T[i]) y : y != 0 -> `|x| = y -> arg x = 0 -> x = y.
 Proof.
 move=> y0; case: x => x1 x2 norma H.
 rewrite -(mulr1 y) -expi0 -H expi_arg; last by rewrite -normr_eq0 norma.
 by rewrite norma mulrCA divrr // mulr1.
 Qed.
 
-Lemma argpi_inv (x : R[i]) y : y != 0 -> `|x| = y -> arg x = pi -> x = - y.
+Lemma argpi_inv (x : T[i]) y : y != 0 -> `|x| = y -> arg x = pi -> x = - y.
 Proof.
 move=> y0; case: x => x1 x2 norma H.
 rewrite -(mulrN1 y) -expipi -H expi_arg; last by rewrite -normr_eq0 norma.
@@ -346,7 +346,7 @@ Qed.
 Lemma cos2Dsin2 a : (cos a) ^+ 2 + (sin a) ^+ 2 = 1.
 Proof.
 move: (add_Re2_Im2 (expi a)).
-by rewrite normr_expi expr1n => /(congr1 (@complex.Re R)) => /= <-.
+by rewrite normr_expi expr1n => /(congr1 (@complex.Re T)) => /= <-.
 Qed.
 
 Lemma sin2cos2 a : sin a ^+ 2 = 1 - cos a ^+ 2.
@@ -438,13 +438,13 @@ Proof. by move/eqP; rewrite sin_eq0; case: eqP => /= ?/eqP?; [left|right]. Qed.
 
 Definition tan a := sin a / cos a.
 
-Lemma tan0 : tan 0 = 0 :> R.
+Lemma tan0 : tan 0 = 0 :> T.
 Proof. by rewrite /tan sin0 cos0 mul0r. Qed.
 
 Lemma tanpi : tan pi = 0.
 Proof. by rewrite /tan sinpi mul0r. Qed.
 
-Lemma tanN x : tan (- x) = - tan x :> R.
+Lemma tanN x : tan (- x) = - tan x :> T.
 Proof. by rewrite /tan sinN cosN mulNr. Qed.
 
 Lemma cos2_tan2 x : cos x != 0 -> 1 / (cos x) ^+ 2 = 1 + (tan x) ^+ 2.
@@ -455,14 +455,14 @@ Qed.
 
 (* pi/2 *)
 
-Definition pihalf : angle R := arg 'i.
+Definition pihalf : angle T := arg 'i.
 
 Lemma expi_pihalf : expi pihalf = 'i.
 Proof. by rewrite /pihalf argK // normc_def /= expr0n expr1n add0r sqrtr1. Qed.
 
 Lemma sin_pihalf : sin pihalf = 1.
 Proof.
-have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
+have i1 : `|'i| = 1 :> T[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
 rewrite /sin /pihalf expi_arg //.
 by rewrite i1 divr1.
 by rewrite -normr_eq0 i1 oner_neq0.
@@ -470,7 +470,7 @@ Qed.
 
 Lemma cos_pihalf : cos pihalf = 0.
 Proof.
-have i1 : `|'i| = 1 :> R[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
+have i1 : `|'i| = 1 :> T[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
 rewrite /cos /pihalf expi_arg //.
 by rewrite i1 divr1.
 by rewrite -normr_eq0 i1 oner_neq0.
@@ -508,7 +508,7 @@ Qed.
 
 (* pi/4 *)
 
-Definition piquarter : angle R := arg (Num.sqrt (2%:R^-1) +i* Num.sqrt (2%:R^-1))%C.
+Definition piquarter : angle T := arg (Num.sqrt (2%:R^-1) +i* Num.sqrt (2%:R^-1))%C.
 
 Lemma expi_piquarter :
   expi piquarter = (Num.sqrt (2%:R^-1) +i* Num.sqrt (2%:R^-1))%C.
@@ -524,7 +524,7 @@ cos(t) = ( exp(it) + exp(-it) )/2
 
 (* arccos *)
 
-Definition acos (x : R) : angle R := arg (x +i* Num.sqrt (1 - x ^+ 2))%C.
+Definition acos (x : T) : angle T := arg (x +i* Num.sqrt (1 - x ^+ 2))%C.
 
 Lemma acos1 : acos 1 = 0.
 Proof. by rewrite /acos expr1n subrr sqrtr0 complexr0 arg1. Qed.
@@ -537,7 +537,7 @@ Qed.
 
 (* arcsin *)
 
-Definition asin (x : R) : angle R := arg (Num.sqrt (1 - x ^+ 2) +i* x)%C.
+Definition asin (x : T) : angle T := arg (Num.sqrt (1 - x ^+ 2) +i* x)%C.
 
 Lemma asinN x : asin (- x) = - asin x.
 Proof.
@@ -548,7 +548,7 @@ Qed.
 
 (* arctan *)
 
-Definition atan (x : R) : angle R := if x == 0 then 0 else arg ((x^-1 +i* 1)%C *~ sgz x).
+Definition atan (x : T) : angle T := if x == 0 then 0 else arg ((x^-1 +i* 1)%C *~ sgz x).
 
 Lemma atan0 : atan 0 = 0.
 Proof. by rewrite /atan eqxx. Qed.
@@ -608,11 +608,11 @@ Lemma angle_in a : a \in Opi_closed \/ a \in piO_closed.
 Proof. rewrite 2!inE; case: (lerP 0 (sin a)); by auto. Qed.
 
 (* ]-pi/2, pi/2[ *)
-Definition Npi2pi2_open : pred (angle R) := [pred a | cos a > 0].
+Definition Npi2pi2_open : pred (angle T) := [pred a | cos a > 0].
 Lemma Npi2pi2_openP a : (a \in Npi2pi2_open) = (0 < cos a).
 Proof. by rewrite inE. Qed.
 
-Lemma acosK (r : R) : -1 <= r <= 1 -> cos (acos r) = r.
+Lemma acosK (r : T) : -1 <= r <= 1 -> cos (acos r) = r.
 Proof.
 move=> rdom; rewrite /acos /cos argK // normc_def /= sqr_sqrtr; last first.
   by rewrite subr_ge0 -ler_sqrt // ?ltr01 // sqrtr1 sqrtr_sqr ler_norml.
@@ -690,7 +690,7 @@ case: (lerP 0 x); last by apply atanKneg.
 rewrite ler_eqVlt => /orP [/eqP <-|]; by [rewrite atan0 tan0 | apply atanKpos].
 Qed.
 
-Lemma sqr_sin_atan (x : R) : (sin (atan x)) ^+ 2 = x ^+ 2 / (1 + x ^+ 2).
+Lemma sqr_sin_atan (x : T) : (sin (atan x)) ^+ 2 = x ^+ 2 / (1 + x ^+ 2).
 Proof.
 case/boolP : (x == 0) => [/eqP ->|x0].
   by rewrite atan0 sin0 expr0n /= mul0r.
@@ -705,7 +705,7 @@ rewrite -exprVn -div1r expr_div_n expr1n cos2_tan2.
 by rewrite gtr_eqF // -Npi2pi2_openP atan_in.
 Qed.
 
-Lemma sin_atan_ltr0 (x : R) : x < 0 -> sin (atan x) < 0.
+Lemma sin_atan_ltr0 (x : T) : x < 0 -> sin (atan x) < 0.
 Proof.
 move=> x0.
 rewrite /sin /atan ltr_eqF // ltr0_sgz // mulrN1z /= expi_arg //=.
@@ -719,13 +719,13 @@ rewrite /sin /atan ltr_eqF // ltr0_sgz // mulrN1z /= expi_arg //=.
 by rewrite eq_complex /= negb_and /= orbC eqr_oppLR oppr0 oner_eq0.
 Qed.
 
-Lemma sin_atan_gtr0 (x : R) : 0 < x -> 0 < sin (atan x).
+Lemma sin_atan_gtr0 (x : T) : 0 < x -> 0 < sin (atan x).
 Proof.
 move=> x0.
 by rewrite -atanN sinN -oppr_lt0 opprK sin_atan_ltr0 // oppr_lt0.
 Qed.
 
-Lemma sin_atan (x : R) : sin (atan x) = x / Num.sqrt (1 + x ^+ 2).
+Lemma sin_atan (x : T) : sin (atan x) = x / Num.sqrt (1 + x ^+ 2).
 Proof.
 apply/eqP.
 case/boolP : (x == 0) => [/eqP ->|].
@@ -748,7 +748,7 @@ move=> Nx_le1; rewrite /sin /acos argK //; simpc; rewrite sqr_sqrtr.
 by rewrite subr_ge0 -[_ ^+ _]real_normK ?num_real // exprn_ile1.
 Qed.
 
-Lemma cos_asin (x : R) : `| x | < 1 -> cos (asin x) = Num.sqrt (1 - x ^+ 2).
+Lemma cos_asin (x : T) : `| x | < 1 -> cos (asin x) = Num.sqrt (1 - x ^+ 2).
 Proof.
 move=> x1.
 rewrite /asin /cos argK // normc_def /= sqr_sqrtr ?subr_ge0 ?subrK ?sqrtr1 //.
@@ -768,28 +768,28 @@ End angle_basic_prop.
 
 Section half_angle.
 
-Variable R : realType.
+Variable T : rcfType (*realType*).
 
-Definition half_anglec (x : R[i]) :=
+Definition half_anglec (x : T[i]) :=
   (if 0 <= complex.Im x then
     Num.sqrt ((1 + complex.Re x) / 2%:R) +i* Num.sqrt ((1 - complex.Re x) / 2%:R)
   else
     - Num.sqrt ((1 + complex.Re x) / 2%:R) +i* Num.sqrt ((1 - complex.Re x) / 2%:R))%C.
 
-Lemma Re_half_anglec (x : R[i]) : `|x| = 1 -> 0 <= 1 + complex.Re x.
+Lemma Re_half_anglec (x : T[i]) : `|x| = 1 -> 0 <= 1 + complex.Re x.
 Proof.
 move=> x1; rewrite -ler_subl_addr add0r.
 suff : `| complex.Re x |%:C%C <= `|x|; last by rewrite normc_ge_Re.
 rewrite x1 -lecR; apply: ler_trans; by rewrite lecR ler_normr lerr orbT.
 Qed.
 
-Lemma Im_half_anglec (x : R[i]) : `|x| = 1 -> complex.Re x <= 1.
+Lemma Im_half_anglec (x : T[i]) : `|x| = 1 -> complex.Re x <= 1.
 Proof.
 move=> x1; suff : `| complex.Re x |%:C%C <= `|x|; last by rewrite normc_ge_Re.
 rewrite x1 -lecR; apply: ler_trans; by rewrite lecR ler_normr lerr.
 Qed.
 
-Lemma norm_half_anglec (x : R[i]) : `|x| = 1 -> `|half_anglec x| == 1.
+Lemma norm_half_anglec (x : T[i]) : `|x| = 1 -> `|half_anglec x| == 1.
 Proof.
 move=> x1.
 rewrite /half_anglec.
@@ -806,7 +806,7 @@ rewrite sqrrN sqr_sqrtr; last first.
 by rewrite mulrC (mulrC (1 - complex.Re x)) -mulrDr addrCA addrK -mulr2n mulVr ?pnatf_unit // sqrtr1.
 Qed.
 
-Definition half_angle (x : angle R) := Angle (norm_half_anglec (normr_expi x)).
+Definition half_angle (x : angle T) := Angle (norm_half_anglec (normr_expi x)).
 
 Lemma half_angle0 : half_angle 0 = 0.
 Proof.
@@ -816,7 +816,7 @@ move=> _; rewrite subrr mul0r sqrtr0 divrr ?unitfE // ?complexr0 ?sqrtr1 //.
 by rewrite (_ : 1 + 1 = 2%:R) // pnatr_eq0.
 Qed.
 
-Lemma half_anglepi : half_angle pi = pihalf R.
+Lemma half_anglepi : half_angle pi = pihalf T.
 Proof.
 apply val_inj => /=; rewrite /half_anglec; case: ifPn => /=; rewrite expipi /= oppr0.
 2: by rewrite lerr.
@@ -882,7 +882,7 @@ rewrite /half_anglec expipi /= oppr0 lerr subrr mul0r sqrtr0 opprK.
 by rewrite -(@natrD _ 1 1) divrr ?unitfE ?pnatr_eq0 // sqrtr1 expi_pihalf.
 Qed.
 
-Lemma pi_pihalf : pi = pihalf R *+ 2.
+Lemma pi_pihalf : pi = pihalf T *+ 2.
 Proof. by rewrite -[LHS]halfP pihalf_is_half -mulr2n. Qed.
 
 Lemma piquarter_is_half : piquarter _ = half_angle (pihalf _).
@@ -891,18 +891,18 @@ rewrite /half_angle; apply val_inj => /=.
 by rewrite /half_anglec expi_pihalf /= ler01 addr0 subr0 div1r expi_piquarter.
 Qed.
 
-Lemma pi_piquarter : pi = piquarter R *+ 4.
+Lemma pi_piquarter : pi = piquarter T *+ 4.
 Proof.
 rewrite (mulrnA _ 2 2) -[LHS]halfP -mulr2n; congr (_ *+ 2).
 by rewrite piquarter_is_half mulr2n halfP pihalf_is_half.
 Qed.
 
 (* TODO: move *)
-Lemma atan2_N1N1 : atan2 (- 1) (- 1) = - piquarter R *+ 3.
+Lemma atan2_N1N1 : atan2 (- 1) (- 1) = - piquarter T *+ 3.
 Proof.
 rewrite /atan2 ltr0N1 ltrN10 ler0N1 divrr; last first.
   by rewrite unitfE eqr_oppLR oppr0 oner_neq0.
-rewrite atan1 pi_piquarter -opprB -{2}(mulr1n (piquarter R)).
+rewrite atan1 pi_piquarter -opprB -{2}(mulr1n (piquarter T)).
 by rewrite -mulrnBr // mulNrn.
 Qed.
 
@@ -984,12 +984,12 @@ End half_angle.
 
 Section derived_trigonometric_functions.
 
-Variable R : realType.
-Implicit Types a : angle R.
+Variable T : rcfType (*realType*).
+Implicit Types a : angle T.
 
 Definition cot a := (tan a)^-1.
 
-Lemma cot_pihalf : cot (pihalf R) = 0.
+Lemma cot_pihalf : cot (pihalf T) = 0.
 Proof. by rewrite /cot tan_pihalf invr0. Qed.
 
 Lemma cot_half_angle a : cot (half_angle a) = sin a / (1 - cos a).
