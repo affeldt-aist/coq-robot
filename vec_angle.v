@@ -5,8 +5,6 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-(*From mathcomp.analysis Require Import reals.*)
-
 Require Import ssr_ext angle euclidean3.
 
 Set Implicit Arguments.
@@ -33,7 +31,7 @@ Local Open Scope ring_scope.
       distance_between_lines
 *)
 
-Lemma norm1_cossin (T : rcfType (*realType*)) (v : 'rV[T]_2) :
+Lemma norm1_cossin (T : rcfType) (v : 'rV[T]_2) :
   norm v = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
 Proof.
 move=> v1.
@@ -43,7 +41,7 @@ Qed.
 
 Section vec_angle.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types u v : 'rV[T]_3.
 
 Definition vec_angle v w : angle T := arg (v *d w +i* norm (v *v w))%C.
@@ -335,7 +333,7 @@ End vec_angle.
 
 Section colinear.
 
-Variable T : rcfType (*realType*).
+Variable T : fieldType.
 Implicit Types u v : 'rV[T]_3.
 
 Definition colinear u v := u *v v == 0.
@@ -360,6 +358,25 @@ Proof. by rewrite colinear_sym colinear0v. Qed.
 
 Definition colinear0 := (colinear0v, colinearv0).
 
+Lemma colinearZv u v k : colinear (k *: u) v = (k == 0) || colinear u v.
+Proof. by rewrite /colinear crossmulZv scaler_eq0. Qed.
+
+Lemma colinearvZ u v k : colinear u (k *: v) = (k == 0) || colinear u v.
+Proof. by rewrite /colinear crossmulvZ scaler_eq0. Qed.
+
+Lemma colinearNv u v : colinear (- u) v = colinear u v.
+Proof. by rewrite /colinear crossmulNv eqr_oppLR oppr0. Qed.
+
+Lemma colinearvN u v : colinear u (- v) = colinear u v.
+Proof. by rewrite colinear_sym colinearNv colinear_sym. Qed.
+
+End colinear.
+
+Section colinear1.
+
+Variable T : rcfType.
+Implicit Types u v : 'rV[T]_3.
+
 Lemma colinear_trans v u w : u != 0 -> colinear v u -> colinear u w -> colinear v w.
 Proof.
 move=> u0.
@@ -377,18 +394,6 @@ move/eqP/(congr1 (fun x => (u *d w)^-1 *: x )).
 rewrite scalerA mulVr // ?unitfE // scale1r => ->.
 by rewrite scalerA crossmulC linearZ /= crossmulvv scaler0 oppr0.
 Qed.
-
-Lemma colinearZv u v k : colinear (k *: u) v = (k == 0) || colinear u v.
-Proof. by rewrite /colinear crossmulZv scaler_eq0. Qed.
-
-Lemma colinearvZ u v k : colinear u (k *: v) = (k == 0) || colinear u v.
-Proof. by rewrite /colinear crossmulvZ scaler_eq0. Qed.
-
-Lemma colinearNv u v : colinear (- u) v = colinear u v.
-Proof. by rewrite /colinear crossmulNv eqr_oppLR oppr0. Qed.
-
-Lemma colinearvN u v : colinear u (- v) = colinear u v.
-Proof. by rewrite colinear_sym colinearNv colinear_sym. Qed.
 
 (* TODO: to be improved? *)
 Lemma colinearP u v :
@@ -476,11 +481,11 @@ rewrite -subr_eq0 -scalerBr scaler_eq0 -normr_eq0 Hk1 mulf_eq0 invr_eq0.
 by rewrite 2!norm_eq0 (negbTE u0) (negbTE v0) /= subr_eq0 => /eqP.
 Qed.
 
-End colinear.
+End colinear1.
 
 Section axial_normal_decomposition.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types u v : vector.
 
@@ -609,7 +614,7 @@ End axial_normal_decomposition.
 
 Section law_of_sines.
 
-Variable T : rcfType (*realType*).
+Variable T : fieldType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Implicit Types a b c : point.
@@ -630,6 +635,16 @@ rewrite /tricolinear /colinear !linearD /= !crossmulDl !crossmulvN !crossmulNv.
 rewrite !opprK !crossmulvv !addr0 -{1}oppr0 -eqr_oppLR 2!opprB.
 by rewrite addrC (crossmulC a b) opprK.
 Qed.
+
+End law_of_sines.
+
+Section law_of_sines1.
+
+Variable T : rcfType.
+Let point := 'rV[T]_3.
+Let vector := 'rV[T]_3.
+Implicit Types a b c : point.
+Implicit Types v : vector.
 
 Lemma triangle_sin_vector_helper v1 v2 : ~~ colinear v1 v2 ->
   norm v1 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp v1 v2) ^+ 2.
@@ -675,7 +690,7 @@ rewrite exprMn -triangle_sin_vector_helper // mulrAC exprVn divrr ?mul1r //.
 by rewrite unitfE sqrf_eq0 norm_eq0.
 Qed.
 
-Lemma triangle_sin_point p1 p2 p : ~~ tricolinear p1 p2 p ->
+Lemma triangle_sin_point (p1 p2 p : 'rV[T]_3) : ~~ tricolinear p1 p2 p ->
   let v1 := p1 - p in let v2 := p2 - p in
   sin (vec_angle v1 v2) = norm (normalcomp v1 v2) / norm v1.
 Proof.
@@ -705,7 +720,7 @@ have H3 : normalcomp v1 v2 = normalcomp (v1 - v2) v2.
 by rewrite H3 mulrAC -(opprB v2) normalcompNv normN.
 Qed.
 
-Lemma law_of_sines_point p1 p2 p : ~~ tricolinear p1 p2 p ->
+Lemma law_of_sines_point (p1 p2 p : 'rV[T]_3) : ~~ tricolinear p1 p2 p ->
   let v1 := p1 - p in let v2 := p2 - p in
   sin (vec_angle v1 v2) / norm (p2 - p1) =
   sin (vec_angle (p2 - p1) (p2 - p)) / norm (p1 - p).
@@ -717,11 +732,11 @@ apply: contra H.
 by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
 Qed.
 
-End law_of_sines.
+End law_of_sines1.
 
 Module Line.
 Section line_def.
-Variable T : rcfType (*realType*).
+Variable T : fieldType.
 Record t := mk {
   point : 'rV[T]_3 ;
   vector :> 'rV[T]_3
@@ -736,13 +751,13 @@ Notation "'\pt(' l ')'" := (Line.point l) (at level 3, format "'\pt(' l ')'").
 Notation "'\pt2(' l ')'" := (Line.point2 l) (at level 3, format "'\pt2(' l ')'").
 Notation "'\vec(' l ')'" := (Line.vector l) (at level 3, format "'\vec(' l ')'").
 
-Coercion line_pred (T : rcfType (*realType*)) (l : Line.t T) : pred 'rV[T]_3 :=
+Coercion line_pred (T : fieldType) (l : Line.t T) : pred 'rV[T]_3 :=
   [pred p | (p == \pt( l )) ||
     (\vec( l ) != 0) && colinear \vec( l ) (p - \pt( l ))].
 
 Section line.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Implicit Types l : Line.t T.
@@ -803,7 +818,7 @@ End line.
 
 Section line_line_intersection.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let point := 'rV[T]_3.
 Implicit Types l : Line.t T.
 

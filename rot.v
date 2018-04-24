@@ -5,8 +5,6 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-(*From mathcomp.analysis Require Import reals.*)
-
 Require Import ssr_ext angle euclidean3 skew vec_angle frame.
 
 (* OUTLINE:
@@ -51,7 +49,7 @@ Local Open Scope ring_scope.
 
 Section two_dimensional_rotation.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types a b : angle T.
 Implicit Types M : 'M[T]_2.
 
@@ -141,7 +139,7 @@ End two_dimensional_rotation.
 
 Section elementary_rotations.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types a : angle T.
 
 Definition Rx a := col_mx3
@@ -244,7 +242,7 @@ End elementary_rotations.
 
 Section isRot_definition.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types a : angle T.
 
 Definition isRot (a : angle T)
@@ -491,7 +489,7 @@ End isRot_definition.
 
 Section axial_vector.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 
 Definition axial_vec (M : 'M[T]_3) : 'rV[T]_3 :=
@@ -568,7 +566,7 @@ End axial_vector.
 
 Section exponential_map_rot.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Type u v : vector.
 Implicit Type a b : angle T.
@@ -874,8 +872,8 @@ have -> : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
   rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
   rewrite (scalerDr (normalcomp p u *d (Base.frame u)|,2%:R)) addrA addrC.
   rewrite scalerA mulrC -scalerA; congr (_ + _).
-  rewrite scalerA mulrC -scalerA addrC scalerA mulrC -scalerA addrC.
-  rewrite -{1}(opprK (sin a)) 3!scaleNr -opprB opprK -scalerBr; congr (- (_ *: _)).
+  rewrite scalerA mulrC -scalerA [in X in _ + X = _]scalerA mulrC -scalerA.
+  rewrite scaleNr -opprB -scalerBr; congr (- (_ *: _)).
   rewrite -double_crossmul.
   rewrite 2!rowframeE SO_jcrossk; last first.
     by rewrite (col_mx3_rowE (NOFrame.M (Base.frame u))) -!rowframeE Base.is_SO.
@@ -925,7 +923,7 @@ Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )) (format "'`e^(' a ','  w ')'")
 Module Aa.
 Section angle_of_angle_axis_representation.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types M : 'M[T]_3.
 
@@ -1134,7 +1132,7 @@ End angle_of_angle_axis_representation.
 
 Section vector_axis_of_angle_axis_representation.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 
 Definition vaxis M : 'rV[T]_3 :=
@@ -1171,7 +1169,7 @@ End Aa.
 
 Section angle_axis_of_rot.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 
 Definition log_rot (M : 'M[T]_3) : angle T * 'rV[T]_3 :=
@@ -1312,7 +1310,7 @@ End angle_axis_of_rot.
 
 Section angle_axis_representation.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 
 Record angle_axis := AngleAxis {
@@ -1364,7 +1362,7 @@ End angle_axis_representation.
 (* NB: work in progress *)
 Section euler_angles.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 Definition Rxyz (c b a : angle T) := Rx c * Ry b * Rz a.
 

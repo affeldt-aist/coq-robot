@@ -5,8 +5,6 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-(*From mathcomp.analysis Require Import reals.*)
-
 Require Import ssr_ext.
 
 Set Implicit Arguments.
@@ -73,7 +71,7 @@ End nthroot.
 
 Section angle_def.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 Record angle := Angle {
   expi : T[i];
@@ -210,7 +208,7 @@ Arguments pi {T}.
 
 Section angle_basic_prop.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types a b : angle T.
 
 Lemma add_angleE a b : a + b = add_angle a b.
@@ -768,7 +766,7 @@ End angle_basic_prop.
 
 Section half_angle.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 Definition half_anglec (x : T[i]) :=
   (if 0 <= complex.Im x then
@@ -984,7 +982,7 @@ End half_angle.
 
 Section derived_trigonometric_functions.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types a : angle T.
 
 Definition cot a := (tan a)^-1.

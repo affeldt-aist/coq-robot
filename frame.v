@@ -5,8 +5,6 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-From mathcomp.analysis Require Import reals.
-
 Require Import ssr_ext angle euclidean3 skew vec_angle.
 
 (* OUTLINE:
@@ -45,7 +43,7 @@ Local Open Scope ring_scope.
 
 Module NOFrameInterface.
 Section noframe_interface.
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Record t : Type := mk {
   i : 'rV[T]_3 ;
   j : 'rV[T]_3 ;
@@ -69,7 +67,7 @@ Definition idotk := NOFrameInterface.idotk.
 Module NOFrame.
 Section non_oriented_frame_def.
 
-Variable T : rcfType (*realType*).
+Variable T : ringType.
 Record t := mk {
   M :> 'M[T]_3 ;
   MO : M \is 'O[T]_3 }.
@@ -78,7 +76,7 @@ Axiom rowframeE : forall f i, rowframe f i = row i (M f).
 End non_oriented_frame_def.
 End NOFrame.
 
-Coercion matrix_of_noframe (T : rcfType (*realType*)) (f : NOFrame.t T) : 'M[T]_3 :=
+Coercion matrix_of_noframe (T : ringType) (f : NOFrame.t T) : 'M[T]_3 :=
   NOFrame.M f.
 
 Definition rowframeE := NOFrame.rowframeE.
@@ -87,7 +85,7 @@ Notation "f '|,' i" := (NOFrame.rowframe f i)
 
 Section non_oriented_frame_properties.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types p : 'rV[T]_3.
 Variable f : NOFrame.t T.
@@ -289,18 +287,19 @@ End non_oriented_frame_properties.
 Lemma mxE_col_row (T : Type) (M : 'M[T]_3) i j : M i j = (col j (row i M)) 0 0.
 Proof. by rewrite !mxE. Qed.
 
-Lemma colE (T : rcfType (*realType*)) (v : 'rV[T]_3) j : col j v = 'e_j *m v^T.
+Lemma colE (T : comRingType) (v : 'rV[T]_3) j : col j v = 'e_j *m v^T.
 Proof.
 apply/colP => i; rewrite {i}(ord1 i) !mxE coorE /dotmul mxE.
 apply eq_bigr => /= i _; by rewrite !mxE eqxx /= mulrC.
 Qed.
 
-Lemma dotrow (T : rcfType (*realType*)) (M : 'M[T]_3) i j : M i j = 'e_j *d row i M.
+(* TODO: move? *)
+Lemma dotrow (T : comRingType) (M : 'M[T]_3) i j : M i j = 'e_j *d row i M.
 Proof. by rewrite mxE_col_row /dotmul colE. Qed.
 
 Module FrameInterface.
 Section frame_interface.
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Record t : Type := mk {
   f : NOFrameInterface.t T ;
   icrossj : NOFrameInterface.i f *v NOFrameInterface.j f = NOFrameInterface.k f
@@ -311,7 +310,7 @@ Definition icrossj := FrameInterface.icrossj.
 
 Module Frame.
 Section frame.
-Variable T : rcfType (*realType*).
+Variable T : ringType.
 
 Record t := mk {
   noframe_of :> NOFrame.t T ;
@@ -320,12 +319,12 @@ Record t := mk {
 End frame.
 End Frame.
 
-Coercion noframe_of_frame (T : rcfType (*realType*)) (f : Frame.t T) : NOFrame.t T :=
+Coercion noframe_of_frame (T : ringType) (f : Frame.t T) : NOFrame.t T :=
   Frame.noframe_of f.
 
 Section oriented_frame_properties.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Variable f : Frame.t T.
 
 Local Notation "'i'" := (f |, 0).
@@ -368,12 +367,12 @@ Qed.
 
 End oriented_frame_properties.
 
-Canonical frame_subtype (T : rcfType (*realType*)) := [subType for @Frame.noframe_of T].
+Canonical frame_subtype (T : ringType) := [subType for @Frame.noframe_of T].
 
 (* frame with an origin (tangent frame) *)
 Module TFrame.
 Section tframe.
-Variable T : rcfType (*realType*).
+Variable T : ringType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 
@@ -386,16 +385,16 @@ Definition trans (f : t) (u : vector) : t := mk (o f + u) f.
 End tframe.
 End TFrame.
 
-Coercion frame_of_tframe (T : rcfType (*realType*)) (f : TFrame.t T) : Frame.t T :=
+Coercion frame_of_tframe (T : ringType) (f : TFrame.t T) : Frame.t T :=
   TFrame.frame_of f.
 
-Definition xaxis T (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 0).
-Definition yaxis T (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 1).
-Definition zaxis T (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 2%:R).
+Definition xaxis (T : fieldType) (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 0).
+Definition yaxis (T : fieldType) (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 1).
+Definition zaxis (T : fieldType) (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 2%:R).
 
 Section canonical_frame.
 
-Variable T : rcfType (*realType*).
+Variable T : fieldType.
 
 Definition can_noframe := NOFrame.mk (@orthogonal1 2 T).
 
@@ -417,7 +416,7 @@ Definition can_tframe := TFrame.mk 0 can_frame.
 
 End canonical_frame.
 
-Lemma basis_change (T : rcfType (*realType*)) (M : 'M[T]_3) (f : NOFrame.t T) (A : 'M[T]_3) :
+Lemma basis_change (T : rcfType) (M : 'M[T]_3) (f : NOFrame.t T) (A : 'M[T]_3) :
   let i := f |, 0 in
   let j := f |, 1 in
   let k := f |, 2%:R in
@@ -438,7 +437,7 @@ Qed.
 
 Module Base1.
 Section base1.
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Variable i : 'rV[T]_3.
 Hypothesis normi : norm i = 1.
 
@@ -492,7 +491,7 @@ End base1.
 
 Section base1_lemmas.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 (* NB: for information *)
 Lemma je0 : j 'e_0 = 'e_1 :> 'rV[T]_3.
@@ -516,15 +515,15 @@ Qed.
 End base1_lemmas.
 End Base1.
 
-Canonical base1_is_noframe (T : rcfType (*realType*)) (u : 'rV[T]_3) (u1 : norm u = 1) :=
+Canonical base1_is_noframe (T : rcfType) (u : 'rV[T]_3) (u1 : norm u = 1) :=
   NOFrameInterface.mk u1 (Base1.normj u1) (Base1.normk u1)
   (Base1.idotj u1) (Base1.jdotk u) (Base1.idotk u).
 
-Canonical noframe_subtype (T : rcfType (*realType*)) := [subType for @NOFrame.M T].
+Canonical noframe_subtype (T : rcfType) := [subType for @NOFrame.M T].
 
 Module Base.
 Section build_base.
-Variables (T : rcfType (*realType*)) (u : 'rV[T]_3).
+Variables (T : rcfType) (u : 'rV[T]_3).
 
 Definition i := if u == 0 then 'e_0 else normalize u.
 Definition j := if u == 0 then 'e_1 else Base1.j i.
@@ -579,7 +578,7 @@ Proof. by rewrite !rowframeE -col_mx3_rowE Frame.MSO. Qed.
 End build_base.
 
 Section build_base_lemmas.
-Variables (T : rcfType (*realType*)) (u : 'rV[T]_3).
+Variables (T : rcfType) (u : 'rV[T]_3).
 
 Lemma frame0 : frame 0 = can_frame T.
 Proof.
@@ -720,22 +719,22 @@ End build_base_lemmas.
 
 End Base.
 
-Lemma colinear_frame0a (T : rcfType (*realType*)) (u : 'rV[T]_3) : colinear (Base.frame u)|,0 u.
+Lemma colinear_frame0a (T : rcfType) (u : 'rV[T]_3) : colinear (Base.frame u)|,0 u.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite colinear0.
 by rewrite -Base.iE /Base.i (negbTE u0) scale_colinear.
 Qed.
 
-Lemma colinear_frame0b (T : rcfType (*realType*)) (u : 'rV[T]_3) : colinear u (Base.frame u)|,0.
+Lemma colinear_frame0b (T : rcfType) (u : 'rV[T]_3) : colinear u (Base.frame u)|,0.
 Proof. by rewrite colinear_sym colinear_frame0a. Qed.
 
 Definition colinear_frame0 := (colinear_frame0a, colinear_frame0b).
 
-Canonical base_is_noframe (T : rcfType (*realType*)) (u : 'rV[T]_3) :=
+Canonical base_is_noframe (T : rcfType) (u : 'rV[T]_3) :=
   NOFrameInterface.mk (Base.normi u) (Base.normj u) (Base.normk u)
   (Base.idotj u) (Base.jdotk u) (Base.idotk u).
 
-Canonical frame_is_frame (T : rcfType (*realType*)) (u : 'rV[T]_3) :=
+Canonical frame_is_frame (T : rcfType) (u : 'rV[T]_3) :=
   @FrameInterface.mk _ (base_is_noframe u) (Base.icrossj u).
 
 (*Module Frame.
@@ -761,7 +760,7 @@ Coercion Framebasis R (f : Frame.t R) : 'M[R]_3 := Frame.basis f.
 (*Hint Immediate Frame.unit.*)
 
 (* base vectors of A in terms of the basis vectors of B: *)
-Definition FromTo (T : rcfType (*realType*)) (A B : Frame.t T) :=
+Definition FromTo (T : comRingType) (A B : Frame.t T) :=
   \matrix_(i, j) (row i A *d row j B).
 (* = the rotation matrix that transforms a vector expressed in coordinate frame A
    to a vector expressed in coordinate frame B *)
@@ -771,7 +770,7 @@ Notation "A _R^ B" := (@FromTo _ A B) (at level 5).
 
 Section FromTo_properties.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types A B C : Frame.t T.
 
 Lemma FromToE A B : (A _R^ B) = A *m (matrix_of_noframe B)^-1 :> 'M[T]_3.
@@ -818,20 +817,21 @@ Qed.
 
 End FromTo_properties.
 
-Definition noframe_of_FromTo (T : rcfType (*realType*)) (A B : Frame.t T) : NOFrame.t T :=
+Definition noframe_of_FromTo (T : rcfType) (A B : Frame.t T) : NOFrame.t T :=
   NOFrame.mk (FromTo_is_O A B).
 
-Definition frame_of_FromTo (T : rcfType (*realType*)) (B A : Frame.t T) : Frame.t T :=
+Definition frame_of_FromTo (T : rcfType) (B A : Frame.t T) : Frame.t T :=
   @Frame.mk _ (noframe_of_FromTo B A) (FromTo_is_SO B A).
 
 Module FreeVect.
 Section free_vector.
-Variable T : rcfType.
+Variable T : ringType.
 Record t (F : Frame.t T) := mk { v : 'rV[T]_3 }.
 End free_vector.
 End FreeVect.
 
-Local Notation "<| v $ F |>" := (FreeVect.mk F v) (at level 5, v, F at next level, format "<| v  $  F |>").
+Local Notation "<| v $ F |>" := (FreeVect.mk F v) (at level 5,
+  v, F at next level, format "<| v  $  F |>").
 
 Section change_of_coordinate.
 
@@ -914,7 +914,7 @@ End about_frame.*)
 
 Module triad.
 Section triad.
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let point := 'rV[T]_3.
 
 Variables a b c : point.
@@ -985,7 +985,7 @@ End triad.
 
 Section transformation_given_three_points.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 

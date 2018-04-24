@@ -83,7 +83,7 @@ Proof. by move: i; do !case=>//. Qed.
 Lemma ifnot2 (i : 'I_3) : (i != 2%:R) = (i == 0) || (i == 1).
 Proof. by move: i; do !case=>//. Qed.
 
-Lemma Neqxx (R : realDomainType) (x : R) : (-x == x) = (x == 0).
+Lemma Neqxx (R : numDomainType) (x : R) : (-x == x) = (x == 0).
 Proof.
 apply/idP/idP => [|/eqP ->]; last by rewrite oppr0.
 by rewrite -subr_eq0 -opprD -mulr2n -mulNrn mulrn_eq0 /= eqr_oppLR oppr0.

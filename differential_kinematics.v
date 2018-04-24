@@ -17,47 +17,7 @@ Import GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
-Section dotmul_bilinear.
-
-Variables (R : rcfType) (n : nat).
-
-Definition dotmul_rev (v u : 'rV[R]_n) := u *d v.
-Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
-  (fun _ _ => erefl).
-
-Lemma dotmul_is_linear u : GRing.linear (dotmul u : 'rV[R]_n -> R^o).
-Proof. move=> /= k v w; by rewrite dotmulDr dotmulvZ. Qed.
-Canonical dotmul_linear x := Linear (dotmul_is_linear x).
-
-Lemma dotmul_rev_is_linear v : GRing.linear (dotmul_rev v : 'rV[R]_n -> R^o).
-Proof. move=> /= k u w; by rewrite /dotmul_rev dotmulDl dotmulZv. Qed.
-Canonical dotmul_rev_linear v := Linear (dotmul_rev_is_linear v).
-
-Canonical dotmul_bilinear := [bilinear of (@dotmul R n)].
-
-End dotmul_bilinear.
-
-Section crossmul_bilinear.
-
-Variables (R : rcfType).
-
-Definition crossmul_rev (v u : 'rV[R]_3) := u *v v.
-Canonical rev_crossmul := @RevOp _ _ _ crossmul_rev (@crossmul R)
-  (fun _ _ => erefl).
-
-Lemma crossmul_is_linear u : GRing.linear (crossmul u : 'rV[R]_3 -> 'rV[R]_3).
-Proof. move=> /= k v w; by rewrite crossmulDr crossmulvZ. Qed.
-Canonical crossmul_linear x := Linear (crossmul_is_linear x).
-
-Lemma crossmul_rev_is_linear v : GRing.linear (crossmul_rev v : 'rV[R]_3 -> 'rV[R]_3).
-Proof. move=> /= k u w; by rewrite /crossmul_rev crossmulDl crossmulZv. Qed.
-Canonical crossmul_rev_linear v := Linear (crossmul_rev_is_linear v).
-
-Canonical crossmul_bilinear := [bilinear of (@crossmul R)].
-
-End crossmul_bilinear.
-
-Section tmp.
+Section derive1mx.
 
 Variable (V W : normedModType R).
 
@@ -108,7 +68,7 @@ move=> H a b.
 by rewrite (_ : (fun _ => _) = (fun x : R^o => (M x) b i)) // funeqE => z; rewrite mxE.
 Qed.
 
-End tmp.
+End derive1mx.
 
 Section row_belast.
 
@@ -245,12 +205,12 @@ End product_rules.
 Section derivative_of_a_rotation_matrix.
 
 Variable M : R -> 'M[R^o]_3. (* time-varying matrix *)
-Hypothesis MSO : forall t, M t \is 'SO[real_realType]_3.
+Hypothesis MSO : forall t, M t \is 'SO[ [ringType of R] ]_3.
 Hypothesis derivable_M : forall t, derivable_mx M t 1.
 
 Definition s t := derive1mx M t * (M t)^T.
 
-Lemma sso t : s t \is 'so[real_realType]_3.
+Lemma sso t : s t \is 'so[ [ringType of R] ]_3.
 Proof.
 rewrite antiE -subr_eq0 opprK; apply/eqP; rewrite /s trmx_mul trmxK mulmxE.
 have : (fun t => M t * (M t)^T) = cst 1.
@@ -395,25 +355,99 @@ Lemma velocity_composition_rule (t : R) :
 
 End motion.
 
+Section tmp.
+
+Lemma continuousZl {K : absRingType} {V : normedModType K} {T : topologicalType} (f : V) (k : T -> K) x :
+  {for x, continuous k} -> {for x, continuous (fun z => k z *: f)}.
+Proof. by move=> ?; apply: lim_scalel. Qed.
+
+Lemma scaleolx (K : absRingType) (V W : normedModType K) {T : Type}
+  (F : filter_on T) (a : W) (k : T -> K^o) (e : T -> V) (x : T) :
+  ([o_F e of k] x) *: a = [o_F e of (fun y => [o_F e of k] y *: a)] x.
+Proof.
+rewrite [in RHS]littleoE //.
+have [->|a0] := eqVneq a 0.
+  by rewrite (_ : (fun _ => _) = 0 :> (_ -> _)) // funeqE => ?; rewrite scaler0.
+move=> _/posnumP[eps].
+have ea : 0 < eps%:num / `|[ a ]| by rewrite divr_gt0 // normm_gt0.
+set g := 'o _.
+have /(_ _ ea) ? := littleoP [littleo of g].
+near=> y.
+  rewrite (ler_trans (ler_normmZ _ _)) //.
+  rewrite -ler_pdivl_mulr ?ltr_def ?normm_eq0 ?a0 ?normm_ge0 // mulrAC.
+  by near: y.
+end_near.
+Qed.
+
+Lemma differentiable_sum {V W : normedModType R} n (f : 'I_n -> V -> W) (x : V) :
+  (forall i, differentiable x (f i)) -> differentiable x (\sum_(i < n) f i).
+Proof.
+elim: n f => [f _| n IH f H]; first by rewrite big_ord0.
+rewrite big_ord_recr /=; apply/differentiableD; [apply/IH => ? |]; exact: H.
+Qed.
+
+Let dscalel {K : absRingType} {V W : normedModType K} (x : V) (k : V -> K^o) (f : W) :
+  differentiable x k ->
+  continuous (fun z : V => 'd_x k z *: f) /\
+  (fun z => k z *: f) \o shift x = cst (k x *: f) + (fun z => 'd_x k z *: f) +o_ (0 : V) ssrfun.id.
+Proof.
+move=> df; split.
+  move=> y.
+  exact/continuousZl/(@diff_continuous _ _ [normedModType K of K^o]).
+apply/eqaddoE; rewrite funeqE => y /=; have /diff_locallyx dfx := df.
+by rewrite dfx /= !scalerDl -[RHS]/(_ y + _ y + _ y) /cst scaleolx.
+Qed.
+
+Lemma diffZl (V W : normedModType R) (f : W) (k : V -> R^o) (x : V) :
+  (differentiable x) k ->
+  'd_x ((fun z => k z *: f)) = (fun z => 'd_ x k z *: f) :> (V -> W).
+Proof.
+move=> df.
+set g := RHS.
+have @g' : {linear V -> W}.
+  have addg : additive g by move=> a b; rewrite /g linearB scalerBl.
+  have scag : scalable g by move=> l a; rewrite /g linearZ /= scalerA.
+  exists g; eexists; [exact: addg | exact: scag].
+rewrite (_ : g = g') //.
+by apply: diff_unique => //; have [] := dscalel f df.
+Qed.
+
+Lemma differentiableZl {V : normedModType R} (x : V) (f : V -> R^o) (k : V) :
+  differentiable x f -> differentiable x (fun z => f z *: k).
+Proof.
+move=> df; apply/diff_locallyP.
+rewrite diffZl //; by have [] := dscalel k df.
+Qed.
+
+End tmp.
+
 Section cross_product_matrix.
 
 Variable v : 'rV[R^o]_3.
-Let vector := [normedModType R of 'rV[R]_3].
-Let f : {linear vector -> vector} := crossmul_linear v.
-Let g : {bilinear vector -> vector -> vector } := @crossmul_bilinear _.
+Let vector := 'rV[R^o]_3.
 
-Lemma continuous_crossmul : continuous (fun p => g p.1 p.2).
+Lemma diff_coord (x : 'rV[ R^o ]_3) (i : 'I_3) :
+  (differentiable x) (fun z : 'rV_3 => z``_i : R^o).
 Proof.
-move=> x.
 Admitted.
 
-Lemma diff_crossmul a (h : vector * vector) :
-  'd_a (fun x => g x.1 x.2) h = a.1 *v h.2 + h.1 *v a.2.
-Proof. rewrite diff_bilin //; exact: continuous_crossmul. Qed.
-
-Lemma test x : lin1_mx ('d_x (fun x => v *v x)) = \S( v ).
+Lemma differential_cross_product y :
+  GRing.Linear.apply ('d_y (fun x => v *v x)) = GRing.Linear.apply (mx_lin1 \S( v )).
 Proof.
-Abort.
+rewrite (_ : (fun x => v *v x) = (fun x => x *m \S( v ))); last first.
+  by rewrite funeqE => ?; rewrite -skew_mxE.
+rewrite (_ : mulmx^~ \S(v) = mulmxr_linear 1 \S(v)); last by rewrite funeqE.
+rewrite diff_lin //= => x.
+suff : differentiable x (mulmxr \S(v)) by move/differentiable_continuous.
+rewrite (_ : mulmxr \S(v) = (fun z => \sum_i z``_i *: row i \S(v))); last first.
+  rewrite funeqE => z; by rewrite -mulmx_sum_row.
+set f := fun (i : 'I_3) (z : 'rV_3) => z``_i *: row i \S(v) : 'rV_3.
+rewrite (_ : (fun _ => _) = \sum_i f i); last by rewrite funeqE => ?; by rewrite fct_sumE.
+apply: differentiable_sum => i.
+rewrite /f.
+apply: differentiableZl => /=.
+exact: diff_coord.
+Qed.
 
 End cross_product_matrix.
 

@@ -159,7 +159,7 @@ exists T'.
 case: (lin1_mx' linearTm1f) => g Hg.
 exists (lin1_mx g); split; last first.
   split; last by done.
-  apply orth_preserves_dotmul => u v /=.
+  apply/orth_preserves_dotmul => u v /=.
   by rewrite 2!mul_rV_lin1 -[in RHS]orthogonalTm1f 2!Hg.
 move=> u; by rewrite mul_rV_lin1 -Hg subrK.
 Qed.

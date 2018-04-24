@@ -34,7 +34,7 @@ Import Num.Theory.
 Local Open Scope ring_scope.
 
 (* TODO: move? *)
-Lemma mulmx_tr_uvect (T : rcfType (*realType*)) (w : 'rV[T]_3) :
+Lemma mulmx_tr_uvect (T : rcfType) (w : 'rV[T]_3) :
   norm w = 1 -> (w^T *m w) ^+ 2 = w^T *m w.
 Proof.
 move=> w1; rewrite expr2 -mulmxE -mulmxA (mulmxA w) dotmulP dotmulvv w1 expr1n.
@@ -43,7 +43,7 @@ Qed.
 
 Section taylor_exponential.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Variable n : nat.
 Implicit Type M : 'M[T]_n.+1.
@@ -135,7 +135,7 @@ End taylor_exponential.
 
 Module TwistCoor.
 Section twist_coordinates_definition.
-Variable T : rcfType (*realType*).
+Variable T : ringType.
 Let vector := 'rV[T]_3.
 Definition t := 'rV[T]_6.
 Definition mk (v w : vector) : t := block_mx v w 0 0.
@@ -702,7 +702,7 @@ rewrite (scale_block_mx ((k.+2)`!%:R^-1) (\S( (a *: w) ) ^+ k.+2)) !scaler0.
 by rewrite (add_block_mx (emx \S( a *: w ) k.+2)) !(addr0) -emxS.
 Qed.
 
-Definition hom_twist t a e : 'M[T]_4 :=
+Definition hom_twist t (a : T) e : 'M[T]_4 :=
   let (v, w) := (\v( t ), \w( t )) in
   if w == 0 then
     hom 1 (a *: v)
@@ -742,7 +742,7 @@ rewrite ang_tcoorE (negbTE w0) skew_mxZ; congr hom.
 rewrite crossmulZv crossmulvZ scalerA.
 rewrite dotmulZv dotmulvZ !mulrA -[in X in _ + X + _]scalerA.
 rewrite crossmulvZ crossmulNv [in X in _ + _ + X = _]scalerN crossmulZv [in X in _ + _ + X]scalerA.
-rewrite -scalemxAl -scalerDr -scalerBr; congr (_ *: _).
+rewrite -[in LHS]scalemxAl -scalerDr -scalerBr; congr (_ *: _).
   by rewrite -invrM ?unitfE ?norm_eq0.
 rewrite -/w' /= [in X in _ = X + _]mulmxBr mulmx1.
 rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
@@ -1140,7 +1140,8 @@ rewrite double_crossmul dotmulvv.
 rewrite [in X in _ = _ *: (X + _)]mulNmx.
 rewrite [in X in _ = _ *: (X + _)]mulmxBl.
 rewrite opprB -addrA.
-rewrite scalerDr -scalemxAl scalerA [in X in _ = X + _]mulrC divrr ?scale1r; last first.
+rewrite scalerDr.
+rewrite -[in X in _ = X + _]scalemxAl scalerA [in X in _ = X + _]mulrC divrr ?scale1r; last first.
   by rewrite unitfE expf_eq0 /= norm_eq0.
 congr (_ + _).
 rewrite -[in X in _ = _ *: (_ + X)]scalemxAl.
@@ -1159,11 +1160,11 @@ rewrite mulmxBr mulmx1.
 rewrite -rodrigues_genP /rodrigues_gen.
 rewrite crossmulvZ crossmulvv 2!scaler0 addr0.
 rewrite dotmulZv dotmulvv.
-rewrite !scalerA mulrAC mulrA.
-rewrite subrK.
-rewrite subrr oppr0 add0r.
+rewrite !scalerA mulrAC -mulrA opprB subrK.
+apply/esym/eqP; rewrite scaler_eq0; apply/orP; right.
+rewrite subrr add0r.
 rewrite crossmulC mulNmx scalerN.
-by rewrite crossmulC opprK -skew_mxE -mulmxA (mulmxA \S( w )) skew_mxT mul0mx mulmx0 scaler0 oppr0 scaler0.
+by rewrite crossmulC opprK -skew_mxE -mulmxA (mulmxA \S( w )) skew_mxT mul0mx mulmx0 scaler0 oppr0.
 Qed.
 
 End screw_motion.
@@ -1632,8 +1633,9 @@ have {step2} : p0 *m A = b.
 move/(congr1 (fun x => x *m A^T)).
 move/(congr1 (fun x => x *m screw_axis_point_mat_inv)).
 rewrite /screw_axis_point.
-rewrite -2!mulmxA.
-rewrite -screw_axis_point_mat_invE // mulmxV; last by rewrite screw_axis_point_mat_unit.
+rewrite (_ : screw_axis_point_mat_inv = (A *m A^T)^-1); last first.
+  by rewrite screw_axis_point_mat_invE.
+rewrite -2!(mulmxA p0) mulmxV; last by rewrite screw_axis_point_mat_unit.
 rewrite mulmx1 screw_axis_point_mat_invE //.
 rewrite step3.
 rewrite mulmxBr mulmx1 /displacement opprB addrA subrK.

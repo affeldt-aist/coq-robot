@@ -5,8 +5,6 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import  mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-(*From mathcomp.analysis Require Import reals.*)
-
 Require Import ssr_ext euclidean3.
 Require vec_angle.
 
@@ -24,13 +22,15 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Reserved Notation "'\S(' w ')'" (at level 3, format "'\S(' w ')'").
+
 Import GRing.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 
 Section keyed_qualifiers_for_symmetric_matrices.
 
-Variables (n : nat) (R : rcfType (*realType*)).
+Variables (n : nat) (R : ringType).
 
 Definition anti := [qualify M : 'M[R]_n | M == - M^T].
 Fact anti_key : pred_key anti. Proof. by []. Qed.
@@ -47,7 +47,7 @@ Notation "''so[' R ]_ n" := (anti n R)
 
 Section symmetric_matrices.
 
-Variable R : rcfType (*realType*).
+Variable R : comRingType.
 Variable n : nat.
 Implicit Types M A B : 'M[R]_n.
 
@@ -94,6 +94,26 @@ Lemma antiE M : (M \is 'so[R]_n) = (M == - M^T). Proof. by []. Qed.
 Lemma antiN M : (- M \is 'so[R]_n) = (M \is 'so[R]_n).
 Proof. apply/idP/idP; by rewrite !antiE linearN /= opprK eqr_oppLR. Qed.
 
+Lemma conj_so P M : M \is 'so[R]_n -> P^T *m M *m P \is 'so[R]_n.
+Proof.
+rewrite !antiE -eqr_oppLR => /eqP HM.
+by rewrite !trmx_mul trmxK -HM !(mulNmx,mulmxN) opprK mulmxA.
+Qed.
+
+Lemma anti_scaler_closed : GRing.scaler_closed 'so[R]_n.
+Proof.
+move=> ? ?; rewrite antiE => /eqP H; by rewrite antiE linearZ /= -scalerN -H.
+Qed.
+(* TODO: Canonical? *)
+
+End symmetric_matrices.
+
+Section symmetric_matrices1.
+
+Variable R : rcfType.
+Variable n : nat.
+Implicit Types M A B : 'M[R]_n.
+
 Lemma anti_diag M i : M \is 'so[R]_n -> M i i = 0.
 Proof.
 rewrite antiE -addr_eq0 => /eqP/matrixP/(_ i i); rewrite !mxE.
@@ -104,12 +124,6 @@ Lemma trace_anti M : M \is 'so[R]_n -> \tr M = 0.
 Proof.
 move/anti_diag => HM.
 by rewrite /mxtrace (eq_bigr (fun=> 0)) // sumr_const mul0rn.
-Qed.
-
-Lemma conj_so P M : M \is 'so[R]_n -> P^T *m M *m P \is 'so[R]_n.
-Proof.
-rewrite !antiE -eqr_oppLR => /eqP HM.
-by rewrite !trmx_mul trmxK -HM !(mulNmx,mulmxN) opprK mulmxA.
 Qed.
 
 Lemma antiP A B : A \is 'so[R]_n -> B \is 'so[R]_n ->
@@ -126,11 +140,13 @@ move: (soB); rewrite antiE -eqr_oppLR => /eqP/matrixP/(_ i j).
 rewrite !mxE => <-; by rewrite opprK.
 Qed.
 
-Lemma anti_scaler_closed : GRing.scaler_closed 'so[R]_n.
-Proof.
-move=> ? ?; rewrite antiE => /eqP H; by rewrite antiE linearZ /= -scalerN -H.
-Qed.
-(* TODO: Canonical? *)
+End symmetric_matrices1.
+
+Section symmetric_matrices2.
+
+Variable R : numFieldType.
+Variable n : nat.
+Implicit Types M A B : 'M[R]_n.
 
 (* (anti)symmetric parts of a matrix *)
 Definition symp A := 1/2%:R *: (A + A^T).
@@ -153,9 +169,9 @@ Proof.
 by apply/eqP; rewrite /symp linearZ /= [in RHS]linearD /= trmxK addrC.
 Qed.
 
-End symmetric_matrices.
+End symmetric_matrices2.
 
-Lemma sqr_antip (R : rcfType (*realType*)) (M : 'M[R]_3) : M \is 'so[R]_3 ->
+Lemma sqr_antip (R : rcfType) (M : 'M[R]_3) : M \is 'so[R]_3 ->
   M ^+ 2 = col_mx3
   (row3 (- M 0 1 ^+ 2 - M 0 2%:R ^+ 2) (- M 1 2%:R * M 0 2%:R) (M 0 1 * M 1 2%:R))
   (row3 (- M 1 2%:R * M 0 2%:R) (- M 0 1 ^+ 2 - M 1 2%:R ^+ 2) (- M 0 1 * M 0 2%:R))
@@ -176,14 +192,14 @@ Qed.
 
 Section skew.
 
-Variable R : rcfType (*realType*).
+Variable R : fieldType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
 
 Definition skew_mx u : 'M[R]_3 := \matrix_i (u *v 'e_i).
 
-Local Notation "'\S(' u ')'" := (skew_mx u) (at level 3, format "'\S(' u ')'").
+Local Notation "'\S(' u ')'" := (skew_mx u).
 
 Lemma skew_mxE u v : u *m \S( v ) = v *v u.
 Proof.
@@ -238,11 +254,6 @@ Proof. move/eqP: (skew_mx_is_so u) => ->; by rewrite 2!mxE skew02 opprK. Qed.
 Lemma skew21 u : \S( u ) 2%:R 1 = - u``_0.
 Proof. move/eqP: (skew_mx_is_so u) => ->; by rewrite 2!mxE skew12. Qed.
 
-Lemma skewii u i : \S( u ) i i = 0.
-Proof. by rewrite anti_diag // skew_mx_is_so. Qed.
-
-Definition skewij := (skew01, skew10, skew02, skew20, skew21, skew12, skewii).
-
 Lemma skew_mxT u : \S( u ) *m u^T = 0.
 Proof.
 rewrite -(trmxK (skew_mx u)) -trmx_mul tr_skew.
@@ -268,6 +279,43 @@ Proof.
 rewrite (_ : 0 = 0%:M) ?unskew_cst //.
 by apply/matrixP => ??; rewrite !mxE mul0rn.
 Qed.
+
+Lemma unskewN M : unskew (- M) = - unskew M.
+Proof.
+by rewrite /unskew !mxE !opprK row3N -!mulNr !opprB 3!(addrC (- M _ _)).
+Qed.
+
+Lemma unskewZ k M : unskew (k *: M) = k *: unskew M.
+Proof.  by rewrite /unskew !mxE row3Z !mulrA !mulrBr. Qed.
+
+Lemma unskewD (A B : 'M[R]_3) : unskew (A + B) = unskew A + unskew B.
+Proof.
+rewrite /unskew row3D -!mulrDl !mxE !opprD -!addrA.
+by rewrite (addrCA (B 1 _)) (addrCA (B 2%:R _)) (addrCA (B 0 _)).
+Qed.
+
+(* more general result for antisymmetric matrices? *)
+Lemma det_skew_mx u : \det \S( u ) = 0.
+Proof.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite skew_mx0 det0.
+apply/eqP/det0P; exists u => //; by rewrite skew_mxE crossmulvv.
+Qed.
+
+End skew.
+
+Notation "'\S(' w ')'" := (skew_mx w).
+
+Section skew1.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Implicit Types u : vector.
+Implicit Types M : 'M[R]_3.
+
+Lemma skewii u i : \S( u ) i i = 0.
+Proof. by rewrite anti_diag // skew_mx_is_so. Qed.
+
+Definition skewij := (skew01, skew10, skew02, skew20, skew21, skew12, skewii).
 
 Lemma skew_mxK u : unskew \S( u ) = u.
 Proof.
@@ -302,30 +350,9 @@ move=> soM.
 by apply/matrix3P; rewrite skewij ?anti_diag // mxE /= ?opprK // {1}(eqP soM) !mxE opprK.
 Qed.*)
 
-Lemma unskewN M : unskew (- M) = - unskew M.
-Proof.
-by rewrite /unskew !mxE !opprK row3N -!mulNr !opprB 3!(addrC (- M _ _)).
-Qed.
-
-Lemma unskewZ k M : unskew (k *: M) = k *: unskew M.
-Proof.  by rewrite /unskew !mxE row3Z !mulrA !mulrBr. Qed.
-
-Lemma unskewD (A B : 'M[R]_3) : unskew (A + B) = unskew A + unskew B.
-Proof.
-rewrite /unskew row3D -!mulrDl !mxE !opprD -!addrA.
-by rewrite (addrCA (B 1 _)) (addrCA (B 2%:R _)) (addrCA (B 0 _)).
-Qed.
-
 Lemma skew_inj u v : (\S( u ) == \S( v )) = (u == v).
 Proof.
 apply/idP/idP => [/eqP H|/eqP -> //]; by rewrite -(skew_mxK u) H skew_mxK.
-Qed.
-
-(* more general result for antisymmetric matrices? *)
-Lemma det_skew_mx u : \det \S( u ) = 0.
-Proof.
-case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite skew_mx0 det0.
-apply/eqP/det0P; exists u => //; by rewrite skew_mxE crossmulvv.
 Qed.
 
 Lemma skew_mx2' u : \S( u ) ^+ 2 = col_mx3
@@ -440,13 +467,11 @@ rewrite !inE orbA; apply/orP; right.
 by rewrite eq_complex /= oppr0 !eqxx.
 Qed.
 
-End skew.
-
-Notation "'\S(' w ')'" := (skew_mx w) (at level 3, format "'\S(' w ')'").
+End skew1.
 
 Section cayley_transform.
 
-Variable R : rcfType (*realType*).
+Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 
@@ -579,7 +604,7 @@ End cayley_transform.
 
 Section wip.
 
-Variable R : rcfType (*realType*).
+Variable R : rcfType.
 
 Definition lie_bracket (w1 w2 : 'rV[R]_3) := \S( w1 ) * \S( w2) - \S( w2 ) * \S( w1 ).
 

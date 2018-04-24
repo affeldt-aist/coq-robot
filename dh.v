@@ -27,7 +27,7 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B))
 (* [ angeles2014: p.102-203] *)
 Module Plucker.
 Section plucker.
-Variable T : rcfType (*realType*).
+Variable T : comRingType.
 Let vector := 'rV[T]_3.
 
 Record array := mkArray {
@@ -39,13 +39,13 @@ Record array := mkArray {
 End plucker.
 End Plucker.
 
-Coercion plucker_array_mx (T : rcfType (*realType*)) (p : Plucker.array T) :=
+Coercion plucker_array_mx (T : comRingType) (p : Plucker.array T) :=
   row_mx (Plucker.e p) (Plucker.n p).
 
 (* wip *)
 Section plucker_of_line.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Implicit Types l : Line.t T.
 
 Definition normalized_plucker_direction l :=
@@ -368,8 +368,8 @@ have H4 : From1To0 = dh_rot theta alpha.
     move: Hrot.
     rewrite H11 (eqP H21) H10 !mulNr opprK H20 -(mulrA (cos theta)) -expr2 mulrAC.
     rewrite -expr2 -opprD (mulrC (cos theta) (_ ^+ 2)) -mulrDl cos2Dsin2 mul1r.
-    rewrite mulrN -expr2 mulrAC -expr2 mulrAC -expr2 -mulrDl (addrC (_ ^+ 2)).
-    rewrite cos2Dsin2 mul1r -expr2 sin2cos2 addrCA -opprD -mulr2n => /eqP.
+    rewrite mulrN -expr2 -mulrA mulrCA -expr2 -mulrA mulrCA -expr2 -mulrDr (addrC (_ ^+ 2)).
+    rewrite cos2Dsin2 mulr1 -expr2 sin2cos2 addrCA -opprD -mulr2n => /eqP.
     rewrite subr_eq addrC -subr_eq subrr eq_sym mulrn_eq0 /= sqrf_eq0 => ct0.
     rewrite {1}/From1To0 -lock H11 {1}/From1To0 -lock (eqP H21).
     by rewrite (eqP ct0) !(mulr0,mul0r) oppr0.
