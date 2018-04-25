@@ -21,10 +21,9 @@ Require vec_angle.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+Import GRing.Theory Num.Theory.
 
 Reserved Notation "'\S(' w ')'" (at level 3, format "'\S(' w ')'").
-
-Import GRing.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 
@@ -47,8 +46,7 @@ Notation "''so[' R ]_ n" := (anti n R)
 
 Section symmetric_matrices.
 
-Variable R : comRingType.
-Variable n : nat.
+Variables (R : comRingType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
 
 Lemma symE M : (M \is sym n R) = (M == M^T). Proof. by []. Qed.
@@ -110,8 +108,7 @@ End symmetric_matrices.
 
 Section symmetric_matrices1.
 
-Variable R : rcfType.
-Variable n : nat.
+Variables (R : rcfType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
 
 Lemma anti_diag M i : M \is 'so[R]_n -> M i i = 0.
@@ -144,8 +141,7 @@ End symmetric_matrices1.
 
 Section symmetric_matrices2.
 
-Variable R : numFieldType.
-Variable n : nat.
+Variables (R : numFieldType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
 
 (* (anti)symmetric parts of a matrix *)
@@ -294,7 +290,7 @@ rewrite /unskew row3D -!mulrDl !mxE !opprD -!addrA.
 by rewrite (addrCA (B 1 _)) (addrCA (B 2%:R _)) (addrCA (B 0 _)).
 Qed.
 
-(* more general result for antisymmetric matrices? *)
+(* skew-symmetric matrices are always singular *)
 Lemma det_skew_mx u : \det \S( u ) = 0.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite skew_mx0 det0.

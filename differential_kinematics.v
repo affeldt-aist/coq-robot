@@ -22,7 +22,7 @@ Section derive1mx.
 Variable (V W : normedModType R).
 
 Definition derive1mx n m (M : R -> 'M[W]_(n, m)) := fun t =>
-  \matrix_(i < n, j < m) ((fun x => M x i j)^`() t : W).
+  \matrix_(i < n, j < m) (derive1 (fun x => M x i j) t : W).
 
 Lemma derive1mx_cst n m (M : 'M[W]_(n, m)) : derive1mx (cst M) = cst 0.
 Proof.
@@ -38,8 +38,8 @@ by rewrite (_ : (fun _ => _) = (fun t => M t j i)) // funeqE => ?; rewrite mxE.
 Qed.
 
 Lemma derive_mx n m (f : V -> 'I_n -> 'I_m -> W) i j (t : V) v :
-  'D_v[fun x => (\matrix_(i < n, j < m) (f x i j)) i j] t =
-    (\matrix_(i < n, j < m) ('D_v[fun x => f x i j] t : W)) i j.
+  derive (fun x => (\matrix_(i < n, j < m) (f x i j)) i j) v t =
+    (\matrix_(i < n, j < m) (derive (fun x => f x i j) v t : W)) i j.
 Proof.
 by rewrite (_ : (fun x => _) = (fun x => f x i j)) ?mxE // funeqE => ?; rewrite mxE.
 Qed.
@@ -103,7 +103,7 @@ Qed.
 
 Lemma derive1mx_dotmul_belast n (u v : R^o -> 'rV[R^o]_n.+1) t :
   let u' x := row_belast (u x) in let v' x := row_belast (v x) in
-  u' t *d derive1mx v' t + (u t)``_ord_max *: 'D_1[fun x => (v x)``_ord_max] t =
+  u' t *d derive1mx v' t + (u t)``_ord_max *: derive (fun x => (v x)``_ord_max) t 1 =
   u t *d derive1mx v t.
 Proof.
 move=> u' v'.
@@ -137,7 +137,7 @@ Section product_rules.
 
 Lemma derive1mx_dotmul n (u v : R^o -> 'rV[R^o]_n) (t : R^o) :
   derivable_mx u t 1 -> derivable_mx v t 1 ->
-  (fun x => u x *d v x : R^o)^`() t =
+  derive1 (fun x => u x *d v x : R^o) t =
   derive1mx u t *d v t + u t *d derive1mx v t.
 Proof.
 move=> U V.
@@ -155,7 +155,7 @@ elim: n u v => [|n IH] u v in U V *.
 rewrite [LHS]big_ord_recr /=.
 set u' := fun x => row_belast (u x). set v' := fun x => row_belast (v x).
 transitivity (derive1mx u' t *d v' t + u' t *d derive1mx v' t +
-    'D_1[fun x => (u x)``_ord_max * (v x)``_ord_max] t).
+    derive (fun x => (u x)``_ord_max * (v x)``_ord_max) t 1).
   rewrite -(IH _ _ (derivable_row_belast U) (derivable_row_belast V)).
   congr (_ + _); apply eq_bigr => i _; congr (derive _ t 1).
   by rewrite funeqE => x; rewrite !mxE.
@@ -202,10 +202,45 @@ Qed.
 
 End product_rules.
 
+Section cross_product_matrix.
+
+Lemma coord_continuous {K : absRingType} m n i j :
+  continuous (fun M : 'M[K]_(m.+1, n.+1) => M i j).
+Proof.
+move=> /= M s /= /locallyP; rewrite locally_E => -[e e0 es].
+apply/locallyP; rewrite locally_E; exists e => //= N MN; exact/es/MN.
+Qed.
+
+Lemma differentiable_coord m n (M : 'M[R]_(m.+1, n.+1)) i j :
+  (differentiable M) (fun N : 'M[R]_(m.+1, n.+1) => N i j : R^o).
+Proof.
+have @f : {linear 'M[R]_(m.+1, n.+1) -> R^o}.
+  by exists (fun N : 'M[R]_(_, _) => N i j); eexists; move=> ? ?; rewrite !mxE.
+rewrite (_ : (fun _ => _) = f) //; exact/linear_differentiable/coord_continuous.
+Qed.
+
+Lemma differential_cross_product (v : 'rV[R^o]_3) y :
+  GRing.Linear.apply ('d_y (fun x => v *v x)) = GRing.Linear.apply (mx_lin1 \S( v )).
+Proof.
+rewrite (_ : (fun x => v *v x) = (fun x => x *m \S( v ))); last first.
+  by rewrite funeqE => ?; rewrite -skew_mxE.
+rewrite (_ : mulmx^~ \S(v) = mulmxr_linear 1 \S(v)); last by rewrite funeqE.
+rewrite diff_lin //= => x.
+suff : differentiable x (mulmxr \S(v)) by move/differentiable_continuous.
+rewrite (_ : mulmxr \S(v) = (fun z => \sum_i z``_i *: row i \S(v))); last first.
+  rewrite funeqE => z; by rewrite -mulmx_sum_row.
+set f := fun (i : 'I_3) (z : 'rV_3) => z``_i *: row i \S(v) : 'rV_3.
+rewrite (_ : (fun _ => _) = \sum_i f i); last by rewrite funeqE => ?; by rewrite fct_sumE.
+apply: differentiable_sum => i.
+exact/differentiableZl/differentiable_coord.
+Qed.
+
+End cross_product_matrix.
+
 Section derivative_of_a_rotation_matrix.
 
 Variable M : R -> 'M[R^o]_3. (* time-varying matrix *)
-Hypothesis MSO : forall t, M t \is 'SO[ [ringType of R] ]_3.
+Hypothesis MO : forall t, M t \is 'O[ [ringType of R] ]_3.
 Hypothesis derivable_M : forall t, derivable_mx M t 1.
 
 Definition s t := derive1mx M t * (M t)^T.
@@ -215,7 +250,7 @@ Proof.
 rewrite antiE -subr_eq0 opprK; apply/eqP; rewrite /s trmx_mul trmxK mulmxE.
 have : (fun t => M t * (M t)^T) = cst 1.
   rewrite funeqE => x.
-  by move: (MSO x); rewrite rotationE orthogonalE => /andP[/eqP].
+  by move: (MO x); rewrite orthogonalE => /eqP.
 move/(congr1 (fun x => derive1mx x t)); rewrite derive1mx_cst -[cst 0 _]/(0).
 rewrite derive1mxM // ?derive1mx_tr //; exact/trmx_derivable/derivable_M.
 Qed.
@@ -225,14 +260,31 @@ Lemma derive_rot_skew (t : R) : derive1mx M t = s t * M t.
 Proof.
 move: (sso t); rewrite antiE -subr_eq0 opprK => /eqP.
 rewrite {1 2}/s trmx_mul trmxK => /(congr1 (fun x => x * M t)).
-rewrite mul0r mulrDl -{1}mulrA -{1}(rotation_inv (MSO t)).
-rewrite mulVr ?mulr1 ?unitmxE ?rotation_det // ?unitr1 //.
+rewrite mul0r mulrDl -{1}mulrA -{1}(orthogonal_inv (MO t)).
+rewrite mulVr ?orthogonal_unit // mulr1.
 move/eqP; rewrite addr_eq0 => /eqP ->.
 move: (sso t); rewrite antiE => /eqP ->.
 by rewrite /s trmx_mul trmxK mulNr.
 Qed.
 
+Let angular_velocity (t : R) : 'rV[R]_3 := unskew (s t).
+
+Lemma derive1mx_angular_velocity (p' : 'rV[R^o]_3) :
+  let p := fun t => p' *m (M t) in
+  forall t,
+  derive1mx p t = angular_velocity t *v p' *m M t.
+Proof.
+move=> p t.
+rewrite /p derive1mxM; last first.
+  exact: derivable_M.
+  rewrite /derivable_mx => i j; exact: ex_derive.
+rewrite derive1mx_cst mul0mx add0r derive_rot_skew mulmxA.
+by rewrite -{1}(unskewK (sso t)) skew_mxE.
+Qed.
+
 End derivative_of_a_rotation_matrix.
+
+(* WIPWIP *)
 
 Require Import frame.
 
@@ -252,7 +304,7 @@ End about_free_vectors.
 
 Notation "a +fv b" := (FreeVect_add a b) (at level 39).
 
-Module BoundVect.
+Module BoundVect. (* i.e., point of application prescribed *)
 Section bound_vector.
 Variable T : rcfType.
 Record t (F : TFrame.t T) := mk { endp : 'rV[T]_3 }.
@@ -348,112 +400,16 @@ rewrite -subr_eq.
 done.
 Qed.
 
-(*Variable angular_velocity : R -> 'rV[T]_3.
+(* TODO Variable angular_velocity : R -> 'rV[T]_3.
 
 Lemma velocity_composition_rule (t : R) :
   derive1mx P t = derive1mx Q t + angular_velocity t *v (P t - Q t).*)
 
 End motion.
 
-Section tmp.
-
-Lemma continuousZl {K : absRingType} {V : normedModType K} {T : topologicalType} (f : V) (k : T -> K) x :
-  {for x, continuous k} -> {for x, continuous (fun z => k z *: f)}.
-Proof. by move=> ?; apply: lim_scalel. Qed.
-
-Lemma scaleolx (K : absRingType) (V W : normedModType K) {T : Type}
-  (F : filter_on T) (a : W) (k : T -> K^o) (e : T -> V) (x : T) :
-  ([o_F e of k] x) *: a = [o_F e of (fun y => [o_F e of k] y *: a)] x.
-Proof.
-rewrite [in RHS]littleoE //.
-have [->|a0] := eqVneq a 0.
-  by rewrite (_ : (fun _ => _) = 0 :> (_ -> _)) // funeqE => ?; rewrite scaler0.
-move=> _/posnumP[eps].
-have ea : 0 < eps%:num / `|[ a ]| by rewrite divr_gt0 // normm_gt0.
-set g := 'o _.
-have /(_ _ ea) ? := littleoP [littleo of g].
-near=> y.
-  rewrite (ler_trans (ler_normmZ _ _)) //.
-  rewrite -ler_pdivl_mulr ?ltr_def ?normm_eq0 ?a0 ?normm_ge0 // mulrAC.
-  by near: y.
-end_near.
-Qed.
-
-Lemma differentiable_sum {V W : normedModType R} n (f : 'I_n -> V -> W) (x : V) :
-  (forall i, differentiable x (f i)) -> differentiable x (\sum_(i < n) f i).
-Proof.
-elim: n f => [f _| n IH f H]; first by rewrite big_ord0.
-rewrite big_ord_recr /=; apply/differentiableD; [apply/IH => ? |]; exact: H.
-Qed.
-
-Let dscalel {K : absRingType} {V W : normedModType K} (x : V) (k : V -> K^o) (f : W) :
-  differentiable x k ->
-  continuous (fun z : V => 'd_x k z *: f) /\
-  (fun z => k z *: f) \o shift x = cst (k x *: f) + (fun z => 'd_x k z *: f) +o_ (0 : V) ssrfun.id.
-Proof.
-move=> df; split.
-  move=> y.
-  exact/continuousZl/(@diff_continuous _ _ [normedModType K of K^o]).
-apply/eqaddoE; rewrite funeqE => y /=; have /diff_locallyx dfx := df.
-by rewrite dfx /= !scalerDl -[RHS]/(_ y + _ y + _ y) /cst scaleolx.
-Qed.
-
-Lemma diffZl (V W : normedModType R) (f : W) (k : V -> R^o) (x : V) :
-  (differentiable x) k ->
-  'd_x ((fun z => k z *: f)) = (fun z => 'd_ x k z *: f) :> (V -> W).
-Proof.
-move=> df.
-set g := RHS.
-have @g' : {linear V -> W}.
-  have addg : additive g by move=> a b; rewrite /g linearB scalerBl.
-  have scag : scalable g by move=> l a; rewrite /g linearZ /= scalerA.
-  exists g; eexists; [exact: addg | exact: scag].
-rewrite (_ : g = g') //.
-by apply: diff_unique => //; have [] := dscalel f df.
-Qed.
-
-Lemma differentiableZl {V : normedModType R} (x : V) (f : V -> R^o) (k : V) :
-  differentiable x f -> differentiable x (fun z => f z *: k).
-Proof.
-move=> df; apply/diff_locallyP.
-rewrite diffZl //; by have [] := dscalel k df.
-Qed.
-
-End tmp.
-
-Section cross_product_matrix.
-
-Variable v : 'rV[R^o]_3.
-Let vector := 'rV[R^o]_3.
-
-Lemma diff_coord (x : 'rV[ R^o ]_3) (i : 'I_3) :
-  (differentiable x) (fun z : 'rV_3 => z``_i : R^o).
-Proof.
-Admitted.
-
-Lemma differential_cross_product y :
-  GRing.Linear.apply ('d_y (fun x => v *v x)) = GRing.Linear.apply (mx_lin1 \S( v )).
-Proof.
-rewrite (_ : (fun x => v *v x) = (fun x => x *m \S( v ))); last first.
-  by rewrite funeqE => ?; rewrite -skew_mxE.
-rewrite (_ : mulmx^~ \S(v) = mulmxr_linear 1 \S(v)); last by rewrite funeqE.
-rewrite diff_lin //= => x.
-suff : differentiable x (mulmxr \S(v)) by move/differentiable_continuous.
-rewrite (_ : mulmxr \S(v) = (fun z => \sum_i z``_i *: row i \S(v))); last first.
-  rewrite funeqE => z; by rewrite -mulmx_sum_row.
-set f := fun (i : 'I_3) (z : 'rV_3) => z``_i *: row i \S(v) : 'rV_3.
-rewrite (_ : (fun _ => _) = \sum_i f i); last by rewrite funeqE => ?; by rewrite fct_sumE.
-apply: differentiable_sum => i.
-rewrite /f.
-apply: differentiableZl => /=.
-exact: diff_coord.
-Qed.
-
-End cross_product_matrix.
-
 (* NB: see also Section tangent_frames in rigid.v *)
 Section tangent_vectors.
-(* or "bound vectors": point of application prescribed *)
+(* or "bound vectors":  *)
 
 Variable R : realType.
 Let vector := 'rV[R]_3.
@@ -480,7 +436,10 @@ Notation "u :@ p" := (TVec p u) (at level 11).
 Notation "p +@ u" := (addt p u) (at level 41).
 
 (* [sciavicco] eqn 3.9 *)
-Lemma rot_skew (M : 'M[R]_3) (w : 'rV[R]_3) :
+Lemma rot_skew {T : rcfType} (M : 'M[T]_3) (w : 'rV[T]_3) :
+  M \is 'O[T]_3 ->
   M * \S( w ) * M^T = \S( w *m M).
 Proof.
+move=> MO.
+apply/matrix3P/and9P; split.
 Abort.

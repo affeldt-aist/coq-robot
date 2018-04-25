@@ -27,7 +27,7 @@ see [FILES.md](FILES.md)
 
 ## Requirements
 
-* The Coq proof-assistant (v8.7)
+* The Coq proof-assistant (v8.8)
   https://coq.inria.fr/
 * The Mathematical Components library
   https://github.com/math-comp/math-comp
