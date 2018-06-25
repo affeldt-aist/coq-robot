@@ -17,6 +17,17 @@ Import GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
+Section mx.
+
+Variable (V W : normedModType R).
+
+Lemma mxE_funeqE n m (f : V -> 'I_n -> 'I_m -> W) i j :
+  (fun x => (\matrix_(i < n, j < m) (f x i j)) i j) =
+  (fun x => f x i j).
+Proof. by rewrite funeqE => ?; rewrite mxE. Qed.
+
+End mx.
+
 Section derive1mx.
 
 Variable (V W : normedModType R).
@@ -31,41 +42,34 @@ by rewrite derive1E (_ : (fun _ => _) = cst (M i j)) // derive_val.
 Qed.
 
 Lemma derive1mx_tr n (M : R -> 'M[W]_(n, n)) t :
-  derive1mx (fun x => (M x)^T) t = (derive1mx M t)^T.
+  derive1mx (trmx \o M) t = (derive1mx M t)^T.
 Proof.
 apply/matrixP => i j; rewrite !mxE.
 by rewrite (_ : (fun _ => _) = (fun t => M t j i)) // funeqE => ?; rewrite mxE.
-Qed.
-
-Lemma derive_mx n m (f : V -> 'I_n -> 'I_m -> W) i j (t : V) v :
-  derive (fun x => (\matrix_(i < n, j < m) (f x i j)) i j) v t =
-    (\matrix_(i < n, j < m) (derive (fun x => f x i j) v t : W)) i j.
-Proof.
-by rewrite (_ : (fun x => _) = (fun x => f x i j)) ?mxE // funeqE => ?; rewrite mxE.
 Qed.
 
 Definition derivable_mx m n (M : R -> 'M[W]_(m, n)) (t : R^o) v :=
   forall i j, derivable (fun x : R^o => (M x) i j) t v.
 
 Lemma trmx_derivable m n (M : R^o -> 'M[W]_(m, n)) (t : R^o) v :
-  derivable_mx M t v -> derivable_mx (fun t0 : R => (M t0)^T) t v.
+  derivable_mx M t v -> derivable_mx (trmx \o M) t v.
 Proof.
 move=> H i j.
 by rewrite (_ : (fun _ => _) = (fun x => M x j i)) // funeqE => z; rewrite mxE.
 Qed.
 
-Lemma derivable_mx_row n m (M : R^o -> 'M[W]_(n, m)) (t : R^o) i :
-  derivable_mx M t 1 -> derivable_mx (fun x : R => \row_z (M x) i z) t 1.
+Lemma derivable_mx_row n m (M : R -> 'M[W]_(n, m)) (t : R^o) i :
+  derivable_mx M t 1 -> derivable_mx (row i \o M) t 1.
 Proof.
 move=> H a b.
 by rewrite (_ : (fun _ => _) = (fun x => (M x) i b)) // funeqE => z; rewrite mxE.
 Qed.
 
-Lemma derivable_mx_row' n m (M : R -> 'M[W]_(n, m)) (t : R^o) i :
-  derivable_mx M t 1 -> derivable_mx (fun x : R => \row_z (M x) z i) t 1.
+Lemma derivable_mx_col n m (M : R -> 'M[W]_(n, m)) (t : R^o) i :
+  derivable_mx M t 1 -> derivable_mx (trmx \o col i \o M) t 1.
 Proof.
 move=> H a b.
-by rewrite (_ : (fun _ => _) = (fun x : R^o => (M x) b i)) // funeqE => z; rewrite mxE.
+by rewrite (_ : (fun _ => _) = (fun x : R^o => (M x) b i)) // funeqE => z; rewrite 2!mxE.
 Qed.
 
 End derive1mx.
@@ -174,9 +178,10 @@ move=> HM HN; apply/matrixP => i j; rewrite ![in LHS]mxE.
 rewrite (_ : (fun x => _) = fun x => \sum_k (M x) i k * (N x) k j); last first.
   by rewrite funeqE => x; rewrite !mxE.
 rewrite (_ : (fun x => _) =
-    fun x => (\row_(z < _) (M x i) z) *d (\row_(z < _) (N x z j))); last first.
-  rewrite funeqE => z; rewrite dotmulE; apply eq_bigr => k _; by rewrite 2!mxE.
-rewrite (derive1mx_dotmul (derivable_mx_row HM) (derivable_mx_row' HN)).
+    fun x => (row i (M x)) *d (col j (N x))^T); last first.
+  rewrite funeqE => z; rewrite dotmulE; apply eq_bigr => k _.
+  by rewrite 3!mxE.
+rewrite (derive1mx_dotmul (derivable_mx_row HM) (derivable_mx_col HN)).
 rewrite [in RHS]mxE; congr (_  + _); rewrite [in RHS]mxE dotmulE;
   apply/eq_bigr => /= k _; rewrite !mxE; congr (_ * _); congr (derive1 _ t);
   by rewrite funeqE => z; rewrite !mxE.
@@ -191,7 +196,7 @@ move=> U V.
 evar (f : R -> 'rV[R]_3); rewrite (_ : (fun x : R => _) = f); last first.
   rewrite funeqE => x; exact: crossmulE.
 rewrite {}/f {1}/derive1mx; apply/rowP => i; rewrite mxE derive1E.
-rewrite derive_mx /= mxE 2!crossmulE ![in RHS]mxE /=.
+rewrite (mxE_funeqE (fun x : R^o => _)) /= mxE 2!crossmulE ![in RHS]mxE /=.
 case: ifPn => [/eqP _|/ifnot0P/orP[]/eqP -> /=];
   rewrite ?derive1E (deriveD (derivableM (U _ _) (V _ _))
     (derivableN (derivableM (U _ _) (V _ _))));
@@ -220,9 +225,9 @@ rewrite (_ : (fun _ => _) = f) //; exact/linear_differentiable/coord_continuous.
 Qed.
 
 Lemma differential_cross_product (v : 'rV[R^o]_3) y :
-  GRing.Linear.apply ('d_y (fun x => v *v x)) = GRing.Linear.apply (mx_lin1 \S( v )).
+  'd_y (crossmul v) = mx_lin1 \S( v ) :> (_ -> _).
 Proof.
-rewrite (_ : (fun x => v *v x) = (fun x => x *m \S( v ))); last first.
+rewrite (_ : crossmul v = (fun x => x *m \S( v ))); last first.
   by rewrite funeqE => ?; rewrite -skew_mxE.
 rewrite (_ : mulmx^~ \S(v) = mulmxr_linear 1 \S(v)); last by rewrite funeqE.
 rewrite diff_lin //= => x.
