@@ -558,7 +558,7 @@ rewrite -(@argZ _ _ (Num.sqrt 2%:R^-1)) ?sqrtr_gt0 ?invr_gt0 ?ltr0Sn //.
 by rewrite -complexZ1 mulr1.
 Qed.
 
-Lemma atanN x : - atan (- x) = atan x.
+Lemma atanN x : atan (- x) = - atan x.
 Proof.
 rewrite /atan eqr_oppLR oppr0.
 case: ifPn => [|x0]; first by rewrite oppr0.
@@ -566,12 +566,12 @@ rewrite -argc.
   congr arg; apply/eqP.
   rewrite sgzN mulrNz /= eq_complex /=.
   move: x0; rewrite neqr_lt => /orP [] x0.
-    by rewrite ltr0_sgz // 2!mulrN1z opprK /= invrN 2!eqxx.
-  by rewrite gtr0_sgz // 2!mulr1z /= invrN 2!opprK 2!eqxx.
+    by rewrite ltr0_sgz // 2!mulrN1z opprK /= invrN opprK 2!eqxx.
+  by rewrite gtr0_sgz // 2!mulr1z /= invrN opprK 2!eqxx.
 move: x0; rewrite neqr_lt => /orP [] x0.
-  by rewrite gtr0_sgz ?oppr_gt0 // mulr1z eq_complex /= negb_and oner_neq0 orbC.
-rewrite ltr0_sgz -?oppr_gt0 ?opprK // mulrN1z eq_complex /= negb_and orbC.
-by rewrite eqr_oppLR oppr0 oner_neq0.
+  rewrite ltr0_sgz // -?oppr_gt0 ?opprK // mulrN1z eq_complex /= negb_and orbC.
+  by rewrite eqr_oppLR oppr0 oner_neq0.
+by rewrite gtr0_sgz ?oppr_gt0 // mulr1z eq_complex /= negb_and oner_neq0 orbC.
 Qed.
 
 (* atan2 *)
@@ -588,6 +588,25 @@ Definition atan2 x y :=
 
 Lemma atan2_11 : atan2 1 1 = piquarter.
 Proof. by rewrite /atan2 ltr01 invr1 mulr1 atan1. Qed.
+
+Lemma atan2N (x y : T) : atan2 (- x) y = - atan2 x y.
+Proof.
+rewrite /atan2; case: ifPn => y0; first by rewrite mulNr atanN.
+rewrite -lerNgt in y0.
+rewrite ltr_neqAle y0 andbT; case: ifPn => y0'.
+  rewrite oppr_ge0; case: ifPn => x0.
+    rewrite lerNgt ltr_neqAle negb_and negbK x0 orbF; case: ifPn => x0'.
+      by rewrite mulNr atanN opprD {1}piNpi.
+    by rewrite mulNr atanN opprD opprK.
+  rewrite -ltrNge in x0.
+  by rewrite ltrW // mulNr atanN opprD.
+rewrite negbK in y0'.
+rewrite oppr_gt0; case: ifPn => x0.
+  by rewrite ltrNge (ltrW x0) /= opprK.
+rewrite -lerNgt in x0.
+rewrite oppr_lt0 ltr_neqAle x0 andbT eq_sym; case: ifPn => x0' //.
+by rewrite oppr0.
+Qed.
 
 (* cancellation laws *)
 
@@ -679,7 +698,7 @@ Lemma atanKneg x : x < 0 -> tan (atan x) = x.
 Proof.
 rewrite -oppr_gt0 => x0; rewrite /atan ltr_eqF -?oppr_gt0 //.
 move/eqP: (atanKpos x0); rewrite -eqr_oppLR => /eqP H.
-by rewrite -{3}H {H} -[in RHS]tanN atanN /atan ltr_eqF // -oppr_gt0.
+by rewrite -{3}H {H} atanN tanN opprK /atan ltr_eqF // -oppr_gt0.
 Qed.
 
 Lemma atanK x : tan (atan x) = x.
@@ -720,7 +739,7 @@ Qed.
 Lemma sin_atan_gtr0 (x : T) : 0 < x -> 0 < sin (atan x).
 Proof.
 move=> x0.
-by rewrite -atanN sinN -oppr_lt0 opprK sin_atan_ltr0 // oppr_lt0.
+by rewrite -(opprK (sin _)) -sinN -atanN -oppr_lt0 opprK sin_atan_ltr0 // oppr_lt0.
 Qed.
 
 Lemma sin_atan (x : T) : sin (atan x) = x / Num.sqrt (1 + x ^+ 2).

@@ -48,7 +48,7 @@ apply/matrixP => i j; rewrite !mxE.
 by rewrite (_ : (fun _ => _) = (fun t => M t j i)) // funeqE => ?; rewrite mxE.
 Qed.
 
-Definition derivable_mx m n (M : R -> 'M[W]_(m, n)) (t : R^o) v :=
+Definition derivable_mx m n (M : R -> 'M[W]_(m, n)) (t : R) v :=
   forall i j, derivable (fun x : R^o => (M x) i j) t v.
 
 Lemma trmx_derivable m n (M : R^o -> 'M[W]_(m, n)) (t : R^o) v :
@@ -224,7 +224,7 @@ have @f : {linear 'M[R]_(m.+1, n.+1) -> R^o}.
 rewrite (_ : (fun _ => _) = f) //; exact/linear_differentiable/coord_continuous.
 Qed.
 
-Lemma differential_cross_product (v : 'rV[R^o]_3) y :
+Lemma differential_cross_product (v : 'rV[R]_3) y :
   'd_y (crossmul v) = mx_lin1 \S( v ) :> (_ -> _).
 Proof.
 rewrite (_ : crossmul v = (fun x => x *m \S( v ))); last first.
@@ -239,6 +239,15 @@ rewrite (_ : (fun _ => _) = \sum_i f i); last by rewrite funeqE => ?; by rewrite
 apply: differentiable_sum => i.
 exact/differentiableZl/differentiable_coord.
 Qed.
+
+Lemma differential_cross_product2 (v y : 'rV[R]_3) :
+  'd_y (fun x : 'rV[R^o]_3 => crossmul x v) = -1 \*: mx_lin1 \S( v ) :> (_ -> _).
+Proof.
+transitivity ('d_y (crossmul (- v))); last first.
+  rewrite differential_cross_product.
+  rewrite skew_mxN (* TODO: linearN? *).
+  admit.
+Abort.
 
 End cross_product_matrix.
 
