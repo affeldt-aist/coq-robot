@@ -38,6 +38,9 @@ Require Import ssr_ext angle euclidean3 skew vec_angle frame.
   8. section euler_angles
 *)
 
+Reserved Notation "'`e(' a ',' M ')'" (format "'`e(' a ','  M ')'").
+Reserved Notation "'`e^(' a ',' w ')'" (format "'`e^(' a ','  w ')'").
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -574,7 +577,7 @@ Implicit Type a b : angle T.
 Definition emx3 a (M : 'M[T]_3) : 'M_3 :=
   1 + sin a *: M + (1 - cos a) *: M ^+ 2.
 
-Local Notation "'`e(' a ',' M ')'" := (emx3 a M) (format "'`e(' a ','  M ')'").
+Local Notation "'`e(' a ',' M ')'" := (emx3 a M).
 
 Lemma emx3a0 a : `e(a, 0) = 1.
 Proof. by rewrite /emx3 expr0n /= 2!scaler0 2!addr0. Qed.
@@ -636,7 +639,7 @@ apply/eqP; rewrite scaler_eq0 sqrf_eq0 subr_eq0 eq_sym (negbTE ca) /=.
 by rewrite aM subrr.
 Qed.
 
-Local Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )) (format "'`e^(' a ','  w ')'").
+Local Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )).
 
 Lemma eskew_v0 a : `e^(a, 0) = 1.
 Proof. by rewrite skew_mx0 emx3a0. Qed.
@@ -855,46 +858,56 @@ rewrite scalerBr [in RHS]scalerBr opprB !addrA; congr (_ - _).
 by rewrite addrC w1 expr1n !scalemx1 (addrC _ 1) subrr addr0.
 Qed.
 
+(* TODO: move? *)
+Lemma normalcomp_double_crossmul p u : norm u = 1 ->
+  normalcomp p u *v ((Base.frame u)|,2%:R *v (Base.frame u)|,1) = u *v p.
+Proof.
+move=> u1.
+rewrite 2!rowframeE (crossmulC (row _ _)) SO_jcrossk; last first.
+  by rewrite (col_mx3_rowE (NOFrame.M (Base.frame u))) -!rowframeE Base.is_SO.
+rewrite -rowframeE Base.frame0E ?norm1_neq0 //.
+rewrite normalizeI // {2}(axialnormalcomp p u) linearD /=.
+by rewrite crossmul_axialcomp add0r crossmulC crossmulNv opprK.
+Qed.
+
+Lemma normalcomp_mulO' a Q u p : norm u = 1 -> isRot a u (mx_lin1 Q) ->
+  normalcomp p u *m Q = cos a *: normalcomp p u + sin a *: (u *v p).
+Proof.
+move=> u1 H.
+set v := normalcomp p u.
+move: (orthogonal_expansion (Base.frame u) v).
+set p0 := _|,0. set p1 := _|,1. set p2 := _|,2%:R.
+rewrite (_ : (v *d p0) *: _ = 0) ?add0r; last first.
+  by rewrite /p0 Base.frame0E ?norm1_neq0 // normalizeI // dotmul_normalcomp scale0r.
+move=> ->.
+rewrite mulmxDl -2!scalemxAl.
+case/isRotP : H => /= _ -> ->.
+rewrite -/p1 -/p2.
+rewrite (scalerDr (normalcomp p u *d p1)) scalerA mulrC -scalerA.
+rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
+rewrite (scalerDr (normalcomp p u *d p2)) addrA addrC.
+rewrite scalerA mulrC -scalerA; congr (_ + _).
+rewrite scalerA mulrC -scalerA [in X in _ + X = _]scalerA mulrC -scalerA.
+rewrite scaleNr -scalerBr; congr (_ *: _).
+by rewrite -double_crossmul normalcomp_double_crossmul.
+Qed.
+
 (* [angeles] p.42, eqn 2.49 *)
 Lemma isRot_exp_eskew' a Q u : norm u = 1 ->
   isRot a u (mx_lin1 Q) -> Q = eskew' a u.
 Proof.
 move=> u1 H; apply/eqP/mulmxP => p.
-rewrite (decomp (p *m Q) u).
-have -> : axialcomp (p *m Q) u = axialcomp p u.
-  rewrite axialcompE -{2}(isRot_axis H) trmx_mul mulmxA -(mulmxA p).
-  rewrite orthogonal_mul_tr //; last first.
-    by apply/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
-  by rewrite mulmx1 axialcompE.
-rewrite /eskew' -[in RHS]addrA mulmxDr axialcompE mulmxA; congr (_ + _).
-  by rewrite u1 expr1n invr1 scale1r.
-have -> : normalcomp (p *m Q) u = cos a *: normalcomp p u - sin a *: (p *v u).
-  rewrite normalcomp_mulO //; last 2 first.
-    by apply/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
-    exact (isRot_axis H).
-  move: (orthogonal_expansion (Base.frame u)).
-  move/(_ (normalcomp p (Base.frame u)|,0)).
-  rewrite Base.frame0E ?norm1_neq0 //.
-  rewrite normalizeI // dotmul_normalcomp // scale0r add0r => ->.
-  rewrite mulmxDl -2!scalemxAl.
-  case/isRotP: H => /= _ -> ->.
-  rewrite (scalerDr (normalcomp p u *d (Base.frame u)|,1)) scalerA mulrC -scalerA.
-  rewrite [in RHS]scalerDr -!addrA; congr (_ + _).
-  rewrite (scalerDr (normalcomp p u *d (Base.frame u)|,2%:R)) addrA addrC.
-  rewrite scalerA mulrC -scalerA; congr (_ + _).
-  rewrite scalerA mulrC -scalerA [in X in _ + X = _]scalerA mulrC -scalerA.
-  rewrite scaleNr -opprB -scalerBr; congr (- (_ *: _)).
-  rewrite -double_crossmul.
-  rewrite 2!rowframeE SO_jcrossk; last first.
-    by rewrite (col_mx3_rowE (NOFrame.M (Base.frame u))) -!rowframeE Base.is_SO.
-  rewrite -rowframeE Base.frame0E ?norm1_neq0 //.
-  rewrite normalizeI // {2}(decomp p u) [in RHS]crossmulC linearD /=.
-  by rewrite crossmul_axialcomp add0r -[in RHS]crossmulC.
-rewrite /normalcomp scalerBr mulmxDr -scalemxAr mulmxBr mulmx1.
-rewrite scalerBr -2!addrA; congr (_ + _).
-rewrite -scalemxAr -(scalerN (sin a)) crossmulC opprK -(skew_mxE p u).
-congr (- (_ *: _) + _).
-by rewrite normalizeI // mulmxA dotmulP mul_scalar_mx dotmulC.
+rewrite (axialnormalcomp (p *m Q) u) axialcomp_mulO; last 2 first.
+  exact/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
+  exact: isRot_axis H.
+rewrite normalcomp_mulO //; last 2 first.
+  exact/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
+  exact: isRot_axis H.
+rewrite axialcompE u1 expr1n invr1 scale1r.
+rewrite /eskew' -addrA mulmxDr mulmxA; congr (_ + _).
+rewrite (@normalcomp_mulO' a) // mulmxDr.
+rewrite -[in X in _ = _ + X]scalemxAr skew_mxE; congr (_ + _).
+by rewrite normalcompE u1 expr1n invr1 scale1r scalemxAr.
 Qed.
 
 Lemma isRot_skew' e (e0 : e != 0) (a : angle T) :
@@ -929,8 +942,8 @@ End alternative_definition_of_eskew.
 
 End exponential_map_rot.
 
-Notation "'`e(' a ',' M ')'" := (emx3 a M) (format "'`e(' a ','  M ')'").
-Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )) (format "'`e^(' a ','  w ')'").
+Notation "'`e(' a ',' M ')'" := (emx3 a M).
+Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )).
 
 Module Aa.
 Section angle_of_angle_axis_representation.
@@ -1460,7 +1473,7 @@ Proof. by rewrite /norm dotmulE sum3E !mxE /= ?(mul0r,add0r) sqrtr_sqr. Qed.
 
 Lemma Rz_rotation_exists (u : 'rV[T]_3) : norm u = 1 ->
   u != 'e_2%:R -> u != - 'e_2%:R ->
-  let n : 'rV_3 := normalize ('e_2%:R *v u) in 
+  let n : 'rV_3 := normalize ('e_2%:R *v u) in
   {phi | isRot phi 'e_2%:R (mx_lin1 (Rz phi)) & 'e_0 *m Rz phi = n}.
 Proof.
 move=> u1 H1 H2 n.
@@ -1506,6 +1519,18 @@ rewrite /normalize row3Z mulr0; congr row3.
   - by rewrite ger0_norm.
   - by rewrite ltr0_norm ?ltrNge // mulrN opprK.
 Qed.
+
+Lemma rotation_exists (e0 e2 u : 'rV[T]_3) : norm e0 = 1 -> norm e2 = 1 -> norm u = 1 ->
+  u != e2 -> u != - e2 -> e0 *d e2 = 0 ->
+  let n : 'rV_3 := normalize (e2 *v u) in
+  {phi | isRot phi e2 (mx_lin1 (`e^(phi, e2))) & e0 *m (`e^(phi, e2)) = n}.
+Proof.
+move=> e01 e21 u1 H1 H2 e0e2 n.
+exists (if 0 <= u``_0 then vec_angle n e0 else - vec_angle n e0).
+  by rewrite isRot_eskew // normalizeI.
+rewrite -rodriguesP // /rodrigues e0e2 mulr0 scale0r addr0.
+rewrite [in RHS](axialnormalcomp n (e2 *v e0)); congr (_ + _).
+Abort.
 
 Lemma euler_angles (R : 'M[T]_3) : R \is 'SO[T]_3 ->
   {phi_theta_psi : angle T * angle T * angle T |

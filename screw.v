@@ -1375,7 +1375,7 @@ Definition normdisp p := normalcomp (displacement f p) w.
 Lemma decomp_displacement p :
   norm (displacement f p) ^+ 2 = norm (d0 *: (norm w ^- 2 *: w)) ^+2 + norm (normdisp p) ^+ 2.
 Proof.
-rewrite (decomp (displacement f p) w) normD -dotmul_cos axialnormal // mul0rn addr0.
+rewrite (axialnormalcomp (displacement f p) w) normD -dotmul_cos axialnormal // mul0rn addr0.
 by rewrite -/(normdisp p) -/(axialdisp p) axialdispE.
 Qed.
 
@@ -1602,13 +1602,13 @@ have _(*?*) : relative_displacement f (f p0) p0 = 0.
   rewrite /relative_displacement -/(displacement f p0).
   move: (MozziChasles w0 sina0 fp0e0).
   rewrite -(normalcomp_colinear _ (norm1_neq0 w1)) // => /eqP H1.
-  rewrite (decomp (displacement f p0) w) H1 addr0.
-  rewrite /axialcomp -scalemxAl mulmxBr mulmx1.
+  rewrite (axialnormalcomp (displacement f p0) w) H1 addr0.
+  rewrite /axialcomp (* TODO *) -scalemxAl mulmxBr mulmx1.
   move: (angle_axis_isRot w0 (ortho_of_diso_is_SO f)); rewrite -/Q -/a -/w.
   rewrite normalizeI // => /isRot_axis ->; by rewrite subrr scaler0.
 have step2 : displacement f q + relative_displacement f p0 q = displacement f q *m (w^T *m w).
   transitivity (displacement f p0 *m w^T *m w).
-    rewrite -(displacement_iso f p0 q) {1}(decomp (displacement f p0) w).
+    rewrite -(displacement_iso f p0 q) {1}(axialnormalcomp (displacement f p0) w).
     move/(MozziChasles w0 sina0) : fp0e0.
     rewrite -normalcomp_colinear; last by rewrite normalize_eq0.
     move/eqP => ->.

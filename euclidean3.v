@@ -1409,6 +1409,9 @@ Implicit Type u v : 'rV[T]_3.
 
 Definition normalize v := (norm v)^-1 *: v.
 
+Lemma normalize0 : normalize 0 = 0.
+Proof. by rewrite /normalize scaler0. Qed.
+
 Lemma normalizeN u : normalize (- u) = - normalize u.
 Proof. by rewrite /normalize normN scalerN. Qed.
 
@@ -1423,7 +1426,7 @@ Qed.
 
 Lemma normalize_eq0 v : (normalize v == 0) = (v == 0).
 Proof.
-apply/idP/idP => [|/eqP ->]; last by rewrite /normalize scaler0.
+apply/idP/idP => [|/eqP ->]; last by rewrite normalize0.
 case/boolP : (v == 0) => [//| /norm_normalize].
 rewrite -norm_eq0 => -> /negPn; by rewrite oner_neq0.
 Qed.
@@ -1450,7 +1453,7 @@ Qed.
 
 Lemma dotmul_normalize u v : (normalize u *d v == 0) = (u *d v == 0).
 Proof.
-case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite /normalize scaler0.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite normalize0.
 apply/idP/idP.
   rewrite /normalize dotmulZv mulf_eq0 => /orP [|//].
   by rewrite invr_eq0 norm_eq0 (negbTE u0).
