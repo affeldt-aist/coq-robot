@@ -5,17 +5,23 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import  mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-Require Import ssr_ext euclidean3.
+Require Import ssr_ext euclidean3 vec_angle.
 Require vec_angle.
 
 (*
  OUTLINE:
- 1. sections on symmetric and antisymmetry matrices.
- 2. section skew
-    properties of skew matrices
-    sample lemma: eigenvalues of skew matrices
- 3. section cayley_transform
- 4. wip
+ 1. Section sym_anti
+    Section anti_rcfType.
+    Section anti_rcfType_dim3.
+    Section sym_anti_numFieldType.
+      sections on symmetric and antisymmetry matrices.
+ 2. Section axial_vector.
+ 3. Section spin_matrix
+    Section spin_matrix_axial_vector_rcfType.
+      properties of spin matrices and axial vectors
+      sample lemma: eigenvalues of spin matrices
+ 4. Section cayley_transform
+ 5. wip (lie_bracket)
 *)
 
 Set Implicit Arguments.
@@ -24,10 +30,11 @@ Unset Printing Implicit Defensive.
 Import GRing.Theory Num.Theory.
 
 Reserved Notation "'\S(' w ')'" (at level 3, format "'\S(' w ')'").
+Reserved Notation "''so[' R ]_ n" (at level 8, n at level 2, format "''so[' R ]_ n").
 
 Local Open Scope ring_scope.
 
-Section keyed_qualifiers_for_symmetric_matrices.
+Section keyed_qualifiers_anti_sym.
 
 Variables (n : nat) (R : ringType).
 
@@ -39,15 +46,17 @@ Definition sym := [qualify M : 'M[R]_n | M == M^T].
 Fact sym_key : pred_key sym. Proof. by []. Qed.
 Canonical sym_keyed := KeyedQualifier sym_key.
 
-End keyed_qualifiers_for_symmetric_matrices.
+End keyed_qualifiers_anti_sym.
 
-Notation "''so[' R ]_ n" := (anti n R)
-  (at level 8, n at level 2, format "''so[' R ]_ n").
+Notation "''so[' R ]_ n" := (anti n R).
 
-Section symmetric_matrices.
+Section sym_anti.
 
 Variables (R : comRingType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
+Implicit Types v : 'rV[R]_n.
+
+Section sym.
 
 Lemma symE M : (M \is sym n R) = (M == M^T). Proof. by []. Qed.
 
@@ -55,7 +64,7 @@ Lemma sym_cst a : a%:M \is sym n R. Proof. by rewrite symE tr_scalar_mx. Qed.
 
 Lemma sym0 : 0 \is sym n R. Proof. by rewrite symE trmx0. Qed.
 
-Lemma mul_tr_vec_sym (u : 'rV[R]_n) : u^T *m u \is sym n R.
+Lemma mul_tr_vec_sym v : v^T *m v \is sym n R.
 Proof. apply/eqP; by rewrite trmx_mul trmxK. Qed.
 
 Lemma symP A B : A \in sym n R -> B \in sym n R ->
@@ -87,6 +96,10 @@ Lemma sym_scaler_closed : GRing.scaler_closed (sym n R).
 Proof. move=> ? ?; rewrite 2!symE => /eqP H; by rewrite linearZ /= -H. Qed.
 (* TODO: Canonical? *)
 
+End sym.
+
+Section anti.
+
 Lemma antiE M : (M \is 'so[R]_n) = (M == - M^T). Proof. by []. Qed.
 
 Lemma antiN M : (- M \is 'so[R]_n) = (M \is 'so[R]_n).
@@ -104,11 +117,13 @@ move=> ? ?; rewrite antiE => /eqP H; by rewrite antiE linearZ /= -scalerN -H.
 Qed.
 (* TODO: Canonical? *)
 
-End symmetric_matrices.
+End anti.
 
-Section symmetric_matrices1.
+End sym_anti.
 
-Variables (R : rcfType) (n : nat).
+Section anti_rcfType.
+
+Variables (R : numDomainType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
 
 Lemma anti_diag M i : M \is 'so[R]_n -> M i i = 0.
@@ -137,9 +152,32 @@ move: (soB); rewrite antiE -eqr_oppLR => /eqP/matrixP/(_ i j).
 rewrite !mxE => <-; by rewrite opprK.
 Qed.
 
-End symmetric_matrices1.
+End anti_rcfType.
 
-Section symmetric_matrices2.
+Section anti_rcfType_dim3.
+
+Lemma sqr_anti (R : rcfType) (M : 'M[R]_3) : M \is 'so[R]_3 ->
+  M ^+ 2 = col_mx3
+  (row3 (- M 0 1 ^+ 2 - M 0 2%:R ^+ 2) (- M 1 2%:R * M 0 2%:R) (M 0 1 * M 1 2%:R))
+  (row3 (- M 1 2%:R * M 0 2%:R) (- M 0 1 ^+ 2 - M 1 2%:R ^+ 2) (- M 0 1 * M 0 2%:R))
+  (row3 (M 1 2%:R * M 0 1) (- M 0 2%:R * M 0 1) (- M 0 2%:R ^+ 2 - M 1 2%:R ^+ 2)).
+Proof.
+move=> a; apply/matrix3P; rewrite !mxE /= !sum3E /a !anti_diag //.
+apply/and9P; split; Simp.r => //=; apply/eqP.
+- rewrite {2}(eqP a) 2!mxE mulrN -expr2; congr (_ + _).
+  by rewrite {2}(eqP a) !mxE mulrN -expr2.
+- by rewrite {2}(eqP a) 2!mxE mulrN mulrC.
+- by rewrite {2}(eqP a) 2!mxE mulrN.
+- rewrite {1}(eqP a) 2!mxE mulNr -expr2; congr (_ + _); by rewrite {2}(eqP a) 2!mxE mulrN -expr2.
+- by rewrite {1}(eqP a) 2!mxE mulNr.
+- by rewrite {1}(eqP a) 2!mxE {2}(eqP a) 2!mxE mulrN mulNr opprK.
+- by rewrite {1}(eqP a) 2!mxE mulNr.
+- rewrite {1}(eqP a) 2!mxE mulNr -expr2; congr (_ + _); by rewrite {1}(eqP a) 2!mxE mulNr -expr2.
+Qed.
+
+End anti_rcfType_dim3.
+
+Section sym_anti_numFieldType.
 
 Variables (R : numFieldType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
@@ -165,252 +203,252 @@ Proof.
 by apply/eqP; rewrite /symp linearZ /= [in RHS]linearD /= trmxK addrC.
 Qed.
 
-End symmetric_matrices2.
+End sym_anti_numFieldType.
 
-Lemma sqr_antip (R : rcfType) (M : 'M[R]_3) : M \is 'so[R]_3 ->
-  M ^+ 2 = col_mx3
-  (row3 (- M 0 1 ^+ 2 - M 0 2%:R ^+ 2) (- M 1 2%:R * M 0 2%:R) (M 0 1 * M 1 2%:R))
-  (row3 (- M 1 2%:R * M 0 2%:R) (- M 0 1 ^+ 2 - M 1 2%:R ^+ 2) (- M 0 1 * M 0 2%:R))
-  (row3 (M 1 2%:R * M 0 1) (- M 0 2%:R * M 0 1) (- M 0 2%:R ^+ 2 - M 1 2%:R ^+ 2)).
+Section axial_vector.
+
+Variable R : fieldType.
+Implicit Types M : 'M[R]_3.
+
+Definition axial M :=
+  row3 (M 1 2%:R - M 2%:R 1) (M 2%:R 0 - M 0 2%:R) (M 0 1 - M 1 0).
+
+Lemma axial_sym' M : M \is sym 3 R -> axial M = 0.
 Proof.
-move=> a; apply/matrix3P; rewrite !mxE /= !sum3E /a !anti_diag //.
-apply/and9P; split; Simp.r => //=; apply/eqP.
-- rewrite {2}(eqP a) 2!mxE mulrN -expr2; congr (_ + _).
-  by rewrite {2}(eqP a) !mxE mulrN -expr2.
-- by rewrite {2}(eqP a) 2!mxE mulrN mulrC.
-- by rewrite {2}(eqP a) 2!mxE mulrN.
-- rewrite {1}(eqP a) 2!mxE mulNr -expr2; congr (_ + _); by rewrite {2}(eqP a) 2!mxE mulrN -expr2.
-- by rewrite {1}(eqP a) 2!mxE mulNr.
-- by rewrite {1}(eqP a) 2!mxE {2}(eqP a) 2!mxE mulrN mulNr opprK.
-- by rewrite {1}(eqP a) 2!mxE mulNr.
-- rewrite {1}(eqP a) 2!mxE mulNr -expr2; congr (_ + _); by rewrite {1}(eqP a) 2!mxE mulNr -expr2.
+rewrite symE => /eqP MMT; by rewrite /axial {1 3 5}MMT !mxE !subrr row30.
 Qed.
 
-Section skew.
+Lemma axial_cst a : axial a%:M = 0 :> 'rV[R]_3.
+Proof. by rewrite axial_sym' // sym_cst. Qed.
+
+Lemma axial0 : axial 0 = 0 :> 'rV[R]_3.
+Proof.
+rewrite (_ : 0 = 0%:M) ?axial_cst //.
+by apply/matrixP => ? ?; rewrite !mxE mul0rn.
+Qed.
+
+Lemma axialN M : axial (- M) = - axial M.
+Proof. by rewrite /axial !mxE !opprK row3N !opprB 3!(addrC (- M _ _)). Qed.
+
+Lemma axialZ k M : axial (k *: M) = k *: axial M.
+Proof. by rewrite {2}/axial row3Z /axial !mulrBr !mxE. Qed.
+
+Lemma axialD (A B : 'M[R]_3) : axial (A + B) = axial A + axial B.
+Proof.
+rewrite /axial -row3D !row3D !mxE -!addrA; congr (row3 (_ + _) (_ + _) (_ + _));
+  rewrite addrC opprD -!addrA; congr (_ + _); by rewrite addrC.
+Qed.
+
+Lemma tr_axial M : axial M^T = - axial M.
+Proof. by rewrite /axial !mxE row3N 3!opprB. Qed.
+
+End axial_vector.
+
+Section spin_matrix.
 
 Variable R : fieldType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
 
-Definition skew_mx u : 'M[R]_3 := \matrix_i (u *v 'e_i).
+Definition spin u : 'M[R]_3 := \matrix_i (u *v 'e_i).
 
-Local Notation "'\S(' u ')'" := (skew_mx u).
+Local Notation "'\S(' u ')'" := (spin u).
 
-Lemma skew_mxE u v : u *m \S( v ) = v *v u.
+Lemma spinE u v : u *m \S( v ) = v *v u.
 Proof.
 rewrite crossmulC -crossmulNv [RHS]crossmulC -crossmulvN [u]row_sum_delta.
 rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
 by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK crossmulvN opprK.
 Qed.
 
-Lemma skew_mx0 : \S( 0 ) = 0.
-Proof. by apply/matrixP => i j; rewrite /skew_mx mxE crossmul0v 2!mxE. Qed.
+Lemma spin0 : \S( 0 ) = 0.
+Proof. by apply/matrixP => i j; rewrite /spin mxE crossmul0v 2!mxE. Qed.
 
-Lemma skew_mxD u v : \S(u + v) = \S(u) + \S(v).
-Proof. apply/eqP/mulmxP => w; by rewrite mulmxDr !skew_mxE crossmulDl. Qed.
+Lemma spinD u v : \S(u + v) = \S(u) + \S(v).
+Proof. apply/eqP/mulmxP => w; by rewrite mulmxDr !spinE crossmulDl. Qed.
 
-Lemma skew_mxZ k u : \S( k *: u ) = k *: \S( u ).
+Lemma spinZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
 apply/matrixP => i j.
 by rewrite mxE crossmulC linearZ /= -scalerN crossmulC opprK mxE 2![in RHS]mxE.
 Qed.
 
-Lemma skew_mxN u : \S( - u ) = - \S( u ).
-Proof. by rewrite -scaleN1r skew_mxZ scaleN1r. Qed.
+Lemma spinN u : \S( - u ) = - \S( u ).
+Proof. by rewrite -scaleN1r spinZ scaleN1r. Qed.
 
-Lemma skew_mx_is_so u : \S( u ) \is 'so[R]_3.
+Lemma spin_is_so u : \S( u ) \is 'so[R]_3.
 Proof.
 rewrite antiE; apply/eqP/matrixP => i j; rewrite !mxE -col_mx3_perm_02.
 by rewrite xrowE det_mulmx det_perm odd_tperm /= expr1 mulN1r.
 Qed.
 
-Lemma tr_skew u : \S( u )^T = - \S( u ).
-Proof. by move: (skew_mx_is_so u); rewrite antiE -eqr_oppLR => /eqP <-. Qed.
+Lemma tr_spin u : \S( u )^T = - \S( u ).
+Proof. by move: (spin_is_so u); rewrite antiE -eqr_oppLR => /eqP <-. Qed.
 
-Lemma mul_skew_mx (r : 'M[R]_3) (w : vector) :
-  r * \S( w ) = col_mx3 (w *v row 0 r) (w *v row 1 r) (w *v row 2%:R r).
-Proof. by rewrite {1}(col_mx3_rowE r) -mulmxE mulmx_col3 !skew_mxE. Qed.
+Lemma mul_spin M u :
+  M * \S( u ) = col_mx3 (u *v row 0 M) (u *v row 1 M) (u *v row 2%:R M).
+Proof. by rewrite {1}(col_mx3_rowE M) -mulmxE mulmx_col3 !spinE. Qed.
 
-Lemma skew01 u : \S( u ) 0 1 = u``_2%:R.
-Proof. by rewrite /skew_mx mxE crossmulE !mxE /= !(mulr0,mulr1,addr0,subr0). Qed.
+Lemma spin01 u : \S( u ) 0 1 = u``_2%:R.
+Proof. by rewrite /spin mxE crossmulE !mxE /= !(mulr0,mulr1,addr0,subr0). Qed.
 
-Lemma skew02 u : \S( u ) 0 2%:R = - u``_1%:R.
-Proof. by rewrite /skew_mx mxE crossmulE !mxE /= !(mulr0,mulr1,add0r,opprK). Qed.
+Lemma spin02 u : \S( u ) 0 2%:R = - u``_1%:R.
+Proof. by rewrite /spin mxE crossmulE !mxE /= !(mulr0,mulr1,add0r,opprK). Qed.
 
-Lemma skew10 u : \S( u ) 1 0 = - u``_2%:R.
-Proof. by move/eqP: (skew_mx_is_so u) => ->; rewrite 2!mxE skew01. Qed.
+Lemma spin10 u : \S( u ) 1 0 = - u``_2%:R.
+Proof. by move/eqP: (spin_is_so u) => ->; rewrite 2!mxE spin01. Qed.
 
-Lemma skew12 u : \S( u ) 1 2%:R = u``_0.
-Proof. by rewrite /skew_mx mxE crossmulE !mxE /= !(mulr0, mulr1, subr0). Qed.
+Lemma spin12 u : \S( u ) 1 2%:R = u``_0.
+Proof. by rewrite /spin mxE crossmulE !mxE /= !(mulr0, mulr1, subr0). Qed.
 
-Lemma skew20 u : \S( u ) 2%:R 0 = u``_1%:R.
-Proof. move/eqP: (skew_mx_is_so u) => ->; by rewrite 2!mxE skew02 opprK. Qed.
+Lemma spin20 u : \S( u ) 2%:R 0 = u``_1%:R.
+Proof. move/eqP: (spin_is_so u) => ->; by rewrite 2!mxE spin02 opprK. Qed.
 
-Lemma skew21 u : \S( u ) 2%:R 1 = - u``_0.
-Proof. move/eqP: (skew_mx_is_so u) => ->; by rewrite 2!mxE skew12. Qed.
+Lemma spin21 u : \S( u ) 2%:R 1 = - u``_0.
+Proof. move/eqP: (spin_is_so u) => ->; by rewrite 2!mxE spin12. Qed.
 
-Lemma skew_mxT u : \S( u ) *m u^T = 0.
+Lemma spin_mul_tr u : \S( u ) *m u^T = 0.
 Proof.
-rewrite -(trmxK (skew_mx u)) -trmx_mul tr_skew.
-by rewrite mulmxN skew_mxE crossmulvv oppr0 trmx0.
+rewrite -(trmxK (spin u)) -trmx_mul tr_spin.
+by rewrite mulmxN spinE crossmulvv oppr0 trmx0.
 Qed.
 
-Definition unskew M := row3
-  ((M 1 2%:R - M 2%:R 1) / 2%:R)
-  ((M 2%:R 0 - M 0 2%:R) / 2%:R)
-  ((M 0 1 - M 1 0) / 2%:R).
+(* normalized axial vector *)
+Definition unskew M := 2%:R^-1 *: axial M.
 
 Lemma unskew_sym M : M \is sym 3 R -> unskew M = 0.
-Proof.
-rewrite symE => /eqP MMT.
-by rewrite /unskew {1 3 5}MMT !mxE !subrr !mul0r row30.
-Qed.
+Proof. by move=> HM; rewrite /unskew axial_sym' // scaler0. Qed.
 
 Lemma unskew_cst a : unskew a%:M = 0 :> 'rV[R]_3.
 Proof. by rewrite unskew_sym // sym_cst. Qed.
 
 Lemma unskew0 : unskew 0 = 0 :> 'rV[R]_3.
-Proof.
-rewrite (_ : 0 = 0%:M) ?unskew_cst //.
-by apply/matrixP => ??; rewrite !mxE mul0rn.
-Qed.
+Proof. by rewrite /unskew axial0 ?scaler0. Qed.
 
 Lemma unskewN M : unskew (- M) = - unskew M.
-Proof.
-by rewrite /unskew !mxE !opprK row3N -!mulNr !opprB 3!(addrC (- M _ _)).
-Qed.
+Proof. by rewrite /unskew axialN scalerN. Qed.
 
 Lemma unskewZ k M : unskew (k *: M) = k *: unskew M.
-Proof.  by rewrite /unskew !mxE row3Z !mulrA !mulrBr. Qed.
+Proof. by rewrite /unskew axialZ scalerA mulrC -scalerA. Qed.
 
 Lemma unskewD (A B : 'M[R]_3) : unskew (A + B) = unskew A + unskew B.
-Proof.
-rewrite /unskew row3D -!mulrDl !mxE !opprD -!addrA.
-by rewrite (addrCA (B 1 _)) (addrCA (B 2%:R _)) (addrCA (B 0 _)).
-Qed.
+Proof. by rewrite /unskew axialD scalerDr. Qed.
 
 (* skew-symmetric matrices are always singular *)
-Lemma det_skew_mx u : \det \S( u ) = 0.
+Lemma det_spin u : \det \S( u ) = 0.
 Proof.
-case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite skew_mx0 det0.
-apply/eqP/det0P; exists u => //; by rewrite skew_mxE crossmulvv.
+case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite spin0 det0.
+apply/eqP/det0P; exists u => //; by rewrite spinE crossmulvv.
 Qed.
 
-End skew.
+End spin_matrix.
 
-Notation "'\S(' w ')'" := (skew_mx w).
+Notation "'\S(' w ')'" := (spin w).
 
-Section skew1.
+Section spin_matrix_axial_vector_rcfType.
 
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
 
-Lemma skewii u i : \S( u ) i i = 0.
-Proof. by rewrite anti_diag // skew_mx_is_so. Qed.
+Lemma spinii u i : \S( u ) i i = 0.
+Proof. by rewrite anti_diag // spin_is_so. Qed.
 
-Definition skewij := (skew01, skew10, skew02, skew20, skew21, skew12, skewii).
+Definition spinij := (spin01, spin10, spin02, spin20, spin21, spin12, spinii).
 
-Lemma skew_mxK u : unskew \S( u ) = u.
+Lemma axial_spin u : axial \S( u ) = 2%:R *: u.
 Proof.
-rewrite /unskew !skewij !opprK -!mulr2n -3!(mulr_natr (u``_ _)) -!mulrA.
-by rewrite divrr ?unitfE ?pnatr_eq0 // 3!mulr1 [RHS]row3E !row3D !(add0r,addr0).
+rewrite /axial !spinij !opprK -!mulr2n -3!(mulr_natr (u``_ _)).
+rewrite !(mulrC _ 2%:R) -row3Z; congr (_ *: _).
+by rewrite [RHS](row3E u) !row3D !(addr0,add0r).
+Qed.
+
+Lemma spin_axial M : M \is 'so[R]_3 -> \S( axial M ) = 2%:R *: M.
+Proof.
+move=> Mso.
+move: (Mso); rewrite antiE => /eqP MMT.
+apply/matrix3P/and9P; split; rewrite spinij ?anti_diag // ?mxE /= ?anti_scaler_closed //.
+- by rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) mulrC.
+- by rewrite {1}MMT !mxE opprB opprK -mulr2n -(mulr_natr (M _ _)) mulrC.
+- by rewrite {1}MMT !mxE opprB opprK -mulr2n -(mulr_natr (M _ _)) mulrC.
+- by rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) mulrC.
+- by rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) mulrC.
+- by rewrite {1}MMT !mxE opprB opprK -mulr2n -(mulr_natr (M _ _)) mulrC.
+Qed.
+
+Lemma spinK u : unskew \S( u ) = u.
+Proof.
+by rewrite /unskew axial_spin scalerA mulVr ?scale1r // unitfE pnatr_eq0.
 Qed.
 
 Lemma unskewK M : M \is 'so[R]_3 -> \S( unskew M ) = M.
 Proof.
 move=> Mso.
-move: (Mso); rewrite antiE => /eqP MMT.
-apply/matrix3P/and9P; split; rewrite skewij ?anti_diag // mxE /=.
-- rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
-  by rewrite unitfE pnatr_eq0.
-- rewrite {1}MMT !mxE -mulNr opprB opprK -mulr2n.
-  rewrite -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
-  by rewrite unitfE pnatr_eq0.
-- rewrite {1}MMT !mxE -mulNr opprB opprK -mulr2n.
-  rewrite -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
-  by rewrite unitfE pnatr_eq0.
-- rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
-  by rewrite unitfE pnatr_eq0.
-- rewrite {2}MMT !mxE opprK -mulr2n -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
-  by rewrite unitfE pnatr_eq0.
-- rewrite {1}MMT !mxE -mulNr opprB opprK -mulr2n.
-  rewrite -(mulr_natr (M _ _)) -mulrA divrr ?mulr1 //.
-  by rewrite unitfE pnatr_eq0.
-Qed.
-(*Lemma unskewK (M : 'M[R]_3) : M \is 'so[R]_3 -> \S( unskew M ) = M.
-Proof.
-move=> soM.
-by apply/matrix3P; rewrite skewij ?anti_diag // mxE /= ?opprK // {1}(eqP soM) !mxE opprK.
-Qed.*)
-
-Lemma skew_inj u v : (\S( u ) == \S( v )) = (u == v).
-Proof.
-apply/idP/idP => [/eqP H|/eqP -> //]; by rewrite -(skew_mxK u) H skew_mxK.
+rewrite /unskew spinZ spin_axial // scalerA mulVr ?scale1r //.
+by rewrite unitfE pnatr_eq0.
 Qed.
 
-Lemma skew_mx2' u : \S( u ) ^+ 2 = col_mx3
+Lemma spin_inj u v : (\S( u ) == \S( v )) = (u == v).
+Proof.
+apply/idP/idP => [/eqP H|/eqP -> //]; by rewrite -(spinK u) H spinK.
+Qed.
+
+Lemma sqr_spin' u : \S( u ) ^+ 2 = col_mx3
   (row3 (- u 0 2%:R ^+ 2 - u 0 1 ^+ 2) (u 0 0 * u 0 1) (u 0 0 * u 0 2%:R))
   (row3 (u 0 0 * u 0 1) (- u 0 2%:R ^+ 2 - u 0 0 ^+ 2) (u 0 1 * u 0 2%:R))
   (row3 (u 0 0 * u 0 2%:R) (u 0 1 * u 0 2%:R) (- u 0 1%:R ^+ 2 - u 0 0 ^+ 2)).
 Proof.
-rewrite (sqr_antip (skew_mx_is_so u)); congr col_mx3.
-by rewrite !skewij sqrrN; Simp.r; rewrite (mulrC (u 0 2%:R)).
-by rewrite !skewij; Simp.r; rewrite (mulrC (u 0 2%:R)).
-by rewrite !skewij sqrrN; Simp.r.
+rewrite (sqr_anti (spin_is_so u)); congr col_mx3.
+by rewrite !spinij sqrrN; Simp.r; rewrite (mulrC (u 0 2%:R)).
+by rewrite !spinij; Simp.r; rewrite (mulrC (u 0 2%:R)).
+by rewrite !spinij sqrrN; Simp.r.
 Qed.
 
-Lemma sym_skew_mx2 u : \S( u ) ^+ 2 \is sym 3 R.
+Lemma sqr_spin_is_sym u : \S( u ) ^+ 2 \is sym 3 R.
 Proof.
-rewrite symE skew_mx2'; by apply/eqP/matrix3P/and9P; split; rewrite !mxE.
+rewrite symE sqr_spin'; by apply/eqP/matrix3P/and9P; split; rewrite !mxE.
 Qed.
 
-Lemma skew_mx2 u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
+Lemma sqr_spin u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
 Proof.
-apply (symP (sym_skew_mx2 u)); last move=> i j.
+apply (symP (sqr_spin_is_sym u)); last move=> i j.
   rewrite rpredD //; last by rewrite rpredN sym_scaler_closed // sym_cst.
   by rewrite mul_tr_vec_sym.
 rewrite [in X in _ -> _ = X]mxE mulmx_trE.
 case/boolP : (i == 0) => [/eqP-> _|/ifnot0P/orP[]/eqP->].
 - case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
-  + rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
+  + rewrite sqr_spin' 5!mxE /= -expr2 mulr1; apply/eqP.
     by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE
       sum3E -!expr2 -addrA addrCA addrAC -addrA.
-  + by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
-  + by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
+  + by rewrite sqr_spin' 5!mxE /= mulr0 subr0.
+  + by rewrite sqr_spin' 5!mxE /= mulr0 subr0.
 - case/boolP : (j == 0) => [/eqP-> //|/ifnot0P/orP[]/eqP-> _].
-  + rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
+  + rewrite sqr_spin' 5!mxE /= -expr2 mulr1; apply/eqP.
     by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE
       sum3E -!expr2 addrAC.
-  + by rewrite skew_mx2' 5!mxE /= mulr0 subr0.
+  + by rewrite sqr_spin' 5!mxE /= mulr0 subr0.
 - case/boolP : (j == 0) => [/eqP-> //|/ifnot0P/orP[]/eqP-> // _].
-  rewrite skew_mx2' 5!mxE /= -expr2 mulr1; apply/eqP.
+  rewrite sqr_spin' 5!mxE /= -expr2 mulr1; apply/eqP.
   by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE sum3E -!expr2.
 Qed.
 
-Lemma skew_mx3 u : \S( u ) ^+ 3 = - (norm u) ^+ 2 *: \S( u ).
+Lemma spin3 u : \S( u ) ^+ 3 = - (norm u) ^+ 2 *: \S( u ).
 Proof.
-rewrite exprS skew_mx2 mulrBr -mulmxE mulmxA skew_mxT mul0mx add0r.
+rewrite exprS sqr_spin mulrBr -mulmxE mulmxA spin_mul_tr mul0mx add0r.
 by rewrite scalemx1 mul_mx_scalar scaleNr.
 Qed.
 
-Lemma skew_mx4 u : \S( u ) ^+ 4 = - norm u ^+2 *: \S( u ) ^+ 2.
+Lemma spin4 u : \S( u ) ^+ 4 = - norm u ^+2 *: \S( u ) ^+ 2.
 Proof.
-by rewrite exprS skew_mx3 scaleNr mulrN -scalerCA -scalerAl -expr2 scaleNr.
+by rewrite exprS spin3 scaleNr mulrN -scalerCA -scalerAl -expr2 scaleNr.
 Qed.
 
-Lemma mxtrace_skew_mx2 u : \tr (\S( u ) ^+ 2) = - (2%:R * (norm u) ^+ 2).
+Lemma mxtrace_sqr_spin u : \tr (\S( u ) ^+ 2) = - (2%:R * (norm u) ^+ 2).
 Proof.
-rewrite /mxtrace sum3E skew_mx2'.
-do 6 rewrite mxE /=.
-rewrite -opprB opprK !addrA addrC !addrA -2!addrA.
-rewrite [in RHS]mulr2n [in RHS]mulrDl [in RHS]opprD mul1r; congr (_ + _).
-  rewrite -opprB opprK; congr (- _).
-  by rewrite addrC addrA -dotmulvv dotmulE sum3E -!expr2.
-rewrite -opprB -opprD opprK; congr (- _).
-by rewrite addrC -addrA addrCA addrA  -dotmulvv dotmulE sum3E -!expr2.
+rewrite sqr_spin linearD /= mxtrace_tr_mul linearN /= linearZ /=; apply/eqP.
+by rewrite !mxtrace_scalar subr_eq addrC mulrC -mulrBl -natrB // mul1r.
 Qed.
 
 (* TODO: useful? *)
@@ -425,35 +463,35 @@ case: i => [] [] // [] // i _ /=.
 by rewrite !mxE; Simp.ord.
 Qed.
 
-Lemma char_poly_skew_mx u : char_poly \S( u ) = 'X^3 + norm u ^+2 *: 'X.
+Lemma char_poly_spin u : char_poly \S( u ) = 'X^3 + norm u ^+2 *: 'X.
 Proof.
-rewrite char_poly3 det_skew_mx subr0 trace_anti ?skew_mx_is_so //.
-rewrite scale0r subr0 expr0n add0r mulrN mxtrace_skew_mx2 mulrN opprK.
+rewrite char_poly3 det_spin subr0 trace_anti ?spin_is_so //.
+rewrite scale0r subr0 expr0n add0r mulrN mxtrace_sqr_spin mulrN opprK.
 by rewrite mulrA div1r mulVr ?unitfE ?pnatr_eq0 // mul1r.
 Qed.
 
-Definition skew_mx_eigenvalues : seq R[i] := [:: 0; 'i; 0 -i* 1]%C.
+Definition spin_eigenvalues : seq R[i] := [:: 0; 'i; 0 -i* 1]%C.
 
-Ltac eigenvalue_skew_mx_eval_poly :=
+Ltac eigenvalue_spin_eval_poly :=
   rewrite /map_poly horner_poly size_addl; [ |by rewrite size_polyXn size_polyX] ;
   rewrite size_polyXn sum4E !coefD !coefXn !coefX !add0r !mul0r !mul1r !add0r !addr0 mul1r.
 
-Lemma eigenvalue_skew_mx u : norm u = 1 ->
-  eigenvalue (map_mx (fun x => x%:C%C) \S( u)) =1 [pred k | k \in skew_mx_eigenvalues].
+Lemma eigenvalue_spin u : norm u = 1 ->
+  eigenvalue (map_mx (fun x => x%:C%C) \S( u)) =1 [pred k | k \in spin_eigenvalues].
 Proof.
 move=> u1 /= k.
-rewrite inE eigenvalue_root_char -map_char_poly char_poly_skew_mx u1 expr1n scale1r.
+rewrite inE eigenvalue_root_char -map_char_poly char_poly_spin u1 expr1n scale1r.
 apply/rootP.
 case: ifPn => [|Hk].
   rewrite inE => /orP [/eqP ->|]; first by rewrite /= horner_map !hornerE.
   rewrite inE => /orP [/eqP ->|].
-    eigenvalue_skew_mx_eval_poly.
+    eigenvalue_spin_eval_poly.
     by rewrite expr1 exprS sqr_i mulrN1 subrr.
   rewrite inE => /eqP ->.
-  eigenvalue_skew_mx_eval_poly.
+  eigenvalue_spin_eval_poly.
   apply/eqP. simpc. by rewrite addrC subrr eq_complex /= eqxx.
 apply/eqP; apply: contra Hk.
-eigenvalue_skew_mx_eval_poly.
+eigenvalue_spin_eval_poly.
 rewrite (exprS _ 2) -{1}(mulr1 k) -mulrDr mulf_eq0 => /orP [/eqP ->|].
   by rewrite inE eqxx.
 rewrite eq_sym addrC -subr_eq add0r -sqr_i eqf_sqr => /orP [/eqP <-|].
@@ -463,7 +501,99 @@ rewrite !inE orbA; apply/orP; right.
 by rewrite eq_complex /= oppr0 !eqxx.
 Qed.
 
-End skew1.
+Lemma det_sub1spin u : \det (1 - \S( u )) = 1 + norm u ^+ 2.
+Proof.
+set a := \S( u ).
+rewrite det_mx33 [a]lock !mxE /=. Simp.r.
+rewrite -lock /a !spinij subr0. Simp.r.
+rewrite -!addrA; congr (_ + _); rewrite !addrA.
+by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC sqr_norm sum3E.
+Qed.
+
+Lemma det_add1spin u : \det (1 + \S( u )) = 1 + norm u ^+ 2.
+Proof.
+set a := \S( u ).
+rewrite det_mx33 [a]lock !mxE /=. Simp.r.
+rewrite -lock /a !spinij addr0. Simp.r.
+rewrite -!addrA; congr (_ + _); rewrite !addrA.
+rewrite sqr_norm sum3E -!expr2 -!addrA; congr (_ + _).
+rewrite mulrDr -expr2 (addrC _ (_^+2)) -!addrA addrC; congr (_ + _).
+by rewrite mulrBr opprB -expr2 addrCA mulrCA subrr addr0.
+Qed.
+
+Lemma sym_add1r M : M \is 'so[R]_3 -> \det (1 + M) != 0.
+Proof.
+move/unskewK => <-; by rewrite det_add1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
+Qed.
+
+Lemma sym_sub1r M : M \is 'so[R]_3 -> \det (1 - M) != 0.
+Proof.
+move/unskewK => <-; by rewrite det_sub1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
+Qed.
+
+Lemma sub1spin_inv u : 1 - \S( u ) \is a GRing.unit.
+Proof. by rewrite unitmxE unitfE sym_sub1r // spin_is_so. Qed.
+
+Lemma skew_axial M : \S( axial M ) = M - M^T.
+Proof.
+have /unskewK : M - M^T \is 'so[R]_3 by rewrite antiE linearB /= trmxK opprB.
+rewrite /unskew spinZ axialD spinD axialN spinN tr_axial spinN.
+by rewrite opprK -mulr2n -scaler_nat scalerA mulVr ?scale1r // unitfE pnatr_eq0.
+Qed.
+
+Lemma axial_sym M : (M \is sym 3 R) = (axial M == 0).
+Proof.
+apply/idP/idP => [|/eqP H]; [by move/axial_sym' => -> |rewrite symE].
+by rewrite -subr_eq0 -skew_axial H spin0.
+Qed.
+
+Lemma axialE M : axial M = unskew (M - M^T).
+Proof. by rewrite -(skew_axial M) spinK. Qed.
+
+Lemma axial_vecP (M : 'M[R]_3) u : u *v axial M = u *m antip M.
+Proof.
+rewrite /antip.
+rewrite crossmulC.
+rewrite -spinE.
+rewrite axialE.
+rewrite unskewK.
+Abort.
+
+Lemma is_eigenvector1_colinear r (Hr : r \is 'SO[R]_3) n :
+  (n <= eigenspace r 1)%MS -> colinear n (axial r).
+Proof.
+move=> Hn.
+have HnT : n *m r^T = n.
+  move/eigenspace_trmx : Hn => /(_ (rotation_sub Hr))/eigenspaceP.
+  by rewrite scale1r.
+set Q := r^T - r.
+have nrrT : n *m Q = 0.
+ rewrite mulmxDr [in LHS]mulmxN HnT.
+ move/eigenspaceP : Hn; rewrite scale1r => ->.
+ by rewrite subrr.
+have skewrrT : \S( - axial r ) = Q.
+  rewrite axialE // -scaleN1r spinZ scaleN1r unskewK ?opprB //.
+  by rewrite antiE linearD /= linearN /= trmxK opprB.
+move/eqP: nrrT.
+by rewrite -skewrrT spinE crossmulC crossmulvN opprK.
+Qed.
+
+Lemma axial_vec_eigenspace M : M \is 'SO[R]_3 ->
+  (axial M <= eigenspace M 1)%MS.
+Proof.
+move=> MSO; apply/eigenspaceP; rewrite scale1r.
+case: (euler MSO) => u /andP[u0 /eqP uMu].
+have /is_eigenvector1_colinear : (u <= eigenspace M 1)%MS.
+  by apply/eigenspaceP; rewrite scale1r.
+move/(_ MSO) => uax.
+suff [k Hk] : exists k, axial M = k *: u by rewrite Hk -scalemxAl uMu.
+case/colinearP : uax => [/eqP ->| [_ [k [? ukv]]]].
+  exists 0; by rewrite scale0r.
+exists (1 / k); rewrite ukv scalerA div1r mulVr ?scale1r // unitfE.
+apply: contra u0; rewrite ukv => /eqP ->; by rewrite scale0r.
+Qed.
+
+End spin_matrix_axial_vector_rcfType.
 
 Section cayley_transform.
 
@@ -519,49 +649,6 @@ Proof. move=> HQ N1; by rewrite antiE trmx_skew_of_orth // ?opprK. Qed.
 Lemma sub1radd1r_comm n (M : 'M[R]_n.+1) : (1 - M) * (1 + M) = (1 + M) * (1 - M).
 Proof. by rewrite mulrDr mulr1 mulrBl mul1r mulrDl mul1r mulrBr mulr1. Qed.
 
-(* TODO: move? *)
-Lemma det_sub1skew_mx u : \det (1 - \S( u )) = 1 + norm u ^+ 2.
-Proof.
-set a := skew_mx u.
-rewrite det_mx33 [a]lock !mxE /=. Simp.r.
-rewrite -lock /a !skewij subr0. Simp.r.
-rewrite -!addrA; congr (_ + _); rewrite !addrA.
-by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC sqr_norm sum3E.
-Qed.
-
-(* TODO: move? *)
-Lemma skew_mx_inv u : 1 - \S( u ) \is a GRing.unit.
-Proof.
-set a := skew_mx u.
-by rewrite unitmxE unitfE det_sub1skew_mx paddr_eq0 // ?ler01 // ?sqr_ge0 // negb_and oner_neq0.
-Qed.
-
-(* TODO: move? *)
-Lemma det_add1skew_mx u : \det (1 + \S( u )) = 1 + norm u ^+ 2.
-Proof.
-set a := skew_mx u.
-rewrite det_mx33 [a]lock !mxE /=. Simp.r.
-rewrite -lock /a !skewij addr0. Simp.r.
-rewrite -!addrA; congr (_ + _); rewrite !addrA.
-rewrite sqr_norm sum3E -!expr2 -!addrA; congr (_ + _).
-rewrite mulrDr -expr2 (addrC _ (_^+2)) -!addrA addrC; congr (_ + _).
-by rewrite mulrBr opprB -expr2 addrCA mulrCA subrr addr0.
-Qed.
-
-(* TODO: move? *)
-Lemma sym_add1r M : M \is 'so[R]_3 -> \det (1 + M) != 0.
-Proof.
-move/unskewK => <-.
-by rewrite det_add1skew_mx paddr_eq0 // ?sqr_ge0 // oner_eq0.
-Qed.
-
-(* TODO: move? *)
-Lemma sym_sub1r M : M \is 'so[R]_3 -> \det (1 - M) != 0.
-Proof.
-move/unskewK => <-.
-by rewrite det_sub1skew_mx paddr_eq0 // ?sqr_ge0 // oner_eq0.
-Qed.
-
 (* given a skew-symmetric matrix, builds an orthogonal matrix *)
 Definition ortho_of_skew n (M : 'M[R]_n.+1) := (1 + M) * (1 - M)^-1.
 
@@ -586,7 +673,7 @@ Qed.
 Lemma det_ortho_of_skew M : M \is 'so[R]_3 -> \det (ortho_of_skew M) = 1.
 Proof.
 move/unskewK => <-.
-rewrite /ortho_of_skew det_mulmx det_inv det_add1skew_mx det_sub1skew_mx.
+rewrite /ortho_of_skew det_mulmx det_inv det_add1spin det_sub1spin.
 by rewrite divrr // unitfE paddr_eq0 ?oner_eq0 /= // sqr_ge0.
 Qed.
 
@@ -611,11 +698,11 @@ Proof.
 Abort.
 
 (* [murray] second half of exercise 9(a), p. 75 *)
-Lemma kernel_skew_mx (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
+Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
 Proof.
-apply/andP; split; last by apply/sub_kermxP; rewrite skew_mxE crossmulvv.
+apply/andP; split; last by apply/sub_kermxP; rewrite spinE crossmulvv.
 apply/rV_subP => v /sub_kermxP.
-rewrite skew_mxE => /eqP/vec_angle.colinearP[|[_[k [Hk1 Hk2]]]].
+rewrite spinE => /eqP/vec_angle.colinearP[|[_[k [Hk1 Hk2]]]].
   move/eqP => ->.
   by rewrite sub0mx.
 apply/sub_rVP; exists (k^-1).

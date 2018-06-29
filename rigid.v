@@ -776,7 +776,7 @@ Lemma conj_skew_mx_crossmul (r : 'M[T]_3) (w : 'rV[T]_3) (t : 'rV[T]_3) : r \is 
   t *m (r^T * \S( w ) * r) = (w *m r) *v t.
 Proof.
 move=> rSO.
-rewrite mul_skew_mx (_ : _ * r = \S(w *m r)); first by rewrite skew_mxE.
+rewrite mul_spin (_ : _ * r = \S(w *m r)); first by rewrite spinE.
 rewrite -mulmxE mulmx_col3.
 rewrite -{2 4 6}(trmxK r).
 rewrite [in LHS](col_mx3_rowE r^T) !rowK /=.
@@ -790,7 +790,7 @@ rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_icrossj ?rotationV // dotmulNv.
 rewrite (dotmulC (_ *v _)) dot_crossmulCA crossmulC dotmulvN dotmulNv opprK SO_jcrossk ?rotationV //.
 rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_icrossk ?rotationV // dotmulvN dotmulNv opprK.
 rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_jcrossk ?rotationV // dotmulNv.
-apply/matrix3P/and9P; split; apply/eqP; rewrite ![in LHS]mxE /= !skewij //;
+apply/matrix3P/and9P; split; apply/eqP; rewrite ![in LHS]mxE /= !spinij //;
   try congr (- _); by rewrite dotmulE mxE; apply/eq_bigr => /= j _; rewrite !mxE.
 Qed.
 
@@ -801,7 +801,7 @@ Definition Adjoint (g : 'M[T]_4) : 'M_6 :=
 
 Lemma Adjoint1 : Adjoint 1 = 1 :> 'M[T]_6.
 Proof.
-by rewrite /Adjoint rot_of_hom1 mul1r trans_of_hom1 skew_mx0 -scalar_mx_block.
+by rewrite /Adjoint rot_of_hom1 mul1r trans_of_hom1 spin0 -scalar_mx_block.
 Qed.
 
 Definition inv_Adjoint (g : 'M[T]_4) : 'M_6 :=
@@ -814,7 +814,7 @@ Lemma inv_AdjointE g : g \is 'SE3[T] -> inv_Adjoint g = Adjoint g^-1.
 Proof.
 move/SE3_inv => ->.
 rewrite /inv_Adjoint /Adjoint /inv_hom.
-by rewrite !(rot_of_hom_hom,trans_of_hom_hom) mulNmx mulNr skew_mxN !mulrN.
+by rewrite !(rot_of_hom_hom,trans_of_hom_hom) mulNmx mulNr spinN !mulrN.
 Qed.
 
 Lemma AdjointM_helper g1 g2 : g1 \is 'SE3[T] -> g2 \is 'SE3[T] ->
@@ -823,13 +823,13 @@ Lemma AdjointM_helper g1 g2 : g1 \is 'SE3[T] -> g2 \is 'SE3[T] ->
   Adjoint (g1 * g2) = block_mx (r1 * r2) 0 ((r1 * r2) * (\S(t2) + r2^T * \S(t1) * r2)) (r1 * r2).
 Proof.
 move=> Hg1 Hg2 r1 r2 t1 t2.
-rewrite /Adjoint -rot_of_homM // trans_of_homM // skew_mxD.
+rewrite /Adjoint -rot_of_homM // trans_of_homM // spinD.
 set a := rot_of_hom (_ * _) * _. set b := rot_of_hom (_ * _) * _.
 suff : a = b by move=> ->.
 rewrite {}/a {}/b; congr (_ * _).
 apply/eqP/mulmxP => t.
 rewrite 2!mulmxDr conj_skew_mx_crossmul; last by rewrite rot_of_hom_SO.
-rewrite addrC; congr (_ + _); by rewrite skew_mxE.
+rewrite addrC; congr (_ + _); by rewrite spinE.
 Qed.
 
 (* [murray] exercise 14 (b) , p. 77 *)
@@ -949,7 +949,7 @@ move=> ?; rewrite ap_vectorE orth_preserves_norm // rotation_sub //; by case: T'
 Qed.
 
 Lemma rodrigues_homogeneous M u (HM : M \in 'SO[T]_3) :
-  axial_vec M != 0 ->
+  axial M != 0 ->
   Aa.angle M != pi ->
   let a := aangle (angle_axis_of_rot M) in
   let w := aaxis (angle_axis_of_rot M) in

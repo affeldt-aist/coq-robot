@@ -106,20 +106,20 @@ Definition plucker_eqn p l :=
 
 Lemma plucker_eqn0 p l : \vec( l ) = 0 -> plucker_eqn p l = 0.
 Proof.
-move => l0; rewrite /plucker_eqn -skew_mxN -skew_mxD -Line.vectorE.
-by rewrite skew_mxE l0 crossmul0v crossmulv0 addr0.
+move => l0; rewrite /plucker_eqn -spinN -spinD -Line.vectorE.
+by rewrite spinE l0 crossmul0v crossmulv0 addr0.
 Qed.
 
 Lemma plucker_eqn_self l : plucker_eqn \pt( l ) l = 0.
 Proof.
-rewrite /plucker_eqn -skew_mxN -skew_mxD skew_mxE crossmulC addrC.
+rewrite /plucker_eqn -spinN -spinD spinE crossmulC addrC.
 by rewrite -crossmulBl subrr crossmul0v.
 Qed.
 
 Lemma in_plucker p l : p \in (l : pred _) -> plucker_eqn p l = 0.
 Proof.
 rewrite inE => /orP[/eqP ->|/andP[l0 H]]; first by rewrite plucker_eqn_self.
-rewrite /plucker_eqn -skew_mxN -skew_mxD skew_mxE crossmulC addrC -crossmulBl.
+rewrite /plucker_eqn -spinN -spinD spinE crossmulC addrC -crossmulBl.
 apply/eqP.
 rewrite -/(colinear _ _) -colinearNv opprB colinear_sym.
 apply: (colinear_trans l0 _ H).
