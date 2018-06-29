@@ -882,9 +882,6 @@ Canonical orthogonal_is_oppr_closed := OpprPred orthogonal_oppr_closed.
 Lemma rotation_sub : {subset 'SO[T]_n <= 'O[T]_n}.
 Proof. by move=> M /andP []. Qed.
 
-Lemma rotation_mul_tr M : (M \is 'SO[T]_n) -> M *m M^T = 1.
-Proof. by move=> /rotation_sub /orthogonal_mul_tr. Qed.
-
 Lemma orthogonalP M :
   reflect (forall i j, row i M *d row j M = (i == j)%:R) (M \is 'O[T]_n).
 Proof.
@@ -1178,7 +1175,7 @@ Proof.
 move=> MSO; apply/eqP; rewrite -[_ == 0](mulrn_eq0 _ 2) addr_eq0.
 have {1}-> : M - 1 = - (M *m (M - 1)^T).
   rewrite raddfD /= raddfN /= trmx1 mulmxDr mulmxN mulmx1.
-  by rewrite rotation_mul_tr // opprB.
+  by rewrite orthogonal_mul_tr ?rotation_sub // opprB.
 rewrite -scaleN1r detZ -signr_odd detM det_tr.
 by rewrite [\det M]rotation_det // mulN1r mul1r.
 Qed.

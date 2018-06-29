@@ -1346,7 +1346,7 @@ Let api : a != pi.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sinpi. Qed.
 Let vaxis0 : Aa.vaxis Q != 0.
 Proof.
-by rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0.
+by rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or w0 andbT invr_eq0 mulrn_eq0.
 Qed.
 Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
 
@@ -1465,7 +1465,7 @@ Let Htmp0 : Aa.vaxis Q != 0.
 Proof.
 rewrite /Aa.vaxis.
 rewrite (negbTE api).
-by rewrite scaler_eq0 negb_or w0 andbT div1r invr_eq0 mulrn_eq0 //=.
+by rewrite scaler_eq0 negb_or w0 andbT invr_eq0 mulrn_eq0 //=.
 Qed.
 Let w1 : norm w = 1.
 Proof. rewrite norm_normalize //. Qed.

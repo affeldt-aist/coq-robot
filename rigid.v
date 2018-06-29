@@ -966,17 +966,10 @@ case/boolP : (Aa.angle M == 0) => a0.
 transitivity (u *m M); last first.
   (* TODO: lemma? *)
   by rewrite ap_pointE /= (mul_mx_row u) mulmx0 add_row_mx addr0 add0r to_hpointK.
-have Htmp0 : Aa.vaxis M != 0.
-
-  rewrite /Aa.vaxis.
-  rewrite (negbTE api).
-
-  rewrite scaler_eq0 negb_or axis0 andbT div1r invr_eq0 mulrn_eq0 /=.
-  apply: contra a0 => /eqP/sin0_inv [/eqP -> //|/eqP]; by rewrite (negbTE api).
 have w1 : norm w = 1.
- by rewrite /w aaxis_of // norm_normalize.
+ by rewrite /w aaxis_of // ?Aa.vaxis_neq0 // norm_normalize // Aa.vaxis_neq0.
 rewrite rodriguesP //; congr (_ *m _) => {u}.
-by rewrite (angle_axis_eskew_old HM).
+by rewrite (angle_axis_eskew_old HM) // Aa.vaxis_neq0.
 Qed.
 
 End se.
