@@ -184,7 +184,7 @@ Proof.
 do 3 rewrite dotmulE sum3E.
 move=> H1 H2 H3.
 have /eqP : p *m (col_mx3 i j k) ^T = 0.
-  by rewrite col_mx3_mul dotmulE sum3E H1 dotmulE sum3E H2 dotmulE sum3E H3 row30.
+  by rewrite mul_tr_col_mx3 dotmulE sum3E H1 dotmulE sum3E H2 dotmulE sum3E H3 row30.
 rewrite mul_mx_rowfree_eq0; first by move/eqP.
 apply/row_freeP; exists (col_mx3 i j k).
 apply/eqP; by rewrite -orthogonalEC !rowframeE -col_mx3_rowE (NOFrame.MO _).
@@ -294,7 +294,7 @@ apply eq_bigr => /= i _; by rewrite !mxE eqxx /= mulrC.
 Qed.
 
 (* TODO: move? *)
-Lemma dotrow (T : comRingType) (M : 'M[T]_3) i j : M i j = 'e_j *d row i M.
+Lemma mxE_dotmul (T : comRingType) (M : 'M[T]_3) i j : M i j = 'e_j *d row i M.
 Proof. by rewrite mxE_col_row /dotmul colE. Qed.
 
 Module FrameInterface.
@@ -406,11 +406,9 @@ Definition can_frame := Frame.mk can_frame_is_SO.
 Lemma can_frame_1 : can_frame = 1 :> 'M_3.
 Proof. by apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
-(* TODO: usful? *)
+(* TODO: useful? *)
 Lemma rotation_can_frame (f : Frame.t T) i j : f i j = row j can_frame *d row i f.
-Proof.
-by rewrite /can_frame /= /can_noframe /= row1 dotrow.
-Qed.
+Proof. by rewrite /can_frame /= /can_noframe /= row1 mxE_dotmul. Qed.
 
 Definition can_tframe := TFrame.mk 0 can_frame.
 
@@ -1010,14 +1008,14 @@ Definition trans3 : vector := r1 - l1 *m rot_l2r.
 
 Lemma i_l_r : triad.i l1 l2 *m rot_l2r = triad.i r1 r2.
 Proof.
-rewrite /rot_l2r /= mulmxA col_mx3_mul dotmulvv triad.normi // expr1n.
+rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 dotmulvv triad.normi // expr1n.
 rewrite triad.idotj triad.idotk /matrix_of_noframe mulmx_row3_col3.
 by rewrite !scale0r scale1r !addr0.
 Qed.
 
 Lemma j_l_r : triad.j l1 l2 l3 *m rot_l2r = triad.j r1 r2 r3.
 Proof.
-rewrite /rot_l2r /= mulmxA col_mx3_mul dotmulC triad.idotj dotmulvv triad.normj //.
+rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 dotmulC triad.idotj dotmulvv triad.normj //.
 rewrite expr1n dot_crossmulCA crossmulvv dotmulv0 /matrix_of_noframe /=.
 rewrite col_mx3E row3_row_mx (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r mul_scalar_mx scale0r addr0.
@@ -1025,7 +1023,7 @@ Qed.
 
 Lemma k_l_r : triad.k l1 l2 l3 *m rot_l2r = triad.k r1 r2 r3.
 Proof.
-rewrite /rot_l2r /= mulmxA col_mx3_mul {1}/triad.k dotmulC dot_crossmulC.
+rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 {1}/triad.k dotmulC dot_crossmulC.
 rewrite crossmulvv dotmul0v {1}/triad.k -dot_crossmulC crossmulvv dotmulv0.
 rewrite /matrix_of_noframe /= dotmulvv triad.normk // expr1n col_mx3E row3_row_mx.
 do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.

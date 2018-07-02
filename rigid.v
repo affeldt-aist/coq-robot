@@ -29,6 +29,11 @@ Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
      (a direct isometry (i.e., cross-product preserving) can be expressed in homogeneous coordinates)
 *)
 
+Reserved Notation "''Iso[' T ]_ n" (at level 8, n at level 2, format "''Iso[' T ]_ n").
+Reserved Notation "''CIso[' T ]_ n" (at level 8, n at level 2, format "''CIso[' T ]_ n").
+Reserved Notation "''DIso_3[' T ]" (at level 8, format "''DIso_3[' T ]").
+Reserved Notation "''SE3[' T ]" (at level 8, format "''SE3[' T ]").
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -47,8 +52,7 @@ Record t := mk {
 End isometry.
 End Iso.
 
-Notation "''Iso[' T ]_ n" := (Iso.t T n)
-  (at level 8, n at level 2, format "''Iso[' T ]_ n").
+Notation "''Iso[' T ]_ n" := (Iso.t T n).
 Definition isometry_coercion := Iso.f.
 Coercion isometry_coercion : Iso.t >-> Funclass.
 
@@ -61,8 +65,7 @@ Record t := mk {
 End central_isometry.
 End CIso.
 
-Notation "''CIso[' T ]_ n" := (CIso.t T n)
-  (at level 8, n at level 2, format "''CIso[' T ]_ n").
+Notation "''CIso[' T ]_ n" := (CIso.t T n).
 Definition cisometry_coercion := CIso.f.
 Coercion cisometry_coercion : CIso.t >-> Iso.t.
 
@@ -229,8 +232,7 @@ Record t := mk {
 End direct_isometry.
 End DIso.
 
-Notation "''DIso_3[' T ]" := (DIso.t T)
-  (at level 8, format "''DIso_3[' T ]").
+Notation "''DIso_3[' T ]" := (DIso.t T).
 Definition disometry_coercion := DIso.f.
 Coercion disometry_coercion : DIso.t >-> Iso.t.
 
@@ -592,8 +594,7 @@ Canonical SE3_keyed := KeyedQualifier SE3_key.
 
 End SE3_def.
 
-Notation "''SE3[' T ]" := (SE3 T)
-  (at level 8, format "''SE3[' T ]") : ring_scope.
+Notation "''SE3[' T ]" := (SE3 T) : ring_scope.
 
 Section SE3_prop.
 
@@ -769,7 +770,7 @@ End SE3_prop.
 
 Section Adjoint.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 (* TODO: move? *)
 Lemma conj_skew_mx_crossmul (r : 'M[T]_3) (w : 'rV[T]_3) (t : 'rV[T]_3) : r \is 'SO[T]_3 ->
@@ -780,7 +781,7 @@ rewrite mul_spin (_ : _ * r = \S(w *m r)); first by rewrite spinE.
 rewrite -mulmxE mulmx_col3.
 rewrite -{2 4 6}(trmxK r).
 rewrite [in LHS](col_mx3_rowE r^T) !rowK /=.
-rewrite !col_mx3_mul.
+rewrite !mul_tr_col_mx3.
 have H i r' : w *v row i r' *d row i r' = 0.
   by rewrite dotmulC dot_crossmulCA crossmulvv dotmulv0.
 rewrite 3!H.
@@ -961,7 +962,7 @@ case/boolP : (Aa.angle M == 0) => a0.
     apply O_tr_idmx; [by apply rotation_sub |].
     apply Aa.angle0_tr => //; by apply/eqP.
   rewrite ap_pointE /= /rodrigues /a aangle_of (eqP a0) cos0 sin0 scale0r addr0 subrr.
-  rewrite mul0r scale0r addr0 scale1r M1.
+  rewrite !(scale0r,subr0,mul0r,addr0) M1.
   by rewrite mul_mx_row mulmx0 mulmx1 add_row_mx add0r addr0 /from_h row_mxKl.
 transitivity (u *m M); last first.
   (* TODO: lemma? *)

@@ -162,12 +162,6 @@ move/allP => H; apply/eqP/rowP => i.
 apply/eqP; by rewrite mxE -sqrf_eq0 expr2 -(implyTb ( _ == _)) H.
 Qed.
 
-(* TODO: move? *)
-Lemma mulmx_trE v i j : (v^T *m v) i j = v 0 i * v 0 j.
-Proof.
-by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
-Qed.
-
 End dot_product.
 
 Section norm.
@@ -512,8 +506,7 @@ Qed.
 
 End triple_prod_mat.
 
-(* TODO: rename *)
-Lemma col_mx3_mul {T : comRingType} (x : 'rV[T]_3) a b c :
+Lemma mul_tr_col_mx3 {T : comRingType} (x : 'rV[T]_3) a b c :
   x *m (col_mx3 a b c)^T = row3 (x *d a) (x *d b) (x *d c).
 Proof.
 rewrite col_mx3E (tr_col_mx a) (tr_col_mx b) (mul_mx_row x a^T).

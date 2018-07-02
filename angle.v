@@ -914,15 +914,6 @@ rewrite (mulrnA _ 2 2) -[LHS]halfP -mulr2n; congr (_ *+ 2).
 by rewrite piquarter_is_half mulr2n halfP pihalf_is_half.
 Qed.
 
-(* TODO: move *)
-Lemma atan2_N1N1 : atan2 (- 1) (- 1) = - piquarter T *+ 3.
-Proof.
-rewrite /atan2 ltr0N1 ltrN10 ler0N1 divrr; last first.
-  by rewrite unitfE eqr_oppLR oppr0 oner_neq0.
-rewrite atan1 pi_piquarter -opprB -{2}(mulr1n (piquarter T)).
-by rewrite -mulrnBr // mulNrn.
-Qed.
-
 Lemma sin_half_angle a : `| sin (half_angle a) | = Num.sqrt ((1 - cos a) / 2%:R).
 Proof.
 move: (cosD (half_angle a) (half_angle a)).
@@ -998,6 +989,14 @@ by rewrite (negbTE api).
 Qed.
 
 End half_angle.
+
+Lemma atan2_N1N1 (T : rcfType) : atan2 (- 1) (- 1) = - piquarter T *+ 3.
+Proof.
+rewrite /atan2 ltr0N1 ltrN10 ler0N1 divrr; last first.
+  by rewrite unitfE eqr_oppLR oppr0 oner_neq0.
+rewrite atan1 pi_piquarter -opprB -{2}(mulr1n (piquarter T)).
+by rewrite -mulrnBr // mulNrn.
+Qed.
 
 Section derived_trigonometric_functions.
 

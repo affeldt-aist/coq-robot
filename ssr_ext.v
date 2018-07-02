@@ -274,6 +274,11 @@ rewrite mxrank1 -[LHS]card_ord -sum1_card.
 by apply/eq_bigr=> i _; rewrite /= mxrank_gen mxrank_delta.
 Qed.
 
+Lemma mulmx_trE (T : ringType) n (v : 'rV[T]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
+Proof.
+by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
+Qed.
+
 End extra_linear.
 
 Section extra_complex.

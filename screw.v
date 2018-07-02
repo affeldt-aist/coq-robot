@@ -348,7 +348,7 @@ Proof.
 by rewrite /lin_of_twist -{1}(@submxK _ 3 1 3 1 x) (@scale_block_mx _ 3 1 3 1 k) block_mxKdl.
 Qed.
 
-Definition ang_of_twist (M : 'M[T]_4) := unskew (@ulsubmx _ 3 1 3 1 M).
+Definition ang_of_twist (M : 'M[T]_4) := unspin (@ulsubmx _ 3 1 3 1 M).
 
 Lemma ang_ang_of_twist t : \w( t ) = ang_of_twist (wedge t).
 Proof. by rewrite /TwistCoor.ang /ang_of_twist /wedge block_mxKul spinK. Qed.
@@ -356,13 +356,14 @@ Proof. by rewrite /TwistCoor.ang /ang_of_twist /wedge block_mxKul spinK. Qed.
 Lemma ang_of_twistD x y : ang_of_twist (x + y) = ang_of_twist x + ang_of_twist y :> 'rV[T]__.
 Proof.
 rewrite /ang_of_twist -{1}(@submxK _ 3 1 3 1 x) -{1}(@submxK _ 3 1 3 1 y).
-set b := ursubmx _. set c := dlsubmx _. by rewrite (add_block_mx _ b c) block_mxKul unskewD.
+set b := ursubmx _. set c := dlsubmx _.
+by rewrite (add_block_mx _ b c) block_mxKul unspinD.
 Qed.
 
 Lemma ang_of_twistZ k x : ang_of_twist (k *: x) = k *: ang_of_twist x :> 'rV[T]__.
 Proof.
 rewrite /ang_of_twist -{1}(@submxK _ 3 1 3 1 x) (@scale_block_mx _ 3 1 3 1 k) block_mxKul.
-by rewrite unskewZ.
+by rewrite unspinZ.
 Qed.
 
 (* the set of twists *)
@@ -422,7 +423,7 @@ Proof.
 rewrite qualifE antiE => /and3P[/eqP H1 /eqP H2 /eqP H3].
 rewrite /wedge /vee ang_tcoorE lin_tcoorE /lin_of_twist.
 rewrite -[in RHS](@submxK _ 3 1 3 1 t) H1 H2 H3; f_equal.
-rewrite unskewK // antiE; by apply/eqP.
+rewrite unspinK // antiE; by apply/eqP.
 Qed.
 
 Lemma wedgeK t : vee (wedge t) = t.
@@ -865,7 +866,7 @@ rewrite 2!mulNmx.
 rewrite (scalerN (1 - cos a) (_ *m _)).
 rewrite (scalerN (ra - sin a) (_ *m _)).
 rewrite -!scalemxAl mulmxE -expr2 -exprSr -exprS -exprD.
-rewrite spin3 spin4.
+rewrite (exp_spin _ O) expr1 (exp_spin _ 1).
 rewrite w1 expr1n 2!scaleN1r.
 rewrite !(scalerN _ \S(w)) !(scalerN _ (\S(w) ^+ 2)).
 
@@ -1162,7 +1163,7 @@ rewrite -(mulrA (rad a * h)) divrr ?mulr1; last by rewrite unitfE expf_eq0 /= no
 rewrite mulrC -[LHS]addr0.
 congr (_ + _).
 rewrite mulmxBr mulmx1.
-rewrite -rodrigues_genP /rodrigues_gen.
+rewrite -rodriguesP /rodrigues.
 rewrite crossmulvZ crossmulvv 2!scaler0 addr0.
 rewrite dotmulZv dotmulvv.
 rewrite !scalerA mulrAC -mulrA opprB subrK.
@@ -1472,10 +1473,10 @@ Proof. rewrite norm_normalize //. Qed.
 
 Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
 Proof.
-move: (isRot_exp_eskew' w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
+move: (isRot_eskew_unit_inv w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
-rewrite mulmxBr mulmx1 /eskew'.
+rewrite mulmxBr mulmx1 /eskew_unit.
 rewrite -addrA linearD /= mulmxDr trmx_mul trmxK.
 rewrite mulmxE -expr2 (mulmx_tr_uvect w1) //.
 rewrite addrC addrA (addrC (- _)) subrr add0r.
@@ -1487,7 +1488,7 @@ Qed.
 
 Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
 Proof.
-move: (isRot_exp_eskew' w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
+move: (isRot_eskew_unit_inv w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q => ->; rewrite linearD /=.
 rewrite mulmxDl [in X in _ + X = _]linearN /= trmx1 mulNmx mul1mx.
 rewrite linearD /= [w]lock linearZ /= tr_spin scalerN mulmxDl -lock.
@@ -1521,14 +1522,14 @@ rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
   rewrite scalemx1.
   by apply/matrix3P/and9P; split; apply/eqP; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
 rewrite addrA.
-move: (isRot_exp_eskew' w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
+move: (isRot_eskew_unit_inv w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q -/a => HQ.
 rewrite {1}HQ.
-rewrite /eskew'.
+rewrite /eskew_unit.
 rewrite -(addrA (w^T *m w)).
 rewrite [w]lock linearD /= trmx_mul trmxK opprD addrC 2!addrA subrr add0r.
 rewrite linearD /= [w]lock 2!linearZ /= 2!linearD /= trmx1 -!lock.
-move: (isRot_exp_eskew' w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
+move: (isRot_eskew_unit_inv w1 (angle_axis_isRot w0 (ortho_of_diso_is_SO f))).
 rewrite -/Q -/a => ->.
 rewrite opprD !addrA addrC !addrA tr_spin.
 rewrite (scalerN (sin a) \S( w )) opprK.

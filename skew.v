@@ -19,9 +19,10 @@ Require vec_angle.
  3. Section spin_matrix
     Section spin_matrix_axial_vector_rcfType.
       properties of spin matrices and axial vectors
+ 4. Section spectral_properties.
       sample lemma: eigenvalues of spin matrices
- 4. Section cayley_transform
- 5. wip (lie_bracket)
+ 5. Section cayley_transform
+ 6. wip (lie_bracket)
 *)
 
 Set Implicit Arguments.
@@ -315,25 +316,25 @@ by rewrite mulmxN spinE crossmulvv oppr0 trmx0.
 Qed.
 
 (* normalized axial vector *)
-Definition unskew M := 2%:R^-1 *: axial M.
+Definition unspin M := 2%:R^-1 *: axial M.
 
-Lemma unskew_sym M : M \is sym 3 R -> unskew M = 0.
-Proof. by move=> HM; rewrite /unskew axial_sym' // scaler0. Qed.
+Lemma unspin_sym M : M \is sym 3 R -> unspin M = 0.
+Proof. by move=> HM; rewrite /unspin axial_sym' // scaler0. Qed.
 
-Lemma unskew_cst a : unskew a%:M = 0 :> 'rV[R]_3.
-Proof. by rewrite unskew_sym // sym_cst. Qed.
+Lemma unspin_cst a : unspin a%:M = 0 :> 'rV[R]_3.
+Proof. by rewrite unspin_sym // sym_cst. Qed.
 
-Lemma unskew0 : unskew 0 = 0 :> 'rV[R]_3.
-Proof. by rewrite /unskew axial0 ?scaler0. Qed.
+Lemma unspin0 : unspin 0 = 0 :> 'rV[R]_3.
+Proof. by rewrite /unspin axial0 ?scaler0. Qed.
 
-Lemma unskewN M : unskew (- M) = - unskew M.
-Proof. by rewrite /unskew axialN scalerN. Qed.
+Lemma unspinN M : unspin (- M) = - unspin M.
+Proof. by rewrite /unspin axialN scalerN. Qed.
 
-Lemma unskewZ k M : unskew (k *: M) = k *: unskew M.
-Proof. by rewrite /unskew axialZ scalerA mulrC -scalerA. Qed.
+Lemma unspinZ k M : unspin (k *: M) = k *: unspin M.
+Proof. by rewrite /unspin axialZ scalerA mulrC -scalerA. Qed.
 
-Lemma unskewD (A B : 'M[R]_3) : unskew (A + B) = unskew A + unskew B.
-Proof. by rewrite /unskew axialD scalerDr. Qed.
+Lemma unspinD (A B : 'M[R]_3) : unspin (A + B) = unspin A + unspin B.
+Proof. by rewrite /unspin axialD scalerDr. Qed.
 
 (* skew-symmetric matrices are always singular *)
 Lemma det_spin u : \det \S( u ) = 0.
@@ -365,7 +366,7 @@ rewrite !(mulrC _ 2%:R) -row3Z; congr (_ *: _).
 by rewrite [RHS](row3E u) !row3D !(addr0,add0r).
 Qed.
 
-Lemma spin_axial M : M \is 'so[R]_3 -> \S( axial M ) = 2%:R *: M.
+Lemma spin_axial_so M : M \is 'so[R]_3 -> \S( axial M ) = 2%:R *: M.
 Proof.
 move=> Mso.
 move: (Mso); rewrite antiE => /eqP MMT.
@@ -378,15 +379,15 @@ apply/matrix3P/and9P; split; rewrite spinij ?anti_diag // ?mxE /= ?anti_scaler_c
 - by rewrite {1}MMT !mxE opprB opprK -mulr2n -(mulr_natr (M _ _)) mulrC.
 Qed.
 
-Lemma spinK u : unskew \S( u ) = u.
+Lemma spinK u : unspin \S( u ) = u.
 Proof.
-by rewrite /unskew axial_spin scalerA mulVr ?scale1r // unitfE pnatr_eq0.
+by rewrite /unspin axial_spin scalerA mulVr ?scale1r // unitfE pnatr_eq0.
 Qed.
 
-Lemma unskewK M : M \is 'so[R]_3 -> \S( unskew M ) = M.
+Lemma unspinK M : M \is 'so[R]_3 -> \S( unspin M ) = M.
 Proof.
 move=> Mso.
-rewrite /unskew spinZ spin_axial // scalerA mulVr ?scale1r //.
+rewrite /unspin spinZ spin_axial_so // scalerA mulVr ?scale1r //.
 by rewrite unitfE pnatr_eq0.
 Qed.
 
@@ -394,6 +395,31 @@ Lemma spin_inj u v : (\S( u ) == \S( v )) = (u == v).
 Proof.
 apply/idP/idP => [/eqP H|/eqP -> //]; by rewrite -(spinK u) H spinK.
 Qed.
+
+Lemma spin_axial M : \S( axial M ) = M - M^T.
+Proof.
+have /unspinK : M - M^T \is 'so[R]_3 by rewrite antiE linearB /= trmxK opprB.
+rewrite /unspin spinZ axialD spinD axialN spinN tr_axial spinN.
+by rewrite opprK -mulr2n -scaler_nat scalerA mulVr ?scale1r // unitfE pnatr_eq0.
+Qed.
+
+Lemma axial_sym M : (M \is sym 3 R) = (axial M == 0).
+Proof.
+apply/idP/idP => [|/eqP H]; [by move/axial_sym' => -> |rewrite symE].
+by rewrite -subr_eq0 -spin_axial H spin0.
+Qed.
+
+Lemma axialE M : axial M = unspin (M - M^T).
+Proof. by rewrite -(spin_axial M) spinK. Qed.
+
+Lemma axial_vecP (M : 'M[R]_3) u : u *v axial M = u *m antip M.
+Proof.
+rewrite /antip.
+rewrite crossmulC.
+rewrite -spinE.
+rewrite axialE.
+rewrite unspinK.
+Abort.
 
 Lemma sqr_spin' u : \S( u ) ^+ 2 = col_mx3
   (row3 (- u 0 2%:R ^+ 2 - u 0 1 ^+ 2) (u 0 0 * u 0 1) (u 0 0 * u 0 2%:R))
@@ -440,9 +466,9 @@ rewrite exprS sqr_spin mulrBr -mulmxE mulmxA spin_mul_tr mul0mx add0r.
 by rewrite scalemx1 mul_mx_scalar scaleNr.
 Qed.
 
-Lemma spin4 u : \S( u ) ^+ 4 = - norm u ^+2 *: \S( u ) ^+ 2.
+Lemma exp_spin u n : \S( u ) ^+ n.+3 = - (norm u) ^+ 2 *: \S( u ) ^+ n.+1.
 Proof.
-by rewrite exprS spin3 scaleNr mulrN -scalerCA -scalerAl -expr2 scaleNr.
+elim: n => [|n IH]; by [rewrite expr1 spin3|rewrite exprS IH -scalerAr -exprS].
 Qed.
 
 Lemma mxtrace_sqr_spin u : \tr (\S( u ) ^+ 2) = - (2%:R * (norm u) ^+ 2).
@@ -450,6 +476,14 @@ Proof.
 rewrite sqr_spin linearD /= mxtrace_tr_mul linearN /= linearZ /=; apply/eqP.
 by rewrite !mxtrace_scalar subr_eq addrC mulrC -mulrBl -natrB // mul1r.
 Qed.
+
+End spin_matrix_axial_vector_rcfType.
+
+Section spectral_properties.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Implicit Types u : vector.
 
 (* TODO: useful? *)
 Lemma row'0_triple_prod_mat tmp (XM : 'M[{poly R}]_3) :
@@ -470,36 +504,89 @@ rewrite scale0r subr0 expr0n add0r mulrN mxtrace_sqr_spin mulrN opprK.
 by rewrite mulrA div1r mulVr ?unitfE ?pnatr_eq0 // mul1r.
 Qed.
 
-Definition spin_eigenvalues : seq R[i] := [:: 0; 'i; 0 -i* 1]%C.
+Definition spin_eigenvalues u : seq R[i] := [:: 0; 0 +i* norm u ; 0 -i* norm u]%C.
 
 Ltac eigenvalue_spin_eval_poly :=
-  rewrite /map_poly horner_poly size_addl; [ |by rewrite size_polyXn size_polyX] ;
-  rewrite size_polyXn sum4E !coefD !coefXn !coefX !add0r !mul0r !mul1r !add0r !addr0 mul1r.
+  rewrite /map_poly horner_poly size_addl; [ |
+    by rewrite size_polyXn size_scale ?size_polyX // sqrf_eq0 norm_eq0];
+  rewrite size_polyXn sum4E !(coefD,coefXn,coefZ,coefX,expr0,expr1)
+                            !(mulr0,mul0r,mul1r,add0r,addr0,mul1r).
 
-Lemma eigenvalue_spin u : norm u = 1 ->
-  eigenvalue (map_mx (fun x => x%:C%C) \S( u)) =1 [pred k | k \in spin_eigenvalues].
+Lemma eigenvalue_spin u : u != 0 ->
+  eigenvalue (map_mx (fun x => x%:C%C) \S( u) ) =1 [pred k | k \in spin_eigenvalues u].
 Proof.
-move=> u1 /= k.
-rewrite inE eigenvalue_root_char -map_char_poly char_poly_spin u1 expr1n scale1r.
+move=> u0 /= k.
+rewrite inE eigenvalue_root_char -map_char_poly char_poly_spin.
 apply/rootP.
 case: ifPn => [|Hk].
-  rewrite inE => /orP [/eqP ->|]; first by rewrite /= horner_map !hornerE.
+- rewrite inE => /orP [/eqP ->|]; first by rewrite /= horner_map !hornerE.
   rewrite inE => /orP [/eqP ->|].
     eigenvalue_spin_eval_poly.
-    by rewrite expr1 exprS sqr_i mulrN1 subrr.
+    simpc.
+    apply/eqP; by rewrite expr2 mulrA subrr eq_complex /= eqxx.
   rewrite inE => /eqP ->.
   eigenvalue_spin_eval_poly.
-  apply/eqP. simpc. by rewrite addrC subrr eq_complex /= eqxx.
-apply/eqP; apply: contra Hk.
-eigenvalue_spin_eval_poly.
-rewrite (exprS _ 2) -{1}(mulr1 k) -mulrDr mulf_eq0 => /orP [/eqP ->|].
-  by rewrite inE eqxx.
-rewrite eq_sym addrC -subr_eq add0r -sqr_i eqf_sqr => /orP [/eqP <-|].
-  by rewrite !inE eqxx orbC.
-rewrite -eqr_oppLR => /eqP <-.
-rewrite !inE orbA; apply/orP; right.
-by rewrite eq_complex /= oppr0 !eqxx.
+  simpc.
+  apply/eqP; by rewrite expr2 mulrA addrC subrr eq_complex /= eqxx.
+- apply/eqP; apply: contra Hk.
+  eigenvalue_spin_eval_poly.
+  rewrite eqxx mulr1 mulrC (exprS _ 2) -mulrDr mulf_eq0 => /orP [/eqP ->|].
+    by rewrite inE eqxx.
+  rewrite eq_sym addrC -subr_eq add0r -mulN1r -sqr_i => H.
+  have {H}: (norm u)*i%C ^+2 == k ^+2.
+    rewrite -(eqP H) eq_complex. simpc. by rewrite /= !(mulr0,add0r,mul0r,eqxx).
+  rewrite eqf_sqr => /orP [/eqP <-|].
+    by rewrite !inE eqxx orbC.
+  rewrite -eqr_oppLR => /eqP <-.
+  rewrite !inE orbA; apply/orP; right.
+  by rewrite eq_complex /= oppr0 !eqxx.
 Qed.
+
+Lemma is_eigenvector1_colinear r (Hr : r \is 'SO[R]_3) n :
+  (n <= eigenspace r 1)%MS -> colinear n (axial r).
+Proof.
+move=> Hn.
+have HnT : n *m r^T = n.
+  move/eigenspace_trmx : Hn => /(_ (rotation_sub Hr))/eigenspaceP.
+  by rewrite scale1r.
+set Q := r^T - r.
+have nrrT : n *m Q = 0.
+ rewrite mulmxDr [in LHS]mulmxN HnT.
+ move/eigenspaceP : Hn; rewrite scale1r => ->.
+ by rewrite subrr.
+have skewrrT : \S( - axial r ) = Q.
+  rewrite axialE // -scaleN1r spinZ scaleN1r unspinK ?opprB //.
+  by rewrite antiE linearD /= linearN /= trmxK opprB.
+move/eqP: nrrT.
+by rewrite -skewrrT spinE crossmulC crossmulvN opprK.
+Qed.
+
+Lemma axial_vec_eigenspace M : M \is 'SO[R]_3 ->
+  (axial M <= eigenspace M 1)%MS.
+Proof.
+move=> MSO; apply/eigenspaceP; rewrite scale1r.
+case: (euler MSO) => u /andP[u0 /eqP uMu].
+have /is_eigenvector1_colinear : (u <= eigenspace M 1)%MS.
+  by apply/eigenspaceP; rewrite scale1r.
+move/(_ MSO) => uax.
+suff [k Hk] : exists k, axial M = k *: u by rewrite Hk -scalemxAl uMu.
+case/colinearP : uax => [/eqP ->| [_ [k [? ukv]]]].
+  exists 0; by rewrite scale0r.
+exists (1 / k); rewrite ukv scalerA div1r mulVr ?scale1r // unitfE.
+apply: contra u0; rewrite ukv => /eqP ->; by rewrite scale0r.
+Qed.
+
+End spectral_properties.
+
+Section cayley_transform.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Implicit Types u : vector.
+
+(* TODO: move? *)
+Lemma sub1radd1r_comm n (M : 'M[R]_n.+1) : (1 - M) * (1 + M) = (1 + M) * (1 - M).
+Proof. by rewrite mulrDr mulr1 mulrBl mul1r mulrDl mul1r mulrBr mulr1. Qed.
 
 Lemma det_sub1spin u : \det (1 - \S( u )) = 1 + norm u ^+ 2.
 Proof.
@@ -523,83 +610,16 @@ Qed.
 
 Lemma sym_add1r M : M \is 'so[R]_3 -> \det (1 + M) != 0.
 Proof.
-move/unskewK => <-; by rewrite det_add1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
+move/unspinK => <-; by rewrite det_add1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
 Qed.
 
 Lemma sym_sub1r M : M \is 'so[R]_3 -> \det (1 - M) != 0.
 Proof.
-move/unskewK => <-; by rewrite det_sub1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
+move/unspinK => <-; by rewrite det_sub1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
 Qed.
 
 Lemma sub1spin_inv u : 1 - \S( u ) \is a GRing.unit.
 Proof. by rewrite unitmxE unitfE sym_sub1r // spin_is_so. Qed.
-
-Lemma skew_axial M : \S( axial M ) = M - M^T.
-Proof.
-have /unskewK : M - M^T \is 'so[R]_3 by rewrite antiE linearB /= trmxK opprB.
-rewrite /unskew spinZ axialD spinD axialN spinN tr_axial spinN.
-by rewrite opprK -mulr2n -scaler_nat scalerA mulVr ?scale1r // unitfE pnatr_eq0.
-Qed.
-
-Lemma axial_sym M : (M \is sym 3 R) = (axial M == 0).
-Proof.
-apply/idP/idP => [|/eqP H]; [by move/axial_sym' => -> |rewrite symE].
-by rewrite -subr_eq0 -skew_axial H spin0.
-Qed.
-
-Lemma axialE M : axial M = unskew (M - M^T).
-Proof. by rewrite -(skew_axial M) spinK. Qed.
-
-Lemma axial_vecP (M : 'M[R]_3) u : u *v axial M = u *m antip M.
-Proof.
-rewrite /antip.
-rewrite crossmulC.
-rewrite -spinE.
-rewrite axialE.
-rewrite unskewK.
-Abort.
-
-Lemma is_eigenvector1_colinear r (Hr : r \is 'SO[R]_3) n :
-  (n <= eigenspace r 1)%MS -> colinear n (axial r).
-Proof.
-move=> Hn.
-have HnT : n *m r^T = n.
-  move/eigenspace_trmx : Hn => /(_ (rotation_sub Hr))/eigenspaceP.
-  by rewrite scale1r.
-set Q := r^T - r.
-have nrrT : n *m Q = 0.
- rewrite mulmxDr [in LHS]mulmxN HnT.
- move/eigenspaceP : Hn; rewrite scale1r => ->.
- by rewrite subrr.
-have skewrrT : \S( - axial r ) = Q.
-  rewrite axialE // -scaleN1r spinZ scaleN1r unskewK ?opprB //.
-  by rewrite antiE linearD /= linearN /= trmxK opprB.
-move/eqP: nrrT.
-by rewrite -skewrrT spinE crossmulC crossmulvN opprK.
-Qed.
-
-Lemma axial_vec_eigenspace M : M \is 'SO[R]_3 ->
-  (axial M <= eigenspace M 1)%MS.
-Proof.
-move=> MSO; apply/eigenspaceP; rewrite scale1r.
-case: (euler MSO) => u /andP[u0 /eqP uMu].
-have /is_eigenvector1_colinear : (u <= eigenspace M 1)%MS.
-  by apply/eigenspaceP; rewrite scale1r.
-move/(_ MSO) => uax.
-suff [k Hk] : exists k, axial M = k *: u by rewrite Hk -scalemxAl uMu.
-case/colinearP : uax => [/eqP ->| [_ [k [? ukv]]]].
-  exists 0; by rewrite scale0r.
-exists (1 / k); rewrite ukv scalerA div1r mulVr ?scale1r // unitfE.
-apply: contra u0; rewrite ukv => /eqP ->; by rewrite scale0r.
-Qed.
-
-End spin_matrix_axial_vector_rcfType.
-
-Section cayley_transform.
-
-Variable R : rcfType.
-Let vector := 'rV[R]_3.
-Implicit Types u : vector.
 
 (* TODO: move? *)
 Lemma ortho_addr1 n M : M \is 'O[R]_n.+1 ->
@@ -645,10 +665,6 @@ Lemma skew_of_ortho_is_so n Q : Q \is 'O[R]_n.+1 ->
   -1 \notin eigenvalue Q -> skew_of_ortho Q \is 'so[R]_n.+1.
 Proof. move=> HQ N1; by rewrite antiE trmx_skew_of_orth // ?opprK. Qed.
 
-(* TODO: move? *)
-Lemma sub1radd1r_comm n (M : 'M[R]_n.+1) : (1 - M) * (1 + M) = (1 + M) * (1 - M).
-Proof. by rewrite mulrDr mulr1 mulrBl mul1r mulrDl mul1r mulrBr mulr1. Qed.
-
 (* given a skew-symmetric matrix, builds an orthogonal matrix *)
 Definition ortho_of_skew n (M : 'M[R]_n.+1) := (1 + M) * (1 - M)^-1.
 
@@ -672,7 +688,7 @@ Qed.
 
 Lemma det_ortho_of_skew M : M \is 'so[R]_3 -> \det (ortho_of_skew M) = 1.
 Proof.
-move/unskewK => <-.
+move/unspinK => <-.
 rewrite /ortho_of_skew det_mulmx det_inv det_add1spin det_sub1spin.
 by rewrite divrr // unitfE paddr_eq0 ?oner_eq0 /= // sqr_ge0.
 Qed.
