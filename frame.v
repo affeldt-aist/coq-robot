@@ -344,6 +344,18 @@ Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_jcrossk. Qed.
 Definition frame_of_SO (M : 'M[T]_3) (HM : M \is 'SO[T]_3) : Frame.t T :=
   @Frame.mk _ (NOFrame.mk (rotation_sub HM)) HM.
 
+Lemma frame_of_SO_i (M : 'M[T]_3) (HM : M \is 'SO[T]_3) :
+  (frame_of_SO HM) |, 0 = row 0 M.
+Proof. by rewrite /frame_of_SO /= NOFrame.rowframeE. Qed.
+
+Lemma frame_of_SO_j (M : 'M[T]_3) (HM : M \is 'SO[T]_3) :
+  (frame_of_SO HM) |, 1 = row 1 M.
+Proof. by rewrite /frame_of_SO /= NOFrame.rowframeE. Qed.
+
+Lemma frame_of_SO_k (M : 'M[T]_3) (HM : M \is 'SO[T]_3) :
+  (frame_of_SO HM) |, 2%:R = row 2%:R M.
+Proof. by rewrite /frame_of_SO /= NOFrame.rowframeE. Qed.
+
 (* negative frame *)
 Record nframe := mkNFrame {
   noframe_of_nframe :> NOFrame.t T ;
@@ -814,6 +826,16 @@ by rewrite noframe_inv mxE.
 Qed.
 
 End FromTo_properties.
+
+(* TODO: move? *)
+Lemma sqr_norm_frame (T : rcfType) (a : Frame.t T) (v : 'rV[T]_3) :
+  norm v ^+ 2 = \sum_(i < 3) (v *d a|,i%:R)^+2.
+Proof.
+have H : norm v = norm (v *m (can_frame T) _R^ a).
+  by rewrite orth_preserves_norm // FromTo_is_O.
+rewrite H sqr_norm [in LHS]sum3E [in RHS]sum3E; congr (_ ^+ 2 + _ ^+ 2 + _ ^+ 2);
+  by rewrite FromTo_from_can mxE_dotmul_row_col -tr_row trmxK row_id NOFrame.rowframeE.
+Qed.
 
 Definition noframe_of_FromTo (T : rcfType) (A B : Frame.t T) : NOFrame.t T :=
   NOFrame.mk (FromTo_is_O A B).

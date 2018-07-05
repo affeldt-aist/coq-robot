@@ -309,17 +309,21 @@ rewrite argK ?expi0; last by rewrite normrN normr1.
 by move/eqP; rewrite eq_sym -subr_eq0 opprK (_ : 1 + 1 = 2%:R) // pnatr_eq0.
 Qed.
 
-Lemma expiNpi : expi (- pi) = - 1 :> T[i].
-Proof.
-rewrite expi_cos_sin cosN sinN cospi sinpi.
-by apply/eqP; rewrite eq_complex /= !eqxx.
-Qed.
+Lemma expii : expi (arg 'i) = 'i :> T[i].
+Proof. by rewrite argK // normc_def /= expr0n expr1n add0r sqrtr1. Qed.
 
 Lemma expiNi : expi (- arg 'i) = -'i :> T[i].
 Proof.
-have i1 : `|'i| = 1 :> T[i] by rewrite normc_def /= expr0n add0r expr1n sqrtr1.
-rewrite expi_cos_sin sinN cosN /cos /sin expi_arg; last by rewrite -normr_eq0 i1 oner_neq0.
-rewrite i1 divr1 /=; apply/eqP; by rewrite eq_complex /= oppr0 2!eqxx.
+rewrite expi_cos_sin sinN cosN /cos /sin expi_arg; last first.
+  by rewrite -normr_eq0 normci oner_neq0.
+rewrite normci divr1 /=; apply/eqP; by rewrite eq_complex /= oppr0 2!eqxx.
+Qed.
+
+Lemma expiNpi : expi (- pi) = - 1 :> T[i].
+Proof.
+rewrite /pi.
+rewrite expi_cos_sin cosN sinN cospi sinpi.
+by apply/eqP; rewrite eq_complex /= !eqxx.
 Qed.
 
 Lemma piNpi : pi = - pi :> angle T.
@@ -457,6 +461,9 @@ Definition pihalf : angle T := arg 'i.
 
 Lemma expi_pihalf : expi pihalf = 'i.
 Proof. by rewrite /pihalf argK // normc_def /= expr0n expr1n add0r sqrtr1. Qed.
+
+Lemma expi_Npihalf : expi (- pihalf) = - 'i.
+Proof. by rewrite /pihalf expiNi. Qed.
 
 Lemma sin_pihalf : sin pihalf = 1.
 Proof.
@@ -647,6 +654,24 @@ Proof.
 rewrite inE => adoml; rewrite /acos /cos /= expi_cos_sin /= -sin2cos2.
 rewrite sqrtr_sqr /= ltr0_norm //.
 move: (expi_cos_sin (- a)); rewrite cosN sinN => <-; by rewrite expiK.
+Qed.
+
+Lemma sinK (x : angle T) : 0 <= cos x (* TODO: define Npi2pi2_closed? *) ->
+  asin (sin x) = x.
+Proof.
+case: x => /= -[x y] x1 cosx1; apply/val_inj/eqP => /=.
+rewrite eq_complex /asin /sin argK /= ?eqxx ?andbT; last first.
+  rewrite {cosx1}.
+  rewrite normc_def /= sqr_sqrtr ?subrK ?sqrtr1 // subr_ge0.
+  move: x1; rewrite normc_def eq_complex eqxx andbT /=.
+  move/eqP/(congr1 (fun x => x^+2)); rewrite expr1n.
+  rewrite sqr_sqrtr ?addr_ge0 // ?sqr_ge0 // => <-.
+  by rewrite ler_addr // sqr_ge0.
+rewrite /cos /= in cosx1.
+move : x1; rewrite normc_def /= eq_complex /= eqxx andbT.
+move/eqP/(congr1 (fun x => x^+2)); rewrite expr1n.
+rewrite  sqr_sqrtr // ?addr_ge0 // ?sqr_ge0 // => <-.
+by rewrite addrK sqrtr_sqr ger0_norm.
 Qed.
 
 Lemma asinK r : -1 <= r <= 1 -> sin (asin r) = r.

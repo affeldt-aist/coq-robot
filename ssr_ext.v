@@ -152,6 +152,17 @@ Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 Lemma sum4E (T : ringType) (f : 'I_4 -> T) : \sum_(i < 4) f i = f 0 + f 1 + f 2%:R + f 3%:R.
 Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 
+Lemma scaler_eq1 (F : fieldType) (R : lmodType F) (k : F) (a : R) :
+  a != 0 -> k *: a = a -> k = 1.
+Proof.
+move=> a0 /eqP; rewrite -{2}(scale1r a) -subr_eq0 -scalerBl.
+by rewrite scaler_eq0 (negbTE a0) subr_eq0 orbF => /eqP.
+Qed.
+
+Lemma scaler_eqN1 (F : fieldType) (R : lmodType F) (k : F) (a : R) :
+  a != 0 -> - k *: a = a -> k = - 1.
+Proof. by move=> a0 /scaler_eq1 => /(_ a0) /eqP; rewrite eqr_oppLR => /eqP. Qed.
+
 Section extra_perm3.
 
 Definition perm3_def (i j : 'I_3) : 'I_3 ^ 3 :=
@@ -284,29 +295,37 @@ End extra_linear.
 Section extra_complex.
 
 Variable R : rcfType.
+Implicit Types x : R[i].
+Implicit Types a b k : R.
 
-Lemma opp_conjc (a b : R) : (- (a -i* b) = (- a +i* b))%C.
+Lemma opp_conjc a b : (- (a -i* b) = (- a +i* b))%C.
 Proof. by apply/eqP; rewrite eq_complex /= opprK !eqxx. Qed.
 
-Lemma Re_scale (x : R[i]) (k : R) : k != 0 -> complex.Re (x / k%:C%C) = complex.Re x / k.
+Lemma Re_scale x k : k != 0 -> complex.Re (x / k%:C%C) = complex.Re x / k.
 Proof.
 move=> k0; case: x => a b /=.
 rewrite expr0n /= addr0 mul0r -mulrN opprK mulr0 addr0.
 by rewrite expr2 invrM // ?unitfE // (mulrA k) divff // mul1r.
 Qed.
 
-Lemma complexZ1 (a b k : R) : ((k * a) +i* (k * b) = k%:C * (a +i* b))%C.
+Lemma ReNiIm x : complex.Re (x * - 'i%C) = complex.Im x.
+Proof. by case: x => a b; simpc. Qed.
+
+Lemma complexZ1 a b k : ((k * a) +i* (k * b) = k%:C * (a +i* b))%C.
 Proof. by simpc. Qed.
 
-Lemma complexZ2 (a b k : R) : ((k * a) -i* (k * b) = k%:C * (a -i* b))%C.
+Lemma complexZ2 a b k : ((k * a) -i* (k * b) = k%:C * (a -i* b))%C.
 Proof. by simpc. Qed.
 
-Lemma ReZ (x : R[i]) (k : R) : complex.Re (k%:C%C * x) = k * complex.Re x.
+Lemma ReZ x k : complex.Re (k%:C%C * x) = k * complex.Re x.
 Proof. case: x => a b /=; by rewrite mul0r subr0. Qed.
 
-Lemma ImZ (x : R[i]) (k : R) : complex.Im ((k%:C)%C * x) = k * complex.Im x.
+Lemma ImZ x k : complex.Im ((k%:C)%C * x) = k * complex.Im x.
 Proof. by case: x => a b /=; rewrite mul0r addr0. Qed.
 
 Definition complexZ := (complexZ1, @complexZ2).
+
+Lemma normci : `|'i| = 1 :> R[i].
+Proof. by rewrite normc_def /= expr0n add0r expr1n sqrtr1. Qed.
 
 End extra_complex.
