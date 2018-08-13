@@ -156,7 +156,7 @@ Notation "'\v(' t ')'" := (TwistCoor.lin t) (format "'\v('  t  ')'", at level 3)
 Definition bilinear (R : ringType) (T : lmodType R) (op : T -> T -> T) :=
   forall y, linear (op^~ y) /\ linear (op y).
 
-(* TODO: wip *)
+(* TODO(rei): wip, see also the end of skew.v *)
 Module LieAlgebra.
 Section lie_algebra.
 Variable T : ringType.
@@ -181,7 +181,7 @@ End LieAlgebra.
 Notation "lie[ t1 , t2 ]" := (@LieAlgebra.op _ _ t1 t2).
 
 Section lie_algebra_properties.
-Variables (T : rcfType (*realType*)) (m n : nat).
+Variables (T : rcfType) (m n : nat).
 Variable A : LieAlgebra.t T.
 
 Local Notation "l[ t1 , t2 ]" := (@LieAlgebra.op _ A t1 t2).
@@ -258,7 +258,7 @@ Abort.
 
 Section twist_properties.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 
 Lemma mkE (t : TwistCoor.t T) : \T(\v( t ), \w( t )) = t.
@@ -432,16 +432,6 @@ rewrite /vee /wedge /lin_of_twist /ang_of_twist block_mxKdl block_mxKul spinK.
 by rewrite mkE.
 Qed.
 
-(* TODO: move *)
-Lemma skew_mx_crossmul (u v : 'rV[T]_3) : \S(v *v u) = \S(u) *m \S(v) - \S(v) *m \S(u).
-Proof.
-apply/eqP/mulmxP => w.
-rewrite [in LHS]spinE mulmxBr !mulmxA ![in RHS]spinE.
-rewrite (crossmulC v w) crossmulvN opprK.
-move/eqP: (jacobi_crossmul v u w); rewrite eq_sym -subr_eq eq_sym => /eqP ->.
-by rewrite add0r (crossmulC w) opprK.
-Qed.
-
 Lemma lie_bracketE (t1 t2 : TwistCoor.t T) :
   let v1 := TwistCoor.lin t1 in
   let v2 := TwistCoor.lin t2 in
@@ -459,7 +449,7 @@ rewrite (mulmx_block \S(w2) 0 v2 0 \S(w1)).
 rewrite !(mul0mx,addr0,mulmx0).
 rewrite (opp_block_mx (\S(w2) *m \S(w1))) !oppr0.
 rewrite (add_block_mx (\S(w1) *m \S(w2))) !addr0.
-by rewrite 2!spinE skew_mx_crossmul (crossmulC w1 v2) opprK.
+by rewrite 2!spinE spin_crossmul (crossmulC w1 v2) opprK.
 Qed.
 
 Lemma lie_bracketE' (t1 t2 : TwistCoor.t T) :

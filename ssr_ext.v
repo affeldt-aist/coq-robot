@@ -329,3 +329,4 @@ Lemma normci : `|'i| = 1 :> R[i].
 Proof. by rewrite normc_def /= expr0n add0r expr1n sqrtr1. Qed.
 
 End extra_complex.
+

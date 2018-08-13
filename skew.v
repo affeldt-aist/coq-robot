@@ -106,6 +106,13 @@ Lemma antiE M : (M \is 'so[R]_n) = (M == - M^T). Proof. by []. Qed.
 Lemma antiN M : (- M \is 'so[R]_n) = (M \is 'so[R]_n).
 Proof. apply/idP/idP; by rewrite !antiE linearN /= opprK eqr_oppLR. Qed.
 
+Lemma trmx_anti M : (M \is 'so[R]_n) = (M^T \is 'so[R]_n).
+Proof.
+apply/idP/idP => H; move: (H).
+by rewrite antiE -eqr_oppLR => /eqP <-; rewrite antiN.
+by rewrite antiE trmxK -eqr_oppLR => /eqP <-; rewrite antiN.
+Qed.
+
 Lemma conj_so P M : M \is 'so[R]_n -> P^T *m M *m P \is 'so[R]_n.
 Proof.
 rewrite !antiE -eqr_oppLR => /eqP HM.
@@ -353,6 +360,23 @@ Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
+
+Lemma spin_similarity (M : 'M[R]_3) (w : 'rV[R]_3) :
+  M \is 'SO[R]_3 -> M^T * \S(w) * M = \S(w *m M).
+Proof.
+move=> MSO; apply/eqP/complex.mulmxP => u.
+rewrite -mulmxE !mulmxA spinE (mulmxr_crossmulr_SO _ _ MSO).
+by rewrite -mulmxA orthogonal_tr_mul ?rotation_sub // mulmx1 spinE.
+Qed.
+
+Lemma spin_crossmul u v : \S(v *v u) = \S(u) *m \S(v) - \S(v) *m \S(u).
+Proof.
+apply/eqP/mulmxP => w.
+rewrite [in LHS]spinE mulmxBr !mulmxA ![in RHS]spinE.
+rewrite (crossmulC v w) crossmulvN opprK.
+move/eqP: (jacobi_crossmul v u w); rewrite eq_sym -subr_eq eq_sym => /eqP ->.
+by rewrite add0r (crossmulC w) opprK.
+Qed.
 
 Lemma spinii u i : \S( u ) i i = 0.
 Proof. by rewrite anti_diag // spin_is_so. Qed.

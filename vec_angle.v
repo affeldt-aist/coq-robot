@@ -594,6 +594,14 @@ Proof. by rewrite /normalcomp opprB axialcompNv opprK addrC. Qed.
 Lemma normalcompZ k e : normalcomp (k *: e) e = 0.
 Proof. by rewrite /normalcomp axialcompZ subrr. Qed.
 
+Lemma normalcompB v1 v2 : normalcomp (v1 - v2) v2 = normalcomp v1 v2.
+Proof.
+apply/esym/eqP.
+rewrite /normalcomp subr_eq -addrA -scaleNr -scalerDl -dotmulvN -dotmulDr.
+rewrite opprB -(addrA v1) (addrCA v1) subrK dotmulC dotmul_normalize_norm.
+by rewrite norm_scale_normalize addrC addrK.
+Qed.
+
 Lemma normalcomp_colinear_helper v e : normalcomp v e = 0 -> colinear v e.
 Proof.
 move/eqP; rewrite subr_eq0 => /eqP ->.
@@ -764,13 +772,7 @@ have H' : ~~ colinear v2 (v2 - v1).
 have H2 : sin (vec_angle v2 (v2 - v1)) = norm (normalcomp (v2 - v1) v2) / norm (v2 - v1).
   rewrite vec_angleC; apply triangle_sin_vector; by rewrite colinear_sym.
 rewrite [in RHS]vec_angleC [in RHS]H2.
-have H3 : normalcomp v1 v2 = normalcomp (v1 - v2) v2.
-  (* TODO: lemma? *)
-  apply/eqP.
-  rewrite /normalcomp subr_eq -addrA -scaleNr -scalerDl -dotmulvN -dotmulDr.
-  rewrite opprB -(addrA v1) (addrCA v1) subrK dotmulC dotmul_normalize_norm.
-  by rewrite norm_scale_normalize addrC addrK.
-by rewrite H3 mulrAC -(opprB v2) normalcompNv normN.
+by rewrite -normalcompB mulrAC -(opprB v2) normalcompNv normN.
 Qed.
 
 Lemma law_of_sines_point (p1 p2 p : 'rV[T]_3) : ~~ tricolinear p1 p2 p ->
@@ -997,7 +999,7 @@ End line_line_intersection.
 
 Section distance_line.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let point := 'rV[T]_3.
 
 Definition distance_point_line (p : point) l : T :=
