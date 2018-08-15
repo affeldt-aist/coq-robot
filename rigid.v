@@ -5,8 +5,6 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-(*From mathcomp.analysis Require Import reals.*)
-
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
 (*
@@ -23,7 +21,7 @@ Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
  7. section SE3_def
  8. section SE3_prop
  9. section Adjoint
-    adjoint representation
+    adjoint transformation
  10. Module SE
  11. section rigid_transformation_is_homogeneous_transformation
      (a direct isometry (i.e., cross-product preserving) can be expressed in homogeneous coordinates)
@@ -770,32 +768,11 @@ End SE3_prop.
 
 Section Adjoint.
 
-Variable T : rcfType.
+Variables (T : rcfType).
+Implicit Types g : 'M[T]_4.
 
-(* TODO: move? *)
-Lemma conj_skew_mx_crossmul (r : 'M[T]_3) (w : 'rV[T]_3) (t : 'rV[T]_3) : r \is 'SO[T]_3 ->
-  t *m (r^T * \S( w ) * r) = (w *m r) *v t.
-Proof.
-move=> rSO.
-rewrite mul_spin (_ : _ * r = \S(w *m r)); first by rewrite spinE.
-rewrite -mulmxE mulmx_col3.
-rewrite -{2 4 6}(trmxK r).
-rewrite [in LHS](col_mx3_rowE r^T) !rowK /=.
-rewrite !mul_tr_col_mx3.
-have H i r' : w *v row i r' *d row i r' = 0.
-  by rewrite dotmulC dot_crossmulCA crossmulvv dotmulv0.
-rewrite 3!H.
-rewrite dotmulC dot_crossmulCA crossmulC dotmulvN dotmulNv opprK SO_icrossj ?rotationV //.
-rewrite (dotmulC (_ *v _)) dot_crossmulCA crossmulC dotmulvN dotmulNv opprK SO_icrossk ?rotationV // dotmulvN.
-rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_icrossj ?rotationV // dotmulNv.
-rewrite (dotmulC (_ *v _)) dot_crossmulCA crossmulC dotmulvN dotmulNv opprK SO_jcrossk ?rotationV //.
-rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_icrossk ?rotationV // dotmulvN dotmulNv opprK.
-rewrite (dotmulC (_ *v _)) dot_crossmulCA SO_jcrossk ?rotationV // dotmulNv.
-apply/matrix3P/and9P; split; apply/eqP; rewrite ![in LHS]mxE /= !spinij //;
-  try congr (- _); by rewrite dotmulE mxE; apply/eq_bigr => /= j _; rewrite !mxE.
-Qed.
-
-Definition Adjoint (g : 'M[T]_4) : 'M_6 :=
+(* adjoint transformation associated with g *)
+Definition Adjoint g : 'M_6 :=
   let r := rot_of_hom g in
   let t := trans_of_hom g in
   block_mx r 0 (r * \S(t)) r.
@@ -805,7 +782,7 @@ Proof.
 by rewrite /Adjoint rot_of_hom1 mul1r trans_of_hom1 spin0 -scalar_mx_block.
 Qed.
 
-Definition inv_Adjoint (g : 'M[T]_4) : 'M_6 :=
+Definition inv_Adjoint g : 'M_6 :=
   let r := rot_of_hom g in
   let t := trans_of_hom g in
   block_mx r^T 0 (- r^T * \S(t *m r^T)) r^T.
@@ -821,19 +798,19 @@ Qed.
 Lemma AdjointM_helper g1 g2 : g1 \is 'SE3[T] -> g2 \is 'SE3[T] ->
   let r1 := rot_of_hom g1 in let r2 := rot_of_hom g2 in
   let t1 := trans_of_hom g1 in let t2 := trans_of_hom g2 in
-  Adjoint (g1 * g2) = block_mx (r1 * r2) 0 ((r1 * r2) * (\S(t2) + r2^T * \S(t1) * r2)) (r1 * r2).
+  Adjoint (g1 * g2) = block_mx (r1 * r2) 0
+    ((r1 * r2) * (\S(t2) + r2^T * \S(t1) * r2)) (r1 * r2).
 Proof.
 move=> Hg1 Hg2 r1 r2 t1 t2.
 rewrite /Adjoint -rot_of_homM // trans_of_homM // spinD.
 set a := rot_of_hom (_ * _) * _. set b := rot_of_hom (_ * _) * _.
 suff : a = b by move=> ->.
 rewrite {}/a {}/b; congr (_ * _).
-apply/eqP/mulmxP => t.
-rewrite 2!mulmxDr conj_skew_mx_crossmul; last by rewrite rot_of_hom_SO.
-rewrite addrC; congr (_ + _); by rewrite spinE.
+rewrite spin_similarity; last by rewrite rot_of_hom_SO.
+by rewrite -/t1 -/t2 -/r2 addrC.
 Qed.
 
-(* [murray] exercise 14 (b) , p. 77 *)
+(* [murray] exercise 14 (b), p. 77 *)
 Lemma AdjointM g1 g2 : g1 \is 'SE3[T] -> g2 \is 'SE3[T] ->
   let r1 := rot_of_hom g1 in let r2 := rot_of_hom g2 in
   let t1 := trans_of_hom g1 in let t2 := trans_of_hom g2 in
@@ -855,7 +832,7 @@ Module SE.
 
 Section se.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 

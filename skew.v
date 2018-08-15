@@ -501,6 +501,19 @@ rewrite sqr_spin linearD /= mxtrace_tr_mul linearN /= linearZ /=; apply/eqP.
 by rewrite !mxtrace_scalar subr_eq addrC mulrC -mulrBl -natrB // mul1r.
 Qed.
 
+(* [murray] second half of exercise 9(a), p. 75 *)
+Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
+Proof.
+apply/andP; split; last by apply/sub_kermxP; rewrite spinE crossmulvv.
+apply/rV_subP => v /sub_kermxP.
+rewrite spinE => /eqP/vec_angle.colinearP[|[_[k [Hk1 Hk2]]]].
+  move/eqP => ->.
+  by rewrite sub0mx.
+apply/sub_rVP; exists (k^-1).
+rewrite Hk2 scalerA mulVr ?scale1r // unitfE; apply: contra w0.
+rewrite Hk2 => /eqP ->; by rewrite scale0r.
+Qed.
+
 End spin_matrix_axial_vector_rcfType.
 
 Section spectral_properties.
@@ -724,30 +737,3 @@ move=> Mso; by rewrite rotationE ortho_of_skew_is_O //= det_ortho_of_skew.
 Qed.
 
 End cayley_transform.
-
-Section wip.
-
-Variable R : rcfType.
-
-Definition lie_bracket (w1 w2 : 'rV[R]_3) := \S( w1 ) * \S( w2) - \S( w2 ) * \S( w1 ).
-
-Local Notation "[ w1 , w2 ]" := (lie_bracket w1 w2).
-
-Lemma lie_bracketE w1 w2 : [ w1 , w2 ] = \S( w1 *v w2 ).
-Proof.
-Abort.
-
-(* [murray] second half of exercise 9(a), p. 75 *)
-Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
-Proof.
-apply/andP; split; last by apply/sub_kermxP; rewrite spinE crossmulvv.
-apply/rV_subP => v /sub_kermxP.
-rewrite spinE => /eqP/vec_angle.colinearP[|[_[k [Hk1 Hk2]]]].
-  move/eqP => ->.
-  by rewrite sub0mx.
-apply/sub_rVP; exists (k^-1).
-rewrite Hk2 scalerA mulVr ?scale1r // unitfE; apply: contra w0.
-rewrite Hk2 => /eqP ->; by rewrite scale0r.
-Qed.
-
-End wip.
