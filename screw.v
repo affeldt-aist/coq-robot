@@ -204,12 +204,10 @@ Lemma lie_anticommutative (x y : a) : (lie[x, y] : a) = - (lie[y, x] : a).
 Proof.
 apply/eqP; rewrite -subr_eq0 opprK; apply/eqP.
 rewrite -[RHS](liealternative (x + y)).
-transitivity lie[x + y, x + y]; last by rewrite liealternative.
-apply/esym.
 move: (proj1 (liebilinear (x + y)) 1 x y); rewrite !scale1r => ->.
 move: (proj2 (liebilinear x) 1 x y); rewrite !scale1r => ->.
 move: (proj2 (liebilinear y) 1 x y); rewrite !scale1r => ->.
-by rewrite !liealternative !(addr0,add0r).
+by rewrite 2!liealternative !(addr0,add0r).
 Qed.
 End lie_prop.
 
@@ -255,6 +253,9 @@ Canonical lie_euclidean_3_type (R : rcfType) :=
   Lie.Pack (Lie.Class (Lie.Mixin (@lie_e3_alternative R)
                                  (@lie_e3_bilinear R)
                                  (@lie_e3_jacobi R))).
+
+(* NB: spin is a Lie algebra isomorphism between (R^3,*v) and
+   (so[R]_3,[S(w1),S(w2)]=S(w1)S(w2)-S(w2)S(w1)) *)
 
 Goal forall (T : rcfType) (u v : 'rV[T]_3), u *v v = - (v *v u).
 Proof.
@@ -342,6 +343,7 @@ Variable T : rcfType.
 Implicit Types E : 'M[T]_4.
 
 (* the set of twists, [murray] p.40 *)
+(* NB: a.k.a. the Lie algebra of SE(3) *)
 Definition se3 := [qualify E : 'M[T]_4 |
   [&& @ulsubmx _ 3 1 3 1 E \is 'so[T]_3,
       @ursubmx _ 3 1 3 1 E == 0 &
@@ -405,6 +407,7 @@ Definition wedge t : 'M_4 := block_mx \S(\w( t )) 0 (\v( t )) 0.
 (* extract the 6-dimensional vector (i.e., the twist coordinates)
    which parameterizes a twist *)
 Definition vee E : twistcoor T :=  \T(lin_of_twist E, ang_of_twist E).
+(* NB: se3 is isomorphic to R^6 via this mapping *)
 
 Lemma lin_of_twist_wedge t : \v( t ) = lin_of_twist (wedge t).
 Proof. by rewrite /TwistCoor.lin /lin_of_twist /wedge block_mxKdl. Qed.
@@ -490,11 +493,17 @@ Qed.
 Lemma lie_bracketE t1 t2 :
   let v1 := \v( t1 ) in let v2 := \v( t2 ) in
   let w1 := \w( t1 ) in let w2 := \w( t2 ) in
+  lie[wedge t1, wedge t2] = wedge t1 * wedge t2 - wedge t2 * wedge t1.
+Proof. by []. Qed.
+
+Lemma lie_bracketE1 t1 t2 :
+  let v1 := \v( t1 ) in let v2 := \v( t2 ) in
+  let w1 := \w( t1 ) in let w2 := \w( t2 ) in
   lie[wedge t1, wedge t2] =
   block_mx \S( w2 *v w1 ) 0 (w2 *v v1 + v2 *v w1) 0.
 Proof.
 move=> v1 v2 w1 w2.
-(* TODO *) rewrite /Lie.bracket /= /lie_sqmat.
+rewrite lie_bracketE.
 rewrite /wedge -/v1 -/v2 -/w1 -/w2.
 rewrite -mulmxE.
 rewrite (mulmx_block \S(w1) 0 v1 0 \S(w2)).
@@ -505,13 +514,14 @@ rewrite (add_block_mx (\S(w1) *m \S(w2))) !addr0.
 by rewrite 2!spinE spin_crossmul (crossmulC w1 v2) opprK.
 Qed.
 
-Lemma lie_bracketE' t1 t2 :
+Lemma lie_bracketE2 t1 t2 :
   let v1 := \v( t1 ) in let v2 := \v( t2 ) in
   let w1 := \w( t1 ) in let w2 := \w( t2 ) in
   lie[wedge t1, wedge t2] = wedge \T( w2 *v v1 + v2 *v w1, w2 *v w1).
 Proof.
 move=> v1 v2 w1 w2.
-by rewrite lie_bracketE -/v1 -/v2 -/w1 -/w2 /wedge TwistCoor.lin_of TwistCoor.ang_of.
+rewrite lie_bracketE1.
+by rewrite -/v1 -/v2 -/w1 -/w2 /wedge TwistCoor.lin_of TwistCoor.ang_of.
 Qed.
 
 End twist_properties.
@@ -522,17 +532,20 @@ Section twist_and_adjoint.
 Variable T : rcfType.
 Implicit Types t : twistcoor T.
 
+Definition SE3_action (g : 'M[T]_4) t : TwistCoor.t T := t *m Adjoint g.
+
 (* [murray] p.56, lem 2.13 (part 2)
    action of 'SE3[T] on twist coordinates *)
 Lemma action_Adjoint g : g \is 'SE3[T] -> forall t,
-  wedge (t *m Adjoint g) = g^-1 * wedge t * g.
+  SE3_action g t = vee (g^-1 * wedge t * g).
 Proof.
 move=> gSE t.
+rewrite /SE3_action.
 (* lhs *)
 rewrite [in LHS]/Adjoint -[in LHS](mkE t) (mulmx_block \v(t) _ 0 0 (rot_of_hom g)).
 rewrite !(mulmx0,mul0mx,addr0,add0r).
 (* rhs *)
-rewrite [in RHS]/wedge /= [in X in _ = _ * _ * X](SE3E gSE) [in RHS]/hom -mulrA -[in RHS]mulmxE.
+rewrite [in X in _ = vee (_ * _ * X)](SE3E gSE) [in RHS]/hom -mulrA -[in RHS]mulmxE.
 rewrite (mulmx_block \S( \w( t ) ) 0 ( \v( t ) ) 0 (rot_of_hom g)).
 rewrite !(mulmx0,add0r,mul1mx,mul0mx,addr0).
 
@@ -541,54 +554,45 @@ rewrite (mulmx_block (rot_of_hom g)^T 0 _ 1 (\S( \w( t ) ) *m rot_of_hom g)).
 rewrite !(mul0mx,addr0,mulmx0,mul1mx).
 set a' := _ + _. set b' := _ *m _.
 set a := _ *m _. set b := _ + _.
-rewrite /wedge TwistCoor.ang_of TwistCoor.lin_of; f_equal.
-- by rewrite {}/a {}/b' mulmxA !mulmxE spin_similarity // rot_of_hom_SO.
+rewrite /vee /lin_of_twist block_mxKdl /ang_of_twist block_mxKul /TwistCoor.mk.
+f_equal.
 - rewrite {}/a' {}/b [in RHS]addrC; congr (_ + _).
   rewrite -mulmxE -mulmxA mulmxE mulNmx mulrA spin_similarity ?rot_of_hom_SO //.
   by rewrite -!mulmxE mulmxA spinE crossmulC -spinE.
+- by rewrite {}/a {}/b' mulmxA !mulmxE spin_similarity // ?rot_of_hom_SO // spinK.
 Qed.
 
-Definition SE3_action (g : 'M[T]_4) t : TwistCoor.t T :=
-  vee (wedge (t *m Adjoint g)).
-
 Lemma SE3_action_neutral t : SE3_action 1 t = t.
-Proof. by rewrite /SE3_action Adjoint1 mulmx1 wedgeK. Qed.
+Proof. by rewrite /SE3_action Adjoint1 mulmx1. Qed.
 
 Lemma SE3_action_comp (g1 g2 : 'M[T]_4) t :
   g1 \is 'SE3[T] -> g2 \is 'SE3[T] ->
   SE3_action g1 (SE3_action g2 t) = SE3_action (g2 * g1) t.
 Proof.
-move=> ? ?; rewrite /SE3_action [in LHS]wedgeK [in RHS]wedgeK action_Adjoint //.
-apply injective_wedge; rewrite action_Adjoint // action_Adjoint ?rpredM //.
-by rewrite veeK ?conj_SE3_se3 // invrM ?SE3_is_unitmx // !mulrA.
+move=> ? ?; rewrite action_Adjoint // action_Adjoint // veeK ?conj_SE3_se3 //.
+rewrite action_Adjoint; last by rewrite rpredM.
+by rewrite !mulrA invrM // ?SE3_is_unitmx.
 Qed.
 
 Lemma linear_action_Adjoint g : g \is 'SE3[T] -> linear (SE3_action g).
-Proof.
-move=> Hg k y x.
-rewrite /SE3_action !action_Adjoint // linear_wedge mulrDr mulrDl -scalerAr -scalerAl.
-by rewrite linear_vee.
-Qed.
-
-
+Proof. move=> Hg k y x; by rewrite /SE3_action mulmxDl scalemxAl. Qed.
 
 (* NB: wrong? *)
 Lemma AdjointE t1 t2 :
   t1 *m Adjoint (wedge t2) = vee lie[wedge t1, wedge t2].
 Proof.
-rewrite lie_bracketE' /=.
-rewrite /vee -lin_of_twist_wedge -ang_of_twist_wedge lin_tcoorE ang_tcoorE.
+rewrite lie_bracketE2 wedgeK.
 rewrite /Adjoint.
 rewrite -{1}(mkE t1).
-rewrite (mulmx_block \v(t1) _ _ _ (rot_of_hom (wedge t2))) !(mulmx0,add0r,mul0mx).
-rewrite /TwistCoor.mk; f_equal.
-  rewrite -!spinE; congr (_ + _).
-    by rewrite /wedge /rot_of_hom block_mxKul.
-  rewrite /wedge /trans_of_hom block_mxKdl /rot_of_hom block_mxKul.
-  rewrite -mulmxE mulmxA !spinE.
-  admit.
-rewrite -spinE.
-by rewrite /wedge /rot_of_hom block_mxKul.
+rewrite (mulmx_block \v(_) \w(_) 0 0 (rot_of_hom (wedge _))).
+rewrite !(mul0mx,mulmx0,add0r).
+rewrite /rot_of_hom /wedge block_mxKul.
+rewrite /trans_of_hom block_mxKdl.
+rewrite /TwistCoor.mk; f_equal; last first.
+  by rewrite spinE.
+rewrite spinE; congr (_ + _).
+rewrite -mulmxE mulmxA spinE; congr (_ *v _).
+rewrite spinE.
 Abort.
 
 End twist_and_adjoint.

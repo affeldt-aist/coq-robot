@@ -810,6 +810,9 @@ rewrite {2}(noframe_inv B) trmxK -mulmxE mulmxA -(mulmxA _ (matrix_of_noframe B)
 by rewrite mulVmx ?noframe_is_unit // mulmx1 -noframe_inv mulmxV // noframe_is_unit.
 Qed.
 
+Lemma FromTo_unit A B : A _R^ B \is a GRing.unit.
+Proof. exact/orthogonal_unit/FromTo_is_O. Qed.
+
 Lemma FromTo_is_SO A B : A _R^ B \is 'SO[T]_3.
 Proof.
 by rewrite FromToE rpredM // ?Frame.MSO // noframe_inv rotationV Frame.MSO.

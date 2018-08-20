@@ -22,7 +22,6 @@ Require vec_angle.
  4. Section spectral_properties.
       sample lemma: eigenvalues of spin matrices
  5. Section cayley_transform
- 6. wip (lie_bracket)
 *)
 
 Set Implicit Arguments.
@@ -361,6 +360,7 @@ Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
 
+(* [sciavicco] eqn 3.9 *)
 Lemma spin_similarity (M : 'M[R]_3) (w : 'rV[R]_3) :
   M \is 'SO[R]_3 -> M^T * \S(w) * M = \S(w *m M).
 Proof.

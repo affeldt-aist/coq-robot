@@ -223,7 +223,7 @@ End isometry_3_prop.
 
 Module DIso.
 Section direct_isometry.
-Variable (T : rcfType (*realType*)).
+Variable (T : rcfType).
 Record t := mk {
   f :> 'Iso[T]_3 ;
   P : iso_sgn f == 1 }.
@@ -236,7 +236,7 @@ Coercion disometry_coercion : DIso.t >-> Iso.t.
 
 Section diso_3_prop.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 Lemma ortho_of_diso_is_SO (f : 'DIso_3[T]) : ortho_of_iso f \is 'SO[T]_3.
 Proof.
@@ -247,7 +247,7 @@ End diso_3_prop.
 
 Section tangent_frames.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 Implicit Types p : point.
@@ -258,17 +258,17 @@ Definition tframe_k (f : TFrame.t T) : vector := (f|,2%:R).
 
 End tangent_frames.
 
-Lemma tvec_of_line (T : rcfType (*realType*)) (l : Line.t T) :
+Lemma tvec_of_line (T : rcfType) (l : Line.t T) :
   Line.vector l = (Line.vector l).
 Proof. by case: l. Qed.
 
-Lemma line_of_tvec (T : rcfType (*realType*)) p (v : 'rV[T]_3) :
+Lemma line_of_tvec (T : rcfType) p (v : 'rV[T]_3) :
   Line.vector (Line.mk p v) = v.
 Proof. by case: v => v /=. Qed.
 
 Section derivative_map.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types f : 'Iso[T]_3.
 
@@ -786,6 +786,15 @@ Definition inv_Adjoint g : 'M_6 :=
   let r := rot_of_hom g in
   let t := trans_of_hom g in
   block_mx r^T 0 (- r^T * \S(t *m r^T)) r^T.
+
+(*Lemma inv_Adjoint' g :
+  let r := rot_of_hom g in
+  let t := trans_of_hom g in
+  inv_Adjoint g = block_mx r^T 0 (- \S(t) * r^T) r^T.
+Proof.
+move=> r t; rewrite /inv_Adjoint; f_equal.
+rewrite -mulmxE mulNmx -spin_similarity ?rotationV ?rot_of_hom_SO //.
+ rewrite trmxK -/t -/r.*)
 
 (* [murray] exercise 14 (a), p.77 *)
 Lemma inv_AdjointE g : g \is 'SE3[T] -> inv_Adjoint g = Adjoint g^-1.
