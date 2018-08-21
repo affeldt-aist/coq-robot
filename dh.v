@@ -5,8 +5,6 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-(*From mathcomp.analysis Require Import reals.*)
-
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
 Set Implicit Arguments.
@@ -146,7 +144,7 @@ End plucker_of_line.
 
 Section denavit_hartenberg_homogeneous_matrix.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 Definition dh_mat (jangle : angle T) loffset llength (ltwist : angle T) : 'M[T]_4 :=
   hRx ltwist * hTx llength * hTz loffset * hRz jangle.
@@ -156,7 +154,7 @@ Definition dh_rot (jangle ltwist : angle T) := col_mx3
   (row3 (cos ltwist * - sin jangle) (cos ltwist * cos jangle) (sin ltwist))
   (row3 (sin ltwist * sin jangle) (- sin ltwist * cos jangle) (cos ltwist)).
 
-Lemma dh_rot_i (f1 f0 : Frame.t T) t a : f1 _R^ f0 = dh_rot t a ->
+Lemma dh_rot_i (f1 f0 : frame T) t a : f1 _R^ f0 = dh_rot t a ->
   f1|,0 *m f0^T = row3 (cos t) (sin t) 0.
 Proof.
 rewrite rowframeE (rowE 0 f1) -mulmxA FromToE noframe_inv => ->.
@@ -183,15 +181,15 @@ End denavit_hartenberg_homogeneous_matrix.
 
 Section denavit_hartenberg_convention.
 
-Variable T : rcfType (*realType*).
-Variables F0 F1 : TFrame.t T.
+Variable T : rcfType.
+Variables F0 F1 : tframe T.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[T]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_tframe T) _R^ F0.
 
-Goal FreeVect.mk F0 p1_in_0 = to_coord F0 (FreeVect.mk (can_tframe T) (TFrame.o F1 - TFrame.o F0)).
+Goal `[ p1_in_0 $ F0 ] = rmap F0 `[ TFrame.o F1 - TFrame.o F0 $ can_tframe T ].
 Proof.
 rewrite /p1_in_0.
-by rewrite /to_coord.
+by rewrite /rmap.
 Abort.
 
 Hypothesis dh1 : perpendicular (xaxis F1) (zaxis F0).
@@ -436,7 +434,7 @@ End denavit_hartenberg_convention.
 (* TODO: in progress, [angeles] p.141-142 *)
 Module Joint.
 Section joint.
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Record t := mk {
   vaxis : vector ;
@@ -447,7 +445,7 @@ End Joint.
 
 Module Link.
 Section link.
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Record t := mk {
   length : T ; (* nonnegative, distance between to successive joint axes *)
   offset : T ; (* between to successive X axes *)
@@ -459,10 +457,10 @@ End Link.
 
 Section open_chain.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
-Let frame := TFrame.t T.
+Let frame := tframe T.
 Let joint := Joint.t T.
 Let link := Link.t T.
 

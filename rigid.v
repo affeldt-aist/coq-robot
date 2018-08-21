@@ -9,28 +9,31 @@ Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
 (*
  OUTLINE:
- 1. section central_isometry_n
- 2. section central_isometry_3
- 3. section isometry_3_prop
- 4. section diso_3_prop
- 4. section tangent_vectors_and_frames
- 5. section derivative_map
+ 1. Section central_isometry_n
+ 2. Section central_isometry_3
+ 3. Section isometry_3_prop
+ 4. Section diso_3_prop
+ 5. Section tangent_frames
+ 6. section derivative_map
      definition of what it means to preserve the cross-product by a transformation
      (sample lemma: preservation of the cross-product by derivative maps)
- 6. section homogeneous_points_and_vectors
- 7. section SE3_def
- 8. section SE3_prop
- 9. section Adjoint
+ 7. Section homogeneous_points_and_vectors
+ 8. Section SE3_def
+ 9. section SE3_prop
+ 10. Section Adjoint
     adjoint transformation
- 10. Module SE
- 11. section rigid_transformation_is_homogeneous_transformation
+ 11. Module SE
+ 12. section rigid_transformation_is_homogeneous_transformation
      (a direct isometry (i.e., cross-product preserving) can be expressed in homogeneous coordinates)
 *)
 
-Reserved Notation "''Iso[' T ]_ n" (at level 8, n at level 2, format "''Iso[' T ]_ n").
-Reserved Notation "''CIso[' T ]_ n" (at level 8, n at level 2, format "''CIso[' T ]_ n").
+Reserved Notation "''Iso[' T ]_ n"
+  (at level 8, n at level 2, format "''Iso[' T ]_ n").
+Reserved Notation "''CIso[' T ]_ n"
+  (at level 8, n at level 2, format "''CIso[' T ]_ n").
 Reserved Notation "''DIso_3[' T ]" (at level 8, format "''DIso_3[' T ]").
 Reserved Notation "''SE3[' T ]" (at level 8, format "''SE3[' T ]").
+Reserved Notation "f '`*'" (at level 5, format "f `*").
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -43,7 +46,7 @@ Local Open Scope ring_scope.
 
 Module Iso.
 Section isometry.
-Variables (T : rcfType (*realType*)) (n : nat).
+Variables (T : rcfType) (n : nat).
 Record t := mk {
   f :> 'rV[T]_n -> 'rV[T]_n ;
   P : {mono f : a b / norm (a - b)} }.
@@ -56,7 +59,7 @@ Coercion isometry_coercion : Iso.t >-> Funclass.
 
 Module CIso.
 Section central_isometry.
-Variable (T : rcfType (*realType*)) (n : nat).
+Variable (T : rcfType) (n : nat).
 Record t := mk {
   f : 'Iso[T]_n ;
   P : f 0 = 0 }.
@@ -69,13 +72,15 @@ Coercion cisometry_coercion : CIso.t >-> Iso.t.
 
 Section central_isometry_n.
 
-Variable (T : rcfType (*realType*)) (n : nat).
+Variable (T : rcfType) (n : nat).
 
-Lemma central_isometry_preserves_norm (f : 'CIso[T]_n) : {mono f : x / norm x}.
+Lemma central_isometry_preserves_norm (f : 'CIso[T]_n) :
+  {mono f : x / norm x}.
 Proof. by case: f => f f0 p; rewrite -(subr0 (f p)) -f0 Iso.P subr0. Qed.
 
 (* [oneill] first part of lemma 1.6, p.100 *)
-Lemma central_isometry_preserves_dotmul (f : 'CIso[T]_n) : {mono f : u v / u *d v}.
+Lemma central_isometry_preserves_dotmul (f : 'CIso[T]_n) :
+  {mono f : u v / u *d v}.
 Proof.
 case: f => f f0 a b.
 have : norm (f a - f b) = norm (a - b) by rewrite (Iso.P f).
@@ -94,9 +99,9 @@ End central_isometry_n.
 
 Section central_isometry_3.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
-Definition frame_central_iso (f : 'CIso[T]_3) (p : NOFrame.t T) : NOFrame.t T.
+Definition frame_central_iso (f : 'CIso[T]_3) (p : noframe T) : noframe T.
 apply: (@NOFrame.mk _ (col_mx3 (f (p|,0)) (f (p|,1)) (f (p|,2%:R)))).
 apply/orthogonal3P.
 by rewrite !rowK /= 3!central_isometry_preserves_norm 3!noframe_norm
@@ -123,7 +128,7 @@ Qed.
 
 End central_isometry_3.
 
-Definition lin1_mx' (T : rcfType (*realType*)) n (f : 'rV[T]_n -> 'rV[T]_n) : linear f ->
+Definition lin1_mx' (T : rcfType) n (f : 'rV[T]_n -> 'rV[T]_n) : linear f ->
   {M : {linear 'rV[T]_n -> 'rV[T]_n} & forall x, f x = M x}.
 Proof.
 move=> H.
@@ -134,14 +139,14 @@ Defined.
 
 Section isometry_3_prop.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 Implicit Types f : 'Iso[T]_3.
 
 (* [oneill] theorem 1.7, p.101 *)
-(** every isometry of E^3 can be uniquely described as an orthogonal transformation
-    followed by a translation *)
+(** every isometry of E^3 can be uniquely described as an orthogonal
+    transformation followed by a translation *)
 Lemma trans_ortho_of_iso f :
   { trans : 'rV[T]_3 & { rot : 'M[T]_3 |
     (forall x : 'rV[T]_3, f x == x *m rot + trans) /\
@@ -249,22 +254,20 @@ Section tangent_frames.
 
 Variable T : rcfType.
 Let vector := 'rV[T]_3.
-Let point := 'rV[T]_3.
-Implicit Types p : point.
 
-Definition tframe_i (f : TFrame.t T) : vector := (f|,0).
-Definition tframe_j (f : TFrame.t T) : vector := (f|,1).
-Definition tframe_k (f : TFrame.t T) : vector := (f|,2%:R).
+Definition tframe_i (f : tframe T) : vector := (f|,0).
+Definition tframe_j (f : tframe T) : vector := (f|,1).
+Definition tframe_k (f : tframe T) : vector := (f|,2%:R).
 
 End tangent_frames.
 
 Lemma tvec_of_line (T : rcfType) (l : Line.t T) :
-  Line.vector l = (Line.vector l).
+  Line.vector l = Line.vector l.
 Proof. by case: l. Qed.
 
 Lemma line_of_tvec (T : rcfType) p (v : 'rV[T]_3) :
   Line.vector (Line.mk p v) = v.
-Proof. by case: v => v /=. Qed.
+Proof. by case: v. Qed.
 
 Section derivative_map.
 
@@ -277,7 +280,7 @@ Definition dmap f (v : vector) : vector :=
   let C := ortho_of_iso f in
   (v *m C).
 
-Local Notation "f '`*'" := (@dmap f) (at level 5, format "f `*").
+Local Notation "f '`*'" := (@dmap f).
 
 Lemma dmap0 f : f `* 0 = 0.
 Proof. by rewrite /dmap /= mul0mx. Qed.
@@ -295,7 +298,7 @@ by rewrite orth_preserves_norm // ortho_of_iso_is_O.
 Qed.
 
 (* [oneill] lemma 3.2, p.108 *)
-Lemma dmap_iso_sgnP (tf : TFrame.t T) f :
+Lemma dmap_iso_sgnP (tf : tframe T) f :
   let e1 := tf|,0 in
   let e2 := tf|,1 in
   let e3 := tf|,2%:R in
@@ -351,7 +354,7 @@ have Kv : f`* v = v1 *: e1 + v2 *: e2 + v3 *: e3 :> vector.
   rewrite !scalemxAl [in RHS]/=.
   rewrite /u1p /u2p /u3p /tframe_i /tframe_j /tframe_k.
   by rewrite 3!rowframeE 3!rowE !mulmx1.
-have @f' : NOFrame.t T.
+have @f' : noframe T.
 apply (@NOFrame.mk _ (col_mx3 e1 e2 e3)).
   apply/orthogonal3P; rewrite !rowK /=.
   do 3! rewrite orth_preserves_norm ?ortho_of_iso_is_O //.
@@ -484,47 +487,27 @@ Proof. move=> u v; by rewrite dmap_preserves_crossmul (eqP (DIso.P df)) scale1r.
 
 End derivative_map.
 
-(* Notation "f '`*'" := (@dmap _ f _) (at level 5, format "f '`*'"). *)
-
 Section homogeneous_points_and_vectors.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 
-Definition hpoint := [qualify u : 'rV[T]_4 | u``_3%:R == 1].
-Fact hpoint_key : pred_key hpoint. Proof. by []. Qed.
-Canonical hpoint_keyed := KeyedQualifier hpoint_key.
+Lemma rsubmx_coor3 (x : 'rV[T]_4) : @rsubmx _ 1 3 1 x = x``_3%:R%:M.
+Proof.
+apply/rowP => i; rewrite {i}(ord1 i) !mxE eqxx.
+rewrite (_ : (rshift _ _) = 3%:R :> 'I_(3 + 1) ) //; by apply val_inj.
+Qed.
 
-Lemma hpointE p : (p \in hpoint) = (p``_3%:R == 1).
-Proof. by []. Qed.
+Definition from_h (x : 'rV_4) : 'rV[T]_3 := @lsubmx _ 1 3 1 x.
 
-Definition hvector := [qualify u : 'rV[T]_4 | u``_3%:R == 0].
-Fact hvector_key : pred_key hvector. Proof. by []. Qed.
-Canonical hvector_keyed := KeyedQualifier hvector_key.
-
-Lemma hvectorE p : (p \in hvector) = (p``_3%:R == 0).
-Proof. by []. Qed.
-
-Definition from_h (x : 'rV[T]_4) : 'rV[T]_3 := @lsubmx _ 1 3 1 x.
-
-Definition to_hpoint (p : point) : 'rV[T]_4 := row_mx p 1.
-
-Definition to_hvector (v : vector) : 'rV[T]_4 := row_mx v 0.
-
-Lemma to_hpointK p : from_h (to_hpoint p) = p.
-Proof. by rewrite /from_h row_mxKl. Qed.
-
-Lemma to_hvectorK v : from_h (to_hvector v) = v.
-Proof. by rewrite /from_h row_mxKl. Qed.
-
-Lemma from_hD (a' b : 'rV[T]_4) : from_h (a' + b) = from_h a' + from_h b.
+Lemma from_hD (x y : 'rV[T]_4) : from_h (x + y) = from_h x + from_h y.
 Proof. apply/rowP => i; by rewrite !mxE. Qed.
 
-Lemma from_hZ k (a' : 'rV[T]_4) : from_h (k *: a') = k *: from_h a'.
+Lemma from_hZ k (x : 'rV[T]_4) : from_h (k *: x) = k *: from_h x.
 Proof. apply/rowP => i; by rewrite !mxE. Qed.
 
-Lemma from_hB (a b : 'rV[T]_4) : from_h (a - b) = from_h a - from_h b.
+Lemma from_hB (x y : 'rV[T]_4) : from_h (x - y) = from_h x - from_h y.
 Proof. apply/rowP => i; by rewrite !mxE. Qed.
 
 Lemma from_hE (x : 'rV[T]_4) : from_h x = \row_(i < 3) x 0 (inord i).
@@ -533,40 +516,58 @@ apply/rowP => i; rewrite !mxE; congr (x 0 _).
 apply val_inj => /=; by rewrite inordK // (ltn_trans (ltn_ord i)).
 Qed.
 
-Lemma rsubmx_coor3 (x : 'rV[T]_4) : @rsubmx _ 1 3 1 x = x``_3%:R%:M.
-Proof.
-apply/rowP => i; rewrite {i}(ord1 i) !mxE eqxx.
-rewrite (_ : (rshift _ _) = 3%:R :> 'I_(3 + 1) ) //; by apply val_inj.
-Qed.
+Definition hpoint := [qualify x : 'rV[T]_4 | x``_3%:R == 1].
+Fact hpoint_key : pred_key hpoint. Proof. by []. Qed.
+Canonical hpoint_keyed := KeyedQualifier hpoint_key.
 
-Lemma hpoint_from_h p : (p \is hpoint) = (p == row_mx (from_h p) 1).
+Lemma hpointE (x : 'rV_4) : (x \in hpoint) = (x``_3%:R == 1).
+Proof. by []. Qed.
+
+Definition to_hpoint (p : point) : 'rV[T]_4 := row_mx p 1.
+
+Lemma to_hpointK (p : point) : from_h (to_hpoint p) = p.
+Proof. by rewrite /from_h row_mxKl. Qed.
+
+Lemma hpoint_from_h x : (x \is hpoint) = (x == row_mx (from_h x) 1).
 Proof.
-rewrite hpointE -{2}(@hsubmxK _ 1 3 1 p) rsubmx_coor3.
+rewrite hpointE -{2}(@hsubmxK _ 1 3 1 x) rsubmx_coor3.
 apply/idP/idP => [/eqP -> // | /eqP/(@eq_row_mx _ 1 3 1) [_ /rowP/(_ ord0)]].
 by rewrite !mxE eqxx /= => /eqP.
 Qed.
 
-Lemma to_hpointP p : to_hpoint p \in hpoint.
+Lemma to_hpointP (p : point) : to_hpoint p \in hpoint.
 Proof. by rewrite hpoint_from_h to_hpointK. Qed.
 
-Lemma hvector_from_h p : (p \is hvector) = (p == row_mx (from_h p) 0).
+Definition hvector := [qualify x : 'rV[T]_4 | x``_3%:R == 0].
+Fact hvector_key : pred_key hvector. Proof. by []. Qed.
+Canonical hvector_keyed := KeyedQualifier hvector_key.
+
+Lemma hvectorE (x : 'rV_4) : (x \in hvector) = (x``_3%:R == 0).
+Proof. by []. Qed.
+
+Definition to_hvector (v : vector) : 'rV[T]_4 := row_mx v 0.
+
+Lemma to_hvectorK (v : vector) : from_h (to_hvector v) = v.
+Proof. by rewrite /from_h row_mxKl. Qed.
+
+Lemma hvector_from_h (x : 'rV_4) : (x \is hvector) = (x == row_mx (from_h x) 0).
 Proof.
-rewrite hvectorE -{2}(@hsubmxK _ 1 3 1 p) rsubmx_coor3.
+rewrite hvectorE -{2}(@hsubmxK _ 1 3 1 x) rsubmx_coor3.
 apply/idP/idP => [/eqP -> //| /eqP/(@eq_row_mx _ 1 3 1) [_ /rowP/(_ ord0)]].
 by rewrite (_ : 0%:M = 0) //; apply/rowP => i; rewrite {i}(ord1 i) !mxE eqxx.
 by rewrite !mxE eqxx /= => /eqP.
 Qed.
 
-Lemma to_hvectorP v : to_hvector v \in hvector.
+Lemma to_hvectorP (v : vector) : to_hvector v \in hvector.
 Proof. by rewrite hvector_from_h to_hvectorK. Qed.
 
-Lemma hpointB p q : p \in hpoint -> q \in hpoint -> p - q \in hvector.
+Lemma hpointB (x y : 'rV_4) : x \in hpoint -> y \in hpoint -> x - y \in hvector.
 Proof.
 rewrite 2!hpoint_from_h hvector_from_h => /eqP Hp /eqP Hq.
-by rewrite {1}Hp {1}Hq (opp_row_mx (from_h q)) (add_row_mx (from_h p)) subrr -from_hB.
+by rewrite {1}Hp {1}Hq (opp_row_mx (from_h y)) (add_row_mx (from_h x)) subrr -from_hB.
 Qed.
 
-Lemma to_hpointB p q : to_hpoint p - to_hpoint q = to_hvector (p - q).
+Lemma to_hpointB (p q : point) : to_hpoint p - to_hpoint q = to_hvector (p - q).
 Proof. by rewrite /to_hpoint (opp_row_mx q) (add_row_mx p) subrr. Qed.
 
 End homogeneous_points_and_vectors.
@@ -576,7 +577,7 @@ Notation "''hV[' T ]" := (hvector T) (at level 8, format "''hV[' T ]").
 
 Section SE3_def.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 Definition hom (r : 'M[T]_3) (t : 'rV[T]_3) : 'M[T]_4 :=
   block_mx r 0 t 1.
@@ -596,7 +597,7 @@ Notation "''SE3[' T ]" := (SE3 T) : ring_scope.
 
 Section SE3_prop.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 
 Lemma hom10 : hom 1 0 = 1 :> 'M[T]_4.
 Proof.
@@ -761,7 +762,19 @@ Definition hTx d : 'M[T]_4 := hom 1 (row3 d 0 0).
 Definition hTy d : 'M[T]_4 := hom 1 (row3 0 d 0).
 Definition hTz d : 'M[T]_4 := hom 1 (row3 0 0 d).
 
-Definition FromToDisp (T : rcfType (*realType*)) (B A : TFrame.t T) (x : 'rV[T]_3) : 'rV[T]_3 :=
+Lemma hTxRz (a : T) theta :
+  hTx a * hRz theta = hom (Rz theta) (row3 (a * cos theta) (a * sin theta) 0).
+Proof.
+by rewrite homM mul1r addr0 mulmx_row3_col3 2!scale0r !addr0 row3Z mulr0.
+Qed.
+
+Lemma hTzRz (d : T) theta :
+  hTz d * hRz theta = hom (Rz theta) (row3 0 0 d).
+Proof.
+by rewrite homM mul1r mulmx_row3_col3 2!scale0r !(add0r,addr0) e2row row3Z !(mulr0,mulr1).
+Qed.
+
+Definition FromToDisp (T : rcfType) (B A : tframe T) (x : 'rV[T]_3) : 'rV[T]_3 :=
   x *m (B _R^ A) + TFrame.o B.
 
 End SE3_prop.

@@ -256,10 +256,10 @@ Qed.
 Lemma RzE a : Rz a = (frame_of_SO (Rz_is_SO a)) _R^ (can_frame T).
 Proof. rewrite FromTo_to_can; by apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
-Lemma to_coord_Rz_e0 a :
-  to_coord (can_tframe T) <| 'e_0 $ frame_of_SO (Rz_is_SO a) |> =
-  <| row 0 (Rz a) $ can_tframe T |>.
-Proof. by rewrite to_coordE_to_can rowE [in RHS]RzE FromTo_to_can. Qed.
+Lemma rmap_Rz_e0 a :
+  rmap (can_tframe T) `[ 'e_0 $ frame_of_SO (Rz_is_SO a) ] =
+                      `[ row 0 (Rz a) $ can_tframe T ].
+Proof. by rewrite rmapE_to_can rowE [in RHS]RzE FromTo_to_can. Qed.
 
 Definition Rzy a b := col_mx3
     (row3 (cos a * cos b) (sin a) (- cos a * sin b))
@@ -1434,92 +1434,92 @@ Variables (T : rcfType).
 Implicit Types R : 'M[T]_3.
 
 (* two orthogonal vectors belonging to the plan (y,z) projected on y and z *)
-Lemma exists_rotation_angle (a : Frame.t T) (u v : 'rV[T]_3) :
-  norm u = 1 -> norm v = 1 -> u *d v = 0 -> u *v v = a|,0 ->
-  { w : angle T | u = cos w *: (a|,1) + sin w *: (a|,2%:R) /\
-                  v = - sin w *: (a|,1) + cos w *: (a|,2%:R) }.
+Lemma exists_rotation_angle (F : frame T) (u v : 'rV[T]_3) :
+  norm u = 1 -> norm v = 1 -> u *d v = 0 -> u *v v = F|,0 ->
+  { w : angle T | u = cos w *: (F|,1) + sin w *: (F|,2%:R) /\
+                  v = - sin w *: (F|,1) + cos w *: (F|,2%:R) }.
 Proof.
 move=> normu normv u_perp_v uva0.
-have u0 : u *d a|,0 = 0 by rewrite -uva0 dot_crossmulC crossmulvv dotmul0v.
-have v0 : v *d a|,0 = 0 by rewrite -uva0 dot_crossmulCA crossmulvv dotmulv0.
-case/boolP : (u *d a|,2%:R == 0) => [/eqP|] u2.
-  suff [?|?] : {u = a|,1 /\ v = a|,2%:R} + {u = - a|,1 /\ v = - a|,2%:R}.
+have u0 : u *d F|,0 = 0 by rewrite -uva0 dot_crossmulC crossmulvv dotmul0v.
+have v0 : v *d F|,0 = 0 by rewrite -uva0 dot_crossmulCA crossmulvv dotmulv0.
+case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
+  suff [?|?] : {u = F|,1 /\ v = F|,2%:R} + {u = - F|,1 /\ v = - F|,2%:R}.
   - exists 0; by rewrite sin0 cos0 !(scale1r,oppr0,scale0r,addr0,add0r).
   - exists pi; by rewrite sinpi cospi !(scaleN1r,scale0r,oppr0,add0r,addr0).
-  have v1 : v *d a|,1 = 0.
-    move/eqP: (frame_icrossk a); rewrite -eqr_oppLR => /eqP <-.
+  have v1 : v *d F|,1 = 0.
+    move/eqP: (frame_icrossk F); rewrite -eqr_oppLR => /eqP <-.
     rewrite dotmulvN -uva0 crossmulC dotmulvN opprK double_crossmul.
     rewrite dotmulDr dotmulvN (dotmulC _ u) u2 scale0r dotmulv0 subr0.
     by rewrite dotmulvZ (dotmulC v) u_perp_v mulr0.
-  rewrite (orthogonal_expansion a u) (orthogonal_expansion a v).
+  rewrite (orthogonal_expansion F u) (orthogonal_expansion F v).
   rewrite u2 u0 v0 v1 !(scale0r,addr0,add0r).
-  have [/eqP u1 | /eqP u1] : {u *d a |, 1 == 1} + {u *d a|,1 == -1}.
-    move: normu => /(congr1 (fun x => x ^+ 2)); rewrite (sqr_norm_frame a u).
+  have [/eqP u1 | /eqP u1] : {u *d F |, 1 == 1} + {u *d F|,1 == -1}.
+    move: normu => /(congr1 (fun x => x ^+ 2)); rewrite (sqr_norm_frame F u).
     rewrite sum3E u0 u2 expr0n add0r addr0 expr1n => /eqP.
     by rewrite sqrf_eq1 => /Bool.orb_true_elim.
-  - have v2 : v *d a|,2%:R = 1.
+  - have v2 : v *d F|,2%:R = 1.
       move: uva0.
-      rewrite {1}(orthogonal_expansion a u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0).
-      rewrite {1}(orthogonal_expansion a v) v0 v1 !(scale0r,add0r) crossmulvZ.
-      rewrite (frame_jcrossk a) => /scaler_eq1; apply.
+      rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0).
+      rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r) crossmulvZ.
+      rewrite (frame_jcrossk F) => /scaler_eq1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scale1r; by left.
-  - have v2 : v *d a|,2%:R = -1.
+  - have v2 : v *d F|,2%:R = -1.
       move: uva0.
-      rewrite {1}(orthogonal_expansion a u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0,scaleN1r).
-      rewrite {1}(orthogonal_expansion a v) v0 v1 !(scale0r,add0r,scale1r,addr0,scaleN1r).
-      rewrite crossmulNv crossmulvZ (frame_jcrossk a) -scaleNr => /scaler_eqN1; apply.
+      rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0,scaleN1r).
+      rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r,scale1r,addr0,scaleN1r).
+      rewrite crossmulNv crossmulvZ (frame_jcrossk F) -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scaleN1r; by right.
-case/boolP : (u *d a|,1 == 0) => [/eqP|] u1.
-  have {u2}[/eqP u2|/eqP u2] : {u *d a|,2%:R == 1} + {u *d a|,2%:R == -1}.
+case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
+  have {u2}[/eqP u2|/eqP u2] : {u *d F|,2%:R == 1} + {u *d F|,2%:R == -1}.
     move: normu => /(congr1 (fun x => x ^+ 2)).
-    rewrite (sqr_norm_frame a u) sum3E u0 u1 expr0n !add0r expr1n => /eqP.
+    rewrite (sqr_norm_frame F u) sum3E u0 u1 expr0n !add0r expr1n => /eqP.
     by rewrite sqrf_eq1 => /Bool.orb_true_elim.
-  + have v1 : v *d a|,1%:R = -1.
+  + have v1 : v *d F|,1%:R = -1.
       move: uva0.
-      rewrite {1}(orthogonal_expansion a u) u0 u1 u2 !(scale0r,add0r,scale1r,scaleN1r).
-      rewrite {1}(orthogonal_expansion a v) v0 !(scale0r,add0r,scale1r,addr0).
-      rewrite crossmulDr crossmulvZ crossmulC (frame_jcrossk a).
+      rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,scaleN1r).
+      rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scale1r,addr0).
+      rewrite crossmulDr crossmulvZ crossmulC (frame_jcrossk F).
       rewrite crossmulvZ crossmulvv scaler0 addr0 scalerN -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
-    have v2 : v *d a|,2%:R = 0.
+    have v2 : v *d F|,2%:R = 0.
       move: normv => /(congr1 (fun x => x ^+ 2)).
-      rewrite expr1n (sqr_norm_frame a) sum3E v1 v0 expr0n add0r sqrrN expr1n => /eqP.
+      rewrite expr1n (sqr_norm_frame F) sum3E v1 v0 expr0n add0r sqrrN expr1n => /eqP.
       by rewrite eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
     exists (pihalf T).
     rewrite cos_pihalf sin_pihalf !(scale0r,add0r,scale1r,scaleN1r,addr0).
-    rewrite (orthogonal_expansion a u) (orthogonal_expansion a v).
+    rewrite (orthogonal_expansion F u) (orthogonal_expansion F v).
     by rewrite u1 u0 u2 v1 v0 v2 !(scale0r,addr0,add0r,scale1r,scaleN1r).
-  + have v1 : v *d a|,1 = 1.
+  + have v1 : v *d F|,1 = 1.
       move: uva0.
-      rewrite {1}(orthogonal_expansion a u) u0 u1 u2 !(scale0r,add0r,scaleN1r).
-      rewrite {1}(orthogonal_expansion a v) v0 !(scale0r,add0r,scaleN1r).
+      rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scaleN1r).
+      rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scaleN1r).
       rewrite crossmulDr !crossmulNv !crossmulvZ crossmulvv scaler0 subr0.
-      rewrite -scalerN crossmulC opprK (frame_jcrossk a) => /scaler_eq1; apply.
+      rewrite -scalerN crossmulC opprK (frame_jcrossk F) => /scaler_eq1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
-    have v2 : v *d a|,2%:R = 0.
+    have v2 : v *d F|,2%:R = 0.
       move: normv => /(congr1 (fun x => x ^+ 2)).
-      rewrite expr1n (sqr_norm_frame a) sum3E v1 v0 expr0n add0r expr1n => /eqP.
+      rewrite expr1n (sqr_norm_frame F) sum3E v1 v0 expr0n add0r expr1n => /eqP.
       by rewrite eq_sym addrC -subr_eq subrr eq_sym sqrf_eq0 => /eqP.
     exists (- pihalf T).
     rewrite cosN sinN cos_pihalf sin_pihalf ?(scale0r,add0r,scale1r,scaleN1r,addr0,opprK).
-    rewrite (orthogonal_expansion a u) (orthogonal_expansion a v).
+    rewrite (orthogonal_expansion F u) (orthogonal_expansion F v).
     by rewrite u1 u0 u2 v1 v0 v2 !(scale0r,addr0,add0r,scale1r,scaleN1r).
-move: (orthogonal_expansion a u).
+move: (orthogonal_expansion F u).
 rewrite -{1}uva0 dot_crossmulC crossmulvv dotmul0v scale0r add0r => Hr2.
-move: (orthogonal_expansion a v).
+move: (orthogonal_expansion F v).
 rewrite -{1}uva0 crossmulC dotmulvN dot_crossmulC crossmulvv dotmul0v oppr0 scale0r add0r => Hr3.
-have [w [Hw1 Hw2]] : {w : angle T | u *d a|,1 = cos w /\ (u *d a|,2%:R) = sin w}.
+have [w [Hw1 Hw2]] : {w : angle T | u *d F|,1 = cos w /\ (u *d F|,2%:R) = sin w}.
   apply sqrD1_cossin.
   move/(congr1 (fun x => norm x)) : Hr2.
   rewrite normu.
   move/(congr1 (fun x => x ^+ 2)).
   rewrite expr1n normD !normZ ?noframe_norm !mulr1.
   rewrite (_ : cos _ = 0); last first.
-    case: (lerP 0 (u *d a|,2%:R)).
+    case: (lerP 0 (u *d F|,2%:R)).
       rewrite ler_eqVlt eq_sym (negbTE u2) /= => {u2}u2.
-      case: (lerP 0 (u *d a|,1)).
+      case: (lerP 0 (u *d F|,1)).
         rewrite ler_eqVlt eq_sym (negbTE u1) /= => {u1}u1.
         rewrite vec_anglevZ; last by [].
         rewrite vec_angleZv; last by [].
@@ -1532,7 +1532,7 @@ have [w [Hw1 Hw2]] : {w : angle T | u *d a|,1 = cos w /\ (u *d a|,2%:R) = sin w}
           by rewrite -norm_eq0 noframe_norm oner_neq0.
         by rewrite /cos /vec_angle noframe_jdotk frame_jcrossk noframe_norm expii oppr0.
       move=> {u2}u2.
-      case: (lerP 0 (u *d a|,1)).
+      case: (lerP 0 (u *d F|,1)).
         rewrite ler_eqVlt eq_sym (negbTE u1) /= => {u1}u1.
         rewrite vec_angleZv; last by [].
         rewrite vec_anglevZN; last by [].
@@ -1548,33 +1548,33 @@ have [w [Hw1 Hw2]] : {w : angle T | u *d a|,1 = cos w /\ (u *d a|,2%:R) = sin w}
           by rewrite -norm_eq0 noframe_norm oner_neq0.
         by rewrite opprK /cos /vec_angle noframe_jdotk frame_jcrossk noframe_norm expii.
   by rewrite mulr0 mul0rn addr0 !sqr_normr.
-have uRv : u *m `e^(pihalf T, a|,0) = v.
+have uRv : u *m `e^(pihalf T, F|,0) = v.
   rewrite -rodriguesP /rodrigues noframe_norm ?expr1n scale1r cos_pihalf subr0.
   rewrite scale1r mul1r sin_pihalf scale1r subrr add0r -uva0 dot_crossmulC.
   rewrite crossmulvv dotmul0v scale0r add0r crossmulC double_crossmul dotmulvv.
   by rewrite normu expr1n scale1r opprB u_perp_v scale0r subr0.
-have RO : `e^(pihalf T, a|,0) \in 'O[T]_3 by apply eskew_is_O; rewrite noframe_norm.
-have H' : vec_angle u a|,2%:R = vec_angle v (- a|,1).
-  move/orth_preserves_vec_angle : RO => /(_ u a|,2%:R) <-.
+have RO : `e^(pihalf T, F|,0) \in 'O[T]_3 by apply eskew_is_O; rewrite noframe_norm.
+have H' : vec_angle u F|,2%:R = vec_angle v (- F|,1).
+  move/orth_preserves_vec_angle : RO => /(_ u F|,2%:R) <-.
   rewrite uRv; congr (vec_angle v _).
   rewrite -rodriguesP /rodrigues noframe_norm ?expr1n scale1r cos_pihalf subr0.
   rewrite scale1r mul1r sin_pihalf scale1r subrr add0r.
   by rewrite dotmulC noframe_idotk scale0r add0r frame_icrossk.
-have H : vec_angle u (a |, 1) = vec_angle v (a |, 2%:R).
-  move/orth_preserves_vec_angle : RO => /(_ u a|,1) <-.
+have H : vec_angle u (F |, 1) = vec_angle v (F|,2%:R).
+  move/orth_preserves_vec_angle : RO => /(_ u F|,1) <-.
   rewrite uRv; congr (vec_angle v _).
   rewrite -rodriguesP /rodrigues noframe_norm ?expr1n scale1r cos_pihalf subr0.
   rewrite scale1r mul1r sin_pihalf scale1r subrr add0r.
   by rewrite dotmulC noframe_idotj scale0r add0r frame_icrossj.
 exists w; rewrite -{1}Hw1 -{1}Hw2.
 split; first by [].
-have <- : v *d a|,1 = - sin w.
+have <- : v *d F|,1 = - sin w.
   rewrite -Hw2 2!dotmul_cos normu 2!noframe_norm mul1r normv mulr1.
   rewrite [in LHS]mul1r [in RHS]mul1r ?opprK H'.
   rewrite [in RHS]cos_vec_anglevN ?opprK; [by [] | | ].
   by rewrite -norm_eq0 normv oner_neq0.
   by rewrite -norm_eq0 noframe_norm oner_neq0.
-have <- : v *d a|,2%:R = cos w.
+have <- : v *d F|,2%:R = cos w.
   by rewrite -Hw1 2!dotmul_cos normu 2!noframe_norm mul1r normv mulr1 H.
 by [].
 Qed.

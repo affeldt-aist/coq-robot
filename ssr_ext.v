@@ -243,22 +243,25 @@ Local Open Scope ring_scope.
 
 Section extra_linear.
 
-Lemma row_mx_eq0 (M : ringType) (m n1 n2 : nat)
- (A1 : 'M[M]_(m, n1)) (A2 : 'M_(m, n2)):
+Lemma mxE_col_row (T : Type) n (M : 'M[T]_n) i j : M i j = (col j (row i M)) 0 0.
+Proof. by rewrite !mxE. Qed.
+
+Variable R : ringType.
+
+Lemma row_mx_eq0 (m n1 n2 : nat) (A1 : 'M[R]_(m, n1)) (A2 : 'M_(m, n2)) :
  (row_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
 Proof.
 apply/eqP/andP; last by case=> /eqP -> /eqP ->; rewrite row_mx0.
 by rewrite -row_mx0 => /eq_row_mx [-> ->].
 Qed.
 
-Lemma col_mx_eq0 (M : ringType) (m1 m2 n : nat)
- (A1 : 'M[M]_(m1, n)) (A2 : 'M_(m2, n)):
+Lemma col_mx_eq0 (m1 m2 n : nat) (A1 : 'M[R]_(m1, n)) (A2 : 'M_(m2, n)) :
  (col_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
 Proof.
 by rewrite -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx0 tr_col_mx row_mx_eq0.
 Qed.
 
-Lemma col_mx_row_mx (T : ringType) (m1 n1 : nat) (A : 'M[T]_(m1, n1)) n2 m2 :
+Lemma col_mx_row_mx (m1 n1 : nat) (A : 'M[R]_(m1, n1)) n2 m2 :
   col_mx (row_mx A (0 : 'M_(m1, n2))) (0 : 'M_(m2, n1 + n2)) = row_mx (col_mx A 0) 0.
 Proof.
 set a : 'M_(m2, _ + n2) := 0.
@@ -266,8 +269,13 @@ have -> : a = row_mx (0 : 'M_(m2, n1)) 0 by rewrite row_mx0.
 by rewrite -block_mxEv block_mxEh col_mx0.
 Qed.
 
-Definition mx_lin1 (R : ringType) n (M : 'M[R]_n) : {linear 'rV[R]_n -> 'rV[R]_n} :=
+Definition mx_lin1 n (M : 'M[R]_n) : {linear 'rV[R]_n -> 'rV[R]_n} :=
   mulmxr_linear 1 M.
+
+Lemma mulmx_trE n (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
+Proof.
+by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
+Qed.
 
 (* courtesy of GG *)
 Lemma mxdirect_delta (F : fieldType) (T : finType) (n : nat) (P : pred T) f :
@@ -283,11 +291,6 @@ apply/mxdirectP=> /=; transitivity (mxrank (1%:M : 'M[F]_n)).
   by rewrite -(mul_delta_mx (0 : 'I_1)) genmxE submxMl.
 rewrite mxrank1 -[LHS]card_ord -sum1_card.
 by apply/eq_bigr=> i _; rewrite /= mxrank_gen mxrank_delta.
-Qed.
-
-Lemma mulmx_trE (T : ringType) n (v : 'rV[T]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
-Proof.
-by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
 Qed.
 
 End extra_linear.
@@ -329,4 +332,3 @@ Lemma normci : `|'i| = 1 :> R[i].
 Proof. by rewrite normc_def /= expr0n add0r expr1n sqrtr1. Qed.
 
 End extra_complex.
-

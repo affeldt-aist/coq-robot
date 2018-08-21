@@ -75,8 +75,8 @@ Parameter rowframe : t -> 'I_3 -> 'rV[T]_3.
 Axiom rowframeE : forall f i, rowframe f i = row i (M f).
 End non_oriented_frame_def.
 End NOFrame.
-
-Coercion matrix_of_noframe (T : ringType) (f : NOFrame.t T) : 'M[T]_3 :=
+Notation noframe := NOFrame.t.
+Coercion matrix_of_noframe (T : ringType) (f : noframe T) : 'M[T]_3 :=
   NOFrame.M f.
 
 Definition rowframeE := NOFrame.rowframeE.
@@ -88,7 +88,7 @@ Section non_oriented_frame_properties.
 Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types p : 'rV[T]_3.
-Variable f : NOFrame.t T.
+Variable f : noframe T.
 
 Lemma noframe_norm (k : 'I_3) : norm f|,k = 1.
 Proof. rewrite rowframeE; apply norm_row_of_O; by case: f. Qed.
@@ -283,20 +283,6 @@ Qed.
 
 End non_oriented_frame_properties.
 
-(* TODO: move? *)
-Lemma mxE_col_row (T : Type) (M : 'M[T]_3) i j : M i j = (col j (row i M)) 0 0.
-Proof. by rewrite !mxE. Qed.
-
-Lemma colE (T : comRingType) (v : 'rV[T]_3) j : col j v = 'e_j *m v^T.
-Proof.
-apply/colP => i; rewrite {i}(ord1 i) !mxE coorE /dotmul mxE.
-apply eq_bigr => /= i _; by rewrite !mxE eqxx /= mulrC.
-Qed.
-
-(* TODO: move? *)
-Lemma mxE_dotmul (T : comRingType) (M : 'M[T]_3) i j : M i j = 'e_j *d row i M.
-Proof. by rewrite mxE_col_row /dotmul colE. Qed.
-
 Module FrameInterface.
 Section frame_interface.
 Variable T : rcfType.
@@ -311,15 +297,13 @@ Definition icrossj := FrameInterface.icrossj.
 Module Frame.
 Section frame.
 Variable T : ringType.
-
 Record t := mk {
-  noframe_of :> NOFrame.t T ;
+  noframe_of :> noframe T ;
   MSO : NOFrame.M noframe_of \is 'SO[T]_3}.
-
 End frame.
 End Frame.
-
-Coercion noframe_of_frame (T : ringType) (f : Frame.t T) : NOFrame.t T :=
+Notation frame := Frame.t.
+Coercion noframe_of_frame (T : ringType) (f : frame T) : noframe T :=
   Frame.noframe_of f.
 
 Section oriented_frame_properties.
@@ -341,7 +325,7 @@ Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_icrossk. Qed.
 Lemma frame_jcrossk : j *v k = i.
 Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_jcrossk. Qed.
 
-Definition frame_of_SO (M : 'M[T]_3) (HM : M \is 'SO[T]_3) : Frame.t T :=
+Definition frame_of_SO (M : 'M[T]_3) (HM : M \is 'SO[T]_3) : frame T :=
   @Frame.mk _ (NOFrame.mk (rotation_sub HM)) HM.
 
 Lemma frame_of_SO_i (M : 'M[T]_3) (HM : M \is 'SO[T]_3) :
@@ -358,7 +342,7 @@ Proof. by rewrite /frame_of_SO /= NOFrame.rowframeE. Qed.
 
 (* negative frame *)
 Record nframe := mkNFrame {
-  noframe_of_nframe :> NOFrame.t T ;
+  noframe_of_nframe :> noframe T ;
   nframeP : noframe_sgn noframe_of_nframe = -1}.
 
 (*
@@ -387,22 +371,19 @@ Section tframe.
 Variable T : ringType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
-
 Record t := mk {
   o : point ;
-  frame_of :> Frame.t T }.
-
+  frame_of :> frame T }.
 Definition trans (f : t) (u : vector) : t := mk (o f + u) f.
-
 End tframe.
 End TFrame.
-
-Coercion frame_of_tframe (T : ringType) (f : TFrame.t T) : Frame.t T :=
+Notation tframe := TFrame.t.
+Coercion frame_of_tframe (T : ringType) (f : tframe T) : frame T :=
   TFrame.frame_of f.
 
-Definition xaxis (T : fieldType) (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 0).
-Definition yaxis (T : fieldType) (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 1).
-Definition zaxis (T : fieldType) (f : TFrame.t T) := Line.mk (TFrame.o f) (f |, 2%:R).
+Definition xaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 0).
+Definition yaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 1).
+Definition zaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 2%:R).
 
 Section canonical_frame.
 
@@ -419,14 +400,14 @@ Lemma can_frame_1 : can_frame = 1 :> 'M_3.
 Proof. by apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
 (* TODO: useful? *)
-Lemma rotation_can_frame (f : Frame.t T) i j : f i j = row j can_frame *d row i f.
+Lemma rotation_can_frame (f : frame T) i j : f i j = row j can_frame *d row i f.
 Proof. by rewrite /can_frame /= /can_noframe /= row1 mxE_dotmul. Qed.
 
 Definition can_tframe := TFrame.mk 0 can_frame.
 
 End canonical_frame.
 
-Lemma basis_change (T : rcfType) (M : 'M[T]_3) (f : NOFrame.t T) (A : 'M[T]_3) :
+Lemma basis_change (T : rcfType) (M : 'M[T]_3) (f : noframe T) (A : 'M[T]_3) :
   let i := f |, 0 in
   let j := f |, 1 in
   let k := f |, 2%:R in
@@ -544,7 +525,7 @@ Proof.
 rewrite /i; case: ifP => [_|/eqP/eqP ?]; by rewrite ?normeE // norm_normalize.
 Qed.
 
-Parameter frame : 'rV[T]_3 -> Frame.t T.
+Parameter frame : 'rV[T]_3 -> frame T.
 Axiom frameE : frame u = Base1.frame normi.
 
 Lemma iE : i = (frame u) |, 0.
@@ -770,7 +751,7 @@ Coercion Framebasis R (f : Frame.t R) : 'M[R]_3 := Frame.basis f.
 (*Hint Immediate Frame.unit.*)
 
 (* base vectors of A in terms of the basis vectors of B: *)
-Definition FromTo (T : comRingType) (A B : Frame.t T) :=
+Definition FromTo (T : comRingType) (A B : frame T) :=
   \matrix_(i, j) (row i A *d row j B).
 (* = the rotation matrix that transforms a vector expressed in coordinate frame A
    to a vector expressed in coordinate frame B *)
@@ -781,7 +762,7 @@ Notation "A _R^ B" := (@FromTo _ A B) (at level 5).
 Section FromTo_properties.
 
 Variable T : rcfType.
-Implicit Types A B C : Frame.t T.
+Implicit Types A B C : frame T.
 
 Lemma FromToE A B : (A _R^ B) = A *m (matrix_of_noframe B)^-1 :> 'M[T]_3.
 Proof.
@@ -831,7 +812,7 @@ Qed.
 End FromTo_properties.
 
 (* TODO: move? *)
-Lemma sqr_norm_frame (T : rcfType) (a : Frame.t T) (v : 'rV[T]_3) :
+Lemma sqr_norm_frame (T : rcfType) (a : frame T) (v : 'rV[T]_3) :
   norm v ^+ 2 = \sum_(i < 3) (v *d a|,i%:R)^+2.
 Proof.
 have H : norm v = norm (v *m (can_frame T) _R^ a).
@@ -840,58 +821,62 @@ rewrite H sqr_norm [in LHS]sum3E [in RHS]sum3E; congr (_ ^+ 2 + _ ^+ 2 + _ ^+ 2)
   by rewrite FromTo_from_can mxE_dotmul_row_col -tr_row trmxK row_id NOFrame.rowframeE.
 Qed.
 
-Definition noframe_of_FromTo (T : rcfType) (A B : Frame.t T) : NOFrame.t T :=
+Definition noframe_of_FromTo (T : rcfType) (A B : frame T) : noframe T :=
   NOFrame.mk (FromTo_is_O A B).
 
-Definition frame_of_FromTo (T : rcfType) (B A : Frame.t T) : Frame.t T :=
+Definition frame_of_FromTo (T : rcfType) (B A : frame T) : frame T :=
   @Frame.mk _ (noframe_of_FromTo B A) (FromTo_is_SO B A).
 
-Module FreeVect.
-Section free_vector.
+Module FramedVect.
+Section framed_vector.
 Variable T : ringType.
-Record t (F : Frame.t T) := mk { v : 'rV[T]_3 }.
-End free_vector.
-End FreeVect.
+Record t (F : frame T) := mk { v : 'rV[T]_3 }.
+End framed_vector.
+End FramedVect.
+Notation fvec := FramedVect.t.
 
-Local Notation "<| v $ F |>" := (FreeVect.mk F v) (at level 5,
-  v, F at next level, format "<| v  $  F |>").
+Notation "`[ v $ F ]" := (FramedVect.mk F v)
+  (at level 5, v, F at next level, format "`[ v  $  F ]").
 
-Section change_of_coordinate.
+Definition FramedVect_add (T : ringType) (F : tframe T) (a b : fvec F) : fvec F :=
+  `[ FramedVect.v a + FramedVect.v b $ F ].
+
+Notation "a +fv b" := (FramedVect_add a b) (at level 39).
+
+Lemma fv_eq (T : ringType) a b : a = b -> forall F : frame T, `[ a $ F ] = `[ b $ F ].
+Proof. by move=> ->. Qed.
+
+Section change_of_coordinate_by_rotation.
 
 Variable T : rcfType.
-Implicit Types A B : Frame.t T.
+Implicit Types A B : frame T.
 
-Lemma FreeVectvK A (x : FreeVect.t A) : <|FreeVect.v x $ A|> = x.
+Lemma FramedVectvK A (x : fvec A) : `[FramedVect.v x $ A] = x.
 Proof. by case: x. Qed.
 
-(* change of coordinates: "mapping" from frame A to frame B *)
-Definition to_coord A B (x : FreeVect.t A) : FreeVect.t B :=
-  <|FreeVect.v x *m (A _R^ B) $ B|>.
+(* change of coordinates: "rotation mapping" from frame A to frame B *)
+Definition rmap A B (x : fvec A) : fvec B := `[FramedVect.v x *m (A _R^ B) $ B].
 
-Lemma to_coordK A B (x : FreeVect.t A) : to_coord A (to_coord B x) = x.
+Lemma rmapK A B (x : fvec A) : rmap A (rmap B x) = x.
 Proof.
-rewrite /to_coord /= 2!FromToE -2!mulmxA (mulmxA ((matrix_of_noframe B)^-1)).
+rewrite /rmap /= 2!FromToE -2!mulmxA (mulmxA (matrix_of_noframe B)^-1).
 rewrite mulmxE mulVr ?noframe_is_unit // mulmxA mul1r -mulmxA mulmxE.
-by rewrite divrr ?noframe_is_unit // mulmx1 /= FreeVectvK.
+by rewrite divrr ?noframe_is_unit // mulmx1 /= FramedVectvK.
 Qed.
 
-Lemma to_coordE A B (x : 'rV[T]_3) :
-  to_coord B <|x $ A|> = <|x *m A (*A->can*) *m B^T(*can->B*) $ B|>.
-Proof. by rewrite /to_coord FromToE noframe_inv mulmxA. Qed.
+Lemma rmapE A B (x : 'rV[T]_3) :
+  rmap B `[x $ A] = `[x *m A (*A->can*) *m B^T(*can->B*) $ B].
+Proof. by rewrite /rmap FromToE noframe_inv mulmxA. Qed.
 
-Lemma to_coordE_from_can A (x : 'rV[T]_3) :
-  to_coord A <|x $ can_tframe T|> = <|x *m A^T $ A|>.
-Proof. by rewrite to_coordE can_frame_1 mulmx1. Qed.
+Lemma rmapE_from_can A (x : 'rV[T]_3) :
+  rmap A `[x $ can_tframe T] = `[x *m A^T $ A].
+Proof. by rewrite rmapE can_frame_1 mulmx1. Qed.
 
-Lemma to_coordE_to_can A (x : 'rV[T]_3) :
-  to_coord (can_tframe T) <|x $ A|> = <|x *m A $ can_tframe T|>.
-Proof. by rewrite to_coordE can_frame_1 trmx1 mulmx1. Qed.
+Lemma rmapE_to_can A (x : 'rV[T]_3) :
+  rmap (can_tframe T) `[x $ A] = `[x *m A $ can_tframe T].
+Proof. by rewrite rmapE can_frame_1 trmx1 mulmx1. Qed.
 
-End change_of_coordinate.
-
-(*Arguments to_coord [R] _ _.*)
-
-Notation "<| v $ F |>" := (FreeVect.mk F v) (at level 5, v, F at next level, format "<| v  $  F |>").
+End change_of_coordinate_by_rotation.
 
 (*Section about_frame.
 

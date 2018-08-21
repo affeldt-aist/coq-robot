@@ -60,19 +60,6 @@ Qed.
 
 End hom_scara.
 
-(* TODO: move to dh.v *)
-Lemma hTxRz (a : R) theta :
-  hTx a * hRz theta = hom (Rz theta) (row3 (a * cos theta) (a * sin theta) 0).
-Proof.
-by rewrite homM mul1r addr0 mulmx_row3_col3 2!scale0r !addr0 row3Z mulr0.
-Qed.
-
-Lemma hTzRz (d : R) theta :
-  hTz d * hRz theta = hom (Rz theta) (row3 0 0 d).
-Proof.
-by rewrite homM mul1r mulmx_row3_col3 2!scale0r !(add0r,addr0) e2row row3Z !(mulr0,mulr1).
-Qed.
-
 Section dh_scara.
 
 Definition B10 := hTx a1 * hRz theta1.

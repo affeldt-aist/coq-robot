@@ -54,11 +54,11 @@ From mathcomp.analysis Require Import topology hierarchy.
 
 Section dot_product0.
 
-Variables (T : comRingType) (n : nat).
+Variables (R : comRingType) (n : nat).
 
-Implicit Types u v w : 'rV[T]_n.
+Implicit Types u v w : 'rV[R]_n.
 
-Definition dotmul u v : T := (u *m v^T)``_0.
+Definition dotmul u v : R := (u *m v^T)``_0.
 Local Notation "*d%R" := (@dotmul _).
 Local Notation "u *d w" := (dotmul u w).
 
@@ -107,7 +107,7 @@ Proof. by rewrite dotmulC dotmulvZ dotmulC. Qed.
 Lemma dotmul_delta_mx u i : u *d 'e_i = u``_i.
 Proof. by rewrite dotmulC /dotmul -rowE !mxE. Qed.
 
-Lemma dote2 i j : ('e_i : 'rV[T]_n) *d 'e_j = (i == j)%:R.
+Lemma dote2 i j : ('e_i : 'rV[R]_n) *d 'e_j = (i == j)%:R.
 Proof. by rewrite dotmul_delta_mx mxE eqxx eq_sym. Qed.
 
 (* Lemma dotmul_eq u v : (forall x, u *d x = v *d x) -> u = v. *)
@@ -116,9 +116,21 @@ Proof. by rewrite dotmul_delta_mx mxE eqxx eq_sym. Qed.
 Lemma dotmul_trmx u M v : u *d (v *m M) = (u *m M^T) *d v.
 Proof. by rewrite /dotmul trmx_mul mulmxA. Qed.
 
-Lemma mxE_dotmul_row_col m p (M : 'M[T]_(m,n)) (N :'M[T]_(n,p)) i j :
+Lemma mxE_dotmul_row_col m p (M : 'M[R]_(m, n)) (N : 'M[R]_(n, p)) i j :
   (M *m N) i j = (row i M) *d (col j N)^T.
 Proof. rewrite !mxE dotmulE; apply/eq_bigr => /= k _; by rewrite !mxE. Qed.
+
+Lemma coorE (p : 'rV[R]_n) i : p``_i = p *d 'e_i.
+Proof. by rewrite dotmul_delta_mx. Qed.
+
+Lemma colE (v : 'rV[R]_n) j : col j v = 'e_j *m v^T.
+Proof.
+apply/colP => i; rewrite {i}(ord1 i) !mxE coorE /dotmul mxE.
+apply eq_bigr => /= i _; by rewrite !mxE eqxx /= mulrC.
+Qed.
+
+Lemma mxE_dotmul (M : 'M[R]_n) i j : M i j = 'e_j *d row i M.
+Proof. by rewrite mxE_col_row /dotmul colE. Qed.
 
 End dot_product0.
 
@@ -1348,9 +1360,6 @@ Qed.
 End norm3.
 
 Section properties_of_canonical_vectors.
-
-Lemma coorE (T : comRingType) (p : 'rV[T]_3) i : p``_i = p *d 'e_i.
-Proof. by rewrite dotmul_delta_mx. Qed.
 
 Lemma normeE (T : rcfType) i : norm ('e_i : 'rV_3) = 1 :> T.
 Proof. by rewrite norm_delta_mx. Qed.
