@@ -639,7 +639,7 @@ End sample_rigid_transformation.
 (* [murray] proposition 2.8, p. 41-42 *)
 Section exponential_coordinates_rigid_using_taylor.
 
-Variable T : rcfType (*realType*).
+Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types w v : vector.
 

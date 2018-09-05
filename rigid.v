@@ -317,11 +317,11 @@ move: (orthogonal_expansion (can_noframe T) e3).
 rewrite !rowframeE !row1.
 set a31 := _ *d 'e_0. set a32 := _ *d 'e_1. set a33 := _ *d 'e_2%:R => He3.
 have e1a : e1 = row3 a11 a12 a13.
-  by rewrite (row3E e1) !row3D !(add0r,addr0) !coorE.
+  by rewrite (row3_proj e1) !row3D !(add0r,addr0) !coorE.
 have e2a : e2 = row3 a21 a22 a23.
-  by rewrite (row3E e2) !row3D !(add0r,addr0) !coorE.
+  by rewrite (row3_proj e2) !row3D !(add0r,addr0) !coorE.
 have e3a : e3 = row3 a31 a32 a33.
-  by rewrite (row3E e3) !row3D !(add0r,addr0) !coorE.
+  by rewrite (row3_proj e3) !row3D !(add0r,addr0) !coorE.
 transitivity (\det ((ortho_of_iso f)^T *m
   (col_mx3 (row3 a11 a12 a13) (row3 a21 a22 a23) (row3 a31 a32 a33))^T)).
   rewrite /= -det_tr trmx_mul trmxK mulmx_col3.
@@ -610,7 +610,7 @@ Qed.
 Lemma det_hom (r : 'M[T]_3) t : \det (hom r t) = \det r.
 Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
 
-Lemma rot_of_hom_hom r t : rot_of_hom (hom r t) = r :> 'M[T]_3.
+Lemma rot_of_hom_hom t r : rot_of_hom (hom r t) = r :> 'M[T]_3.
 Proof. by rewrite /rot_of_hom /hom block_mxKul. Qed.
 
 Lemma rot_of_hom1 : rot_of_hom 1 = 1 :> 'M[T]__.

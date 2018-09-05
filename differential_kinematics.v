@@ -45,6 +45,14 @@ Definition derivable_mx m n (M : R -> 'M[W]_(m, n)) t v :=
 Definition derive1mx m n (M : R -> 'M[W]_(m, n)) := fun t =>
   \matrix_(i < m, j < n) (derive1 (fun x => M x i j) t : W).
 
+Lemma derive1mxE m n t (f : 'I_m -> 'I_n -> R -> W) :
+  derive1mx (fun x => \matrix_(i, j) f i j x) t =
+  \matrix_(i, j) (derive1 (f i j) t : W).
+Proof.
+rewrite /derive1mx; apply/matrixP => ? ?; rewrite !mxE; congr (derive1 _ t).
+rewrite funeqE => ?; by rewrite mxE.
+Qed.
+
 Variables m n : nat.
 Implicit Types M N : R -> 'M[W]_(m, n).
 
@@ -455,7 +463,7 @@ Record t (F : tframe T) := mk {
   k : fvec F ;
   f : tframe T ;
   _ : BoundVect.endp o = TFrame.o f ;
-  _ : FramedVect.v i = (f|,@Ordinal 3 0 isT) ;
+  _ : FramedVect.v i = (f|,ord0) ;
   _ : FramedVect.v j = (f|,@Ordinal 3 1 isT) ;
   _ : FramedVect.v k = (f|,@Ordinal 3 2 isT) ;
 }.
@@ -771,35 +779,264 @@ Qed.
 
 End link_velocity.
 
+Require Import angle screw.
+
+Lemma chain_rule (f g : R^o -> R^o) x :
+  derivable f x 1 -> derivable g (f x) 1 ->
+  derive1 (g \o f) x = derive1 g (f x) * derive1 f x.
+Proof.
+move=> /derivable1_diffP df /derivable1_diffP dg.
+rewrite derive1E'; last exact/differentiable_comp.
+by rewrite diff_comp // !derive1E' //= -{1}(mulr1 ('d_x f 1)) linearZ mulrC.
+Qed.
+
+Definition Cos (x : R^o) : R^o := cos (Rad.angle_of x).
+Definition Sin (x : R^o) : R^o := sin (Rad.angle_of x).
+
+Axiom derive1_Cos : forall t, derive1 Cos t = - Sin t.
+Axiom derive1_Sin : forall t, derive1 Sin t = Cos t.
+Axiom derivable_Sin : forall t, derivable Sin t 1.
+Axiom derivable_Cos : forall t, derivable Cos t 1.
+
+Lemma derive1_Cos_comp t (a : R^o -> R^o) : derivable a t 1 ->
+  derive1 (Cos \o a) t = - (derive1 a t) * Sin (a t).
+Proof.
+move=> H; rewrite (chain_rule H) ?derive1_Cos 1?mulrC ?(mulNr,mulrN).
+by [].
+exact: derivable_Cos.
+Qed.
+
+Lemma derive1mx_RzE (a : R^o -> R^o) t : derivable a t 1 ->
+  derive1mx (fun x => Rz (@Rad.angle_of [realType of R^o] (a x))) t =
+  derive1 a t *: col_mx3 (row3 (- Sin (a t)) (Cos (a t)) 0) (row3 (- Cos (a t)) (- Sin (a t)) 0) 0.
+Proof.
+move=> Ha.
+apply/matrix3P/and9P; split; rewrite !mxE /=.
+- rewrite (_ : (fun _ => _) = Cos \o a); last by rewrite funeqE => x; rewrite !mxE.
+  rewrite (chain_rule Ha); last exact/derivable_Cos.
+  by rewrite derive1_Cos mulrC.
+- rewrite (_ : (fun _ => _) = Sin \o a); last by rewrite funeqE => x; rewrite !mxE.
+  rewrite (chain_rule Ha); last exact/derivable_Sin.
+  by rewrite derive1_Sin mulrC.
+- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive1_cst mulr0.
+- rewrite (_ : (fun _ => _) = - Sin \o a); last by rewrite funeqE => x; rewrite !mxE.
+  rewrite (_ : - _ \o _ = - (Sin \o a)) // derive1E deriveN; last first.
+    apply/derivable1_diffP/differentiable_comp.
+    exact/derivable1_diffP.
+    exact/derivable1_diffP/derivable_Sin.
+  rewrite -derive1E (chain_rule Ha); last exact/derivable_Sin.
+  by rewrite derive1_Sin mulrN mulrC.
+- rewrite (_ : (fun _ => _) = Cos \o a); last by rewrite funeqE => x; rewrite !mxE.
+  rewrite (chain_rule Ha); last exact/derivable_Cos.
+  by rewrite derive1_Cos mulrN mulNr mulrC.
+- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive1_cst mulr0.
+- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive1_cst mulr0.
+- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive1_cst mulr0.
+- rewrite (_ : (fun _ => _) = cst 1); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive1_cst mulr0.
+Qed.
+
+(* example 3.1 [sciavicco]*)
+Lemma ang_vel_mx_Rz (a : R^o -> R^o) t : derivable a t 1 ->
+  ang_vel_mx (fun x => Rz (@Rad.angle_of [realType of R^o] (a x))) t = \S(row3 0 0 (derive1 a t)).
+Proof.
+move=> Ha.
+rewrite /ang_vel_mx trmx_Rz (derive1mx_RzE Ha) /Rz -mulmxE.
+rewrite -!scalemxAr mulmx_col3.
+rewrite mulmx_row3_col3 scale0r addr0.
+rewrite mulmx_row3_col3 scale0r addr0.
+rewrite e2row mulmx_row3_col3 !(scale0r,scaler0,addr0).
+rewrite !row3Z !(cosN,sinN,opprK,mulr0,mulrN,mulNr).
+rewrite !row3D mulrC addrC subrr addr0.
+rewrite -!expr2 cos2Dsin2 -opprD addrC cos2Dsin2.
+by apply/matrix3P; rewrite !spinij !mxE /= !(eqxx,oppr0,mulr0,mulrN1,mulr1).
+Qed.
+
+(* see also the end of dh.v *)
+Section chain.
+
+Inductive joint (R : rcfType) :=
+  Revolute of (R^o -> angle R) | Prismatic of (R^o -> R).
+
+Definition joint_variable (R : realType) (j : joint [rcfType of R]) : R^o -> R :=
+  fun t => match j with Revolute a => Rad.f (a t) | Prismatic a => a t end.
+
+Record chain (R : rcfType) n (* number of joints *) := mkChain {
+  joint_of_chain : 'I_n -> joint R ;
+  frame_of_chain : 'I_n.+1 -> (R^o -> tframe R) }.
+
+End chain.
+
+Section geometric_jacobian_computation.
+
+Variables (n : nat) (c : chain [rcfType of R^o] n).
+
+Section geo_jac_row.
+Variable i : 'I_n.
+Let j : joint [rcfType of R^o] := joint_of_chain c i.
+Let q : R^o -> R^o := joint_variable j.
+(* contribution to the angular velocity *)
+Definition geo_jac_ang t : 'rV_3 := match j with
+  Revolute f => zvec (frame_of_chain c (inord i) t)
+| Prismatic f => 0
+end.
+(* contribution to the linear velocity *)
+Definition geo_jac_lin t : 'rV_3 := match j with
+  Revolute f => zvec (frame_of_chain c (inord i) t) *v
+    (TFrame.o (frame_of_chain c (inord i.+1) t) -
+     TFrame.o (frame_of_chain c (inord i) t))
+| Prismatic f => zvec (frame_of_chain c (inord i) t)
+end.
+End geo_jac_row.
+
+Local Notation "\matrix_ ( i < m ) E" :=
+  (\matrix_(i < m, j < _) @fun_of_matrix _ 1 _ E ord0 j)
+  (only parsing) : ring_scope.
+
+Definition geo_jac t : 'M_(n, 6) :=
+  row_mx (\matrix_(i < n) geo_jac_lin i t) (\matrix_(i < n) geo_jac_ang i t).
+
+End geometric_jacobian_computation.
+
 Require Import rigid scara.
 
-Section scara_jacobian.
+Section scara_geometric_jacobian.
 
-Variable scara_joints : R -> 'rV[R^o]_4.
-Let scara_joint_velocities : R^o -> 'rV_4 := derive1mx scara_joints.
+Variable theta1 : R -> angle [rcfType of R^o].
+Variable a1 : R.
+Variable theta2 : R -> angle [rcfType of R^o].
+Variable a2 : R.
+Variable d3 : R -> R^o.
+Variable theta4 : R -> angle [rcfType of R^o].
+Variable d4 : R.
+Let Theta1 : R^o -> R^o := @Rad.f [realType of R^o] \o theta1.
+Let Theta2 : R^o -> R^o := @Rad.f [realType of R^o] \o theta2.
+Let Theta4 : R^o -> R^o := @Rad.f [realType of R^o] \o theta4.
+(* direct kinematics equation written in function of the joint variables,
+   from scara.v  *)
+Let rot t := scara_rot (theta1 t) (theta2 t) (theta4 t).
+Let trans t := scara_trans (theta1 t) a1 (theta2 t) a2 (d3 t) d4.
+Definition scara_end_effector t : 'M[R^o]_4 := hom (rot t) (trans t).
 
-Variable scara_end_effector : R -> 'M[R]_4. (* see hom scara_rot scara_trans *)
-Let scara_lin_vel (t : R) : 'rV[R]_3 := trans_of_hom (scara_end_effector t).
-Let scara_ang_vel : R -> 'rV[R]_3 :=
-  let r : R -> 'M[R^o]_3 := fun t => rot_of_hom (scara_end_effector t) in
-  fun t => unspin ((r t)^T * derive1mx r t).
+Let scara_lin_vel : R -> 'rV[R^o]_3 :=
+  derive1mx (@trans_of_hom [rcfType of R^o] \o scara_end_effector).
+Let scara_ang_vel : R -> 'rV[R^o]_3 :=
+  ang_vel (@rot_of_hom [rcfType of R^o] \o scara_end_effector).
 
-Variable scara_jacobian : R -> 'M[R]_(4, 6).
-(*
-z0	z0 *v (o4 - o0)
-z1	z1 *v (o4 - o1)
-0	z2
-z3	0
-*)
+Definition scara_joints : 'I_4 -> joint [rcfType of R] :=
+  [eta (fun=> Prismatic 0) with
+  ord0 |-> Revolute theta1,
+  @Ordinal 4 1 isT |-> Revolute (theta1 + theta2),
+  @Ordinal 4 2 isT |-> Prismatic d3,
+  @Ordinal 4 3 isT |-> Revolute theta4].
+Definition scara_joint_variables t : 'rV[R^o]_4 :=
+  \row_i (joint_variable (scara_joints i) t).
+Let scara_joint_velocities : R^o -> 'rV[R^o]_4 := derive1mx scara_joint_variables.
+Variables scara_frames : 'I_5 -> R^o -> tframe [rcfType of R^o].
+Let F i := scara_frames (inord i).
 
-Lemma scara_jacobianP t :
-  scara_joints t *m scara_jacobian t = row_mx (scara_lin_vel t) (scara_ang_vel t).
+Local Notation "''e_' i" := (delta_mx ord0 i)
+ (format "''e_' i", at level 3) : ring_scope.
+
+Lemma scara_geometric_jacobian t :
+  derivable (Theta1 + Theta2 + Theta4) t 1 ->
+  scara_joint_velocities t *m geo_jac (mkChain scara_joints scara_frames) t =
+  row_mx (scara_lin_vel t) (scara_ang_vel t).
+Proof.
+move=> H.
+rewrite /geo_jac; set a := (X in _ *m @row_mx _ _ 3 3 X _).
+rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
+- rewrite /scara_lin_vel (_ : @trans_of_hom [rcfType of R^o] \o _ = trans); last first.
+    rewrite funeqE => x /=; exact: trans_of_hom_hom.
+  rewrite /trans /scara_trans derive1mxE [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
+  transitivity (
+      derive1 Theta1 t *: zvec (F 0 t) *v (TFrame.o (F 1 t) - TFrame.o (F 0 t)) +
+      derive1 (Theta1 + Theta2) t *: zvec (F 1 t) *v (TFrame.o (F 2 t) - TFrame.o (F 1 t)) +
+      derive1 d3 t *: zvec (F 2 t) +
+      derive1 Theta4 t *: zvec (F 3 t) *v (TFrame.o (F 4 t) - TFrame.o (F 3 t))).
+    rewrite /scara_joint_velocities /scara_joint_variables derive1mxE /geo_jac_lin /=.
+    apply/rowP => i; rewrite 3![in RHS]mxE [in LHS]mxE sum4E; congr (_ + _ + _ + _).
+    - by rewrite 2!mxE /= crossmulZv [in RHS]mxE.
+    - rewrite 2!mxE /= crossmulZv [in RHS]mxE. admit.
+    - by rewrite 2!mxE [in RHS]mxE.
+    - by rewrite 2!mxE /= crossmulZv [in RHS]mxE.
+  rewrite (_ : zvec (F 0 t) = 'e_(@Ordinal 3 2 erefl)); last by admit.
+  rewrite (_ : zvec (F 1 t) = 'e_(@Ordinal 3 2 erefl)); last by admit.
+  rewrite (_ : zvec (F 3 t) = 'e_(@Ordinal 3 2 erefl)); last by admit.
+  rewrite (_ : TFrame.o (F 1 t) - TFrame.o (F 0 t) =
+    a1 * Cos (Theta1 t) *: 'e_ord0 + a1 * Sin (Theta1 t) *: 'e_(@Ordinal 3 1 erefl)); last by admit.
+  rewrite (_ : TFrame.o (F 2 t) - TFrame.o (F 1 t) =
+    a2 * Cos (Theta2 t + Theta1 t) *: 'e_ord0 + a2 * Sin (Theta2 t + Theta1 t) *: 'e_(@Ordinal 3 1 erefl)); last by admit.
+  rewrite (_ : TFrame.o (F 4 t) - TFrame.o (F 3 t) =
+    (d4 + d3 t) *: 'e_(@Ordinal 3 2 erefl)); last by admit.
+  rewrite crossmulDr crossmulvZ crossmulZv.
+  rewrite (_ : _ *v _ = - 'e_(@Ordinal 3 1 erefl)); last by admit.
+  rewrite 2!scalerN.
+  rewrite crossmulDr crossmulvZ crossmulZv.
+  rewrite (_ : _ *v _ = - 'e_ord0); last by admit.
+  rewrite 2!scalerN.
+  rewrite crossmulvZ crossmulZv.
+  rewrite (_ : _ *v _ = - 'e_(@Ordinal 3 1 erefl)); last by admit.
+  rewrite 2!scalerN.
+  rewrite crossmulvZ crossmulZv.
+  rewrite (_ : _ *v _ = - 'e_ord0); last by admit.
+  rewrite 2!scalerN.
+  rewrite crossmulvZ crossmulZv crossmulvv 2!scaler0 addr0.
+  rewrite row3e0.
+  rewrite row3e1.
+  rewrite row3e2.
+  rewrite (_ : zvec (F 2 t) = 'e_(@Ordinal 3 2 erefl)); last by admit.
+  rewrite !scalerA.
+  rewrite -!scaleNr.
+  rewrite addrACA.
+  rewrite -!scalerDl.
+  rewrite -addrA.
+  rewrite addrCA.
+  rewrite addrA.
+  congr (_ *: _ + _ *: _ + _ *: _).
+  rewrite [in RHS]derive1E deriveD; last 2 first.
+    admit.
+    admit.
+  rewrite addrC.
+  rewrite deriveZ; last by admit.
+  rewrite deriveZ; last by admit.
+  admit.
+  rewrite [in RHS]derive1E deriveD; last 2 first.
+    admit.
+    admit.
+  rewrite deriveZ; last by admit.
+  rewrite deriveZ; last by admit.
+  admit.
+  rewrite [in RHS]derive1E deriveD; last 2 first.
+    admit.
+    admit.
+  admit.
+- rewrite /scara_ang_vel (_ : @rot_of_hom [rcfType of R^o] \o _ = rot); last first.
+    rewrite funeqE => x /=; exact: rot_of_hom_hom.
+  rewrite /rot /ang_vel /scara_rot.
+  rewrite (_ : (fun _ => _) = (fun x => Rz (Rad.angle_of ((Theta1 + Theta2 + Theta4) x)))); last first.
+    rewrite funeqE => x; congr Rz.
+    rewrite -[(Theta1 + Theta2 + Theta4) x]/(Theta1 x + Theta2 x + Theta4 x).
+    admit.
+  rewrite ang_vel_mx_Rz // spinK.
+  transitivity (derive1 Theta1 t *: zvec (F 0 t) +
+                derive1 (Theta1 + Theta2) t *: zvec (F 1 t) +
+                derive1 Theta4 t *: zvec (F 3 t)).
+    rewrite /scara_joint_velocities /scara_joint_variables derive1mxE /geo_jac_ang /=.
+    apply/rowP => i; rewrite !mxE sum4E !mxE mulr0 addr0.
+    rewrite -!/(F _) [F 0 _]lock [F 1 _]lock [F 3 _]lock /= -!lock. admit.
+  admit.
 Abort.
 
-End scara_jacobian.
+End scara_geometric_jacobian.
 
-(* TODO: delete? *)
-Section tangent_vectors.
+(* TODO: relation geometric/analytic Jacobian *)
+
+(*Section tangent_vectors.
 
 Variable R : realType.
 Let vector := 'rV[R]_3.
@@ -823,11 +1060,4 @@ End tangent_vectors.
 Coercion vtvec_field_coercion := vtvec.
 Notation "p .-vec" := (tvec p) (at level 5).
 Notation "u :@ p" := (TVec p u) (at level 11).
-Notation "p +@ u" := (addt p u) (at level 41).
-
-Require Import angle.
-
-(* TODO *)
-Lemma derivative_Rx (a : R -> angle.angle [rcfType of R^o]) t :
-  derive1mx (fun x => Rx (a x)) t = \S( row3 1 0 0 ) *m Rx (a t).
-Abort.
+Notation "p +@ u" := (addt p u) (at level 41).*)

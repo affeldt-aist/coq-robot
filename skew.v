@@ -242,7 +242,7 @@ Proof. by rewrite {2}/axial row3Z /axial !mulrBr !mxE. Qed.
 
 Lemma axialD (A B : 'M[R]_3) : axial (A + B) = axial A + axial B.
 Proof.
-rewrite /axial -row3D !row3D !mxE -!addrA; congr (row3 (_ + _) (_ + _) (_ + _));
+rewrite /axial !row3D !mxE -!addrA; congr (row3 (_ + _) (_ + _) (_ + _));
   rewrite addrC opprD -!addrA; congr (_ + _); by rewrite addrC.
 Qed.
 
@@ -387,7 +387,7 @@ Lemma axial_spin u : axial \S( u ) = 2%:R *: u.
 Proof.
 rewrite /axial !spinij !opprK -!mulr2n -3!(mulr_natr (u``_ _)).
 rewrite !(mulrC _ 2%:R) -row3Z; congr (_ *: _).
-by rewrite [RHS](row3E u) !row3D !(addr0,add0r).
+by rewrite [RHS](row3_proj u) !row3D !(addr0,add0r).
 Qed.
 
 Lemma spin_axial_so M : M \is 'so[R]_3 -> \S( axial M ) = 2%:R *: M.

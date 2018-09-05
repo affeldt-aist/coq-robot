@@ -54,6 +54,18 @@ Implicit Types (a b : angle T) (M : 'M[T]_2).
 
 Definition RO a := col_mx2 (row2 (cos a) (sin a)) (row2 (- sin a) (cos a)).
 
+Lemma trmx_RO a : (RO a)^T = RO (- a).
+Proof.
+apply/matrixP => i j.
+rewrite !mxE /= cosN sinN opprK.
+case: ifPn => [/eqP ->{j}|].
+  case: ifPn => [/eqP ->{i}|]; first by rewrite !mxE.
+  by rewrite ifnot01 => /eqP ->{i}; rewrite eqxx !mxE.
+rewrite ifnot01 => /eqP ->; rewrite eqxx.
+case: ifPn => [/eqP ->{i}|]; rewrite ?mxE //= ifnot01 => /eqP ->{i}.
+by rewrite eqxx /= mxE.
+Qed.
+
 Lemma tr_RO a : \tr (RO a) = (cos a) *+ 2.
 Proof. by rewrite /mxtrace sum2E !mxE /= mulr2n. Qed.
 
@@ -233,6 +245,9 @@ rewrite (_ : ursubmx _ = 0); last first.
 rewrite (_ : dlsubmx _ = 0) //; apply/rowP => i; rewrite !mxE /=.
 by case/boolP : (i == 0) => [|/ifnot01P]/eqP->.
 Qed.
+
+Lemma trmx_Rz a : (Rz a)^T = Rz (- a).
+Proof. by rewrite Rz_RO (tr_block_mx (RO a)) !(trmx0,trmx1) trmx_RO -Rz_RO. Qed.
 
 Lemma RzM a b : Rz a * Rz b = Rz (a + b).
 Proof.

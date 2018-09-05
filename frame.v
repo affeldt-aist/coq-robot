@@ -385,6 +385,10 @@ Definition xaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 0)
 Definition yaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 1).
 Definition zaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 2%:R).
 
+Definition xvec (T : fieldType) (f : tframe T) := (f |, 0).
+Definition yvec (T : fieldType) (f : tframe T) := (f |, 1).
+Definition zvec (T : fieldType) (f : tframe T) := (f |, 2%:R).
+
 Section canonical_frame.
 
 Variable T : fieldType.
@@ -1027,7 +1031,7 @@ Lemma j_l_r : triad.j l1 l2 l3 *m rot_l2r = triad.j r1 r2 r3.
 Proof.
 rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 dotmulC triad.idotj dotmulvv triad.normj //.
 rewrite expr1n dot_crossmulCA crossmulvv dotmulv0 /matrix_of_noframe /=.
-rewrite col_mx3E row3_row_mx (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
+rewrite col_mx3E row3E (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r mul_scalar_mx scale0r addr0.
 Qed.
 
@@ -1035,7 +1039,7 @@ Lemma k_l_r : triad.k l1 l2 l3 *m rot_l2r = triad.k r1 r2 r3.
 Proof.
 rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 {1}/triad.k dotmulC dot_crossmulC.
 rewrite crossmulvv dotmul0v {1}/triad.k -dot_crossmulC crossmulvv dotmulv0.
-rewrite /matrix_of_noframe /= dotmulvv triad.normk // expr1n col_mx3E row3_row_mx.
+rewrite /matrix_of_noframe /= dotmulvv triad.normk // expr1n col_mx3E row3E.
 do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite mul_scalar_mx scale1r.
 Qed.

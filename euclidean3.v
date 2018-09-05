@@ -16,10 +16,10 @@ Require Import ssr_ext.
     includes section norm1 (unit norm)
  3. section row2
     section row3
- 4. section extra_linear3
-    extra lemmas about linear algebra specialized to dimensions <= 3
- 5. section col_mx2_col_mx3
+ 4. section col_mx2_col_mx3
     specialization of col_mx to row vectors of length 2, 3
+ 5. section extra_linear3
+    extra lemmas about linear algebra specialized to dimensions <= 3
  6. section normal
  7. section crossmul
     (sample lemma: double_crossmul)
@@ -286,7 +286,7 @@ apply/colP => i; rewrite !mxE /= (_ : rshift 1 (rshift 1 0) = 2%:R) //.
 exact/val_inj.
 Qed.
 
-Lemma row3_row_mx a b c : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
+Lemma row3E a b c : row3 a b c = row_mx a%:M (row_mx b%:M c%:M).
 Proof. by rewrite -[LHS]row_mx_colE !col_row3 !mxE. Qed.
 
 Lemma row_row3 n (M : 'M[T]_(n, 3)) i : row i M = row3 (M i 0) (M i 1) (M i 2%:R).
@@ -309,7 +309,7 @@ Qed.
 Lemma row3D a b c a' b' c' :
   row3 a b c + row3 a' b' c' = row3 (a + a') (b + b') (c + c').
 Proof.
-rewrite 3!row3_row_mx (add_row_mx a%:M) (add_row_mx b%:M).
+rewrite 3!row3E (add_row_mx a%:M) (add_row_mx b%:M).
 rewrite -(scalemx1 _ a) -(scalemx1 _ a') -(scalemx1 _ b) -(scalemx1 _ b').
 rewrite -(scalemx1 _ c) -(scalemx1 _ c'); by do 3! rewrite -scalerDl scalemx1.
 Qed.
@@ -317,129 +317,43 @@ Qed.
 Lemma row30 : row3 0 0 0 = 0 :> 'rV[T]_3.
 Proof. by apply/rowP => a; rewrite !mxE /=; do 3 case: ifPn => //. Qed.
 
-Lemma row3E (u : 'rV[T]_3) :
+Lemma e0row : 'e_0 = row3 1 0 0.
+Proof.
+by apply/rowP=> i; rewrite !mxE /=; case: ifPn=> //;
+  rewrite ifnot0=> /orP[]/eqP ->.
+Qed.
+
+Lemma e1row : 'e_1 = row3 0 1 0.
+Proof.
+by apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //|];
+  rewrite ifnot0=> /orP[]/eqP ->.
+Qed.
+
+Lemma e2row : 'e_2%:R = row3 0 0 1.
+Proof.
+by apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //|];
+  rewrite ifnot0=> /orP[]/eqP ->.
+Qed.
+
+Lemma row3_proj (u : 'rV[T]_3) :
   u = row3 (u``_0) 0 0 + row3 0 (u``_1) 0 + row3 0 0 (u``_2%:R).
 Proof.
 rewrite 2!row3D !(addr0,add0r); apply/rowP => k; by rewrite -row_row3 mxE.
 Qed.
 
-Lemma e0row : 'e_0 = row3 1 0 0 :> 'rV_3.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => // _.
-case: ifPn => //; by case: ifPn.
-Qed.
+Lemma row3e0 a : row3 a 0 0 = a *: 'e_0.
+Proof. by rewrite e0row row3Z mulr1 mulr0. Qed.
 
-Lemma e1row : 'e_1 = row3 0 1 0.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
-by case: ifPn => // _; case: ifPn.
-Qed.
+Lemma row3e1 a : row3 0 a 0 = a *: 'e_1.
+Proof. by rewrite e1row row3Z mulr1 mulr0. Qed.
 
-Lemma e2row : 'e_2%:R = row3 0 0 1.
-Proof.
-apply/rowP => i; rewrite !mxE /=; case: ifPn => [/eqP -> //| _].
-by case: ifPn => [/eqP -> //| _]; case: ifPn.
-Qed.
+Lemma row3e2 a : row3 0 0 a = a *: 'e_2%:R.
+Proof. by rewrite e2row row3Z mulr1 mulr0. Qed.
 
 End row3.
 
-Lemma norm_row3z {T : rcfType} (z : T) : norm (row3 0 0 z) = `|z|.
+Lemma norm_row3z (T : rcfType) (z : T) : norm (row3 0 0 z) = `|z|.
 Proof. by rewrite /norm dotmulE sum3E !mxE /= ?(mul0r,add0r) sqrtr_sqr. Qed.
-
-Section extra_linear3.
-
-Lemma matrix2P (T : eqType) (A B : 'M[T]_2) :
-  reflect (A = B)
-    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 1 0 == B 1 0 & A 1 1 == B 1 1].
-Proof.
-apply (iffP idP); last by move=> ->; rewrite !eqxx.
-case/and4P => /eqP ? /eqP ? /eqP ? /eqP ?; apply/matrixP => i j.
-case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
-  by case/boolP : (j == 0) => [|/ifnot01P]/eqP->.
-Qed.
-
-Lemma matrix3P (T : eqType) (A B : 'M[T]_3) :
-  reflect (A = B)
-    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 0 2%:R == B 0 2%:R,
-        A 1 0 == B 1 0, A 1 1 == B 1 1, A 1 2%:R == B 1 2%:R,
-        A 2%:R 0 == B 2%:R 0, A 2%:R 1 == B 2%:R 1 & A 2%:R 2%:R == B 2%:R 2%:R].
-Proof.
-apply (iffP idP) => [|]; last by move=> ->; rewrite !eqxx.
-case/and9P; do 9 move/eqP => ?; apply/matrixP => i j.
-case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->;
-  by case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
-Qed.
-
-Lemma vec3E (T : ringType) (u : 'rV[T]_3) :
-  u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
-Proof. rewrite [LHS]row3E e0row e1row e2row !row3Z. by Simp.r. Qed.
-
-Lemma mx_lin1K (T : ringType) (Q : 'M[T]_3) : lin1_mx (mx_lin1 Q) = Q.
-Proof. apply/matrix3P; by rewrite !mxE !sum3E !mxE !eqxx /=; Simp.r. Qed.
-
-Lemma det_mx11 (T : comRingType) (A : 'M[T]_1) : \det A = A 0 0.
-Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
-
-Lemma cofactor_mx22 (T : comRingType) (A : 'M[T]_2) i j :
-  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
-Proof.
-rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
-by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
-Qed.
-
-Lemma det_mx22 (T : comRingType) (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
-Proof.
-rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
-rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
-by rewrite !(lift0E, add0r) /= addrr_char2.
-Qed.
-
-Lemma cofactor_mx33 (T : comRingType) (A : 'M[T]_3) i j :
-  cofactor A i j = (-1) ^+ (i + j) *
-                   (A (i == 0)%:R (j == 0)%:R * A ((i <= 1).+1%:R) ((j <= 1).+1%:R) -
-                    A (i == 0)%:R ((j <= 1).+1%:R) * A ((i <= 1).+1%:R) (j == 0)%:R).
-Proof.
-rewrite /cofactor det_mx22 !mxE; congr (_ * (A _ _ * A _ _ - A _ _ * A _ _));
-  by rewrite (liftE0, liftE1).
-Qed.
-
-Lemma det_mx33 (T : comRingType) (M : 'M[T]_3) :
-  \det M = M 0 0 * (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R) +
-           M 0 1 * (M 2%:R 0 * M 1 2%:R - M 1 0 * M 2%:R 2%:R) +
-           M 0 2%:R * (M 1 0 * M 2%:R 1 - M 2%:R 0 * M 1 1).
-Proof.
-rewrite (expand_det_row M 0) sum3E -2!addrA; congr (_ * _ + (_ * _ + _ * _)).
-  by rewrite cofactor_mx33 /= expr0 mul1r [in X in _ - X]mulrC.
-by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
-by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
-Qed.
-
-Lemma mxtrace_sqr (T : comRingType) (M : 'M[T]_3) : \tr (M ^+ 2) =
-  \sum_i (M i i ^+2) + M 0 1 * M 1 0 *+ 2 + M 0 2%:R * M 2%:R 0 *+ 2 +
-  M 1 2%:R * M 2%:R 1 *+ 2.
-Proof.
-rewrite sum3E.
-transitivity (\sum_(i < 3) (row i M) *d (col i M)^T).
-  by apply/eq_bigr => i _; rewrite mxE_dotmul_row_col.
-rewrite sum3E !dotmulE !sum3E !mxE -!expr2 -!addrA; congr (_ + _).
-do 3 rewrite addrC -!addrA; congr (_ + _).
-do 3 rewrite addrC -!addrA; congr (_ + _).
-congr (_ + _).
-rewrite addrC -!addrA mulrC; congr (_ + _).
-rewrite addrC -!addrA mulrC; congr (_ + _).
-rewrite addrC -!addrA; congr (_ + _).
-by rewrite mulrC.
-Qed.
-
-Lemma sqr_mxtrace {T : comRingType} (M : 'M[T]_3) : (\tr M) ^+ 2 =
-  \sum_i (M i i ^+2) + M 0 0 * M 1 1 *+ 2 + (M 0 0 + M 1 1) * M 2%:R 2%:R *+ 2.
-Proof.
-rewrite /mxtrace sum3E 2!sqrrD sum3E -!addrA; congr (_ + _).
-do 2 rewrite addrC -!addrA; congr (_ + _).
-do 2 rewrite addrC -!addrA; congr (_ + _).
-Qed.
-
-End extra_linear3.
 
 Section col_mx2_col_mx3.
 
@@ -559,11 +473,106 @@ Lemma mul_tr_col_mx3 (x : 'rV[T]_3) a b c :
   x *m (col_mx3 a b c)^T = row3 (x *d a) (x *d b) (x *d c).
 Proof.
 rewrite col_mx3E (tr_col_mx a) (tr_col_mx b) (mul_mx_row x a^T).
-by rewrite row3_row_mx (mul_mx_row x b^T) 3!dotmulP.
+by rewrite row3E (mul_mx_row x b^T) 3!dotmulP.
 Qed.
 End col_mx3_comRingType.
 
 End col_mx2_col_mx3.
+
+Section extra_linear3.
+
+Lemma matrix2P (T : eqType) (A B : 'M[T]_2) :
+  reflect (A = B)
+    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 1 0 == B 1 0 & A 1 1 == B 1 1].
+Proof.
+apply (iffP idP); last by move=> ->; rewrite !eqxx.
+case/and4P => /eqP ? /eqP ? /eqP ? /eqP ?; apply/matrixP => i j.
+case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
+  by case/boolP : (j == 0) => [|/ifnot01P]/eqP->.
+Qed.
+
+Lemma matrix3P (T : eqType) (A B : 'M[T]_3) :
+  reflect (A = B)
+    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 0 2%:R == B 0 2%:R,
+        A 1 0 == B 1 0, A 1 1 == B 1 1, A 1 2%:R == B 1 2%:R,
+        A 2%:R 0 == B 2%:R 0, A 2%:R 1 == B 2%:R 1 & A 2%:R 2%:R == B 2%:R 2%:R].
+Proof.
+apply (iffP idP) => [|]; last by move=> ->; rewrite !eqxx.
+case/and9P; do 9 move/eqP => ?; apply/matrixP => i j.
+case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->;
+  by case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
+Qed.
+
+Lemma vec3E (T : ringType) (u : 'rV[T]_3) :
+  u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
+Proof. rewrite [LHS]row3_proj e0row e1row e2row !row3Z. by Simp.r. Qed.
+
+Lemma mx_lin1K (T : ringType) (Q : 'M[T]_3) : lin1_mx (mx_lin1 Q) = Q.
+Proof. apply/matrix3P; by rewrite !mxE !sum3E !mxE !eqxx /=; Simp.r. Qed.
+
+Lemma det_mx11 (T : comRingType) (A : 'M[T]_1) : \det A = A 0 0.
+Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
+
+Lemma cofactor_mx22 (T : comRingType) (A : 'M[T]_2) i j :
+  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
+Proof.
+rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
+by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
+Qed.
+
+Lemma det_mx22 (T : comRingType) (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
+Proof.
+rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
+rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
+by rewrite !(lift0E, add0r) /= addrr_char2.
+Qed.
+
+Lemma cofactor_mx33 (T : comRingType) (A : 'M[T]_3) i j :
+  cofactor A i j = (-1) ^+ (i + j) *
+                   (A (i == 0)%:R (j == 0)%:R * A ((i <= 1).+1%:R) ((j <= 1).+1%:R) -
+                    A (i == 0)%:R ((j <= 1).+1%:R) * A ((i <= 1).+1%:R) (j == 0)%:R).
+Proof.
+rewrite /cofactor det_mx22 !mxE; congr (_ * (A _ _ * A _ _ - A _ _ * A _ _));
+  by rewrite (liftE0, liftE1).
+Qed.
+
+Lemma det_mx33 (T : comRingType) (M : 'M[T]_3) :
+  \det M = M 0 0 * (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R) +
+           M 0 1 * (M 2%:R 0 * M 1 2%:R - M 1 0 * M 2%:R 2%:R) +
+           M 0 2%:R * (M 1 0 * M 2%:R 1 - M 2%:R 0 * M 1 1).
+Proof.
+rewrite (expand_det_row M 0) sum3E -2!addrA; congr (_ * _ + (_ * _ + _ * _)).
+  by rewrite cofactor_mx33 /= expr0 mul1r [in X in _ - X]mulrC.
+by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
+by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
+Qed.
+
+Lemma mxtrace_sqr (T : comRingType) (M : 'M[T]_3) : \tr (M ^+ 2) =
+  \sum_i (M i i ^+2) + M 0 1 * M 1 0 *+ 2 + M 0 2%:R * M 2%:R 0 *+ 2 +
+  M 1 2%:R * M 2%:R 1 *+ 2.
+Proof.
+rewrite sum3E.
+transitivity (\sum_(i < 3) (row i M) *d (col i M)^T).
+  by apply/eq_bigr => i _; rewrite mxE_dotmul_row_col.
+rewrite sum3E !dotmulE !sum3E !mxE -!expr2 -!addrA; congr (_ + _).
+do 3 rewrite addrC -!addrA; congr (_ + _).
+do 3 rewrite addrC -!addrA; congr (_ + _).
+congr (_ + _).
+rewrite addrC -!addrA mulrC; congr (_ + _).
+rewrite addrC -!addrA mulrC; congr (_ + _).
+rewrite addrC -!addrA; congr (_ + _).
+by rewrite mulrC.
+Qed.
+
+Lemma sqr_mxtrace {T : comRingType} (M : 'M[T]_3) : (\tr M) ^+ 2 =
+  \sum_i (M i i ^+2) + M 0 0 * M 1 1 *+ 2 + (M 0 0 + M 1 1) * M 2%:R 2%:R *+ 2.
+Proof.
+rewrite /mxtrace sum3E 2!sqrrD sum3E -!addrA; congr (_ + _).
+do 2 rewrite addrC -!addrA; congr (_ + _).
+do 2 rewrite addrC -!addrA; congr (_ + _).
+Qed.
+
+End extra_linear3.
 
 Section normal.
 

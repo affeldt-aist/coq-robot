@@ -7,6 +7,14 @@ From mathcomp Require Import complex finset fingroup perm.
 
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
+(* OUTLINE
+  1. Module Plucker.
+  2. Section plucker_of_line.
+  3. Section denavit_hartenberg_homogeneous_matrix.
+  4. Section denavit_hartenberg_convention.
+  5. Section open_chain. (wip)
+*)
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
