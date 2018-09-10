@@ -162,6 +162,8 @@ Definition dh_rot (jangle ltwist : angle T) := col_mx3
   (row3 (cos ltwist * - sin jangle) (cos ltwist * cos jangle) (sin ltwist))
   (row3 (sin ltwist * sin jangle) (- sin ltwist * cos jangle) (cos ltwist)).
 
+Local Open Scope frame_scope.
+
 Lemma dh_rot_i (f1 f0 : frame T) t a : f1 _R^ f0 = dh_rot t a ->
   f1|,0 *m f0^T = row3 (cos t) (sin t) 0.
 Proof.
@@ -187,14 +189,16 @@ Qed.
 
 End denavit_hartenberg_homogeneous_matrix.
 
+Local Open Scope frame_scope.
+
 Section denavit_hartenberg_convention.
 
 Variable T : rcfType.
 Variables F0 F1 : tframe T.
 Definition From1To0 := locked (F1 _R^ F0).
-Definition p1_in_0 : 'rV[T]_3 := (TFrame.o F1 - TFrame.o F0) *m (can_tframe T) _R^ F0.
+Definition p1_in_0 : 'rV[T]_3 := (\o{F1} - \o{F0}) *m (can_tframe T) _R^ F0.
 
-Goal `[ p1_in_0 $ F0 ] = rmap F0 `[ TFrame.o F1 - TFrame.o F0 $ can_tframe T ].
+Goal `[ p1_in_0 $ F0 ] = rmap F0 `[ \o{F1} - \o{F0} $ can_tframe T ].
 Proof.
 rewrite /p1_in_0.
 by rewrite /rmap.
@@ -202,6 +206,8 @@ Abort.
 
 Hypothesis dh1 : perpendicular (xaxis F1) (zaxis F0).
 Hypothesis dh2 : intersects (xaxis F1) (zaxis F0).
+
+Local Open Scope frame_scope.
 
 (* [spong] an homogeneous transformation that satisfies dh1 and dh2
    can be represented by means of only four parameters *)
@@ -412,8 +418,7 @@ have H4 : From1To0 = dh_rot theta alpha.
   rewrite -expr2 mulNr mulrAC -expr2 (mulrAC (cos alpha)) -expr2 -opprD -mulrDl.
   rewrite (addrC (sin _ ^+ 2)) cos2Dsin2 mul1r mulrN -expr2 -opprD cos2Dsin2 => /eqP.
   by rewrite -subr_eq0 -opprD eqr_oppLR oppr0 (_ : 1 + 1 = 2%:R) // pnatr_eq0.
-have [d [a H5]] : exists d a,
-  TFrame.o F1 = TFrame.o F0 + d *: (F0|,2%:R) + a *: (F1|,0).
+have [d [a H5]] : exists d a, \o{F1} = \o{F0} + d *: (F0|,2%:R) + a *: (F1|,0).
   case/intersects_interpoint : dh2 => p [].
   rewrite /is_interpoint => /andP[/lineP[k1 /= Hk1] /lineP[k2 /= Hk2]] _.
   exists k2, (- k1).
@@ -481,6 +486,8 @@ Axiom angle_between_lines : 'rV[T]_3 -> 'rV[T]_3 -> 'rV[T]_3 -> angle T.
 Variable n' : nat.
 Let n := n'.+1.
 
+Local Open Scope frame_scope.
+
 (* 1. Zi is the axis of the ith joint *)
 Definition joint_axis (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
@@ -491,8 +498,8 @@ Definition joint_axis (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
 Definition X_Z (frames : frame ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let predi : 'I_n.+1 := inord i.-1 in
-  let: (o_predi, z_predi) := let f := frames predi in (TFrame.o f, f|,2%:R) in
-  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, f|,0, f|,2%:R) in
+  let: (o_predi, z_predi) := let f := frames predi in (\o{f}, f|,2%:R) in
+  let: (o_i, x_i, z_i) := let f := frames i' in (\o{f}, f|,0, f|,2%:R) in
   if intersects (zaxis (frames predi)) (zaxis (frames i')) then
     x_i == z_predi *v z_i
   else if colinear z_predi z_i then
@@ -514,8 +521,8 @@ Definition link_length (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) 
 Definition link_offset (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  let: (o_succi, x_succi) := let f := frames succi in (TFrame.o f, f|,0) in
-  let: (o_i, x_i, z_i) := let f := frames i' in (TFrame.o f, f|,0, f|,2%:R) in
+  let: (o_succi, x_succi) := let f := frames succi in (\o{f}, f|,0) in
+  let: (o_i, x_i, z_i) := let f := frames i' in (\o{f}, f|,0, f|,2%:R) in
   if intersection (zaxis (frames i')) (xaxis (frames succi)) is some o'_i then
     (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == Link.offset (links i')) &&
     (`| Link.offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))

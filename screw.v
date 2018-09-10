@@ -1149,11 +1149,11 @@ Proof. move=> w0; by rewrite /hom_screw_motion w0 spin0 emx3a0 subrr mulmx0 add0
 Lemma hom_screwE s (p : point) (w1 : norm \vec( Screw.l s) = 1) :
   let l := Screw.l s in let a := Screw.a s in let h := Screw.h s in
   let q := \pt( l ) in let w := \vec( l ) in
-  SE.ap_point (SE.mk (q *m (1 - `e^(a, w)) + (h * rad a) *: w)
+  SE3.ap_point (SE3.mk (q *m (1 - `e^(a, w)) + (h * rad a) *: w)
                      (eskew_is_SO a w1)) p = screw_motion s p.
 Proof.
 move=> l a h q w.
-rewrite SE.ap_pointE mul_mx_row add_row_mx mulmx0 add0r to_hpointK.
+rewrite SE3.ap_pointE mul_mx_row add_row_mx mulmx0 add0r to_hpointK.
 rewrite addrA /hom_screw_motion /=; apply/rowP => i.
 rewrite mxE [in RHS]mxE; congr (_ + _).
 rewrite mulmxBr mulmx1 addrCA mxE [in RHS]mxE; congr (_ + _).

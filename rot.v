@@ -299,6 +299,8 @@ End elementary_rotations.
 
 Section isRot.
 
+Local Open Scope frame_scope.
+
 Variable T : rcfType.
 Implicit Types a : angle T.
 
@@ -836,6 +838,8 @@ rewrite scalerBl scale1r addrCA -addrA; congr (_ + _).
 rewrite scalerBr [in RHS]scalerBr opprB !addrA; congr (_ - _).
 by rewrite addrC w1 expr1n !scalemx1 (addrC _ 1) subrr addr0.
 Qed.
+
+Local Open Scope frame_scope.
 
 (* TODO: move? *)
 Lemma normalcomp_double_crossmul p (e : 'rV[T]_3) : norm e = 1 ->
@@ -1447,6 +1451,8 @@ Section euler_angles.
 Variables (T : rcfType).
 
 Implicit Types R : 'M[T]_3.
+
+Local Open Scope frame_scope.
 
 (* two orthogonal vectors belonging to the plan (y,z) projected on y and z *)
 Lemma exists_rotation_angle (F : frame T) (u v : 'rV[T]_3) :

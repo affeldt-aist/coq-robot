@@ -679,6 +679,8 @@ rewrite uquatE' /sqrq in q_is_uquat.
 by rewrite exprMn exprVn -mulrDl (eqP q_is_uquat) -exprVn mul1r -exprVn invrK.
 Qed.
 
+Local Open Scope frame_scope.
+
 Lemma quat_rot_isRot (a : quat R) : a \is uquat -> ~~ pureq a ->
   let: (u, theta) := polar_of_quat a in
   u != 0 ->

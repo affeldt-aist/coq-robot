@@ -36,8 +36,14 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory.
-Import Num.Theory.
+Import GRing.Theory Num.Theory.
+
+Reserved Notation "f '|,' i" (at level 3, i at level 2,
+  left associativity, format "f '|,' i").
+Reserved Notation "'\o{' F '}'" (at level 3, format "'\o{' F '}'").
+Reserved Notation "'\x{' F '}'" (at level 3, format "'\x{' F '}'").
+Reserved Notation "'\y{' F '}'" (at level 3, format "'\y{' F '}'").
+Reserved Notation "'\z{' F '}'" (at level 3, format "'\z{' F '}'").
 
 Local Open Scope ring_scope.
 
@@ -80,8 +86,9 @@ Coercion matrix_of_noframe (T : ringType) (f : noframe T) : 'M[T]_3 :=
   NOFrame.M f.
 
 Definition rowframeE := NOFrame.rowframeE.
-Notation "f '|,' i" := (NOFrame.rowframe f i)
-  (at level 3, i at level 2, left associativity, format "f '|,' i") : ring_scope.
+Notation "f '|,' i" := (NOFrame.rowframe f i) : frame_scope.
+
+Local Open Scope frame_scope.
 
 Section non_oriented_frame_properties.
 
@@ -322,8 +329,14 @@ Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_icrossj. Qed.
 Lemma frame_icrossk : i *v k = - j.
 Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_icrossk. Qed.
 
+Lemma frame_kcrossi : k *v i = j.
+Proof. by rewrite crossmulC frame_icrossk opprK. Qed.
+
 Lemma frame_jcrossk : j *v k = i.
 Proof. move: (Frame.MSO f); rewrite !rowframeE; by move/SO_jcrossk. Qed.
+
+Lemma frame_kcrossj : k *v j = -i.
+Proof. by rewrite crossmulC frame_jcrossk. Qed.
 
 Definition frame_of_SO (M : 'M[T]_3) (HM : M \is 'SO[T]_3) : frame T :=
   @Frame.mk _ (NOFrame.mk (rotation_sub HM)) HM.
@@ -381,13 +394,19 @@ Notation tframe := TFrame.t.
 Coercion frame_of_tframe (T : ringType) (f : tframe T) : frame T :=
   TFrame.frame_of f.
 
-Definition xaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 0).
-Definition yaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 1).
-Definition zaxis (T : fieldType) (f : tframe T) := Line.mk (TFrame.o f) (f |, 2%:R).
+Notation "'\o{' F '}'" := (TFrame.o F) : frame_scope.
 
-Definition xvec (T : fieldType) (f : tframe T) := (f |, 0).
-Definition yvec (T : fieldType) (f : tframe T) := (f |, 1).
-Definition zvec (T : fieldType) (f : tframe T) := (f |, 2%:R).
+Definition xaxis (T : fieldType) (F : tframe T) := Line.mk \o{F} (F |, 0).
+Definition yaxis (T : fieldType) (F : tframe T) := Line.mk \o{F} (F |, 1).
+Definition zaxis (T : fieldType) (F : tframe T) := Line.mk \o{F} (F |, 2%:R).
+
+Definition xvec (T : ringType) (F : tframe T) := (F |, 0).
+Definition yvec (T : ringType) (F : tframe T) := (F |, 1).
+Definition zvec (T : ringType) (F : tframe T) := (F |, 2%:R).
+
+Notation "'\x{' F '}'" := (xvec F) : frame_scope.
+Notation "'\y{' F '}'" := (yvec F) : frame_scope.
+Notation "'\z{' F '}'" := (zvec F) : frame_scope.
 
 Section canonical_frame.
 
@@ -411,10 +430,10 @@ Definition can_tframe := TFrame.mk 0 can_frame.
 
 End canonical_frame.
 
-Lemma basis_change (T : rcfType) (M : 'M[T]_3) (f : noframe T) (A : 'M[T]_3) :
-  let i := f |, 0 in
-  let j := f |, 1 in
-  let k := f |, 2%:R in
+Lemma basis_change (T : rcfType) (M : 'M[T]_3) (F : noframe T) (A : 'M[T]_3) :
+  let i := F |, 0 in
+  let j := F |, 1 in
+  let k := F |, 2%:R in
   i *m M = A 0 0 *: i + A 0 1 *: j + A 0 2%:R *: k ->
   j *m M = A 1 0 *: i + A 1 1 *: j + A 1 2%:R *: k ->
   k *m M = A 2%:R 0 *: i + A 2%:R 1 *: j + A 2%:R 2%:R *: k ->
@@ -427,7 +446,7 @@ have : P * M = A * P.
   congr col_mx3; apply/rowP => a; by rewrite !mxE sum3E !mxE.
 rewrite -mulrA => <-.
 rewrite mulrA mulVr ?mul1r // unitmxE unitfE /P -crossmul_triple.
-by rewrite -normr_gt0 -noframe_sgnE (abs_noframe_sgn f) ltr01.
+by rewrite -normr_gt0 -noframe_sgnE (abs_noframe_sgn F) ltr01.
 Qed.
 
 Module Base1.
