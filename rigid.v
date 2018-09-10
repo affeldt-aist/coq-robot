@@ -46,16 +46,6 @@ Import GRing.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 
-(* TODO: move? *)
-Definition lin1_mx' (T : rcfType) n (f : 'rV[T]_n -> 'rV[T]_n) : linear f ->
-  {M : {linear 'rV[T]_n -> 'rV[T]_n} & forall x, f x = M x}.
-Proof.
-move=> H.
-have @g : {linear 'rV[T]_n -> 'rV[T]_n}.
-  exists f; exact: (GRing.Linear.class_of_axiom H).
-by exists g.
-Defined.
-
 Module Iso.
 Section isometry.
 Variables (T : rcfType) (n : nat).

@@ -864,7 +864,7 @@ Notation "`[ v $ F ]" := (FramedVect.mk F v)
 Definition FramedVect_add (T : ringType) (F : tframe T) (a b : fvec F) : fvec F :=
   `[ FramedVect.v a + FramedVect.v b $ F ].
 
-Notation "a +fv b" := (FramedVect_add a b) (at level 39).
+Notation "a \+f b" := (FramedVect_add a b) (at level 39).
 
 Lemma fv_eq (T : ringType) a b : a = b -> forall F : frame T, `[ a $ F ] = `[ b $ F ].
 Proof. by move=> ->. Qed.

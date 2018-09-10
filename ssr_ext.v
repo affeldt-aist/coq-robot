@@ -248,20 +248,20 @@ Proof. by rewrite !mxE. Qed.
 
 Variable R : ringType.
 
-Lemma row_mx_eq0 (m n1 n2 : nat) (A1 : 'M[R]_(m, n1)) (A2 : 'M_(m, n2)) :
+Lemma row_mx_eq0 m n1 n2 (A1 : 'M[R]_(m, n1)) (A2 : 'M_(m, n2)) :
  (row_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
 Proof.
 apply/eqP/andP; last by case=> /eqP -> /eqP ->; rewrite row_mx0.
 by rewrite -row_mx0 => /eq_row_mx [-> ->].
 Qed.
 
-Lemma col_mx_eq0 (m1 m2 n : nat) (A1 : 'M[R]_(m1, n)) (A2 : 'M_(m2, n)) :
+Lemma col_mx_eq0 m1 m2 n (A1 : 'M[R]_(m1, n)) (A2 : 'M_(m2, n)) :
  (col_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
 Proof.
 by rewrite -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx0 tr_col_mx row_mx_eq0.
 Qed.
 
-Lemma col_mx_row_mx (m1 n1 : nat) (A : 'M[R]_(m1, n1)) n2 m2 :
+Lemma col_mx_row_mx m1 n1 (A : 'M[R]_(m1, n1)) n2 m2 :
   col_mx (row_mx A (0 : 'M_(m1, n2))) (0 : 'M_(m2, n1 + n2)) = row_mx (col_mx A 0) 0.
 Proof.
 set a : 'M_(m2, _ + n2) := 0.
@@ -271,6 +271,15 @@ Qed.
 
 Definition mx_lin1 n (M : 'M[R]_n) : {linear 'rV[R]_n -> 'rV[R]_n} :=
   mulmxr_linear 1 M.
+
+Definition lin1_mx' n (f : 'rV[R]_n -> 'rV[R]_n) : linear f ->
+  {M : {linear 'rV[R]_n -> 'rV[R]_n} & forall x, f x = M x}.
+Proof.
+move=> H.
+have @g : {linear 'rV[R]_n -> 'rV[R]_n}.
+  exists f; exact: (GRing.Linear.class_of_axiom H).
+by exists g.
+Defined.
 
 Lemma mulmx_trE n (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
 Proof.
