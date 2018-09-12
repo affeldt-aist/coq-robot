@@ -47,6 +47,10 @@ Reserved Notation "*d%R".
 Reserved Notation "u *d w" (at level 40).
 Reserved Notation "*v%R".
 Reserved Notation "u *v w" (at level 40).
+Reserved Notation "''O[' T ]_ n"
+  (at level 8, n at level 2, format "''O[' T ]_ n").
+Reserved Notation "''SO[' T ]_ n"
+  (at level 8, n at level 2, format "''SO[' T ]_ n").
 
 Local Open Scope ring_scope.
 
@@ -910,11 +914,9 @@ Canonical rotation_keyed := KeyedQualifier rotation_key.
 
 End orthogonal_rotation_def.
 
-Notation "''O[' T ]_ n" := (orthogonal n T)
-  (at level 8, n at level 2, format "''O[' T ]_ n") : ring_scope.
+Notation "''O[' T ]_ n" := (orthogonal n T) : ring_scope.
 
-Notation "''SO[' T ]_ n" := (rotation n T)
-  (at level 8, n at level 2, format "''SO[' T ]_ n") : ring_scope.
+Notation "''SO[' T ]_ n" := (rotation n T) : ring_scope.
 
 Section orthogonal_rotation_properties0.
 

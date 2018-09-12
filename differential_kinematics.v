@@ -605,15 +605,15 @@ Proof. by rewrite trmx_derivable. Qed.
 
 End derivable_FromTo.
 
-(* the coordinate transformation of a point P' from frame F1 to frame F
+(* the coordinate transformation of a point P1 from frame F1 to frame F
   (eqn 2.33, 3.10) *)
-Definition fmap (F : tframe [ringType of R^o]) (F1 : rframe F)
+Definition coortrans (F : tframe [ringType of R^o]) (F1 : rframe F)
     (P1 : bvec F1) : bvec F :=
   RFrame.o F1 \+b rmap F (FramedVect_of_Bound P1).
 
-(* motion of P w.r.t. the fixed frame F (eqn B.2) *)
+(* motion of P1 w.r.t. the fixed frame F (eqn B.2) *)
 Definition motion (F : tframe [ringType of R^o]) (F1 : R -> rframe F)
-  (P1 : forall t, bvec (F1 t)) t : bvec F := fmap (P1 t).
+  (P1 : forall t, bvec (F1 t)) t : bvec F := coortrans (P1 t).
 
 (* [sciavicco] p.351-352  *)
 Section kinematics.
@@ -637,7 +637,7 @@ Let Q : R -> bvec F := motion Q1.
 (* eqn B.3 *)
 Lemma eqnB3 t : P t = Q t \+b rmap F (P1 t \-b Q1 t).
 Proof.
-rewrite /P /Q /motion /fmap BoundFramed_addA; congr (_ \+b _).
+rewrite /P /Q /motion /coortrans BoundFramed_addA; congr (_ \+b _).
 apply fv_eq => /=; rewrite -mulmxDl; congr (_ *m _).
 by rewrite addrCA subrr addr0.
 Qed.
@@ -770,7 +770,7 @@ Lemma spatial_velocityE t :
 Proof.
 move=> r.
 rewrite /spatial_velocity.
-rewrite SE3_inv //.
+rewrite -inv_homE //.
 rewrite /inv_hom.
 rewrite /hom.
 rewrite derive1mx_SE //.
@@ -786,7 +786,7 @@ Proof.
 rewrite spatial_velocityE. set r := @rot_of_hom _.
 rewrite qualifE block_mxKul block_mxKur block_mxKdr 2!eqxx 2!andbT.
 rewrite ang_vel_mx_is_so // => t0.
-by rewrite rotation_sub // rot_of_hom_SO.
+by rewrite rotation_sub // rot_of_hom_is_SO.
 exact: derivable_rot_of_hom.
 Qed.
 
@@ -798,7 +798,7 @@ move=> r.
 rewrite spatial_velocityE.
 rewrite /wedge lin_tcoorE ang_tcoorE unspinK //.
 rewrite ang_vel_mx_is_so // => t0.
-by rewrite rotation_sub // rot_of_hom_SO.
+by rewrite rotation_sub // rot_of_hom_is_SO.
 exact: derivable_rot_of_hom.
 Qed.
 
@@ -821,11 +821,11 @@ Lemma body_ang_vel_is_so t : body_ang_vel_mx (@rot_of_hom _ \o M) t \is 'so[R_rc
 Proof.
 rewrite /body_ang_vel_mx.
 have : forall t, (@rot_of_hom [rcfType of R^o] \o M) t \is 'O[[ringType of R]]_3.
-  move=> t0; by rewrite rotation_sub // rot_of_hom_SO.
+  move=> t0; by rewrite rotation_sub // rot_of_hom_is_SO.
 move/ang_vel_mx_is_so => /(_ (derivable_rot_of_hom derivableM))/(_ t).
 rewrite /ang_vel_mx.
 move/(conj_so (((rot_of_hom (T:=[rcfType of R^o]) \o M) t)^T)).
-rewrite !mulmxA !trmxK orthogonal_mul_tr ?rotation_sub // ?rot_of_hom_SO //.
+rewrite !mulmxA !trmxK orthogonal_mul_tr ?rotation_sub // ?rot_of_hom_is_SO //.
 by rewrite mul1mx.
 Qed.
 
@@ -834,8 +834,7 @@ Lemma body_velocityE t : let r : R -> 'M[R^o]_3 := @rot_of_hom _ \o M in
 Proof.
 move=> r.
 rewrite /body_velocity.
-rewrite SE3_inv //.
-rewrite /inv_hom.
+rewrite -inv_homE // /inv_hom.
 rewrite /hom.
 rewrite derive1mx_SE //.
 rewrite (_ : rot_of_hom (M t) = r t) // -/r.
@@ -866,7 +865,7 @@ Proof.
 rewrite -/(SE3_action _ _) action_Adjoint; last by [].
 congr vee; rewrite /spatial_velocity -mulmxE -mulmxA; congr (_ * _).
 rewrite veeK; last by rewrite body_velocity_is_se.
-by rewrite /body_velocity -mulmxA mulVmx ?mulmx1 // SE3_is_unitmx.
+by rewrite /body_velocity -mulmxA mulVmx ?mulmx1 // SE3_in_unitmx.
 Qed.
 
 End spatial_body_adjoint.
