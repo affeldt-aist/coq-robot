@@ -69,7 +69,7 @@ Qed.
 
 Section taylor_exponential.
 
-Variable T : rcfType.
+Variable T : realFieldType.
 Let vector := 'rV[T]_3.
 Variable n : nat.
 Implicit Type M : 'M[T]_n.+1.
@@ -247,7 +247,7 @@ Canonical lie_algebra_sqmat_type (R : comRingType) n := Lie.Pack
                         (@lie_sqmat_jacobi _ _))).
 
 Section lie_euclidean_3.
-Variable T : rcfType.
+Variable T : comRingType.
 Let vector := 'rV[T]_3.
 Lemma lie_e3_bilinear : bilinear (@crossmul T).
 Proof. split; [exact: crossmulr_linear | exact: crossmul_linear]. Qed.
@@ -255,7 +255,7 @@ Definition lie_e3_alternative := @crossmulvv T.
 Definition lie_e3_jacobi := @jacobi_crossmul T.
 End lie_euclidean_3.
 
-Canonical lie_euclidean_3_type (R : rcfType) :=
+Canonical lie_euclidean_3_type (R : comRingType) :=
   Lie.Pack (Lie.Class (Lie.Mixin (@lie_e3_alternative R)
                                  (@lie_e3_bilinear R)
                                  (@lie_e3_jacobi R))).
@@ -263,7 +263,7 @@ Canonical lie_euclidean_3_type (R : rcfType) :=
 (* NB: spin is a Lie algebra isomorphism between (R^3,*v) and
    (so[R]_3,[S(w1),S(w2)]=S(w1)S(w2)-S(w2)S(w1)) *)
 
-Goal forall (T : rcfType) (u v : 'rV[T]_3), u *v v = - (v *v u).
+Goal forall (T : comRingType) (u v : 'rV[T]_3), u *v v = - (v *v u).
 Proof.
 move=> R u v.
 move: (@lie_anticommutative _ (lie_euclidean_3_type R) u v).
@@ -345,7 +345,7 @@ End twist_coordinates_properties.
 
 Section se3_qualifier.
 
-Variable T : rcfType.
+Variable T : comUnitRingType.
 Implicit Types E : 'M[T]_4.
 
 (* the set of twists, [murray] p.40 *)
@@ -401,7 +401,7 @@ Notation "''se3[' R ]" := (se3 R) : ring_scope.
 
 Section twist_properties.
 
-Variable T : rcfType.
+Variable T : realFieldType.
 Let vector := 'rV[T]_3.
 Implicit Types t : twist T.
 Implicit Types E : 'M[T]_4.
@@ -534,7 +534,7 @@ End twist_properties.
 
 Section twist_and_adjoint.
 
-Variable T : rcfType.
+Variable T : realFieldType.
 Implicit Types t : twist T.
 
 Definition SE3_action (g : 'M[T]_4) t : twist T := t *m Adjoint g.
@@ -603,7 +603,7 @@ End twist_and_adjoint.
 
 Section sample_rigid_transformation.
 
-Variable T : rcfType.
+Variable T : comRingType.
 Let vector := 'rV[T]_3.
 Implicit Types v w : vector.
 
@@ -621,6 +621,14 @@ Proof.
 by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 crossmulNv subrr hom10.
 Qed.
 
+End sample_rigid_transformation.
+
+Section sample_rigid_cont.
+
+Variable T : comUnitRingType.
+Let vector := 'rV[T]_3.
+Implicit Types v w : vector.
+
 Lemma rigid_trans_unitmx w v : rigid_trans w v \in unitmx.
 Proof.
 by rewrite unitmxE /rigid_trans (det_lblock 1 (_ *v _)) 2!det1 mulr1 unitr1.
@@ -637,7 +645,7 @@ Proof.
 apply/unitrP; exists (inv_rigid_trans w v); by rewrite Vrigid_trans rigid_transV.
 Qed.
 
-End sample_rigid_transformation.
+End sample_rigid_cont.
 
 (* exponential coordinates for rbt using taylor expansion of the exponential function *)
 (* [murray] proposition 2.8, p. 41-42 *)

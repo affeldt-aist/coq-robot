@@ -333,7 +333,7 @@ End vec_angle.
 
 Section colinear.
 
-Variable T : fieldType.
+Variable T : comRingType.
 Implicit Types u v : 'rV[T]_3.
 
 Definition colinear u v := u *v v == 0.
@@ -358,78 +358,89 @@ Proof. by rewrite colinear_sym colinear0v. Qed.
 
 Definition colinear0 := (colinear0v, colinearv0).
 
-Lemma colinearZv u v k : colinear (k *: u) v = (k == 0) || colinear u v.
-Proof. by rewrite /colinear crossmulZv scaler_eq0. Qed.
-
-Lemma colinearvZ u v k : colinear u (k *: v) = (k == 0) || colinear u v.
-Proof. by rewrite /colinear crossmulvZ scaler_eq0. Qed.
-
 Lemma colinearNv u v : colinear (- u) v = colinear u v.
 Proof. by rewrite /colinear crossmulNv eqr_oppLR oppr0. Qed.
 
 Lemma colinearvN u v : colinear u (- v) = colinear u v.
 Proof. by rewrite colinear_sym colinearNv colinear_sym. Qed.
 
+Lemma colinearD u v w : colinear u w -> colinear v w -> colinear (u + v) w.
+Proof. by rewrite /colinear crossmulDl => /eqP-> /eqP->; rewrite addr0. Qed.
+
 End colinear.
+
+Lemma col_perm_eq0 (T : ringType) (u : 'rV[T]_3) (s : 'S_3) :
+  (col_perm s u == 0) = (u == 0).
+Proof.
+apply/eqP/eqP; last by move->; rewrite col_permE mul0mx.
+move=> /rowP u0; apply/rowP=> i.
+by have := u0 (s^-1%g i); rewrite !mxE /= permKV.
+Qed.
+
+Lemma colinear_permE (T : idomainType) (s : 'S_3) (u v : 'rV[T]_3) :
+  colinear u v = colinear (col_perm s u) (col_perm s v).
+Proof.
+rewrite /colinear !col_permE -mulmx_crossmul; last exact: unitmx_perm.
+rewrite -scalemxAr scalemx_eq0 det_perm signr_eq0 /=.
+by rewrite perm_mxV invrK tr_perm_mx -col_permE col_perm_eq0.
+Qed.
+
+Lemma colinear_trans (T : idomainType) (v u w : 'rV[T]_3) :
+  u != 0 -> colinear v u -> colinear u w -> colinear v w.
+Proof.
+move=> /eqP/rowP/eqfunP; rewrite negb_forall => /existsP [j].
+rewrite mxE; wlog: v u w j / j = 0.
+  move=> hwlog ujn0; set s := tperm j 0.
+  rewrite (colinear_permE s) => vu; rewrite (colinear_permE s) => uw.
+  rewrite (colinear_permE s); apply: hwlog 0 _ _ vu uw => //.
+  by rewrite mxE tpermR.
+move=>-> /lregP u0n0; rewrite /colinear !crossmulE => /eqP/rowP vu /eqP/rowP uw.
+apply/eqP/rowP=> i; rewrite !mxE /=; case: ifP => _.
+  apply/eqP; rewrite -(mulrI_eq0 _ u0n0) mulrBr !mulrA.
+  have := vu 1; rewrite !mxE /= => /subr0_eq; rewrite mulrC =>->.
+  rewrite [u``_0 * _]mulrC; have := vu 2%:R; rewrite !mxE /= => /subr0_eq => <-.
+  rewrite -mulrA; have := uw 0; rewrite !mxE /= => /subr0_eq =>->.
+  by rewrite mulrA subrr.
+case: ifP => _.
+  apply/eqP; rewrite -(mulrI_eq0 _ u0n0) mulrBr !mulrA.
+  rewrite [u``_0 * _]mulrC; have := vu 1; rewrite !mxE /= => /subr0_eq ->.
+  rewrite -[X in X - _]mulrA; have := uw 1; rewrite !mxE /= => /subr0_eq ->.
+  by rewrite mulrCA mulrA subrr.
+case: ifP => _ //; apply/eqP; rewrite -(mulrI_eq0 _ u0n0) mulrBr !mulrA.
+rewrite mulrAC; have := uw 2%:R; rewrite !mxE /= => /subr0_eq ->.
+rewrite mulrAC [u``_1 * _]mulrC; have := vu 2%:R; rewrite !mxE /= => /subr0_eq.
+by move->; rewrite [v``_1 * _]mulrC subrr.
+Qed.
+
+Lemma colinearZv (T : fieldType) (u v : 'rV[T]_3) k :
+  colinear (k *: u) v = (k == 0) || colinear u v.
+Proof. by rewrite /colinear crossmulZv scaler_eq0. Qed.
+
+Lemma colinearvZ (T : fieldType) (u v : 'rV[T]_3) k :
+  colinear u (k *: v) = (k == 0) || colinear u v.
+Proof. by rewrite /colinear crossmulvZ scaler_eq0. Qed.
+
+Lemma colinearP (T : fieldType) (u v : 'rV[T]_3) :
+  reflect (v == 0 \/ (v != 0 /\ exists k, u = k *: v)) (colinear u v).
+Proof.
+apply: (iffP idP); last first.
+  case=> [/eqP ->|]; first by rewrite colinear0.
+  case=> v0 [k ukv].
+  by rewrite /colinear ukv crossmulC linearZ /= crossmulvv scaler0 oppr0.
+rewrite /colinear => uv.
+case/boolP : (v == 0) => v0; [by left | right; split; first by done].
+move: v0 => /eqP/rowP/eqfunP; rewrite negb_forall => /existsP [j].
+rewrite mxE => v0; exists (u``_j / v``_j); apply/rowP => i; rewrite mxE.
+case: (eqVneq i j) => [->|inej]; first by rewrite mulrVK ?unitfE.
+move: uv; rewrite crossmul0E => /forallP /(_ j) /forallP /(_ i).
+rewrite eq_sym => /implyP /(_ inej) /eqP uvij; apply: (mulfI v0).
+by rewrite mulrC !mulrA -mulrA mulrACA mulfV ?mul1r.
+Qed.
 
 Section colinear1.
 
 Variable T : rcfType.
 Implicit Types u v : 'rV[T]_3.
-
-Lemma colinear_trans v u w : u != 0 -> colinear v u -> colinear u w -> colinear v w.
-Proof.
-move=> u0.
-rewrite /colinear => vu0 uw0.
-move: (jacobi_crossmul u v w).
-rewrite (crossmulC u v) (eqP vu0) oppr0 crossmulv0 addr0.
-rewrite (crossmulC w u) (eqP uw0) oppr0 crossmulv0 addr0.
-rewrite double_crossmul => /eqP; rewrite subr_eq0.
-case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite crossmul0v.
-case/boolP : (w == 0) => [/eqP ->|w0]; first by rewrite crossmulv0.
-have uw0' : u *d w != 0.
-  apply: contraL uw0.
-  by apply dotmul_eq0_crossmul_neq0.
-move/eqP/(congr1 (fun x => (u *d w)^-1 *: x )).
-rewrite scalerA mulVr // ?unitfE // scale1r => ->.
-by rewrite scalerA crossmulC linearZ /= crossmulvv scaler0 oppr0.
-Qed.
-
-(* TODO: to be improved? *)
-Lemma colinearP u v :
-  reflect (v == 0 \/
-           (v != 0 /\ exists k, `| k | = norm u / norm v /\ u = k *: v))
-          (colinear u v).
-Proof.
-apply: (iffP idP); last first.
-  case => [/eqP ->|]; first by rewrite colinear0.
-  case => v0 [k [k0 ukv]].
-  by rewrite /colinear ukv crossmulC linearZ /= crossmulvv scaler0 oppr0.
-rewrite /colinear => uv.
-case/boolP : (v == 0) => v0; [by left | right; split; first by done].
-case/boolP : (u == 0) => u0.
-  by exists (norm u / norm v); rewrite (eqP u0) norm0 mul0r normr0 scale0r.
-have : vec_angle u v = 0 \/ vec_angle u v = pi.
-  rewrite /vec_angle (eqP uv) norm0.
-  case: (lerP 0 (u *d v)) => udv; [left | right].
-    rewrite arg_Re // ltr_neqAle udv andbT eq_sym.
-    apply/negP => /(dotmul_eq0_crossmul_neq0 u0 v0); by rewrite uv.
-  by rewrite arg_Re_neg.
-case => [ /(vec_angle0_inv u0 v0) | /(vec_anglepi_inv u0 v0)] ukv.
-  exists (norm u / norm v); split => //.
-  by rewrite ger0_norm // divr_ge0 // norm_ge0.
-exists (- (norm u / norm v)); split => //.
-by rewrite normrN ger0_norm // divr_ge0 // norm_ge0.
-Qed.
-
-Lemma colinearD u v w : colinear u w -> colinear v w ->
-  colinear (u + v) w.
-Proof.
-case/boolP : (v == 0) => [/eqP ->|v0]; first by rewrite addr0.
-case/colinearP => [/eqP -> _| [w0 [k [Hk1 Hk2]]]]; first by rewrite colinear0.
-case/colinearP => [/eqP ->|[_ [k' [Hk'1 Hk'2]]]]; first by rewrite colinear0.
-by rewrite Hk2 Hk'2 -scalerDl colinearZv colinear_refl orbT.
-Qed.
 
 Lemma colinear_sin u v (u0 : u != 0) (v0 : v != 0) :
   (colinear u v) = (sin (vec_angle u v) == 0).
@@ -437,10 +448,10 @@ Proof.
 apply/idP/idP.
 - rewrite colinear_sym => /colinearP.
   rewrite (negbTE u0).
-  case=> // -[_ [k [Hk1 Hk2]]].
-  rewrite Hk2 /vec_angle crossmulvZ crossmulvv scaler0 norm0 complexr0.
+  case=> // -[_ [k Hk]].
+  rewrite Hk /vec_angle crossmulvZ crossmulvv scaler0 norm0 complexr0.
   rewrite dotmulvZ dotmulvv /sin.
-  have k0 : k != 0 by apply: contra v0 => /eqP k0; rewrite Hk2 k0 scale0r.
+  have k0 : k != 0 by apply: contra v0 => /eqP k0; rewrite Hk k0 scale0r.
   rewrite expi_arg; last first.
     by rewrite eq_complex /= eqxx andbT mulf_neq0 // sqrf_eq0 norm_eq0.
   by rewrite ImZ mulf_eq0 mulf_eq0 (negbTE k0) sqrf_eq0 norm_eq0 (negbTE u0) /= mul0r oppr0.
@@ -475,10 +486,11 @@ Proof. split; [exact: sin_vec_angle_ge0|by rewrite colinear_sin]. Qed.
 Lemma invariant_colinear (u : 'rV[T]_3) (M : 'M[T]_3) :
   u != 0 -> u *m M = u -> forall v, colinear u v -> v *m M = v.
 Proof.
-move=> u0 uMu v /colinearP[/eqP->|[v0 [k [Hk1 Hk2]]]]; first by rewrite mul0mx.
-move: uMu; rewrite Hk2 -scalemxAl => /eqP.
-rewrite -subr_eq0 -scalerBr scaler_eq0 -normr_eq0 Hk1 mulf_eq0 invr_eq0.
-by rewrite 2!norm_eq0 (negbTE u0) (negbTE v0) /= subr_eq0 => /eqP.
+move=> u0 uMu v /colinearP[/eqP->|[v0 [k Hk]]]; first by rewrite mul0mx.
+move: uMu; rewrite Hk -scalemxAl => /eqP.
+rewrite -subr_eq0 -scalerBr scaler_eq0 => /orP [/eqP k0|].
+  by move: u0; rewrite Hk k0 scale0r eq_refl.
+by rewrite subr_eq0 => /eqP.
 Qed.
 
 End colinear1.
@@ -613,7 +625,7 @@ Lemma normalcomp_colinear v e (e0 : e != 0) :
 Proof.
 apply/idP/idP => [/eqP|/colinearP]; first exact: normalcomp_colinear_helper.
 case; first by rewrite (negbTE e0).
-case=> _ [k [Hk1 ->]]; by rewrite normalcompZ.
+case=> _ [k ->]; by rewrite normalcompZ.
 Qed.
 
 Lemma crossmul_normalcomp v e : e *v normalcomp v e = e *v v.
@@ -675,7 +687,7 @@ End axial_normal_decomposition.
 
 Section law_of_sines.
 
-Variable T : fieldType.
+Variable T : comRingType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Implicit Types a b c : point.
@@ -791,7 +803,9 @@ End law_of_sines1.
 
 Module Line.
 Section line_def.
-Variable T : fieldType.
+(* could be zmodType but then the coercion line_pred does not satisfy the
+   uniform inheritance condition *)
+Variable T : comRingType.
 Record t := mk {
   point : 'rV[T]_3 ;
   vector :> 'rV[T]_3
@@ -806,19 +820,19 @@ Notation "'\pt(' l ')'" := (Line.point l) (at level 3, format "'\pt(' l ')'").
 Notation "'\pt2(' l ')'" := (Line.point2 l) (at level 3, format "'\pt2(' l ')'").
 Notation "'\vec(' l ')'" := (Line.vector l) (at level 3, format "'\vec(' l ')'").
 
-Coercion line_pred (T : fieldType) (l : Line.t T) : pred 'rV[T]_3 :=
+Coercion line_pred (T : comRingType) (l : Line.t T) : pred 'rV[T]_3 :=
   [pred p | (p == \pt( l )) ||
     (\vec( l ) != 0) && colinear \vec( l ) (p - \pt( l ))].
 
+Lemma line_point_in (T : comRingType) (l : Line.t T) : \pt(l) \in (l : pred _).
+Proof. by case: l => p v /=; rewrite inE /= eqxx. Qed.
+
 Section line.
 
-Variable T : rcfType.
+Variable T : fieldType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Implicit Types l : Line.t T.
-
-Lemma line_point_in l : \pt( l ) \in (l : pred _).
-Proof. by case: l => p v /=; rewrite inE /= eqxx. Qed.
 
 Lemma lineP p l :
   reflect (exists k', p = \pt( l ) + k' *: \vec( l)) (p \in (l : pred _)).
@@ -826,11 +840,12 @@ Proof.
 apply (iffP idP) => [|[k' ->]].
   rewrite inE.
   case/orP => [/eqP pl|]; first by exists 0; rewrite scale0r addr0.
-  case/andP => l0 /colinearP[|[pl [k [Hk1 Hk2]]]].
+  case/andP => l0 /colinearP[|[pl [k Hk]]].
     rewrite subr_eq0 => /eqP ->; exists 0; by rewrite scale0r addr0.
-  have k0 : k != 0 by rewrite -normr_eq0 Hk1 mulf_neq0 // ?invr_eq0 norm_eq0.
+  have k0 : k != 0.
+    by apply/negP => /eqP k0; move: l0; rewrite Hk k0 scale0r eq_refl.
   exists k^-1.
-  by rewrite Hk2 scalerA mulVr ?unitfE // scale1r addrCA subrr addr0.
+  by rewrite Hk scalerA mulVr ?unitfE // scale1r addrCA subrr addr0.
 rewrite inE.
 case/boolP : (\vec( l ) == 0) => [/eqP ->|l0 /=].
   by rewrite scaler0 addr0 eqxx.
@@ -846,34 +861,34 @@ apply/lineP/idP => [[] x /eqP|pl].
   rewrite inE l0 /=; apply/orP; right.
   rewrite -!addrA addrC !addrA subrK colinear_sym.
   by rewrite colinearD // ?colinearZv ?colinear_refl ?orbT // colinearNv.
-case/colinearP : vl => [|[_ [k [Hk1 ->]]]]; first by rewrite (negPf l0).
+case/colinearP : vl => [|[_ [k ->]]]; first by rewrite (negPf l0).
 case/lineP : pl => k' ->.
 exists (k' + k); by rewrite -addrA -scalerDl.
 Qed.
 
-Definition parallel : rel (Line.t T) :=
+End line.
+
+Definition parallel (T : comRingType) : rel (Line.t T) :=
   [rel l1 l2 | colinear \vec( l1 ) \vec( l2 )].
 
-Definition perpendicular : rel (Line.t T) :=
+Definition perpendicular (T : comRingType) : rel (Line.t T) :=
   [rel l1 l2 | \vec( l1 ) *d \vec( l2 ) == 0].
 
 (* skew lines *)
 
-Definition coplanar (p1 p2 p3 p4 : point) : bool :=
+Definition coplanar (T : comRingType) (p1 p2 p3 p4 : 'rV[T]_3) : bool :=
   (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
 
-Definition skew : rel (Line.t T) := [rel l1 l2 |
+Definition skew (T : comRingType) : rel (Line.t T) := [rel l1 l2 |
   ~~ coplanar \pt( l1 ) \pt2( l1 ) \pt( l2 ) \pt2( l2) ].
 
-Lemma skewE l1 l2 :
+Lemma skewE (T : comRingType) (l1 l2 : Line.t T) :
   skew l1 l2 = ~~ coplanar \pt( l1 ) \pt2( l1 ) \pt( l2 ) \pt2( l2).
 Proof. by []. Qed.
 
-End line.
-
 Section line_line_intersection.
 
-Variable T : rcfType.
+Variable T : realFieldType.
 Let point := 'rV[T]_3.
 Implicit Types l : Line.t T.
 
@@ -885,7 +900,7 @@ Definition is_interpoint p l1 l2 :=
 
 Definition interpoint_param x l1 l2 :=
   let v1 := \vec( l1 ) in let v2 := \vec( l2 ) in
-  \det (col_mx3 (\pt( l2 ) - \pt( l1 )) x (v1 *v v2)) / norm (v1 *v v2) ^+ 2.
+  \det (col_mx3 (\pt( l2 ) - \pt( l1 )) x (v1 *v v2)) / ((v1 *v v2) *d (v1 *v v2)).
 
 Lemma interpoint_param0 l1 l2 v : \pt( l1 ) = \pt( l2 ) ->
   interpoint_param v l1 l2 = 0.
@@ -907,14 +922,14 @@ rewrite /interpoint_t /interpoint_s /interpoint_param  -/v1 -/v2.
 do 2 rewrite -crossmul_triple (dot_crossmulC (\pt( l2) - \pt( l1 ))).
 apply/eqP; set v1v2 := v1 *v v2.
 rewrite -subr_eq -addrA eq_sym addrC -subr_eq.
-rewrite 2!(mulrC _ (_^-2)) -2!scalerA -scalerBr.
+rewrite 2!(mulrC _ _^-1) -2!scalerA -scalerBr.
 rewrite dotmulC dot_crossmulC (dotmulC _ v1v2) (dot_crossmulC).
 rewrite -double_crossmul.
 rewrite crossmulC double_crossmul dotmulC -{2}(opprB _ \pt( l2 )) dotmulNv.
 case/andP: Hinter.
 rewrite skewE negbK /coplanar -2!Line.vectorE => /eqP -> ?.
-rewrite oppr0 scale0r add0r opprK dotmulvv scalerA mulVr ?scale1r //.
-by rewrite unitfE sqrf_eq0 norm_eq0.
+rewrite oppr0 scale0r add0r opprK scalerA mulVr ?scale1r //.
+by rewrite unitfE dotmulvv0.
 Qed.
 
 Lemma intersects_interpoint l1 l2 : intersects l1 l2 ->
@@ -967,10 +982,10 @@ have Ht' : t' = interpoint_t l1 l2.
   have : t' *: (v1 *v v2) = (\pt( l2 ) - \pt( l1 )) *v v2.
     by rewrite (H \pt( l1 ) \pt( l2 ) _ _ _ s') // -Hs -Ht.
   move/(congr1 (fun x => x *d (v1 *v v2))).
-  rewrite dotmulZv dotmulvv.
-  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
-  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
-  by rewrite -dot_crossmulC crossmul_triple.
+  rewrite dotmulZv.
+  move/(congr1 (fun x => x / ((v1 *v v2) *d (v1 *v v2)))).
+  rewrite -mulrA divrr ?mulr1; first by rewrite -dot_crossmulC crossmul_triple.
+  by rewrite unitfE dotmulvv0.
 have Hs' : s' = interpoint_s l1 l2.
   have : s' *: (v1 *v v2) = (\pt( l2) - \pt( l1 )) *v v1.
     move: (H \pt( l2 ) \pt( l1 ) v2 v1 s' t').
@@ -978,10 +993,10 @@ have Hs' : s' = interpoint_s l1 l2.
     rewrite crossmulC scalerN -opprB crossmulNv => /eqP.
     by rewrite eqr_opp => /eqP.
   move/(congr1 (fun x => x *d (v1 *v v2))).
-  rewrite dotmulZv dotmulvv.
-  move/(congr1 (fun x => x / (norm (v1 *v v2)) ^+ 2)).
-  rewrite -mulrA divrr ?mulr1; last by rewrite unitfE sqrf_eq0 norm_eq0.
-  by rewrite -dot_crossmulC crossmul_triple.
+  rewrite dotmulZv.
+  move/(congr1 (fun x => x / ((v1 *v v2) *d (v1 *v v2)))).
+  rewrite -mulrA divrr ?mulr1; first by rewrite -dot_crossmulC crossmul_triple.
+  by rewrite unitfE dotmulvv0.
 by rewrite /t /s -Ht' -Hs'.
 Qed.
 

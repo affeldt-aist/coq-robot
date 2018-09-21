@@ -89,7 +89,8 @@ apply/idP/idP => [|/eqP ->]; last by rewrite oppr0.
 by rewrite -subr_eq0 -opprD -mulr2n -mulNrn mulrn_eq0 /= eqr_oppLR oppr0.
 Qed.
 
-Lemma Neqxx_mat (R : rcfType) n m (u : 'M[R]_(m, n)) : (- u == u) = (u == 0).
+Lemma Neqxx_mat (R : numFieldType) n m (u : 'M[R]_(m, n)) :
+  (- u == u) = (u == 0).
 Proof.
 apply/idP/idP => [|/eqP ->]; last by rewrite oppr0.
 by rewrite -subr_eq0 -opprD -mulr2n -scaler_nat oppr_eq0 scaler_eq0 pnatr_eq0.

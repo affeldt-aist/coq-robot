@@ -469,7 +469,7 @@ End derivative_map.
 
 Section homogeneous_points_and_vectors.
 
-Variable T : rcfType.
+Variable T : ringType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Let homogeneous := 'rV[T]_4.
@@ -558,7 +558,7 @@ Notation "''hV[' T ]" := (hvector T).
 
 Section homogeneous_matrices.
 
-Variable T : rcfType.
+Variable T : ringType.
 Let homogeneous := 'M[T]_4.
 Implicit Types M : homogeneous.
 Implicit Types r : 'M[T]_3.
@@ -576,9 +576,6 @@ congr (@block_mx _ 3 1 3 1); apply/matrixP => i j; rewrite !mxE -val_eqE //.
 rewrite {j}(ord1 j) /= addn0; by case: i => -[] // [] // [].
 rewrite {i}(ord1 i) /= addn0; by case: j => -[] // [] // [].
 Qed.
-
-Lemma det_hom r t : \det (hom r t) = \det r.
-Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
 
 Lemma rot_of_hom_hom t r : rot_of_hom (hom r t) = r.
 Proof. by rewrite /rot_of_hom /hom block_mxKul. Qed.
@@ -609,6 +606,18 @@ Definition inv_hom M := hom (rot_of_hom M)^T (- trans_of_hom M *m (rot_of_hom M)
 Lemma trmx_hom (r : 'M[T]_3) t : (hom r t)^T = block_mx r^T t^T 0 1.
 Proof. by rewrite /hom (tr_block_mx r) trmx1 trmx0. Qed.
 
+End homogeneous_matrices.
+
+Lemma det_hom (T : comRingType) (r : 'M[T]_3) t : \det (hom r t) = \det r.
+Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
+
+Section homogeneous_transformations.
+
+Variable T : rcfType.
+Let homogeneous := 'M[T]_4.
+Implicit Types M : homogeneous.
+Implicit Types r : 'M[T]_3.
+
 (* elementary rotations in homogeneous form *)
 Definition hRx a : homogeneous := hom (Rx a) 0.
 
@@ -638,10 +647,10 @@ rewrite homM mul1r mulmx_row3_col3 2!scale0r !(add0r,addr0) e2row row3Z.
 by rewrite !(mulr0,mulr1).
 Qed.
 
-End homogeneous_matrices.
+End homogeneous_transformations.
 
 Section SE3_qualifier.
-Variable T : rcfType.
+Variable T : ringType.
 Implicit Types M : 'M[T]_4.
 Definition SE3 := [qualify M |
   [&& rot_of_hom M \is 'SO[T]_3,
@@ -654,25 +663,25 @@ Notation "''SE3[' T ]" := (SE3 T) : ring_scope.
 
 Section SE3_hom.
 
-Variable T : rcfType.
-
-Lemma rot_of_hom_is_SO M : M \is 'SE3[T] -> rot_of_hom M \is 'SO[T]_3.
+Lemma rot_of_hom_is_SO (T : ringType) M :
+  M \is 'SE3[T] -> rot_of_hom M \is 'SO[T]_3.
 Proof. by case/and3P. Qed.
 
-Lemma hom_is_SE r t : r \is 'SO[T]_3 -> hom r t \is 'SE3[T].
+Lemma hom_is_SE (T : ringType) r t : r \is 'SO[T]_3 -> hom r t \is 'SE3[T].
 Proof.
 move=> Hr; apply/and3P; rewrite rot_of_hom_hom Hr; split => //.
 - by rewrite /hom block_mxKur.
 - by rewrite /hom block_mxKdr.
 Qed.
 
-Lemma SE3E M : M \is 'SE3[T] -> M = hom (rot_of_hom M) (trans_of_hom M).
+Lemma SE3E (T : ringType) M :
+  M \is 'SE3[T] -> M = hom (rot_of_hom M) (trans_of_hom M).
 Proof.
 case/and3P => T1 /eqP T2 /eqP T3.
 by rewrite /hom -[in LHS](@submxK _ 3 1 3 1 M) T2 T3.
 Qed.
 
-Lemma SE31 : 1 \is 'SE3[T].
+Lemma SE31 (T : comUnitRingType) : 1 \is 'SE3[T].
 Proof.
 apply/and3P; split; first by rewrite rot_of_hom1 rotation1.
 - apply/eqP/matrixP => i j; rewrite !mxE -val_eqE /= {j}(ord1 j) addn0.
@@ -680,23 +689,23 @@ apply/and3P; split; first by rewrite rot_of_hom1 rotation1.
 - by apply/eqP/rowP => i; rewrite {i}(ord1 i) !mxE -val_eqE.
 Qed.
 
-Lemma SE3_in_unitmx M : M \is 'SE3[T] -> M \in unitmx.
+Lemma SE3_in_unitmx (T : comUnitRingType) M : M \is 'SE3[T] -> M \in unitmx.
 Proof.
 move=> H; rewrite (SE3E H).
 by rewrite unitmxE /= det_hom rotation_det // ?unitr1 // rot_of_hom_is_SO.
 Qed.
 
-Lemma rot_of_homM M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
+Lemma rot_of_homM (T : ringType) M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
   rot_of_hom (M1 * M2) = rot_of_hom M1 * rot_of_hom M2.
 Proof. move/SE3E => -> /SE3E ->; by rewrite homM !rot_of_hom_hom. Qed.
 
-Lemma trans_of_homM M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
+Lemma trans_of_homM (T : ringType) M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
   trans_of_hom (M1 * M2) = trans_of_hom M1 *m rot_of_hom M2 + trans_of_hom M2.
 Proof.
 move/SE3E => -> /SE3E tmp; rewrite [in LHS]tmp; by rewrite homM 2!trans_of_hom_hom.
 Qed.
 
-Lemma homV M : M \is 'SE3[T] -> M * inv_hom M = 1.
+Lemma homV (T : comUnitRingType) M : M \is 'SE3[T] -> M * inv_hom M = 1.
 Proof.
 move=> HM.
 rewrite (SE3E HM) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
@@ -705,7 +714,7 @@ rewrite homM -rotation_inv ?rot_of_hom_is_SO // divrr; last first.
 by rewrite mulNmx subrr hom10.
 Qed.
 
-Lemma Vhom M : M \is 'SE3[T] -> inv_hom M * M = 1.
+Lemma Vhom (T : fieldType) M : M \is 'SE3[T] -> inv_hom M * M = 1.
 Proof.
 move=> HM.
 rewrite (SE3E HM) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
@@ -715,14 +724,15 @@ rewrite -mulmxA mulVmx ?mulmx1 1?addrC ?subrr ?hom10 // .
 by rewrite unitmxE unitfE rotation_det ?oner_eq0 // rot_of_hom_is_SO.
 Qed.
 
-Lemma inv_homE M : M \is 'SE3[T] -> inv_hom M = M^-1.
+Lemma inv_homE (T : fieldType) M : M \is 'SE3[T] -> inv_hom M = M^-1.
 Proof.
 move=> HM.
 rewrite -[RHS]mul1mx -[X in _ = X *m _ ](Vhom HM) -mulmxA.
 by rewrite mulmxV ?mulmx1 // SE3_in_unitmx.
 Qed.
 
-Lemma inv_hom_is_SE3 M : M \is 'SE3[T] -> inv_hom M \is 'SE3[T].
+Lemma inv_hom_is_SE3 (T : comUnitRingType) M :
+  M \is 'SE3[T] -> inv_hom M \is 'SE3[T].
 Proof.
 case/and3P=> ? ? ?; apply/and3P; split.
 - by rewrite /inv_hom rot_of_hom_hom rotationV.
@@ -730,10 +740,10 @@ case/and3P=> ? ? ?; apply/and3P; split.
 - by rewrite /inv_hom /hom block_mxKdr.
 Qed.
 
-Lemma SE3_invr_closed : invr_closed 'SE3[T].
+Lemma SE3_invr_closed (T : fieldType) : invr_closed 'SE3[T].
 Proof. move=> M HM; by rewrite -inv_homE // inv_hom_is_SE3. Qed.
 
-Lemma SE3_mulr_closed : mulr_closed 'SE3[T].
+Lemma SE3_mulr_closed (T : comUnitRingType) : mulr_closed 'SE3[T].
 Proof.
 split; first exact: SE31.
 move=> /= A B HA HB.
@@ -747,22 +757,23 @@ apply/and3P; split.
 - by rewrite /hom block_mxKdr.
 Qed.
 
-Canonical SE3_is_mulr_closed := MulrPred SE3_mulr_closed.
+Canonical SE3_is_mulr_closed (T : comUnitRingType) :=
+  MulrPred (SE3_mulr_closed T).
 
-Lemma SE3_divr_closed : divr_closed 'SE3[T].
+Lemma SE3_divr_closed (T : fieldType) : divr_closed 'SE3[T].
 Proof.
 split; first by rewrite SE31.
 move=> A B HA HB.
 by rewrite rpredM // SE3_invr_closed.
 Qed.
 
-Canonical SE3_is_divr_closed := DivrPred SE3_divr_closed.
+Canonical SE3_is_divr_closed (T : fieldType) := DivrPred (SE3_divr_closed T).
 
 End SE3_hom.
 
 Section Adjoint.
 
-Variables (T : rcfType).
+Variables (T : comRingType).
 Implicit Types g : 'M[T]_4.
 
 (* adjoint transformation associated with g *)
@@ -781,11 +792,18 @@ Definition inv_Adjoint g : 'M_6 :=
   let t := trans_of_hom g in
   block_mx r^T 0 (- r^T * \S(t *m r^T)) r^T.
 
-Lemma Adjoint_in_unitmx M : M \is 'SE3[T] -> Adjoint M \in unitmx.
+End Adjoint.
+
+Section adjoint_theory.
+
+Lemma Adjoint_in_unitmx (T : comUnitRingType) M :
+  M \is 'SE3[T] -> Adjoint M \in unitmx.
 Proof.
 move=> ?; rewrite unitmxE /Adjoint (det_lblock (rot_of_hom M)).
 by rewrite rotation_det ?mulr1 ?unitr1 // rot_of_hom_is_SO.
 Qed.
+
+Variable (T : realFieldType).
 
 Lemma VAdjoint g : rot_of_hom g \is 'SO[T]_3 -> inv_Adjoint g * Adjoint g = 1.
 Proof.
@@ -849,11 +867,11 @@ move: (rot_of_hom_is_SO Hg2).
 rewrite rotationE orthogonalE => /andP[/eqP -> _]; by rewrite mulr1.
 Qed.
 
-End Adjoint.
+End adjoint_theory.
 
 Module EuclideanMotion.
 Section euclidean_motion.
-Variable T : rcfType.
+Variable T : comUnitRingType.
 
 Record t : Type := mk {
   trans_rot : 'rV[T]_3 * 'M[T]_3;
@@ -984,17 +1002,21 @@ Proof.
 by rewrite /motion_point -from_hB hom_motionB ?to_hpointP // to_hpointB.
 Qed.
 
-Lemma motion_vector_preserves_norm m : {mono (motion_vector m) : u / norm u}.
+End euclidean_motion.
+
+Lemma motion_vector_preserves_norm (T : rcfType) (m : t T) :
+  {mono (motion_vector m) : u / norm u}.
 Proof.
-by move=> ?; rewrite motion_vectorE orth_preserves_norm // rotation_sub.
+move=> ?; rewrite motion_vectorE orth_preserves_norm // rotation_sub //.
+exact: rotP.
 Qed.
 
-Lemma rodrigues_homogeneous M u (MSO : M \is 'SO[T]_3) :
+Lemma rodrigues_homogeneous (T : rcfType) M u (MSO : M \is 'SO[T]_3) :
   axial M != 0 ->
   Aa.angle M != pi ->
   let a := aangle (angle_axis_of_rot M) in
   let w := aaxis (angle_axis_of_rot M) in
-  rodrigues u a w = motion_point (mk (0, _) MSO) u.
+  rodrigues u a w = motion_point (@mk _ (0, _) MSO) u.
 Proof.
 move=> axis0 api a w.
 case/boolP : (Aa.angle M == 0) => a0.
@@ -1013,14 +1035,13 @@ rewrite rodriguesP //; congr (_ *m _) => {u}.
 by rewrite (angle_axis_eskew_old MSO) // Aa.vaxis_neq0.
 Qed.
 
-End euclidean_motion.
 End EuclideanMotion.
 
 Coercion hom_of_euclidean_motion := EuclideanMotion.hom_of.
 
 Section coordinate_transformation.
 
-Variable T : rcfType.
+Variable T : comUnitRingType.
 Variable m : EuclideanMotion.t T.
 (* the coordinate transformation from frame A to frame B
   (m = motion A -> B or frame configuration of B w.r.t. A) *)

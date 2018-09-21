@@ -33,7 +33,7 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B))
 (* [ angeles2014: p.102-203] *)
 Module Plucker.
 Section plucker.
-Variable T : comRingType.
+Variable T : ringType.
 Let vector := 'rV[T]_3.
 
 Record array := mkArray {
@@ -45,7 +45,7 @@ Record array := mkArray {
 End plucker.
 End Plucker.
 
-Coercion plucker_array_mx (T : comRingType) (p : Plucker.array T) :=
+Coercion plucker_array_mx (T : ringType) (p : Plucker.array T) :=
   row_mx (Plucker.e p) (Plucker.n p).
 
 (* wip *)

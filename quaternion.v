@@ -140,7 +140,7 @@ Notation "a *`j" := (mkQuat 0 (a *: 'e_1)) : quat_scope.
 Notation "a *`k" := (mkQuat 0 (a *: 'e_2%:R)) : quat_scope.
 
 Section quaternion.
-Variable R : fieldType.
+Variable R : comRingType.
 
 Definition mulq (a b : quat R) :=
   mkQuat (a`0 * b`0 - a`1 *d b`1) (a`0 *: b`1 + b`0 *: a`1 + a`1 *v b`1).
@@ -228,12 +228,6 @@ rewrite mulqE /mulq /= scale0r crossmulvv dotmulE sum3E !mxE /=; Simp.r => /=; c
 by rewrite /= oppr0.
 Qed.
 
-Lemma ijk : `i * `j = `k.
-Proof.
-apply/eqP; rewrite eq_quat /=; Simp.r.
-by rewrite vece2 odd_perm3 dote2; Simp.ord; Simp.r.
-Qed.
-
 Lemma ikNj : `i * `k = - `j.
 Proof.
 rewrite mulqE /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=. Simp.r.
@@ -268,6 +262,11 @@ by rewrite {1}[a`1]vec3E -!scalerDr.
 Qed.
 
 End quaternion.
+
+Lemma ijk (R : comUnitRingType) : `i * `j = `k :> quat R.
+Proof.
+by apply/eqP; rewrite eq_quat /=; Simp.r; rewrite vecij dote2; Simp.r.
+Qed.
 
 Section quaternion1.
 Variable R : rcfType.
@@ -593,7 +592,7 @@ case: a => a0 a1 /=.
 rewrite /quat_rot /= /conjq /= mulqE /mulq /=.
 rewrite mulr0 scale0r addr0 add0r; congr mkQuat.
   rewrite dotmulvN opprK dotmulDl (dotmulC (_ *v _) a1) dot_crossmulC.
-  by rewrite crossmulvv dotmul0v addr0 dotmulZv mulrC mulNr dotmulC addrC subrr.
+  by rewrite crossmulvv dotmul0v addr0 dotmulZv mulNr mulrC dotmulC addrC subrr.
 rewrite scalerDr scalerA -expr2 addrCA scalerBl -!addrA; congr (_ + _).
 rewrite [in X in _ + X = _]linearN /= (crossmulC _ a1) linearD /= opprK.
 rewrite linearZ /= (addrA (a0 *: _ )) -mulr2n.
@@ -744,7 +743,7 @@ Notation "x '^*q'" := (conjq x) : quat_scope.
 
 Section dual_number.
 
-Variables (R : unitRingType).
+Variables (R : ringType).
 
 Record dual := mkDual {ldual : R ; rdual : R }.
 
@@ -870,15 +869,24 @@ Proof. move=> a b; by rewrite /scaled /= !mulrDl adddE. Qed.
 Definition dual_lmodMixin := LmodMixin scaledA scaled1 scaledDr scaledDl.
 Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
 
-Definition unitd : pred dual := [pred a | a``0 \is a GRing.unit].
+End dual_number.
 
-Definition invd (a : dual) :=
+Section dual_number_unit.
+
+Variable (R : unitRingType).
+
+Local Notation "x '``0'" := (ldual x) (at level 1, format "x '``0'").
+Local Notation "x '``1'" := (rdual x) (at level 1, format "x '``1'").
+
+Definition unitd : pred (dual R) := [pred a | a``0 \is a GRing.unit].
+
+Definition invd (a : dual R) :=
   if a \in unitd then
-    dual_of_mat ((a``0)^-1%:M * (1 - deps * a``1%:M * (a``0)^-1%:M))
+    dual_of_mat ((a``0)^-1%:M * (1 - deps R * a``1%:M * (a``0)^-1%:M))
   else
     a.
 
-Lemma mulVd : {in unitd, left_inverse 1 invd muld}.
+Lemma mulVd : {in unitd, left_inverse 1 invd (@muld R)}.
 Proof.
 move=> a0 ua0.
 rewrite /invd ua0 /dual_of_mat; congr mkDual.
@@ -889,7 +897,7 @@ rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1,mulr0n,add0r,mul1r).
 by rewrite !(mulrN,mulNr) -!mulrA mulVr // mulr1 subrr.
 Qed.
 
-Lemma muldV : {in unitd, right_inverse 1 invd muld}.
+Lemma muldV : {in unitd, right_inverse 1 invd (@muld R)}.
 Proof.
 move=> a0 ua0.
 rewrite /invd ua0 /dual_of_mat; congr mkDual.
@@ -908,9 +916,9 @@ Lemma invd0id : {in [predC unitd], invd =1 id}.
 Proof. move=> a; by rewrite inE /= /invd => /negbTE ->. Qed.
 
 Definition dual_UnitRingMixin := UnitRingMixin mulVd muldV unitdP invd0id.
-Canonical dual_unitRing := UnitRingType dual dual_UnitRingMixin.
+Canonical dual_unitRing := UnitRingType (dual R) dual_UnitRingMixin.
 
-End dual_number.
+End dual_number_unit.
 
 Notation "x '..1'" := (ldual x) (at level 1, format "x '..1'") : dual_scope.
 Notation "x '..2'" := (rdual x) (at level 1, format "x '..2'") : dual_scope.
