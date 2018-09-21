@@ -52,7 +52,7 @@ Notation "''so[' R ]_ n" := (anti n R).
 
 Section sym_anti.
 
-Variables (R : comRingType) (n : nat).
+Variables (R : ringType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
 Implicit Types v : 'rV[R]_n.
 
@@ -63,9 +63,6 @@ Lemma symE M : (M \is sym n R) = (M == M^T). Proof. by []. Qed.
 Lemma sym_cst a : a%:M \is sym n R. Proof. by rewrite symE tr_scalar_mx. Qed.
 
 Lemma sym0 : 0 \is sym n R. Proof. by rewrite symE trmx0. Qed.
-
-Lemma mul_tr_vec_sym v : v^T *m v \is sym n R.
-Proof. apply/eqP; by rewrite trmx_mul trmxK. Qed.
 
 Lemma symP A B : A \in sym n R -> B \in sym n R ->
   (forall i j : 'I_n, (i <= j)%N -> A i j = B i j) -> A = B.
@@ -112,12 +109,6 @@ by rewrite antiE -eqr_oppLR => /eqP <-; rewrite antiN.
 by rewrite antiE trmxK -eqr_oppLR => /eqP <-; rewrite antiN.
 Qed.
 
-Lemma conj_so P M : M \is 'so[R]_n -> P^T *m M *m P \is 'so[R]_n.
-Proof.
-rewrite !antiE -eqr_oppLR => /eqP HM.
-by rewrite !trmx_mul trmxK -HM !(mulNmx,mulmxN) opprK mulmxA.
-Qed.
-
 Lemma anti_scaler_closed : GRing.scaler_closed 'so[R]_n.
 Proof.
 move=> ? ?; rewrite antiE => /eqP H; by rewrite antiE linearZ /= -scalerN -H.
@@ -127,6 +118,16 @@ Qed.
 End anti.
 
 End sym_anti.
+
+Lemma mul_tr_vec_sym (R : comRingType) m (v : 'rV[R]_m) : v^T *m v \is sym m R.
+Proof. apply/eqP; by rewrite trmx_mul trmxK. Qed.
+
+Lemma conj_so (R : comRingType) n P M :
+  M \is 'so[R]_n -> P^T *m M *m P \is 'so[R]_n.
+Proof.
+rewrite !antiE -eqr_oppLR => /eqP HM.
+by rewrite !trmx_mul trmxK -HM !(mulNmx,mulmxN) opprK mulmxA.
+Qed.
 
 Section anti_rcfType.
 
@@ -163,7 +164,7 @@ End anti_rcfType.
 
 Section anti_rcfType_dim3.
 
-Lemma sqr_anti (R : rcfType) (M : 'M[R]_3) : M \is 'so[R]_3 ->
+Lemma sqr_anti (R : numDomainType) (M : 'M[R]_3) : M \is 'so[R]_3 ->
   M ^+ 2 = col_mx3
   (row3 (- M 0 1 ^+ 2 - M 0 2%:R ^+ 2) (- M 1 2%:R * M 0 2%:R) (M 0 1 * M 1 2%:R))
   (row3 (- M 1 2%:R * M 0 2%:R) (- M 0 1 ^+ 2 - M 1 2%:R ^+ 2) (- M 0 1 * M 0 2%:R))
@@ -214,7 +215,7 @@ End sym_anti_numFieldType.
 
 Section axial_vector.
 
-Variable R : fieldType.
+Variable R : ringType.
 Implicit Types M : 'M[R]_3.
 
 Definition axial M :=
@@ -253,7 +254,7 @@ End axial_vector.
 
 Section spin_matrix.
 
-Variable R : fieldType.
+Variable R : comRingType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
@@ -272,8 +273,15 @@ Qed.
 Lemma spin0 : \S( 0 ) = 0.
 Proof. by apply/matrixP => i j; rewrite /spin mxE crossmul0v 2!mxE. Qed.
 
+(* this should generalize mulmxP *)
+Lemma mulmatP M N : reflect (forall u, u *m M = u *m N) (M == N).
+Proof.
+apply: (iffP idP) => [/eqP->|MeN] //.
+by apply/eqP/row_matrixP => i; rewrite !rowE.
+Qed.
+
 Lemma spinD u v : \S(u + v) = \S(u) + \S(v).
-Proof. apply/eqP/mulmxP => w; by rewrite mulmxDr !spinE crossmulDl. Qed.
+Proof. apply/eqP/mulmatP => w; by rewrite mulmxDr !spinE crossmulDl. Qed.
 
 Lemma spinZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
@@ -321,6 +329,17 @@ rewrite -(trmxK (spin u)) -trmx_mul tr_spin.
 by rewrite mulmxN spinE crossmulvv oppr0 trmx0.
 Qed.
 
+End spin_matrix.
+
+Notation "'\S(' w ')'" := (spin w).
+
+Section unspin_matrix.
+
+Variable R : comUnitRingType.
+Let vector := 'rV[R]_3.
+Implicit Types u : vector.
+Implicit Types M : 'M[R]_3.
+
 (* normalized axial vector *)
 Definition unspin M := 2%:R^-1 *: axial M.
 
@@ -342,20 +361,18 @@ Proof. by rewrite /unspin axialZ scalerA mulrC -scalerA. Qed.
 Lemma unspinD (A B : 'M[R]_3) : unspin (A + B) = unspin A + unspin B.
 Proof. by rewrite /unspin axialD scalerDr. Qed.
 
+End unspin_matrix.
+
 (* skew-symmetric matrices are always singular *)
-Lemma det_spin u : \det \S( u ) = 0.
+Lemma det_spin (R : idomainType) (u : 'rV[R]_3) : \det \S( u ) = 0.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite spin0 det0.
 apply/eqP/det0P; exists u => //; by rewrite spinE crossmulvv.
 Qed.
 
-End spin_matrix.
+Section spin_matrix_axial_vector_rfType.
 
-Notation "'\S(' w ')'" := (spin w).
-
-Section spin_matrix_axial_vector_rcfType.
-
-Variable R : rcfType.
+Variable R : realFieldType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
@@ -461,6 +478,28 @@ Proof.
 rewrite symE sqr_spin'; by apply/eqP/matrix3P/and9P; split; rewrite !mxE.
 Qed.
 
+(* [murray] second half of exercise 9(a), p. 75 *)
+Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
+Proof.
+apply/andP; split; last by apply/sub_kermxP; rewrite spinE crossmulvv.
+apply/rV_subP => v /sub_kermxP.
+rewrite spinE => /eqP/vec_angle.colinearP[|[_[k Hk]]].
+  move/eqP => ->.
+  by rewrite sub0mx.
+apply/sub_rVP; exists (k^-1).
+rewrite Hk scalerA mulVr ?scale1r // unitfE; apply: contra w0.
+rewrite Hk => /eqP ->; by rewrite scale0r.
+Qed.
+
+End spin_matrix_axial_vector_rfType.
+
+Section spin_matrix_axial_vector_rcfType.
+
+Variable R : rcfType.
+Let vector := 'rV[R]_3.
+Implicit Types u : vector.
+Implicit Types M : 'M[R]_3.
+
 Lemma sqr_spin u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
 Proof.
 apply (symP (sqr_spin_is_sym u)); last move=> i j.
@@ -499,19 +538,6 @@ Lemma mxtrace_sqr_spin u : \tr (\S( u ) ^+ 2) = - (2%:R * (norm u) ^+ 2).
 Proof.
 rewrite sqr_spin linearD /= mxtrace_tr_mul linearN /= linearZ /=; apply/eqP.
 by rewrite !mxtrace_scalar subr_eq addrC mulrC -mulrBl -natrB // mul1r.
-Qed.
-
-(* [murray] second half of exercise 9(a), p. 75 *)
-Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
-Proof.
-apply/andP; split; last by apply/sub_kermxP; rewrite spinE crossmulvv.
-apply/rV_subP => v /sub_kermxP.
-rewrite spinE => /eqP/vec_angle.colinearP[|[_[k [Hk1 Hk2]]]].
-  move/eqP => ->.
-  by rewrite sub0mx.
-apply/sub_rVP; exists (k^-1).
-rewrite Hk2 scalerA mulVr ?scale1r // unitfE; apply: contra w0.
-rewrite Hk2 => /eqP ->; by rewrite scale0r.
 Qed.
 
 End spin_matrix_axial_vector_rcfType.
@@ -607,7 +633,7 @@ have /is_eigenvector1_colinear : (u <= eigenspace M 1)%MS.
   by apply/eigenspaceP; rewrite scale1r.
 move/(_ MSO) => uax.
 suff [k Hk] : exists k, axial M = k *: u by rewrite Hk -scalemxAl uMu.
-case/colinearP : uax => [/eqP ->| [_ [k [? ukv]]]].
+case/colinearP : uax => [/eqP ->| [_ [k ukv]]].
   exists 0; by rewrite scale0r.
 exists (1 / k); rewrite ukv scalerA div1r mulVr ?scale1r // unitfE.
 apply: contra u0; rewrite ukv => /eqP ->; by rewrite scale0r.

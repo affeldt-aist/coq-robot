@@ -1734,9 +1734,10 @@ rewrite (_ : 'e_2%:R 0 2%:R = 1) ?mul1r; last by rewrite mxE.
 have ? : 'e_2%:R *v u != 0.
   apply/colinearP; case.
     by rewrite -norm_eq0 u1 // oner_eq0.
-  case=> _ [k].
-  rewrite u1 divr1 norm_delta_mx => -[].
-  case: (lerP k 0) => k0.
+  case=> _ [k Hk]; have k1 : `|k| = 1.
+    move: Hk => /(congr1 (@norm _ _)); rewrite normZ u1 mulr1 norm_delta_mx.
+    by move->.
+  case: (lerP k 0) => k0; move: k1 Hk.
     rewrite ler0_norm // -{2}(opprK k) => ->; rewrite scaleN1r.
     by move/(congr1 (fun x => - x)); rewrite opprK => /esym; apply/eqP.
   by rewrite gtr0_norm // => ->; rewrite scale1r => /esym; apply/eqP.

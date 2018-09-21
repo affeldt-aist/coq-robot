@@ -410,7 +410,7 @@ Notation "'\z{' F '}'" := (zvec F) : frame_scope.
 
 Section canonical_frame.
 
-Variable T : fieldType.
+Variable T : comUnitRingType.
 
 Definition can_noframe := NOFrame.mk (@orthogonal1 2 T).
 
@@ -463,7 +463,7 @@ Lemma idotj : i *d j = 0.
 Proof.
 rewrite /j; case: ifPn => [|_]; last first.
   by rewrite dotmulvZ -{3}(normalizeI normi) dotmul_orthogonalize mulr0.
-case/colinearP => [| [_ [k [Hk ->]]]].
+case/colinearP => [| [_ [k ->]]].
   by rewrite -norm_eq0 norm_delta_mx (negbTE (oner_neq0 _)).
 by rewrite dotmulZv dote2 mulr0.
 Qed.
@@ -700,11 +700,11 @@ Lemma j_tr_mul (v : 'rV[T]_3) (v1 : norm v = 1) : j v *m v^T = 0.
 Proof.
 rewrite /j (negbTE (norm1_neq0 v1)) /Base1.j.
 case: ifPn => [|_].
-  case/colinearP => [|[_[k [Hk1 Hk2]]]].
+  case/colinearP => [|[_[k Hk]]].
     move/eqP/rowP/(_ ord0).
     rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
-  rewrite /i (negbTE (norm1_neq0 v1)) normalizeI // in Hk2.
-  by rewrite dotmulP Hk2 dotmulvZ dote2 oner_eq0 mulr0 (mx11_scalar 0) mxE.
+  rewrite /i (negbTE (norm1_neq0 v1)) normalizeI // in Hk.
+  by rewrite dotmulP Hk dotmulvZ dote2 oner_eq0 mulr0 (mx11_scalar 0) mxE.
 apply/eqP.
 rewrite -scalemxAl scaler_eq0 {2}/i (negbTE (norm1_neq0 v1)) normalizeI //.
 by rewrite normalcomp_mul_tr // orbT.
@@ -714,12 +714,12 @@ Lemma k_tr_mul (v : 'rV[T]_3) (v1 : norm v = 1) : k v *m v^T *m v = 0.
 Proof.
 rewrite /k (negbTE (norm1_neq0 v1)) /Base1.k /Base1.j.
 case: ifPn => [|_].
-  case/colinearP => [|[_[k [Hk1 Hk2]]]].
+  case/colinearP => [|[_[k Hk]]].
     move/eqP/rowP/(_ ord0).
     rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
-  rewrite /i (negbTE (norm1_neq0 v1)) normalizeI // in Hk2.
+  rewrite /i (negbTE (norm1_neq0 v1)) normalizeI // in Hk.
   rewrite /i (negbTE (norm1_neq0 v1)) normalizeI //.
-  rewrite {1}Hk2 crossmulZv vecij -2!scalemxAl {1}Hk2 linearZ /= -scalemxAr.
+  rewrite {1}Hk crossmulZv vecij -2!scalemxAl {1}Hk linearZ /= -scalemxAr.
   by rewrite dotmulP dote2 scale_scalar_mx mulr0 mul_scalar_mx scale0r scaler0.
 apply/eqP.
 rewrite /normalize crossmulvZ -!scalemxAl scaler_eq0; apply/orP; right.
