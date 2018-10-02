@@ -452,7 +452,7 @@ Qed.
 
 Lemma derive1mx_rot (p' : 'rV[R^o]_3 (* constant vector *)) :
   let p := fun t => p' *m M t in
-  forall t, derive1mx p t = ang_vel t *v (p' *m M t).
+  forall t, derive1mx p t = ang_vel t *v p t.
 Proof.
 move=> p t; rewrite /p derive1mxM; last first.
   exact: derivable_M.
@@ -702,7 +702,7 @@ rewrite /P /Q /= opprD addrACA subrr add0r mulmxBl -!mulmxA.
 by rewrite orthogonal_mul_tr ?FromTo_is_O // !mulmx1.
 Qed.
 
-Hypothesis P1_fixed_in_G : forall t, BoundVect.endp (P1 t) = BoundVect.endp (P1 0).
+Hypothesis P1_fixed_in_F1 : forall t, BoundVect.endp (P1 t) = BoundVect.endp (P1 0).
 
 (* eqn B.4 *)
 Lemma velocity_composition_rule_spec (t : R) :
@@ -714,7 +714,7 @@ rewrite velocity_composition_rule; congr (_ + _).
 suff -> : derive1mx P1 t = 0 by rewrite mul0mx addr0.
 apply/matrixP => a b; rewrite !mxE.
 rewrite (_ : (fun x => _) = cst (P1 0 a b)); last first.
-  rewrite funeqE => x /=; by rewrite /boundvectendp (P1_fixed_in_G x).
+  rewrite funeqE => x /=; by rewrite /boundvectendp (P1_fixed_in_F1 x).
 by rewrite derive1_cst.
 Qed.
 
@@ -876,58 +876,60 @@ End rigid_body_velocity.
 Section link_velocity.
 
 Variable F : tframe [ringType of R^o].
-Variable Fim1 : R -> rframe F.
-Variable Fi : R -> rframe F.
-Let pim1 t : bvec F := RFrame.o (Fim1 t).
-Let pi t : bvec F := RFrame.o (Fi t).
+Variable F1 : R -> rframe F.
+Variable F2 : R -> rframe F.
+Let o1 t : bvec F := RFrame.o (F1 t).
+Let o2 t : bvec F := RFrame.o (F2 t).
 
-Let rim1i : forall t : R, bvec (Fim1 t) := fun t =>
-  BoundVect.mk (Fim1 t)
-    (FramedVect.v (rmap (Fim1 t) `[ \o{Fi t} - \o{Fim1 t} $ F ])).
+Let r12 : forall t : R, bvec (F1 t) := fun t =>
+  BoundVect.mk (F1 t)
+    (FramedVect.v (rmap (F1 t) `[ \o{F2 t} - \o{F1 t} $ F ])).
 
-Hypothesis derivable_Fim1 : forall t, derivable_mx (fun x => Fim1 x) t 1.
-Hypothesis derivable_Fim1o : forall t, derivable_mx (@TFrame.o [ringType of R^o] \o Fim1) t 1.
-Hypothesis derivable_rim1i : forall t, derivable_mx (fun x => BoundVect.endp (rim1i x)) t 1.
-Hypothesis derivable_Fi : forall t, derivable_mx (fun t0 : R => Fi t0) t 1.
+Hypothesis derivable_F1 : forall t, derivable_mx F1 t 1.
+Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o [ringType of R^o] \o F1) t 1.
+Hypothesis derivable_r12 : forall t, derivable_mx (fun x => BoundVect.endp (r12 x)) t 1.
+Hypothesis derivable_F2 : forall t, derivable_mx F2 t 1.
 
-Lemma eqn310' t : pi t = pim1 t \+b rmap F (FramedVect_of_Bound (rim1i t)).
+Lemma eqn310' t : o2 t = o1 t \+b rmap F (FramedVect_of_Bound (r12 t)).
 Proof.
-rewrite /pi /pim1 /= /rim1i /= /rmap /= /BoundFramed_add /=; apply bv_eq => /=.
+rewrite /o2 /o1 /= /r12 /= /rmap /= /BoundFramed_add /=; apply bv_eq => /=.
 rewrite -mulmxA FromTo_comp FromToI mulmx1 /= addrCA RFrame_o /=.
 by rewrite subrr addr0 -RFrame_o.
 Qed.
 
-Definition wim1 := ang_vel (fun t => (Fim1 t) _R^ F).
+Definition w1 := ang_vel (fun t => (F1 t) _R^ F).
+
+Lemma eqn314_helper t : FramedVect.v (rmap F `[r12 t $ F1 t]) = \o{F2 t} - \o{F1 t}.
+Proof. by rewrite /= -mulmxA FromTo_comp FromToI mulmx1. Qed.
 
 (* lin. vel. of Link i as a function of
    the translational and rotational velocities of Link i-1 *)
-Lemma eqn314 t : derive1mx pi t = derive1mx pim1 t +
-  FramedVect.v (rmap F `[derive1mx rim1i t $ Fim1 t])
+Lemma eqn314 t : derive1mx o2 t = derive1mx o1 t +
+  FramedVect.v (rmap F `[derive1mx r12 t $ F1 t])
     (* velocity of the origin of Frame i w.r.t. the origin of Frame i-1 *) +
-  wim1 t *v FramedVect.v (rmap F `[rim1i t $ Fim1 t]).
+  w1 t *v (\o{F2 t} - \o{F1 t}).
 Proof.
-move: (@eqn312 F _ derivable_Fim1 _ derivable_rim1i derivable_Fim1o t).
-have -> : derive1mx (fun x : R => BoundVect.endp (motion rim1i x)) t =
-  derive1mx (fun t0 : R => pi t0) t.
-  rewrite (_ : (fun x : R => BoundVect.endp (motion rim1i x)) = (fun t0 : R => pi t0)) //.
+rewrite -eqn314_helper.
+move: (@eqn312 F _ derivable_F1 _ derivable_r12 derivable_F1o t).
+have -> : derive1mx (fun x => BoundVect.endp (motion r12 x)) t = derive1mx o2 t.
+  rewrite (_ : (fun x => BoundVect.endp (motion r12 x)) = o2) //.
   rewrite funeqE => t' /=; rewrite -mulmxA FromTo_comp FromToI mulmx1.
   rewrite addrCA RFrame_o subrr addr0.
-  by rewrite /pi -RFrame_o.
+  by rewrite /o2 -RFrame_o.
 move=> ->.
 rewrite -!addrA; congr (_ + _).
-rewrite (_ : (fun x : R => BoundVect.endp (motion (fun _ : R => bvec0 (Fim1 x)) t)) =
-             (fun t0 : R => pim1 t0)) //.
+rewrite (_ : (fun x => BoundVect.endp (motion (fun _ : R => bvec0 (F1 x)) t)) = o1) //.
 rewrite funeqE => t'.
-by rewrite /motion /= mul0mx addr0 /pim1.
+by rewrite /motion /= mul0mx addr0.
 Qed.
 
-Definition wi : R -> 'rV_3 := ang_vel (fun t => (Fi t) _R^ F).
-Definition wi' : R -> 'rV_3 := ang_vel (fun t => (Fi t) _R^ (Fim1 t)).
+Definition w2 : R -> 'rV_3 := ang_vel (fun t => (F2 t) _R^ F).
+Definition w12 : R -> 'rV_3 := ang_vel (fun t => (F2 t) _R^ (F1 t)).
 
 (* ang. vel. of Link i as a function of the ang. vel. of Link i-1 and of Link i w.r.t. Link i-1 *)
-Lemma eqn316 t : wi t = wim1 t + wi' t *m ((Fim1 t) _R^ F).
+Lemma eqn316 t : w2 t = w1 t + w12 t *m ((F1 t) _R^ F).
 Proof.
-have : (fun t => (Fi t) _R^ F) = (fun t => ((Fi t) _R^ (Fim1 t)) *m ((Fim1 t) _R^ F)).
+have : (fun t => (F2 t) _R^ F) = (fun t => ((F2 t) _R^ (F1 t)) *m ((F1 t) _R^ F)).
   by rewrite funeqE => ?; rewrite FromTo_comp.
 move/(congr1 (fun x => derive1mx x)).
 rewrite funeqE.
@@ -953,12 +955,12 @@ rewrite ang_vel_mxE; last 2 first.
 rewrite ang_vel_mxE; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
   move=> t'; exact: derivable_mx_FromTo.
-rewrite mulmxE -[in X in _ = X + _](mulr1 ((Fi t) _R^ (Fim1 t))).
-rewrite -(@orthogonal_tr_mul _ _ (F _R^ (Fim1 t))) ?FromTo_is_O //.
-rewrite -{2}(trmx_FromTo (Fim1 t) F).
+rewrite mulmxE -[in X in _ = X + _](mulr1 ((F2 t) _R^ (F1 t))).
+rewrite -(@orthogonal_tr_mul _ _ (F _R^ (F1 t))) ?FromTo_is_O //.
+rewrite -{2}(trmx_FromTo (F1 t) F).
 rewrite -!mulrA.
-rewrite (mulrA _ _ ((Fim1 t) _R^ F)).
-rewrite (@spin_similarity _ ((Fim1 t) _R^ F)) ?FromTo_is_SO //.
+rewrite (mulrA _ _ ((F1 t) _R^ F)).
+rewrite (@spin_similarity _ ((F1 t) _R^ F)) ?FromTo_is_SO //.
 rewrite mulrA -mulmxE.
 rewrite trmx_FromTo.
 rewrite FromTo_comp.
@@ -966,7 +968,7 @@ rewrite mulmxA.
 rewrite FromTo_comp.
 rewrite -mulmxDr.
 rewrite -spinD.
-rewrite -/wi -/wim1 -/wi'.
+rewrite -/w2 -/w1 -/w12.
 rewrite mulmxE.
 move/mulrI.
 rewrite FromTo_unit => /(_ isT)/eqP.
@@ -1087,7 +1089,7 @@ Variable i : 'I_n.
 Let j : joint [rcfType of R^o] := joint_of_chain c i.
 Let q : R^o -> R^o := joint_variable j.
 Let Fim1 := frame_of_chain c (prev_frame i).
-Let Fi := frame_of_chain c (next_frame i).
+(*Let Fi := frame_of_chain c (next_frame i).*)
 Let Fmax := frame_of_chain c last_frame.
 (* contribution to the angular velocity *)
 Definition geo_jac_ang t : 'rV_3 := if j is Revolute _ then \z{Fim1 t} else 0.
