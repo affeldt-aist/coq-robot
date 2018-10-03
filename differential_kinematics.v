@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype ssrnat seq choice.
 From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
+From mathcomp Require Import ssrnum rat (*poly*) closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
@@ -59,7 +59,7 @@ Proof. by rewrite funeqE => ?; rewrite mxE. Qed.
 
 End mx.
 
-Lemma derive1_cst (V : normedModType R) (f : V) t : derive1 (cst f) t = 0.
+Lemma derive1_cst (V : normedModType R) (f : V) t : (cst f)^`() t = 0.
 Proof. by rewrite derive1E derive_val. Qed.
 
 Local Open Scope frame_scope.
@@ -374,7 +374,7 @@ apply/locallyP; rewrite locally_E; exists e => //= N MN; exact/es/MN.
 Qed.
 
 Lemma differentiable_coord m n (M : 'M[R]_(m.+1, n.+1)) i j :
-  (differentiable M) (fun N : 'M[R]_(m.+1, n.+1) => N i j : R^o).
+  differentiable (fun N : 'M[R]_(m.+1, n.+1) => N i j : R^o) M.
 Proof.
 have @f : {linear 'M[R]_(m.+1, n.+1) -> R^o}.
   by exists (fun N : 'M[R]_(_, _) => N i j); eexists; move=> ? ?; rewrite !mxE.
@@ -382,13 +382,13 @@ rewrite (_ : (fun _ => _) = f) //; exact/linear_differentiable/coord_continuous.
 Qed.
 
 Lemma differential_cross_product (v : 'rV[R]_3) y :
-  'd_y (crossmul v) = mx_lin1 \S( v ) :> (_ -> _).
+  'd (crossmul v) y = mx_lin1 \S( v ) :> (_ -> _).
 Proof.
 rewrite (_ : crossmul v = (fun x => x *m \S( v ))); last first.
   by rewrite funeqE => ?; rewrite -spinE.
 rewrite (_ : mulmx^~ \S(v) = mulmxr_linear 1 \S(v)); last by rewrite funeqE.
 rewrite diff_lin //= => x.
-suff : differentiable x (mulmxr \S(v)) by move/differentiable_continuous.
+suff : differentiable (mulmxr \S(v)) x by move/differentiable_continuous.
 rewrite (_ : mulmxr \S(v) = (fun z => \sum_i z``_i *: row i \S(v))); last first.
   rewrite funeqE => z; by rewrite -mulmx_sum_row.
 set f := fun (i : 'I_3) (z : 'rV_3) => z``_i *: row i \S(v) : 'rV_3.
@@ -398,9 +398,9 @@ exact/differentiableZl/differentiable_coord.
 Qed.
 
 Lemma differential_cross_product2 (v y : 'rV[R]_3) :
-  'd_y (fun x : 'rV[R^o]_3 => x *v v) = -1 \*: mx_lin1 \S( v ) :> (_ -> _).
+  'd (fun x : 'rV[R^o]_3 => x *v v) y = -1 \*: mx_lin1 \S( v ) :> (_ -> _).
 Proof.
-transitivity ('d_y (crossmul (- v))); last first.
+transitivity ('d (crossmul (- v)) y); last first.
   by rewrite differential_cross_product spinN mx_lin1N.
 congr diff.
 by rewrite funeqE => /= u; rewrite crossmulC crossmulNv.
@@ -986,7 +986,7 @@ Lemma chain_rule (f g : R^o -> R^o) x :
 Proof.
 move=> /derivable1_diffP df /derivable1_diffP dg.
 rewrite derive1E'; last exact/differentiable_comp.
-by rewrite diff_comp // !derive1E' //= -{1}(mulr1 ('d_x f 1)) linearZ mulrC.
+by rewrite diff_comp // !derive1E' //= -{1}(mulr1 ('d f x 1)) linearZ mulrC.
 Qed.
 
 Definition Cos (x : R^o) : R^o := cos (Rad.angle_of x).
