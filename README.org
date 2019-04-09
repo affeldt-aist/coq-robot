@@ -26,10 +26,11 @@ see [[FILES.md]]
 
 ** Requirements
 
-- [[https://coq.inria.fr/][The Coq proof-assistant (v8.8.1)]]
-- [[https://github.com/math-comp/math-comp][The Mathematical Components library]]
-- [[https://github.com/math-comp/analysis][Analysis library compatible with Mathematical Components]]
+- [[https://coq.inria.fr/][The Coq proof-assistant (v8.9.0)]]
+- [[https://github.com/math-comp/math-comp][The Mathematical Components library (v1.7)]]
 - [[https://github.com/math-comp/real-closed][Theorems for real closed fields]]
+- [[https://github.com/math-comp/analysis][Analysis library compatible with Mathematical Components]]
+  + development version
 
 ** Installation Procedure
 

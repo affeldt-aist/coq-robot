@@ -54,7 +54,7 @@ Reserved Notation "''SO[' T ]_ n"
 
 Local Open Scope ring_scope.
 
-From mathcomp.analysis Require Import topology hierarchy.
+From mathcomp.analysis Require Import topology.
 
 Section dot_product0.
 

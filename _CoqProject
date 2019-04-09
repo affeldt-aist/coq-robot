@@ -1,3 +1,5 @@
+-arg "-w -notation-overridden"
+
 ssr_ext.v
 euclidean3.v
 angle.v

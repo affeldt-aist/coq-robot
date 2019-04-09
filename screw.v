@@ -180,7 +180,7 @@ Definition bracket (a : t) : T a -> T a -> T a :=
   let: Pack _ (Class _ (Mixin x _ _ _ )) := a in x.
 Arguments bracket {a} x y : simpl never.
 Definition baseType a : lmodType R :=
-  GRing.Lmodule.Pack _ (base (class a)) t.
+  GRing.Lmodule.Pack _ (base (class a)) R.
 Definition zmodType a : zmodType :=
   GRing.Lmodule.zmodType (baseType a).
 End lie.
