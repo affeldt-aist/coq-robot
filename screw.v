@@ -174,13 +174,13 @@ Record mixin_of (L : lmodType R) := Mixin {
   _ : jacobi op_bracket }.
 Record class_of L := Class {
   base : GRing.Lmodule.class_of R L ;
-  mixin : mixin_of (GRing.Lmodule.Pack _ base L) }.
+  mixin : mixin_of (GRing.Lmodule.Pack _ base) }.
 Structure t := Pack { T : Type ; class : class_of T }.
 Definition bracket (a : t) : T a -> T a -> T a :=
   let: Pack _ (Class _ (Mixin x _ _ _ )) := a in x.
 Arguments bracket {a} x y : simpl never.
 Definition baseType a : lmodType R :=
-  GRing.Lmodule.Pack _ (base (class a)) R.
+  GRing.Lmodule.Pack _ (base (class a)).
 Definition zmodType a : zmodType :=
   GRing.Lmodule.zmodType (baseType a).
 End lie.
