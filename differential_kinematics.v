@@ -6,7 +6,7 @@ From mathcomp Require Import complex finset fingroup perm.
 
 Require Import Reals.
 From mathcomp.analysis Require Import boolp reals Rstruct Rbar classical_sets posnum.
-From mathcomp.analysis Require Import topology hierarchy landau forms derive.
+From mathcomp.analysis Require Import topology normedtype landau forms derive.
 
 Require Import ssr_ext euclidean3 rot skew rigid.
 

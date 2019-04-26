@@ -12,5 +12,6 @@ quaternion.v
 screw.v
 dh.v
 scara.v
+differential_kinematics.v
 
 -R . robot
