@@ -5,7 +5,7 @@ From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
+Require Import ssr_ext angle euclidean3 skew vec_angle rot frame rigid.
 
 (* OUTLINE
   1. Module Plucker.
@@ -135,8 +135,6 @@ Qed.
 Definition homogeneous_plucker_eqn l :=
   let p1 := \pt( l ) in let p2 := \pt2( l ) in
   col_mx (\S( p2 ) - \S( p1 )) (p1 *v (p2 - p1)).
-
-Require Import rigid.
 
 Lemma homogeneous_in_plucker p (l : Line.t T) : p \is 'hP[T] ->
   from_h p \in (l : pred _) ->

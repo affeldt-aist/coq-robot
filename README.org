@@ -26,12 +26,12 @@ see [[FILES.md]]
 
 ** Requirements
 
-- [[https://coq.inria.fr/][The Coq proof-assistant]] 8.9.0
-- [[https://github.com/math-comp/math-comp][The Mathematical Components library]] 1.8.0
-- [[https://github.com/affeldt-aist/real-closed][Theorems for real closed fields]] (fork)
+- [[https://coq.inria.fr/][The Coq proof-assistant]] 8.9.1
+- [[https://github.com/math-comp/math-comp][The Mathematical Components library]] 1.9.0
+- [[https://github.com/math-comp/real-closed][Theorems for real closed fields]] 1.0.3
   + requires [[https://github.com/math-comp/bigenough][bigenough]] first release
-- [[https://github.com/math-comp/analysis][Analysis library compatible with Mathematical Components]] master version
-  + requires bigenouh and [[https://github.com/math-comp/finmap][finmap]] 1.2.0
+- [[https://github.com/math-comp/analysis][Analysis library compatible with Mathematical Components]] 0.2.2
+  + requires bigenouh and [[https://github.com/math-comp/finmap][finmap]] 1.2.1
 
 ** Installation Procedure
 
