@@ -1,0 +1,29 @@
+opam-version: "2.0"
+name: "coq-robot"
+maintainer: "reynald.affeldt@aist.go.jp"
+homepage: "https://github.com/affeldt-aist/coq-robot"
+bug-reports: "https://github.com/affeldt-aist/coq-robot"
+dev-repo: "git+https://github.com/affeldt-aist/coq-robot.git"
+license: "LGPL v3"
+authors: [
+  "Reynald Affeldt"
+  "Cyril Cohen"
+]
+build: [
+  ["coq_makefile" "-f" "_CoqProject" "-o" "Makefile"]
+  [make]
+]
+install: [
+  [make "install"]
+]
+depends: [
+  "coq" { (>= "8.9.1" & < "8.10.0~") }
+  "coq-mathcomp-field" { (>= "1.9.0") & < "1.10.0~"}
+  "coq-mathcomp-analysis"   {(>= "0.2.0" & <= "0.2.2")}
+  "coq-mathcomp-real-closed" { (= "1.0.3") }
+]
+synopsis: "Robot"
+description: """
+This library is a formalization of the mathematics of rigid body
+transformations in the Coq proof-assistant.
+"""
