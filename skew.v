@@ -73,7 +73,7 @@ wlog : i j ij / (i < j)%N.
   move=> wlo; move: ij; rewrite neq_ltn => /orP [] ij.
     rewrite wlo //; by apply: contraL ij => /eqP ->; by rewrite ltnn.
   move: (sA) (sB) => /eqP -> /eqP ->; by rewrite 2!mxE AB // leq_eqVlt ij orbC.
-by move=> {ij}ij; rewrite AB // leq_eqVlt ij orbC.
+by move=> {}ij; rewrite AB // leq_eqVlt ij orbC.
 Qed.
 
 Lemma sym_oppr_closed : oppr_closed (sym n R).
@@ -155,7 +155,7 @@ wlog : i j ij / (i < j)%N.
   move=> wlo; move: ij; rewrite neq_ltn => /orP [] ij.
     rewrite wlo //; by apply: contraL ij => /eqP ->; by rewrite ltnn.
   move: (soA); by rewrite antiE => /eqP ->; rewrite 2!mxE AB // opprK.
-move=> {ij}ij; rewrite AB //.
+move=> {}ij; rewrite AB //.
 move: (soB); rewrite antiE -eqr_oppLR => /eqP/matrixP/(_ i j).
 rewrite !mxE => <-; by rewrite opprK.
 Qed.

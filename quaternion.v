@@ -7,14 +7,6 @@ From mathcomp Require Import complex finset fingroup perm.
 
 Require Import ssr_ext euclidean3 angle vec_angle frame rot.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.
-
-Local Open Scope ring_scope.
-
-Import GRing.Theory Num.Theory.
-
 (*
 1. section quaternion
   - definition of quaternions
@@ -44,6 +36,16 @@ Reserved Notation "a *`i" (at level 3).
 Reserved Notation "a *`j" (at level 3).
 Reserved Notation "a *`k" (at level 3).
 Reserved Notation "x '^*dq'" (at level 2, format "x '^*dq'").
+
+Declare Scope quat_scope.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+Local Open Scope ring_scope.
+
+Import GRing.Theory Num.Theory.
 
 Section quaternion0.
 Variable R : ringType.

@@ -32,11 +32,7 @@ Require Import ssr_ext angle euclidean3 skew vec_angle.
      sample lemma: the rotation obtained behaves like a change of coordinates from left to right
 *)
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.
-
-Import GRing.Theory Num.Theory.
+Declare Scope frame_scope.
 
 Reserved Notation "f '|,' i" (at level 3, i at level 2,
   left associativity, format "f '|,' i").
@@ -44,6 +40,12 @@ Reserved Notation "'\o{' F '}'" (at level 3, format "'\o{' F '}'").
 Reserved Notation "'\x{' F '}'" (at level 3, format "'\x{' F '}'").
 Reserved Notation "'\y{' F '}'" (at level 3, format "'\y{' F '}'").
 Reserved Notation "'\z{' F '}'" (at level 3, format "'\z{' F '}'").
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+Import GRing.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 

@@ -1241,7 +1241,7 @@ have sina0 : sin (Aa.angle M) != 0.
   apply: contra a0 => /eqP/sin0_inv [->//|/eqP]; by rewrite (negbTE api).
 set w : 'rV_3 := normalize _.
 have [a Rota] := SO_isRot MSO.
-have {Rota}Rota : isRot a (normalize (vaxis_euler M)) (mx_lin1 M).
+have {}Rota : isRot a (normalize (vaxis_euler M)) (mx_lin1 M).
   by rewrite (isRotZ a _ (vaxis_euler_neq0 MSO)) // invr_gt0 norm_gt0 vaxis_euler_neq0.
 have w0 : normalize (vaxis_euler M) != 0 by rewrite normalize_eq0 vaxis_euler_neq0.
 have w1 : norm w = 1 by rewrite norm_normalize // Aa.vaxis_neq0.
@@ -1539,26 +1539,26 @@ have [w [Hw1 Hw2]] : {w : angle T | u *d F|,1 = cos w /\ (u *d F|,2%:R) = sin w}
   rewrite expr1n normD !normZ ?noframe_norm !mulr1.
   rewrite (_ : cos _ = 0); last first.
     case: (lerP 0 (u *d F|,2%:R)).
-      rewrite ler_eqVlt eq_sym (negbTE u2) /= => {u2}u2.
+      rewrite ler_eqVlt eq_sym (negbTE u2) /= => {}u2.
       case: (lerP 0 (u *d F|,1)).
-        rewrite ler_eqVlt eq_sym (negbTE u1) /= => {u1}u1.
+        rewrite ler_eqVlt eq_sym (negbTE u1) /= => {}u1.
         rewrite vec_anglevZ; last by [].
         rewrite vec_angleZv; last by [].
         by rewrite /cos /vec_angle noframe_jdotk frame_jcrossk noframe_norm expii.
-      move=> {u1}u1.
+      move=> {}u1.
         rewrite vec_angleZNv; last by [].
         rewrite vec_anglevZ; last by [].
         rewrite cos_vec_angleNv; last 2 first.
           by rewrite -norm_eq0 noframe_norm oner_neq0.
           by rewrite -norm_eq0 noframe_norm oner_neq0.
         by rewrite /cos /vec_angle noframe_jdotk frame_jcrossk noframe_norm expii oppr0.
-      move=> {u2}u2.
+      move=> {}u2.
       case: (lerP 0 (u *d F|,1)).
-        rewrite ler_eqVlt eq_sym (negbTE u1) /= => {u1}u1.
+        rewrite ler_eqVlt eq_sym (negbTE u1) /= => {}u1.
         rewrite vec_angleZv; last by [].
         rewrite vec_anglevZN; last by [].
         by rewrite /cos /vec_angle dotmulvN noframe_jdotk oppr0 crossmulvN normN frame_jcrossk noframe_norm expii.
-      move=> {u1}u1.
+      move=> {}u1.
       rewrite vec_anglevZN; last by [].
       rewrite vec_angleZNv; last by [].
         rewrite cos_vec_angleNv; last 2 first.
@@ -2022,7 +2022,7 @@ Proof.
 move=> MSO.
 rewrite RxyzE.
 have [/eqP M02|M02] := boolP (`|M 0 2%:R| == 1); last first.
-  have {M02}M02 : `|M 0 2%:R| < 1.
+  have {}M02 : `|M 0 2%:R| < 1.
     by rewrite ltr_neqAle M02 andTb Oij_ub // rotation_sub.
   apply/matrix3P/and9P; split; apply/eqP; rewrite !mxE /=.
   - rewrite /euler_a /euler_b ltr_eqF //= cosN cos_asin //.

@@ -276,7 +276,7 @@ Lemma sqrD1_cossin (x y : T) :
   x ^+ 2 + y ^+ 2 = 1 -> {a | x = cos a /\ y = sin a}.
 Proof.
 move=> v1.
-have {v1}v1 : (`| x +i* y | = 1)%C by rewrite normc_def /= v1 sqrtr1.
+have {}v1 : (`| x +i* y | = 1)%C by rewrite normc_def /= v1 sqrtr1.
 exists (arg (x +i* y)%C).
 rewrite /cos /sin expi_arg //; last by rewrite -normr_eq0 v1 oner_neq0.
 by rewrite v1 divr1.

@@ -869,7 +869,7 @@ Qed.
 
 End RadTheory.
 
-Hint Resolve rad_ge0 rad_lt_pi rad_pi_gt1.
+Hint Resolve rad_ge0 rad_lt_pi rad_pi_gt1 : core.
 
 Section exponential_coordinates_rigid.
 
@@ -1671,7 +1671,7 @@ have step2 : displacement f q + relative_displacement f p0 q = displacement f q 
     move/eqP => ->.
     by rewrite addr0 axialcompE w1 expr1n invr1 scale1r.
   by rewrite dotmulP mulmxA dotmulP 2!(displacement_proj w0).
-have {step2}step2 : p0 *m (Q - 1) = q *m (Q - 1) - displacement f q *m (1 - w^T *m w).
+have {}step2 : p0 *m (Q - 1) = q *m (Q - 1) - displacement f q *m (1 - w^T *m w).
   rewrite [in X in _ = _ - X]mulmxBr mulmx1 -{}step2.
   rewrite (opprD (displacement f q)) opprK addrCA addrA subrr add0r.
   by rewrite /relative_displacement -/Q mulmxBl addrCA subrr addr0.

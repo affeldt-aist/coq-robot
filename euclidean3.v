@@ -212,7 +212,7 @@ Proof. by rewrite /norm /dotmul trmx_delta mul_delta_mx mxE !eqxx sqrtr1. Qed.
 
 Lemma norm_ge0 u : norm u >= 0.
 Proof. by apply sqrtr_ge0. Qed.
-Hint Resolve norm_ge0.
+Hint Resolve norm_ge0 : core.
 
 Lemma normr_norm u : `|norm u| = norm u.
 Proof. by rewrite ger0_norm. Qed.
@@ -1284,14 +1284,14 @@ Lemma vaxis_euler_neq0 (T : numFieldType) M :
   M \is 'SO[T]_3 -> vaxis_euler M != 0.
 Proof.
 move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
-move=> {MSO}MSO; by case: euler => v /= /andP[].
+move=> {}MSO; by case: euler => v /= /andP[].
 Qed.
 
 Lemma vaxis_eulerP (T : numFieldType) M :
   M \is 'SO[T]_3 -> vaxis_euler M *m M = vaxis_euler M.
 Proof.
 move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
-move=> {MSO}MSO; by case: euler => v /= /andP[_ /eqP].
+move=> {}MSO; by case: euler => v /= /andP[_ /eqP].
 Qed.
 
 End orthogonal_crossmul.

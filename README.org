@@ -26,6 +26,9 @@ see [[FILES.md]]
 
 ** Installation
 
+[[https://travis-ci.com/affeldt-aist/coq-robot][file:https://travis-ci.com/affeldt-aist/coq-robot.svg?branch=master]]
+
+
 - ~git clone git@github.com:affeldt-aist/coq-robot.git~
 - ~cd coq-robot~
 
@@ -40,10 +43,10 @@ If opam is not installed but if the Requirements (see below) are met, do:
 1. ~coq_makefile -f _CoqProject -o Makefile~
 2. ~make~
 3. ~make install~
-
+   
 ** Requirements
 
-- [[https://coq.inria.fr/][The Coq proof-assistant]] 8.9.1
+- [[https://coq.inria.fr/][The Coq proof-assistant]] 8.9.1 or 8.10
 - [[https://github.com/math-comp/math-comp][The Mathematical Components library]] 1.9.0
 - [[https://github.com/math-comp/real-closed][Theorems for real closed fields]] 1.0.3
   + requires [[https://github.com/math-comp/bigenough][bigenough]] first release
