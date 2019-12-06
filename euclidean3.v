@@ -122,8 +122,7 @@ Lemma colE (v : 'rV[R]_n) j : col j v = 'e_j *m v^T.
 Proof.
 apply/colP => i; rewrite {i}(ord1 i) !mxE coorE /dotmul mxE.
 apply: eq_bigr => /= i _; rewrite !mxE eqxx /=.
-case: (eqVneq i j)=> [->|/negbTE->] /=; first by rewrite eqxx mulr1 mul1r.
-by rewrite mulr0 mul0r.
+case/boolP : (i == j) => /=; by rewrite ?(mulr1,mul1r,mul0r,mulr0).
 Qed.
 
 Lemma mxE_dotmul (M : 'M[R]_n) i j : M i j = 'e_j *d row i M.
@@ -1275,22 +1274,19 @@ by exists v; rewrite v_neq0 (eigenspaceP v_eigen) scale1r eqxx.
 Qed.
 
 Definition vaxis_euler (T : numFieldType) M :=
-  match eqVneq (M \is 'SO[T]_3) true with
-  | left MSO => sval (euler MSO)
-  | right _ => 0
-  end.
+  if (M \is 'SO[T]_3) =P true is ReflectT MSO then sval (euler MSO) else 0.
 
 Lemma vaxis_euler_neq0 (T : numFieldType) M :
   M \is 'SO[T]_3 -> vaxis_euler M != 0.
 Proof.
-move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
+move=> MSO; rewrite /vaxis_euler; case: eqP; last by rewrite MSO.
 move=> {}MSO; by case: euler => v /= /andP[].
 Qed.
 
 Lemma vaxis_eulerP (T : numFieldType) M :
   M \is 'SO[T]_3 -> vaxis_euler M *m M = vaxis_euler M.
 Proof.
-move=> MSO; rewrite /vaxis_euler; case: eqVneq; last by rewrite MSO.
+move=> MSO; rewrite /vaxis_euler; case: eqP; last by rewrite MSO.
 move=> {}MSO; by case: euler => v /= /andP[_ /eqP].
 Qed.
 
