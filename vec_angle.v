@@ -1,6 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
@@ -11,7 +10,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory Num.Theory.
+Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
@@ -61,7 +60,7 @@ Lemma vec_anglevZ u v k : 0 < k -> vec_angle u (k *: v) = vec_angle u v.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite !vec_angle0.
 case/boolP : (v == 0) => [/eqP ->|v0 k0]; first by rewrite scaler0 !vec_angle0.
-by rewrite /vec_angle dotmulvZ linearZ normZ ger0_norm ?ltrW // complexZ argZ.
+by rewrite /vec_angle dotmulvZ linearZ normZ ger0_norm ?ltW // complexZ argZ.
 Qed.
 
 Lemma vec_angleZv u v (k : T) : 0 < k -> vec_angle (k *: u) v = vec_angle u v.
@@ -82,7 +81,7 @@ Lemma vec_anglevv u : u != 0 -> vec_angle u u = 0.
 Proof.
 move=> u0.
 rewrite /vec_angle /= crossmulvv norm0 complexr0 dotmulvv arg_Re ?arg1 //.
-by rewrite ltr_neqAle sqr_ge0 andbT eq_sym sqrf_eq0 norm_eq0.
+by rewrite lt_neqAle sqr_ge0 andbT eq_sym sqrf_eq0 norm_eq0.
 Qed.
 
 Lemma cos_vec_angleNv v w : v != 0 -> w != 0 ->
@@ -161,8 +160,8 @@ case/boolP : (u *d v == 0) => uv0.
   by rewrite (eqP uv0) expi_arg //= (eqP uv0) !mul0r -mulrN opprK mulr0 addr0 mulr0.
 rewrite expi_arg //.
 rewrite normc_def Re_scale; last first.
-  rewrite sqrtr_eq0 -ltrNge -(addr0 0) ltr_le_add //.
-    by rewrite exprnP /= ltr_neqAle sqr_ge0 andbT eq_sym -exprnP sqrf_eq0.
+  rewrite sqrtr_eq0 -ltNge -(addr0 0) ltr_le_add //.
+    by rewrite exprnP /= lt_neqAle sqr_ge0 andbT eq_sym -exprnP sqrf_eq0.
   by rewrite /= sqr_ge0.
 rewrite /=.
 rewrite norm_crossmul' addrC subrK sqrtr_sqr ger0_norm; last first.
@@ -184,7 +183,7 @@ Lemma triine u v :
 Proof.
 move/eqP: (sqrrD (norm u) (norm v)); rewrite addrAC -subr_eq => /eqP <-.
 rewrite ler_subr_addr -mulrnDl -{2}(mulr1 (norm u * norm v)) -mulrDr.
-apply (@ler_trans _ (norm u * norm v * 2%:R *+ 2)).
+apply (@le_trans _ _ (norm u * norm v * 2%:R *+ 2)).
   rewrite ler_muln2r /=; apply ler_pmul => //.
     by apply mulr_ge0; apply norm_ge0.
     rewrite -ler_subl_addr add0r; move: (cos_max (vec_angle u v)).
@@ -252,7 +251,7 @@ rewrite norm_crossmul' dotmul_cos !exprMn.
 apply/eqP; rewrite subr_eq -mulrDr.
 rewrite real_normK; first by rewrite addrC cos2Dsin2 mulr1.
 rewrite /sin; case: (expi _) => a b /=; rewrite realE //.
-case: (lerP 0 b) => //= b0; by rewrite ltrW.
+case: (lerP 0 b) => //= b0; by rewrite ltW.
 Qed.
 
 Lemma norm_dotmul_crossmul u v : u != 0 -> v != 0 ->
@@ -467,7 +466,7 @@ apply/idP/idP.
   rewrite (_ : tmp / tmp ^+ 2 = tmp ^-1); last first.
     rewrite expr2 invrM; last 2 first.
       abstract: tmp0.
-      rewrite unitfE /tmp sqrtr_eq0 -ltrNge ltr_neqAle.
+      rewrite unitfE /tmp sqrtr_eq0 -ltNge lt_neqAle.
       rewrite addr_ge0 ?sqr_ge0 // andbT eq_sym.
       rewrite paddr_eq0 ?sqr_ge0 // negb_and !sqrf_eq0 norm_eq0 crossmulC oppr_eq0.
       by rewrite crossmulC oppr_eq0 -(norm_eq0 (_ *v _)).
@@ -554,7 +553,7 @@ Lemma norm_axialcomp v e : e *d v < 0 ->
   norm (axialcomp v e) = - (normalize e *d v).
 Proof.
 move=> H.
-have ? : e != 0 by apply: contraTN H => /eqP ->; rewrite dotmul0v ltrr.
+have ? : e != 0 by apply: contraTN H => /eqP ->; rewrite dotmul0v ltxx.
 rewrite /axialcomp scalerA normZ ltr0_norm; last first.
   rewrite pmulr_llt0 ?invr_gt0 ?norm_gt0 //.
   by rewrite /normalize dotmulZv pmulr_rlt0 // invr_gt0 norm_gt0.
@@ -575,7 +574,7 @@ Lemma vec_angle_axialcomp v e : 0 < e *d v ->
   vec_angle v (axialcomp v e) = vec_angle v e.
 Proof.
 move=> H.
-have ? : e != 0 by apply: contraTN H => /eqP ->; rewrite dotmul0v ltrr.
+have ? : e != 0 by apply: contraTN H => /eqP ->; rewrite dotmul0v ltxx.
 rewrite /axialcomp scalerA vec_anglevZ // divr_gt0 // ?norm_gt0 //.
 by rewrite /normalize dotmulZv mulr_gt0 // invr_gt0 norm_gt0.
 Qed.
@@ -734,7 +733,7 @@ case/boolP : (0 < v2 *d v1) => [v2v1|].
     by rewrite invr_gt0 norm_gt0.
   rewrite [in RHS]mulrA (vec_angleC v1) -expr2 -mulrA -expr2 exprMn.
   by rewrite mulr2n opprD addrA subrK sin2cos2 mulrBr mulr1.
-rewrite -lerNgt ler_eqVlt => /orP[|v2v1].
+rewrite -leNgt le_eqVlt => /orP[|v2v1].
   rewrite {1}dotmul_cos -mulrA mulf_eq0 norm_eq0 (negbTE v20) /=.
   rewrite mulf_eq0 norm_eq0 (negbTE v10) /= => /eqP Hcos.
   rewrite axialcomp_dotmul; last by rewrite dotmul_cos Hcos mulr0.

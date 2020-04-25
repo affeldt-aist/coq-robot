@@ -1,6 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
@@ -45,7 +44,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory Num.Theory.
+Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
@@ -613,18 +612,18 @@ Hypothesis p0 : 0 < p.
 
 Lemma iZ : (frame (p *: u))|,0 = (frame u)|,0.
 Proof.
-rewrite -!iE /i scaler_eq0 (gtr_eqF p0) /=; case: ifP => // /eqP/eqP ?.
+rewrite -!iE /i scaler_eq0 (gt_eqF p0) /=; case: ifP => // /eqP/eqP ?.
 by rewrite normalizeZ.
 Qed.
 
 Lemma jZ_helper : j (p *: u) = j u.
-Proof. by rewrite /j scaler_eq0 (gtr_eqF p0) /= iE iZ -iE. Qed.
+Proof. by rewrite /j scaler_eq0 (gt_eqF p0) /= iE iZ -iE. Qed.
 
 Lemma jZ : (frame (p *: u))|,1 = (frame u)|,1.
 Proof. by rewrite -2!jE jZ_helper. Qed.
 
 Lemma kZ_helper : k (p *: u) = k u.
-Proof. by rewrite /k scaler_eq0 (gtr_eqF p0) /= /Base1.k iE iZ -iE. Qed.
+Proof. by rewrite /k scaler_eq0 (gt_eqF p0) /= /Base1.k iE iZ -iE. Qed.
 
 Lemma kZ : (frame (p *: u))|,2%:R = (frame u)|,2%:R.
 Proof. by rewrite -2!kE kZ_helper. Qed.
@@ -666,7 +665,7 @@ Hypothesis p0 : p < 0.
 
 Lemma jZN_helper : j (p *: u) = j u.
 Proof.
-rewrite /j /i !scaler_eq0 (ltr_eqF p0); case/boolP : (u == 0) => u0 /=.
+rewrite /j /i !scaler_eq0 (lt_eqF p0); case/boolP : (u == 0) => u0 /=.
 reflexivity.
 by rewrite -(opprK p) scaleNr normalizeN Base1.jN normalizeZ // -oppr_lt0 opprK.
 Qed.
@@ -676,7 +675,7 @@ Proof. by rewrite -2!jE jZN_helper. Qed.
 
 Lemma kZN_helper (u0 : u != 0) : k (p *: u) = - k u.
 Proof.
-rewrite /k /i scaler_eq0 (ltr_eqF p0) /= (negbTE u0).
+rewrite /k /i scaler_eq0 (lt_eqF p0) /= (negbTE u0).
 by rewrite -(opprK p) scaleNr normalizeN Base1.kN normalizeZ // oppr_gt0.
 Qed.
 
@@ -689,7 +688,7 @@ case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite scaler0 oppr0.
 do 2 apply val_inj => /=.
 apply/row_matrixP => i; rewrite -rowframeE.
 case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->.
-- rewrite frame0E ?scaler_eq0 ?negb_or ?u0 ?ltr_eqF // -rowframeE iN //.
+- rewrite frame0E ?scaler_eq0 ?negb_or ?u0 ?lt_eqF // -rowframeE iN //.
   by rewrite frame0E // -(opprK p) scaleNr normalizeN normalizeZ // oppr_gt0.
 - by rewrite -rowframeE jZN // jN.
 - by rewrite -rowframeE kZN // kN.
