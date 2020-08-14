@@ -1,6 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
@@ -45,7 +44,7 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 
-Import GRing.Theory Num.Theory.
+Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Section quaternion0.
 Variable R : ringType.
@@ -670,7 +669,7 @@ move=> q_is_uquat q00.
 rewrite /= sin_mulr2n cos_atan sin_atan.
 set k := Num.sqrt _; congr (_ *+ 2).
 have k0 : k \is a GRing.unit.
-  by rewrite unitfE sqrtr_eq0 -ltrNge -(addr0 0) ltr_le_add // ?ltr01 // sqr_ge0.
+  by rewrite unitfE sqrtr_eq0 -ltNge -(addr0 0) ltr_le_add // ?ltr01 // sqr_ge0.
 rewrite div1r mulrCA -invrM // [in RHS]mulrC -mulrA; congr (_ * _).
 apply (@mulrI _ q`0); first by rewrite unitfE.
 rewrite mulrA divrr ?unitfE // mul1r -2!expr2 sqr_sqrtr; last first.

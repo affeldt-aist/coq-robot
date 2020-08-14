@@ -1,9 +1,7 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra tuple mxpoly.
+From mathcomp Require Import zmodp binomial realalg  complex finset fingroup perm.
 
 From mathcomp.analysis Require Import forms.
 
@@ -41,7 +39,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory Num.Theory.
+Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Reserved Notation "*d%R".
 Reserved Notation "u *d w" (at level 40).
@@ -220,7 +218,7 @@ Lemma norm_eq0 u : (norm u == 0) = (u == 0).
 Proof. by rewrite -sqrtr0 eqr_sqrt // ?dotmulvv0 // le0dotmul. Qed.
 
 Lemma norm_gt0 u : (0 < norm u) = (u != 0).
-Proof. by rewrite ltr_neqAle norm_ge0 andbT eq_sym norm_eq0. Qed.
+Proof. by rewrite lt_neqAle norm_ge0 andbT eq_sym norm_eq0. Qed.
 
 Lemma normZ (k : T) u : norm (k *: u) = `|k| * norm u.
 Proof.
@@ -1178,9 +1176,9 @@ Proof. move=> HM v; by rewrite /norm (proj2 (orth_preserves_dotmul M) HM). Qed.
 
 Lemma Oij_ub (T : rcfType) n (M : 'M[T]_n.+1) : M \is 'O[T]_n.+1 -> forall i j, `| M i j | <= 1.
 Proof.
-move=> /norm_row_of_O MO i j; rewrite lerNgt; apply/negP => abs.
+move=> /norm_row_of_O MO i j; rewrite leNgt; apply/negP => abs.
 move: (MO i) => /(congr1 (fun x => x ^+ 2)); apply/eqP.
-rewrite gtr_eqF // sqr_norm (bigD1 j) //= !mxE -(addr0 (1 ^+ 2)) ltr_le_add //.
+rewrite gt_eqF // sqr_norm (bigD1 j) //= !mxE -(addr0 (1 ^+ 2)) ltr_le_add //.
 by rewrite -(sqr_normr (M _ _)) ltr_expn2r.
 rewrite sumr_ge0 // => k ij; by rewrite sqr_ge0.
 Qed.
@@ -1190,13 +1188,13 @@ Proof.
 move=> MO; move: (MO) => /norm_row_of_O MO' tr3.
 have Mdiag : forall i, M i i = 1.
   move=> i; apply/eqP/negPn/negP => Mii; move: tr3; apply/eqP.
-  rewrite ltr_eqF // /mxtrace.
+  rewrite lt_eqF // /mxtrace.
   rewrite (bigD1 i) //=.
   rewrite (eq_bigr (fun i : 'I_n.+1 => M (inord i) (inord i))); last first.
     by move=> j _; congr (M _ _); apply val_inj => /=; rewrite inordK.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => M (inord i) (inord i))).
   rewrite -[in n.+1%:R](card_ord n.+1) -sum1_card (bigD1 i) //= natrD.
-  rewrite ltr_le_add //; first by rewrite ltr_neqAle Mii /= ler_norml1 // Oij_ub.
+  rewrite ltr_le_add //; first by rewrite lt_neqAle Mii /= ler_norml1 // Oij_ub.
   rewrite [in X in _ <= X](@big_morph _ _ _ 0 (fun x y => x + y)%R) //; last first.
     by move=> x y; rewrite natrD.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => 1)).
@@ -1514,8 +1512,8 @@ Qed.
 
 Lemma normalizeZ u (u0 : u != 0) k (k0 : 0 < k) : normalize (k *: u) = normalize u.
 Proof.
-rewrite {1}/normalize normZ gtr0_norm // invrM ?unitfE ?gtr_eqF // ?norm_gt0 //.
-by rewrite scalerA -mulrA mulVr ?mulr1 ?unitfE ?gtr_eqF.
+rewrite {1}/normalize normZ gtr0_norm // invrM ?unitfE ?gt_eqF // ?norm_gt0 //.
+by rewrite scalerA -mulrA mulVr ?mulr1 ?unitfE ?gt_eqF.
 Qed.
 
 (* NB: not used *)

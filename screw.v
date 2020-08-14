@@ -1,6 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
+From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
@@ -54,8 +53,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory.
-Import Num.Theory.
+Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
@@ -863,7 +861,7 @@ Proof. by have /andP [] := rad_in x. Qed.
 
 Lemma rad_2pi_gt1 : 1 < rad pi *+ 2 :> T.
 Proof.
-rewrite (@ltr_le_trans _ (rad pi *+ 1)) ?rad_pi_gt1 //.
+rewrite (@lt_le_trans _ _ (rad pi *+ 1)) ?rad_pi_gt1 //.
 by rewrite -subr_ge0 -mulrnBr // rad_ge0.
 Qed.
 
@@ -1439,10 +1437,10 @@ Qed.
 Lemma MozziChasles_helper p : norm (displacement f p) = d0 -> normdisp p = 0.
 Proof.
 move=> Hp.
-have := lerr (norm (d0 *: w) ^+ 2).
+have := lexx (norm (d0 *: w) ^+ 2).
 rewrite {1}normZ w1 mulr1 sqr_normr -{1}Hp decomp_displacement -ler_sub_addl.
 rewrite w1 expr1n invr1 scale1r.
-by rewrite subrr ler_eqVlt ltrNge sqr_ge0 orbF sqrf_eq0 norm_eq0 => /eqP.
+by rewrite subrr le_eqVlt ltNge sqr_ge0 orbF sqrf_eq0 norm_eq0 => /eqP.
 Qed.
 
 (* [angeles] theorem 3.2.2, p.97 *)
