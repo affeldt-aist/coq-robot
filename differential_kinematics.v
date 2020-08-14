@@ -367,8 +367,8 @@ Section cross_product_matrix.
 Lemma coord_continuous (R : numDomainType) (K : normedModType R) m n i j :
   continuous (fun M : 'M[K]_(m, n) => M i j).
 Proof.
-move=> /= M s /= /locallyP; rewrite locally_E => -[e e0 es].
-apply/locallyP; rewrite locally_E; exists e => //= N MN; exact/es/MN.
+move=> /= M s /= /nbhs_normP => -[e e0 es].
+apply/nbhs_ballP; exists e => //= N MN; exact/es/MN.
 Qed.
 
 Lemma differentiable_coord (R : realFieldType) m n (M : 'M[R^o]_(m.+1, n.+1)) i j :
