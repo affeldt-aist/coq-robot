@@ -249,19 +249,6 @@ Proof. by rewrite !mxE. Qed.
 
 Variable R : ringType.
 
-Lemma row_mx_eq0 m n1 n2 (A1 : 'M[R]_(m, n1)) (A2 : 'M_(m, n2)) :
- (row_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
-Proof.
-apply/eqP/andP; last by case=> /eqP -> /eqP ->; rewrite row_mx0.
-by rewrite -row_mx0 => /eq_row_mx [-> ->].
-Qed.
-
-Lemma col_mx_eq0 m1 m2 n (A1 : 'M[R]_(m1, n)) (A2 : 'M_(m2, n)) :
- (col_mx A1 A2 == 0) = (A1 == 0) && (A2 == 0).
-Proof.
-by rewrite -![_ == 0](inj_eq (@trmx_inj _ _ _)) !trmx0 tr_col_mx row_mx_eq0.
-Qed.
-
 Lemma col_mx_row_mx m1 n1 (A : 'M[R]_(m1, n1)) n2 m2 :
   col_mx (row_mx A (0 : 'M_(m1, n2))) (0 : 'M_(m2, n1 + n2)) = row_mx (col_mx A 0) 0.
 Proof.
@@ -285,22 +272,6 @@ Defined.
 Lemma mulmx_trE n (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
 Proof.
 by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
-Qed.
-
-(* courtesy of GG *)
-Lemma mxdirect_delta (F : fieldType) (T : finType) (n : nat) (P : pred T) f :
-  {in P & , injective f} ->
-  mxdirect (\sum_(i | P i) <<'e_(f i) : 'rV[F]_n>>)%MS.
-Proof.
-pose fP := image f P => Uf; have UfP: uniq fP by apply/dinjectiveP.
-suffices /mxdirectP: mxdirect (\sum_i <<'e_i : 'rV[F]_n>>).
-  rewrite /= !(bigID [mem fP] predT) -!big_uniq //= !big_map !big_filter.
-  by move/mxdirectP; rewrite mxdirect_addsE => /andP[].
-apply/mxdirectP=> /=; transitivity (mxrank (1%:M : 'M[F]_n)).
-  apply/eqmx_rank; rewrite submx1 mx1_sum_delta summx_sub_sums // => i _.
-  by rewrite -(mul_delta_mx (0 : 'I_1)) genmxE submxMl.
-rewrite mxrank1 -[LHS]card_ord -sum1_card.
-by apply/eq_bigr=> i _; rewrite /= mxrank_gen mxrank_delta.
 Qed.
 
 End extra_linear.
