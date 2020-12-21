@@ -3,7 +3,7 @@ From mathcomp Require Import ssrnum rat (*poly*) closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
 
-From mathcomp.analysis Require Import boolp reals Rstruct Rbar classical_sets posnum.
+From mathcomp.analysis Require Import boolp reals Rstruct classical_sets posnum.
 From mathcomp.analysis Require Import topology normedtype landau forms derive.
 
 Require Import ssr_ext euclidean3 rot skew rigid.
