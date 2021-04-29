@@ -1398,25 +1398,44 @@ Section properties_of_canonical_vectors.
 Lemma normeE (T : rcfType) i : norm ('e_i : 'rV_3) = 1 :> T.
 Proof. by rewrite norm_delta_mx. Qed.
 
-Variable T : comUnitRingType.
+Variable T : comRingType.
 
 Lemma vecij : 'e_0 *v 'e_1 = 'e_2%:R :> 'rV[T]__.
-Proof. by rewrite vece2 odd_perm3 /= scale1r. Qed.
-
-Lemma vecjk : 'e_1 *v 'e_2%:R = 'e_0%:R :> 'rV[T]__.
-Proof. by rewrite vece2 odd_perm3 /= scale1r. Qed.
-
-Lemma vecki : 'e_2%:R *v 'e_0 = 'e_1 :> 'rV[T]__.
-Proof. by rewrite vece2 odd_perm3 /= scale1r. Qed.
-
-Lemma vecji : 'e_1 *v 'e_0 = - 'e_2%:R :> 'rV[T]__.
-Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
-
-Lemma veckj : 'e_2%:R *v 'e_1 = - 'e_0 :> 'rV[T]__.
-Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
+Proof.
+apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+by case: j => [] [|[|[|//]]] /=; Simp.r.
+Qed.
 
 Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[T]__.
-Proof. by rewrite vece2 odd_perm3 /= scaleN1r. Qed.
+Proof.
+apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+by case: j => [] [|[|[|//]]] /=; Simp.r.
+Qed.
+
+Lemma vecji : 'e_1 *v 'e_0 = - 'e_2%:R :> 'rV[T]__.
+Proof.
+apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+by case: j => [] [|[|[|//]]] /=; Simp.r.
+Qed.  
+
+Lemma vecjk : 'e_1 *v 'e_2%:R = 'e_0%:R :> 'rV[T]__.
+Proof. 
+apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+by case: j => [] [|[|[|//]]] /=; Simp.r.
+Qed.
+
+Lemma vecki : 'e_2%:R *v 'e_0 = 'e_1 :> 'rV[T]__.
+Proof.
+apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+by case: j => [] [|[|[|//]]] /=; Simp.r.
+Qed.
+
+Lemma veckj : 'e_2%:R *v 'e_1 = - 'e_0 :> 'rV[T]__.
+Proof. 
+apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+by case: j => [] [|[|[|//]]] /=; Simp.r.
+Qed.
+
 
 End properties_of_canonical_vectors.
 
