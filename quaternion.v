@@ -219,22 +219,31 @@ Canonical Structure quat_Ring := Eval hnf in RingType (quat R) quat_RingMixin.
 Lemma mulqE a b : a * b = mulq a b. Proof. done. Qed.
 
 Lemma quat_realM (x y : R) : (x * y)%:q = x%:q * y%:q.
-Proof.
-by rewrite mulqE /mulq /= dotmul0v subr0 scaler0 add0r scaler0 crossmulv0 addr0.
-Qed.
+Proof. by congr mkQuat; rewrite /= (dotmul0v, crossmul0v); Simp.r. Qed.
 
 Lemma iiN1 : `i * `i = -1.
-Proof.
-rewrite mulqE /mulq /= scale0r crossmulvv dotmulE sum3E !mxE /=; Simp.r => /=; congr mkQuat.
-by rewrite /= oppr0.
-Qed.
+Proof.  by congr mkQuat; rewrite (dote2, crossmulvv) /=; Simp.r. Qed.
+
+Lemma ijk : `i * `j = `k.
+Proof. by congr mkQuat; rewrite /= (dote2, vecij); Simp.r. Qed.
 
 Lemma ikNj : `i * `k = - `j.
-Proof.
-rewrite mulqE /mulq /= 2!scale0r dotmulE sum3E !mxE /= crossmulE !mxE /=. Simp.r.
-congr mkQuat; first by Simp.r.
-by apply/rowP => -[[|[|[|?]]] ?] //=; rewrite !mxE //=; Simp.r.
-Qed.
+Proof. by congr mkQuat; rewrite /= (dote2, vecik); Simp.r. Qed.
+
+Lemma jiNk : `j * `i = - `k.
+Proof. by congr mkQuat; rewrite /= (dote2, vecji); Simp.r. Qed.
+
+Lemma jjN1 : `j * `j = -1.
+Proof. by congr mkQuat; rewrite /= (dote2, crossmulvv); Simp.r. Qed.
+
+Lemma kij : `k * `i = `j.
+Proof. by congr mkQuat; rewrite /= (dote2, vecki); Simp.r. Qed.
+
+Lemma kjNi : `k * `j = - `i.
+Proof. by congr mkQuat; rewrite /= (dote2, veckj); Simp.r. Qed.
+
+Lemma kkN1 : `k * `k = -1.
+Proof. by congr mkQuat; rewrite /= (dote2, crossmulvv); Simp.r. Qed.
 
 Definition scaleq k (a : quat R) := mkQuat (k * a`0) (k *: a`1).
 
@@ -263,11 +272,6 @@ by rewrite {1}[a`1]vec3E -!scalerDr.
 Qed.
 
 End quaternion.
-
-Lemma ijk (R : comUnitRingType) : `i * `j = `k :> quat R.
-Proof.
-by apply/eqP; rewrite eq_quat /=; Simp.r; rewrite vecij dote2; Simp.r.
-Qed.
 
 Section quaternion1.
 Variable R : rcfType.
