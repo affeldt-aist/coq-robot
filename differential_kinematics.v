@@ -127,7 +127,7 @@ by rewrite (_ : (fun _ => _) = (fun x => (M x) b i)) // funeqE => z; rewrite 2!m
 Qed.
 
 Lemma derivable_mx_cst (P : 'M[W]_(m, n)) t : derivable_mx (cst P) t 1.
-Proof. move=> a b; by rewrite (_ : (fun x : R^o => _) = cst (P a b)). Qed.
+Proof. move=> a b; by rewrite (_ : (fun x : R => _) = cst (P a b)). Qed.
 
 Lemma derive1mx_cst (P : 'M[W]_(m, n)) : derive1mx (cst P) = cst 0.
 Proof.
@@ -176,7 +176,7 @@ rewrite (_ : (fun x => _) = (\sum_i f1 i)); last first.
   rewrite funeqE => t'; rewrite mxE fct_sumE; apply: eq_bigr => k0 _.
   rewrite /f1; reflexivity.
 rewrite {}/f1; apply: derivable_sum => k0.
-evar (f1 : R^o -> R^o). evar (f2 : R^o -> R^o).
+evar (f1 : R^o -> R). evar (f2 : R -> R).
 rewrite (_ : (fun t' => _) = f1 * f2); last first.
   rewrite funeqE => t'; rewrite -[RHS]/(f1 t' * f2 t') /f1 /f2; reflexivity.
 rewrite {}/f1 {}/f2; exact: derivableM.
@@ -186,7 +186,7 @@ End derive_mx_R.
 
 Section derive_mx_SE.
 
-Variables (R : rcfType) (M : R^o -> 'M[R^o]_4).
+Variables (R : rcfType) (M : R -> 'M[R^o]_4).
 
 Lemma derivable_rot_of_hom : (forall t, derivable_mx M t 1) ->
   forall x, derivable_mx (@rot_of_hom _ \o M) x 1.
@@ -243,7 +243,7 @@ case: fintype.splitP => /= [j Hj|[] [] //= ? ni]; rewrite mxE /=.
 rewrite mulr1n; congr (_ ``_ _); apply val_inj; by rewrite /= ni addn0.
 Qed.
 
-Lemma derivable_row_belast (R : realFieldType) n (u : R^o -> 'rV[R^o]_n.+1) (t : R^o) (v : R^o):
+Lemma derivable_row_belast (R : realFieldType) n (u : R -> 'rV[R^o]_n.+1) (t : R) (v : R):
   derivable_mx u t v -> derivable_mx (fun x => row_belast (u x)) t v.
 Proof.
 move=> H i j; move: (H ord0 (widen_ord (leqnSn n) j)) => {H}.
@@ -376,17 +376,19 @@ Lemma differentiable_coord (R : realFieldType) m n (M : 'M[R^o]_(m.+1, n.+1)) i 
 Proof.
 have @f : {linear 'M[R]_(m.+1, n.+1) -> R^o}.
   by exists (fun N : 'M[R]_(_, _) => N i j); eexists; move=> ? ?; rewrite !mxE.
-rewrite (_ : (fun _ => _) = f) //; exact/linear_differentiable/coord_continuous.
+rewrite (_ : (fun _ => _) = f) //; apply/linear_differentiable.
+exact: (@coord_continuous R [normedModType R of R^o] m.+1 n.+1).
 Qed.
 
-Lemma differential_cross_product (R : realFieldType) (v : 'rV[R]_3) y :
+Lemma differential_cross_product (R : realFieldType) (v : 'rV[R^o]_3) y :
   'd (crossmul v) y = mx_lin1 \S( v ) :> (_ -> _).
 Proof.
 rewrite (_ : crossmul v = (fun x => x *m \S( v ))); last first.
   by rewrite funeqE => ?; rewrite -spinE.
 rewrite (_ : mulmx^~ \S(v) = mulmxr_linear 1 \S(v)); last by rewrite funeqE.
 rewrite diff_lin //= => x.
-suff : differentiable (mulmxr \S(v)) x by move/differentiable_continuous.
+suff : differentiable (mulmxr \S(v)) (x : 'rV[R^o]_3).
+  by move/differentiable_continuous.
 rewrite (_ : mulmxr \S(v) = (fun z => \sum_i z``_i *: row i \S(v))); last first.
   rewrite funeqE => z; by rewrite -mulmx_sum_row.
 set f := fun (i : 'I_3) (z : 'rV_3) => z``_i *: row i \S(v) : 'rV_3.

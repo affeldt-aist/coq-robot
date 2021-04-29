@@ -1610,7 +1610,7 @@ Lemma screw_axis_point_matV :
   screw_axis_point_mat * screw_axis_point_mat_inv = 1.
 Proof.
 rewrite /screw_axis_point_mat /screw_axis_point_mat_inv screw_axis_point_matE !scalemx1 -!mulmxE.
-rewrite mulmxBl mulmxDr {1}mulmxE (scalar_mx_comm ((Ncos2 a)^-1)) -{1}mulmxE Ncos2V //.
+rewrite mulmxBl mulmxDr (comm_mx_scalar (Ncos2 a)^-1) Ncos2V //.
 rewrite -[RHS]addr0 -addrA; congr (_ + _).
 rewrite mul_scalar_mx -{1}scalemxAl scalerA mulrC -mulrA mulVr ?unitNcos2 // mulr1.
 rewrite mulmxDr.
