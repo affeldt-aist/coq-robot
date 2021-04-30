@@ -632,6 +632,7 @@ Proof. rewrite 2!inE; case: (lerP 0 (sin a)); by auto. Qed.
 
 (* ]-pi/2, pi/2[ *)
 Definition Npi2pi2_open : pred (angle T) := [pred a | cos a > 0].
+Definition Npi2pi2_closed : pred (angle T) := [pred a | cos a >= 0].
 Lemma Npi2pi2_openP a : (a \in Npi2pi2_open) = (0 < cos a).
 Proof. by rewrite inE. Qed.
 
@@ -641,6 +642,33 @@ move=> rdom; rewrite /acos /cos argK // normc_def /= sqr_sqrtr; last first.
   by rewrite subr_ge0 -ler_sqrt // ?ltr01 // sqrtr1 sqrtr_sqr ler_norml.
 by rewrite addrC subrK sqrtr1.
 Qed.
+
+Lemma tanK a : a \in Npi2pi2_open -> atan (tan a) = a.
+Proof.
+rewrite inE => adoml; rewrite /atan /tan mulf_eq0.
+have [|saNZ] /= := boolP (sin a == 0).
+  rewrite sin_eq0 => /orP[] /eqP aE //.
+  by rewrite aE cospi // -subr_lt0 opprK add0r (ltr_nat _ 1 0) in adoml.
+rewrite invr_eq0.
+move: (adoml); rewrite lt0r => /andP[/negPf-> _].
+have -> : ((sin a / cos a)^-1 +i* 1 = (sin a)^-1%:C * (cos a +i* sin a))%C.
+  by rewrite invf_div -complexZ mulVf // mulrC.
+rewrite sgzM; case: (sgzP (sin a)) saNZ => //= saP _.
+  by rewrite mul1r gtr0_sgz ?invr_gt0 // argZ ?invr_gt0 // -expi_cos_sin expiK.
+rewrite mulN1r gtr0_sgz ?invr_gt0 // mulrN1z -!mulrN.
+by rewrite argZ_neg ?invr_lt0 // opprK -expi_cos_sin expiK.
+Qed.
+
+Lemma tanDpi a : tan (a + pi) = tan a.
+Proof. by rewrite /tan sinDpi cosDpi mulNr invrN mulrN opprK. Qed.
+
+Lemma tanK_closed a : a \notin Npi2pi2_closed -> atan (tan a) = a + pi.
+Proof.
+rewrite inE => adoml.
+rewrite -{1}[a]addr0 -pi2 mulr2n addrA tanDpi tanK // inE cosDpi.
+by rewrite oppr_cp0 ltNge.
+Qed.
+
 
 Lemma cosK a : a \in Opi_closed -> acos (cos a) = a.
 Proof.
