@@ -116,11 +116,23 @@ Qed.
 Lemma quat_scalarE (a b : R) : (a%:q == b%:q) = (a == b).
 Proof. by apply/idP/idP => [/eqP[] ->|/eqP -> //]. Qed.
 
+Lemma quat_realN (x: R) : (-x)%:q = -(x%:q).
+Proof. by rewrite oppqE /oppq /= oppr0. Qed.
+
+Lemma quat_vectN (x: 'rV[R]_3) : (-x)%:v = -(x%:v).
+Proof. by rewrite oppqE /oppq /= oppr0. Qed.
+
 Lemma quat_realD (x y : R) : (x + y)%:q = x%:q + y%:q.
-Proof. by rewrite addqE /addq /= addr0. Qed.
+Proof. by rewrite addqE /addq /= add0r. Qed.
 
 Lemma quat_vectD (x y : 'rV[R]_3) : (x + y)%:v = x%:v + y%:v.
 Proof. by rewrite addqE /addq /= addr0. Qed.
+
+Lemma quat_realB (x y : R) : (x - y)%:q = x%:q - y%:q.
+Proof. by rewrite quat_realD quat_realN. Qed.
+
+Lemma quat_vectB (x y : 'rV[R]_3) : (x - y)%:v = x%:v - y%:v.
+Proof. by rewrite quat_vectD quat_vectN. Qed.
 
 End quaternion0.
 
@@ -281,6 +293,9 @@ apply/eqP; rewrite eq_quat //=; Simp.r.
 by rewrite {1}[a`1]vec3E -!scalerDr.
 Qed.
 
+Lemma quat_vectZ (k : R) (x : 'rV[R]_3) : (k *: x)%:v = k *: x%:v.
+Proof. by congr mkQuat; rewrite /= mulr0. Qed.
+
 End quaternion.
 
 Section quaternion1.
@@ -331,7 +346,6 @@ rewrite /conjq /= mulqE /mulq /= mulrC dotmulC dotmulvN dotmulNv opprK;
 by rewrite 2!opprD 2!scalerN linearN /= -(crossmulC a1) linearN 
            /= -2!scaleNr -addrA addrCA addrA.
 Qed.
-
 
 Lemma conjqE a : a^*q = - (1 / 2%:R) *: (a + `i * a * `i + `j * a * `j + `k * a * `k).
 Proof.
@@ -388,6 +402,12 @@ case: a => a0 a1.
 rewrite /conjq /= addqE /addq /= subrr opprK quat_vectD scalerDr -scalerDl.
 by rewrite -mulr2n -mulr_natr div1r mulVr ?scale1r // unitfE pnatr_eq0.
 Qed.
+
+Lemma quat_realC (x : R) : (x%:q)^*q = x%:q.
+Proof. by congr mkQuat; rewrite /= oppr0. Qed.
+
+Lemma quat_vectC (x : 'rV_3) : (x%:v)^*q = -(x%:v).
+Proof. by congr mkQuat; rewrite /= oppr0. Qed.
 
 Definition invq a := (1 / sqrq a) *: (a ^*q).
 
@@ -683,24 +703,10 @@ Proof.
 rewrite uquatE' => /eqP Hq; by rewrite invqE /invq Hq invr1 mul1r scale1r.
 Qed.
 
-Definition polar_of_quat (a : quat R) : 'rV[R]_3 * angle R :=
-  (normalize a`1, atan (norm a`1 / a`0)).
 
-Lemma norm_polar_of_uquat q : q \is uquat ->
-  let: (u, a) := polar_of_quat q in
-  normq (mkQuat (cos a) (sin a *: u)) = 1.
-Proof.
-move=> Hq.
-case: q Hq => [q0 q1] nq.
-case/boolP : (q1 == 0) => [/eqP /= ->|q10].
-  by rewrite norm0 mul0r atan0 cos0 sin0 scale0r /normq /sqrq /=
-             norm0 expr0n addr0 expr1n sqrtr1.
-by rewrite /= /normq /sqrq /= normZ exprMn norm_normalize //
-           expr1n mulr1 sqr_normr cos2Dsin2 sqrtr1.
-Qed.
 
 Definition quat_of_polar (a : angle R) (w : 'rV[R]_3) : quat R :=
-  mkQuat (cos (half_angle a)) (sin (half_angle a) *: w).
+  mkQuat (cos a) (sin a *: w).
 
 Lemma uquat_of_polar a w (H : norm w = 1) : quat_of_polar a w \is uquat.
 Proof.
@@ -783,91 +789,128 @@ rewrite expr_div_n -mulrDl.
 by rewrite (eqP nq) mul1r invrK -mulrA mulVr ?mulr1 // unitrX // unitfE.
 Qed.
 
-Lemma polar_of_uquat_prop q : q \is uquat -> ~~ pureq q ->
-  let: a := (polar_of_quat q).2 in
-  cos (a *+ 2) = q`0 ^+ 2 - norm q`1 ^+ 2.
-Proof.
-move=> ? ?; by rewrite mulr2n cosD -2!expr2 cos_atan_uquat // sin_atan_uquat.
-Qed.
-
-Lemma polar_of_uquat_prop2 q : q \is uquat -> q`0 != 0 ->
-  let: a := (polar_of_quat q).2 in
-  sin (a *+ 2) = (q`0 * norm q`1) *+ 2.
-Proof.
-move=> q_is_uquat q00.
-rewrite /= sin_mulr2n cos_atan sin_atan.
-set k := Num.sqrt _; congr (_ *+ 2).
-have k0 : k \is a GRing.unit.
-  by rewrite unitfE sqrtr_eq0 -ltNge -(addr0 0) ltr_le_add // ?ltr01 // sqr_ge0.
-rewrite div1r mulrCA -invrM // [in RHS]mulrC -mulrA; congr (_ * _).
-apply (@mulrI _ q`0); first by rewrite unitfE.
-rewrite mulrA divrr ?unitfE // mul1r -2!expr2 sqr_sqrtr; last first.
-  by rewrite addr_ge0 // ?ler01 // sqr_ge0.
-have /divrr <- : q`0 ^+ 2 \is a GRing.unit by rewrite unitrX // unitfE.
-rewrite uquatE' /sqrq in q_is_uquat.
-by rewrite exprMn exprVn -mulrDl (eqP q_is_uquat) -exprVn mul1r -exprVn invrK.
-Qed.
 
 Local Open Scope frame_scope.
 
-Lemma quat_rot_isRot (a : quat R) : a \is uquat -> ~~ pureq a ->
-  let: (u, theta) := polar_of_quat a in
-  u != 0 -> isRot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
-Proof.
-move=> q_isuqat. rewrite /pureq => a00 a10.
-rewrite normalize_eq0 in a10.
-set a' := atan _.
-apply/isRotP; split.
-- set u : 'rV_3 := normalize a`1.
-  by rewrite quat_rot_is_linearE quat_rot_axis.
-- rewrite /normalize Base.Z ?invr_gt0 ?norm_gt0 //.
-  set f := Base.frame a`1.
-  rewrite quat_rot_is_linearE quat_rotE /=.
-  rewrite (_ : a`1 *d f|,1 = 0); last first.
-    move/eqP: (dot_row_of_O (NOFrame.MO f) 0 1).
-    by rewrite -2!rowframeE Base.frame0E // dotmulZv mulf_eq0 invr_eq0 
-               norm_eq0 (negbTE a10) /= => /eqP.
-  rewrite scale0r mul0rn addr0.
-  rewrite (_ : a`1 *v f|,1 = norm a`1 *: f|,2%:R); last first.
-    rewrite -Base.kE -Base.icrossj Base.iE Base.jE -crossmulZv Base.frame0E //.
-    by rewrite norm_scale_normalize rowframeE.
-  rewrite scalerMnl [in X in _ + X = _]scalerA; congr (_ *: _ + _ *: _).
-  by rewrite polar_of_uquat_prop.
-  by rewrite mulrnAl polar_of_uquat_prop2.
-- rewrite /normalize Base.Z ?invr_gt0 ?norm_gt0 //.
-  set f := Base.frame a`1.
-  rewrite quat_rot_is_linearE quat_rotE /=.
-  rewrite (_ : a`1 *d f|,2%:R = 0); last first.
-    (* TODO: looks like the above *)
-    move/eqP: (dot_row_of_O (NOFrame.MO f) 0 2%:R).
-    by rewrite -2!rowframeE Base.frame0E // dotmulZv mulf_eq0 
-               invr_eq0 norm_eq0 (negbTE a10) /= => /eqP.
-  rewrite scale0r mul0rn addr0.
-  rewrite (_ : a`1 *v f|,2%:R = - norm a`1 *: f|,1); last first.
-    rewrite scaleNr -scalerN -Base.jE -Base.icrossk -crossmulZv -Base.kE; 
-       congr (_ *v _).
-    by rewrite Base.iE Base.frame0E // ?norm_scale_normalize.
-  rewrite addrC; congr (_ + _ *: _); last first.
-    by rewrite -polar_of_uquat_prop.
-  rewrite scaleNr scalerN scalerA mulNrn scalerMnl -scaleNr; congr (_ *: _).
-  by rewrite polar_of_uquat_prop2.
-Qed.
-
-Lemma quat_rot_isRot_test (u : 'rV[R]_3) (theta : angle R) : norm u = 1 ->
-  let a := mkQuat (cos (half_angle theta)) ((sin (half_angle theta)) *: u) in
-  isRot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
+Lemma quat_rot_isRot_polar (u : 'rV[R]_3) (theta : angle R) : norm u = 1 ->
+  isRot (theta *+2) u (Linear (quat_rot_is_linear (quat_of_polar theta u))).
 Proof.
 move=> u1 /=.
-set a := mkQuat _ _.
-have a_uquat : a \is uquat.
-  by rewrite uquatE' /sqrq /= normZ exprMn u1 expr1n mulr1 sqr_normr cos2Dsin2.
-have a_not_pure : ~~ pureq a.
-  admit.
-have polar_of_quat1_neq_0 : (polar_of_quat a).1 != 0.
-  rewrite /= normalize_eq0 scaler_eq0 negb_or -norm_eq0 u1 oner_neq0 andbT.
-  admit.
-move: (quat_rot_isRot a_uquat a_not_pure polar_of_quat1_neq_0).
-Abort.
+have uNZ : u != 0.
+  by apply/eqP=> uZ; move/eqP: u1; rewrite uZ norm0 //= (eqr_nat R 0 1).
+pose f := Base.frame u.
+have ud1 : u *d f|,1 = 0.
+  move/eqP: (dot_row_of_O (NOFrame.MO f) 0 1).
+  rewrite -2!rowframeE Base.frame0E //.
+  by rewrite normalizeI // => /eqP.
+have uv1 : u *v f|,1 = f|,2%:R.
+  rewrite -Base.kE -Base.icrossj Base.iE Base.jE Base.frame0E //.
+  by rewrite normalizeI // => /eqP.
+have ud2 : u *d f|,2%:R = 0.
+  move/eqP: (dot_row_of_O (NOFrame.MO f) 0 2%:R).
+  by rewrite -2!rowframeE Base.frame0E // dotmulZv mulf_eq0 
+               invr_eq0 u1 (eqr_nat _ 1 0) /= => /eqP.
+have uv2 : u *v f|,2%:R = -f|,1.
+  rewrite -Base.jE -Base.icrossk -Base.kE; congr (_ *v _).
+  by rewrite Base.iE Base.frame0E // ?normalizeI.
+apply/isRotP; split;
+    rewrite /= !(mul0r, mulr0, sub0r, scale0r, add0r, addr0) -!scaleNr;
+    rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ, crossmulNv, scalerA).
+  rewrite dotmulvv u1 expr1n mulr1 crossmulvv !(scaler0, addr0);
+  rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ,
+            crossmulNv, scalerA).
+  rewrite crossmulvv scaler0 addr0.       
+  rewrite mulNr mulrN opprK -!expr2 addrC -scalerDl.
+  by rewrite cos2Dsin2 scale1r.
+- rewrite ud1 uv1.
+  rewrite /= !(mul0r, mulr0, sub0r, scale0r, add0r, addr0, oppr0).
+  rewrite -/f crossmulC.
+  rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ,
+            crossmulNv, crossmulDr, scalerA).
+  rewrite uv1 uv2.
+  rewrite !scalerN scaleNr !scalerDr scalerN !scalerA.
+  rewrite [in RHS]mulr2n sinD cosD scalerBl scalerDl.
+  rewrite -!addrA; congr (_ + _).
+  rewrite [RHS]addrC !opprD !opprK !addrA; congr (_ - _).
+  by rewrite addrC.
+rewrite ud2 uv2 -/f.
+rewrite !(mul0r, mulr0, oppr0, scale0r, add0r).
+rewrite -/f crossmulC.
+rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ,
+          crossmulNv, crossmulvN, crossmulDr, scalerA).
+rewrite uv2 uv1.
+rewrite !(scaleNr, scalerN, scalerBr) -!scaleNr !scalerA.
+rewrite !(mulNr, mulrN) !scaleNr !opprK !addrA -!expr2.
+rewrite [in RHS]mulr2n sinD cosD scalerBl scalerDl -!expr2.
+rewrite !opprD !addrA; congr (_ + _).
+rewrite [RHS]addrC -!addrA; congr (_ + _).
+by rewrite addrC.
+Qed.
+
+Definition polar_of_quat (a : quat R)  : ('rV_3 * angle R)%type := 
+  if a`1 == 0 then
+    if a`0 == 1 then ('e_1, 0) else ('e_1, pi)
+  else if a`0 == 0 then (a`1, pihalf R) else
+  let: u := normalize a`1 in
+  let: theta := atan (norm a`1 / a`0) in
+  if 0 < a`0 then (u, theta) else (u, theta + pi).
+
+Lemma polar_of_quatK (a : quat R) : a \is uquat -> 
+  let: (u, theta) := polar_of_quat a in a = quat_of_polar theta u.
+Proof.
+case: a => a0 a1; rewrite /= qualifE /polar_of_quat /normq /sqrq /=.
+have [->|/eqP a1N /eqP u1] := a1 =P 0.
+  rewrite norm0 expr0n addr0 sqrtr_sqr.
+  case: (ltrgt0P a0) => [aP /eqP->|aP /eqP a0H |/eqP a1N].
+  - by rewrite /quat_of_polar eqxx sin0 cos0 scale0r.
+  - rewrite ifN; last first.
+      by rewrite -[a0]opprK a0H eq_sym -subr_eq0 opprK -mulr2n (eqr_nat _ 2 0).
+    by rewrite /quat_of_polar sinpi cospi scale0r -a0H opprK.
+  by rewrite (eqr_nat _ 0 1).
+have F : a0 != 0 -> Num.sqrt (1 + (norm a1 / a0) ^+ 2) = `|a0|^-1.
+  move=> a0NZ.
+  have F : a0 ^+ 2 != 0 by rewrite sqrf_eq0.
+  rewrite exprMn exprVn -(mulfV F) -mulrDl.
+  rewrite sqrtrM; last by rewrite addr_ge0 ?sqr_ge0.
+  by rewrite u1 mul1r sqrtr_sqrN2.
+case: (sgzP a0) u1 F => [->|a0P /eqP u1 F |a0N /eqP u1 F].
+- rewrite expr0n add0r.
+  by rewrite /quat_of_polar cos_pihalf sin_pihalf scale1r.
+- have a0NZ : a0 != 0 by case: (sgzP a0) a0P. 
+  congr mkQuat.
+    by rewrite cos_atan F // mul1r invrK.
+  rewrite sin_atan /normalize F // invrK divfK //.
+  by rewrite scalerA mulfV ?norm_eq0 // scale1r.
+have a0NZ : a0 != 0 by case: (sgzP a0) a0N. 
+congr mkQuat.
+  by rewrite cosDpi cos_atan F // mul1r invrK opprK.
+rewrite sinDpi sin_atan /normalize F //.
+rewrite !invrN invrK !mulrN divfK // opprK scalerA .
+by rewrite mulfV ?norm_eq0 // scale1r.
+Qed.
+
+Lemma norm_polar_of_quat (a : quat R) : a \is uquat -> 
+  let: (u, theta) := polar_of_quat a in norm u = 1.
+Proof.
+case: a => a0 a1; rewrite /= qualifE /polar_of_quat /normq /sqrq /=.
+have [->|/eqP a1N /eqP u1] := a1 =P 0.
+  by case: (a0 == 1); rewrite norm_delta_mx.
+case: (sgzP a0) u1 => [-> |a0P /eqP u1 |a0N /eqP u1].
+- by rewrite expr0n add0r sqrtr_sqr ger0_norm // norm_ge0.
+- by rewrite norm_normalize.
+by rewrite norm_normalize.
+Qed.
+
+Lemma quat_rot_isRot (a : quat R) : a \is uquat -> 
+  let: (u, theta) := polar_of_quat a in
+  isRot (theta *+ 2) u (Linear (quat_rot_is_linear a)).
+Proof.
+move=> aH /=.
+have := norm_polar_of_quat aH.
+have := polar_of_quatK aH.
+case: (polar_of_quat a) => u theta -> u1.
+by apply: quat_rot_isRot_polar.
+Qed.
 
 End quaternion1.
 
