@@ -34,6 +34,9 @@ Reserved Notation "x '^*q'" (at level 2, format "x '^*q'").
 Reserved Notation "a *`i" (at level 3).
 Reserved Notation "a *`j" (at level 3).
 Reserved Notation "a *`k" (at level 3).
+
+Reserved Notation "x +ɛ* y"
+  (at level 40, left associativity, format "x  +ɛ*  y").
 Reserved Notation "x '^*dq'" (at level 2, format "x '^*dq'").
 
 Declare Scope quat_scope.
@@ -922,14 +925,17 @@ Variables (R : ringType).
 
 Record dual := mkDual {ldual : R ; rdual : R }.
 
-Definition dual0 : dual := mkDual 0 0.
-Definition dual1 : dual := mkDual 1 0.
+Local Notation "x +ɛ* y" := (mkDual x y)
+  (at level 40, left associativity, format "x  +ɛ*  y").
+
+Definition dual0 : dual := 0 +ɛ* 0.
+Definition dual1 : dual := 1 +ɛ* 0.
 
 Local Notation "x '``0'" := (ldual x) (at level 1, format "x '``0'").
 Local Notation "x '``1'" := (rdual x) (at level 1, format "x '``1'").
 
 Definition pair_of_dual (a : dual) := let: mkDual a0 a1 := a in (a0, a1).
-Definition dual_of_pair (x : R * R) := let: (x0, x1) := x in mkDual x0 x1.
+Definition dual_of_pair (x : R * R) := let: (x0, x1) := x in x0 +ɛ* x1.
 
 Lemma dual_of_pairK : cancel pair_of_dual dual_of_pair.
 Proof. by case. Qed.
@@ -939,7 +945,7 @@ Canonical Structure dual_eqType := EqType dual dual_eqMixin.
 Definition dual_choiceMixin := CanChoiceMixin dual_of_pairK.
 Canonical Structure dual_choiceType := ChoiceType dual dual_choiceMixin.
 
-Definition oppd a := mkDual (- a``0) (- a``1).
+Definition oppd a := (- a``0) +ɛ* (- a``1).
 
 Definition deps : 'M[R]_2 :=
   \matrix_(i < 2, j < 2) ((i == 0) && (j == 1))%:R.
@@ -952,20 +958,21 @@ Qed.
 
 Definition mat_of_dual (x : dual) : 'M[R]_2 := x``0%:M + x``1 *: deps.
 
-Definition dual_of_mat (M : 'M[R]_2) := mkDual (M 0 0) (M 0 1).
+Definition dual_of_mat (M : 'M[R]_2) := (M 0 0) +ɛ* (M 0 1).
 
 Definition addd (x y : dual) := dual_of_mat (mat_of_dual x + mat_of_dual y).
 
 Definition muld (x y : dual) := dual_of_mat (mat_of_dual x * mat_of_dual y).
 
-Let adddE' (a b : dual) : addd a b = mkDual (a``0 + b``0) (a``1 + b``1).
+Let adddE' (a b : dual) : addd a b = (a``0 + b``0) +ɛ* (a``1 + b``1).
 Proof.
 rewrite /addd /dual_of_mat /mat_of_dual /= !mxE; congr mkDual.
 by rewrite !eqxx !(mulr1n,andbF,mulr1,mulr0,addr0).
 by rewrite !mulr0n !eqxx !mulr1 !add0r.
 Qed.
 
-Let muldE' (a b : dual) : muld a b = mkDual (a``0 * b``0) (a``0 * b``1 + a``1 * b``0).
+Let muldE' (a b : dual) : muld a b = 
+  a``0 * b``0 +ɛ* (a``0 * b``1 + a``1 * b``0).
 Proof.
 rewrite /muld /dual_of_mat /mat_of_dual /= !mxE !sum2E !mxE; congr mkDual.
 by rewrite !eqxx !(mulr0n,mulr1n,mulr0,mulr1,addr0).
@@ -976,7 +983,9 @@ Lemma adddA : associative addd.
 Proof. move=> x y z; by rewrite !adddE' /= 2!addrA. Qed.
 
 Lemma adddC : commutative addd.
-Proof. move=> x y; by rewrite !adddE' /= addrC [in X in mkDual _ X = _]addrC. Qed.
+Proof. 
+move=> x y; by rewrite !adddE' /= addrC [in X in _ +ɛ* X = _]addrC.
+Qed.
 
 Lemma add0d : left_id dual0 addd.
 Proof. move=> x; rewrite adddE' /= 2!add0r; by case: x. Qed.
@@ -1017,13 +1026,13 @@ Proof. apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
 Definition dual_RingMixin := RingMixin muldA mul1d muld1 muldDl muldDr oned_neq0.
 Canonical Structure dual_Ring := Eval hnf in RingType dual dual_RingMixin.
 
-Lemma adddE (a b : dual) : a + b = mkDual (a``0 + b``0) (a``1 + b``1).
+Lemma adddE (a b : dual) : a + b = (a``0 + b``0) +ɛ* (a``1 + b``1).
 Proof. exact: adddE'. Qed.
 
-Lemma muldE (a b : dual) : a * b = mkDual (a``0 * b``0) (a``0 * b``1 + a``1 * b``0).
+Lemma muldE (a b : dual) : a * b = (a``0 * b``0) +ɛ* (a``0 * b``1 + a``1 * b``0).
 Proof. exact: muldE'. Qed.
 
-Definition scaled k (a : dual) := mkDual (k * a``0) (k * a``1).
+Definition scaled k (a : dual) := k * a``0 +ɛ* (k * a``1).
 
 Lemma scaledA a b w : scaled a (scaled b w) = scaled (a * b) w.
 Proof. by rewrite /scaled /=; congr mkDual; rewrite mulrA. Qed.
@@ -1044,7 +1053,51 @@ Proof. move=> a b; by rewrite /scaled /= !mulrDl adddE. Qed.
 Definition dual_lmodMixin := LmodMixin scaledA scaled1 scaledDr scaledDl.
 Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
 
+Definition duall (x : R) := x +ɛ* 0.
+
+Local Notation "*%:dl" := duall  (at level 2).
+Local Notation "v %:dl" := (duall v) (at level 2).
+
+Fact duall_is_rmorphism : rmorphism *%:dl.
+Proof.
+split => [p q|].
+  by congr mkDual; rewrite /= !mxE //= oppr0 !mul0r !addr0 ?mulr1n //.
+split => [p q|] //.
+by congr mkDual; rewrite !mxE /= !big_ord_recr big_ord0 !mxE /=
+                          !(add0r, mul0r, addr0, mulr0) ?mulr1n.
+Qed.
+
+Canonical duall_rmorphism := RMorphism duall_is_rmorphism.
+
+(* Sanity check : Taylor series for polynomial *)
+Lemma dual_deriv_poly (p : {poly R}) (a : R) :
+  (map_poly *%:dl p).[a +ɛ* 1] = p.[a] +ɛ* p^`().[a].
+Proof.
+elim/poly_ind : p => [|p b IH]; first by rewrite map_poly0 deriv0 !horner0.
+rewrite !(rmorphD, rmorphM) /= map_polyX (map_polyC duall_rmorphism) /=.
+rewrite derivD derivC derivM derivX mulr1 addr0.
+rewrite !hornerMXaddC hornerD hornerMX IH.
+by rewrite muldE adddE /= mulr1 addr0 [p.[a] + _]addrC.
+Qed.
+
 End dual_number.
+
+Local Notation "x +ɛ* y" := (mkDual x y)
+  (at level 40, left associativity, format "x  +ɛ*  y") : dual_scope.
+
+Section dual_comm.
+
+Variable R : comRingType.
+
+Fact muld_comm (p q : dual R) : p * q = q * p.
+Proof.
+case: p => p1 p2; case: q => q1 q2.
+by rewrite !muldE /= addrC mulrC [p2 * _]mulrC [q2 * _]mulrC.
+Qed.
+
+Canonical dual_comRingType := Eval hnf in ComRingType (dual R) muld_comm.
+
+End dual_comm.
 
 Section dual_number_unit.
 
@@ -1106,7 +1159,7 @@ Definition dquat := @dual (quat_unitRing R).
 
 Local Open Scope dual_scope.
 
-Definition conjdq (a : dquat) : dquat := mkDual (a..1)^*q (a..2)^*q.
+Definition conjdq (a : dquat) : dquat := (a..1)^*q +ɛ* (a..2)^*q.
 
 Local Notation "x '^*dq'" := (conjdq x).
 
@@ -1142,11 +1195,11 @@ Definition dquat_from_rot_trans (r t : quat R)
   (_ : r \is uquat R) (_ : ~~ pureq r) (_ : (polar_of_quat r).1 != 0)
   (* i.e., rotation around (polar_of_quat r).1 of angle (polar_of_quat r).2 *+ 2 *)
   (_ : pureq t)
-  : dquat := mkDual r t.
+  : dquat := r +ɛ* t.
 
 Definition rot_trans_from_dquat (x : dquat) :=
   (x..1, 2%:R *: (x..2 * x..1^*q)).
 
 End dual_quaternion.
 
-Notation "x '^*dq'" := (conjdq x).
+Notation "x '^*dq'" := (conjdq x) : dual_scope.
