@@ -7,33 +7,51 @@ From mathcomp Require Import complex finset fingroup perm.
 
 Require Import ssr_ext angle euclidean3 skew vec_angle frame.
 
-(* OUTLINE:
-  1. section two_dimensional_rotation
-  2. section elementary_rotations
-     Rx, Ry, Rz
-  3. section isRot.
-     definition of rotations w.r.t. a vector
-     section properties_of_isRot
-     section relation_with_rotation_matrices
-     sample lemmas:
-       all rotations around a vector of angle a have trace "1 + 2 * cos a"
-       equivalence SO[R]_3 <-> Rot
-  4. section exponential_map_rot
-     specialized exponential map
-     sample lemmas:
-       inverse of the exponential map,
-       exponential map of a skew matrix is a rotation
-     Rodrigues formula:
-       u * e^(phi,w) can be expressed using a lin. comb. of vectors u, (u *d w)w, u *v w)
-  5. Module Aa (angle-axis representation)
-     section angle_of_angle_axis_representation
-     section vector_axis_of_angle_axis_representation
-     section angle_axis_of_rot
-       sample lemmas:
-         a rotation matrix has angle_aa M and normalize (vaxis_aa M) for exp. coor.
-  6. section angle_axis_representation
-  7. section euler_angles (wip)
-*)
+(******************************************************************************)
+(*                             Rotations                                      *)
+(*                                                                            *)
+(*  RO a, RO' a == two dimensional rotations of angle a                       *)
+(*                                                                            *)
+(* Elementary rotations:                                                      *)
+(*  Rx a, Rx' a == rotations about axis x of angle a                          *)
+(*  Ry a == rotation about axis y of angle a                                  *)
+(*  Rz a == rotation about axis z of angle a                                  *)
+(*                                                                            *)
+(*  isRot a u f == f is a rotation of angle a w.r.t. vector u                 *)
+(*    sample lemmas:                                                          *)
+(*    all rotations around a vector of angle a have trace "1 + 2 * cos a"     *)
+(*    equivalence SO[R]_3 <-> Rot (isRot_SO, SO_is_Rot)                       *)
+(*                                                                            *)
+(*  emx3 a M == specialized exponential map for angle a and matrix M          *)
+(*    sample lemmas:                                                          *)
+(*    inverse of the exponential map,                                         *)
+(*    exponential map of a skew matrix is a rotation                          *)
+(*                                                                            *)
+(* rodrigues u a w == linear combination of the vectors u, (u *d w)w, w *v u  *)
+(*                    that provides an alternative expression for the vector  *)
+(*                    u * e^(a,w)                                             *)
+(*                                                                            *)
+(* Angle-axis representation:                                                 *)
+(*   Aa.angle M == angle of angle-axis representation for the matrix M        *)
+(*   Aa.vaxis M == axis of angle-axis representation for the matrix M         *)
+(*    sample lemma                                                            *)
+(*    a rotation matrix has Aa.angle M and normalize (Aa.vaxis M) for         *)
+(*    exponential coordinates                                                 *)
+(*                                                                            *)
+(*   Rxyz == sequence of rotations about x, about y, and about z              *)
+(*                                                                            *)
+(* Roll-Pitch-Yaw (ZYX) angles given a rotation matrix M                      *)
+(* with pitch in ]-pi/2;pi/2[ (ref: [sciavicco]):                             *)
+(*   rpy_a M == angle about axis z (roll)                                     *)
+(*   rpy_b M == angle about axis y (pitch)                                    *)
+(*   rpy_c M == angle about axis x (yaw)                                      *)
+(*                                                                            *)
+(* Euler angles:                                                              *)
+(* (ref: [Gregory G. Slabaugh, Computer Euler angles from a rotation matrix]) *)
+(*   euler_a == angle about z                                                 *)
+(*   euler_b == angle about y                                                 *)
+(*   euler_c == angle about x                                                 *)
+(******************************************************************************)
 
 Reserved Notation "'`e(' a ',' M ')'" (format "'`e(' a ','  M ')'").
 Reserved Notation "'`e^(' a ',' w ')'" (format "'`e^(' a ','  w ')'").
@@ -1906,7 +1924,7 @@ Qed.
 
 End properties_of_atan2.
 
-Section euler_angles_old. (* does not look like the right approach *)
+Section euler_angles.
 
 Variables (T : rcfType).
 
@@ -1959,7 +1977,6 @@ rewrite -[_ _ zero]/(1 = 0)%R; apply/eqP.
 by rewrite (eqr_nat T 1 0).
 Defined.
 
-
 Definition Rxyz (a b c : angle T) :=
   let ca := cos a in let cb := cos b in let cc := cos c in
   let sa := sin a in let sb := sin b in let sc := sin c in
@@ -1991,7 +2008,7 @@ Definition rpy_c (M : 'M[T]_3) : angle T :=
   atan2 (M 1 2%:R) (M 2%:R 2%:R).
 
 Lemma RxyzE_M02D1 M a b c : M \is 'SO[T]_3 ->
-  cos b != 0 -> 
+  cos b != 0 ->
   M 0 0 = cos a * cos b ->
   M 0 1 = sin a * cos b ->
   M 0 2%:R = - sin b ->
@@ -2035,7 +2052,7 @@ by rewrite cos2sin2 -sqrrN -M02 expr2; nsatz.
 Qed.
 
 Lemma rpy_solution M : M \is 'SO[T]_3 ->
-  0 < cos (rpy_b M) -> (* pi/2 < b < pi/2 *)
+  0 < cos (rpy_b M) -> (* -pi/2 < b < pi/2 *)
   M = (Rx (rpy_c M) * Ry (rpy_b M) * Rz (rpy_a M)).
 Proof.
 move=> MSO Hb.
@@ -2089,19 +2106,19 @@ rewrite cos_atan2 // addrC sqr_M0jE // -/(yarc _).
 by rewrite mulrCA mulfV ?mulr1 // yarc_neq0.
 Qed.
 
-Definition euler_b (M : 'M[T]_3) : angle T := (* theta *)
+Definition euler_b (M : 'M[T]_3) : angle T :=
   if `| M 0 2%:R | != 1 then
     - asin (M 0 2%:R)
   else if M 0 2%:R == 1 then
     - pihalf T
   else (* M 0 2%:R == - 1*) pihalf T.
 
-Definition euler_c (M : 'M[T]_3) : angle T := (* psi *)
+Definition euler_c (M : 'M[T]_3) : angle T :=
   if `| M 0 2%:R | != 1 then
     atan2 (M 1 2%:R / cos (euler_b M)) (M 2%:R 2%:R / cos (euler_b M))
   else 0.
 
-Definition euler_a (M : 'M[T]_3) : angle T := (* phi *)
+Definition euler_a (M : 'M[T]_3) : angle T :=
   if `| M 0 2%:R | != 1 then
     atan2 (M 0 1 / cos (euler_b M)) (M 0 0 / cos (euler_b M))
   else if M 0 2%:R == 1 then
@@ -2160,7 +2177,7 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
     (* NB: same as above *)
     rewrite mulrA [yarc _ * _]mulrC divfK  ?yarc_neq0 //.
     rewrite 2!expr_div_n -mulrDl addrC sqr_M0jE // sqr_yarc //.
-    by rewrite divrr ?sqrtr1 ?divr1 // unitfE subr_eq0 
+    by rewrite divrr ?sqrtr1 ?divr1 // unitfE subr_eq0
                eq_sym sqr_norm_eq1 lt_eqF.
   rewrite /euler_c /euler_b NM02D1 cosN cos_asin //.
   have [/eqP M22|M22] := boolP (M 2%:R 2%:R == 0).
@@ -2174,7 +2191,7 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
   (* NB: same as above *)
   rewrite mulrA [yarc _ * _]mulrC divfK  ?yarc_neq0 //.
   rewrite 2!expr_div_n -mulrDl addrC sqr_M0jE // sqr_yarc //.
-  by rewrite divrr ?sqrtr1 ?divr1 // unitfE subr_eq0 
+  by rewrite divrr ?sqrtr1 ?divr1 // unitfE subr_eq0
               eq_sym sqr_norm_eq1 lt_eqF.
 rewrite RxyzE.
 have := det_mx33 M; case/andP: MSO => _ /eqP-> => Fd.
@@ -2191,18 +2208,18 @@ rewrite !mxE !sum3E !mxE /= in Fd F00 F01 F02 F10 F11 F12 F20 F21 F22.
 have [M00 M01] : M 0 0 = 0 /\ M 0 1 = 0.
   by move/eqP : NM02E1; rewrite Mi2_1 // => /andP[/eqP ? /eqP].
 rewrite /euler_a /euler_b /euler_c NM02E1 eqxx /=.
-rewrite M00 M01 !(mul0r, mulr0, add0r) 
+rewrite M00 M01 !(mul0r, mulr0, add0r)
   in Fd F00 F01 F02 F10 F11 F12 F20 F21 F22.
 have M12 :  M 1 2%:R = 0%:R by nsatz.
 have M22 :  M 2%:R 2%:R = 0%:R by nsatz.
-rewrite M12 M22 !(mul0r, mulr0, add0r, addr0) 
+rewrite M12 M22 !(mul0r, mulr0, add0r, addr0)
    in Fd F00 F01 F02 F10 F11 F12 F20 F21 F22.
 case: eqP => [M02E1|/eqP M02ED1].
   case: (M 2%:R 0 =P 0) => [M20|/eqP M20D].
     have M11 :  M 1 1%:R = 0%:R by nsatz.
-    rewrite M20 M11 !(mul0r, mulr0, add0r, addr0, oppr0) 
+    rewrite M20 M11 !(mul0r, mulr0, add0r, addr0, oppr0)
       in Fd F00 F01 F02 F10 F11 F12 F20 F21 F22 *.
-    apply/matrix3P/and9P; split; apply/eqP; 
+    apply/matrix3P/and9P; split; apply/eqP;
       rewrite !mxE //= ?(cosN, sinN, cos_pihalf, sin_pihalf, cos0, sin0);
       rewrite ?(mul0r, mulr0, oppr0, add0r, addr0, mul1r, mulN1r, opprK) //;
       rewrite ?(sin_atan2_0, cos_atan2_0) //.
@@ -2224,7 +2241,7 @@ case: eqP => [M02E1|/eqP M02ED1].
     by rewrite opprK sgr1 mulrN1 mulN1r.
   have V := mulfV M20D.
   have NM20D : - M 2%:R 0 != 0 by rewrite oppr_eq0.
-  apply/matrix3P/and9P; split; apply/eqP; 
+  apply/matrix3P/and9P; split; apply/eqP;
       rewrite !mxE //= ?(cosN, sinN, cos_pihalf, sin_pihalf, cos0, sin0);
       rewrite ?(mul0r, mulr0, oppr0, add0r, addr0, mul1r,
                 mulr1, mulN1r, mulrN1, opprK) //;
@@ -2236,21 +2253,21 @@ rewrite -subr_eq0 in M02ED1; have V := mulVf M02ED1.
 have M20EN1 : M 0 2%:R = -1 by nsatz.
 case: (M 2%:R 0 =P 0) => [M20|/eqP M20D].
   have M11 :  M 1 1 = 0%:R by nsatz.
-  rewrite M20EN1 M20 M11 !(mul0r, mulr0, add0r, addr0, oppr0) 
+  rewrite M20EN1 M20 M11 !(mul0r, mulr0, add0r, addr0, oppr0)
     in Fd F00 F01 F02 F10 F11 F12 F20 F21 F22 *.
-  have NM21D : M 2%:R 1 != 0. 
+  have NM21D : M 2%:R 1 != 0.
     by apply/eqP=> M210; have/eqP := F22; rewrite M210 mul0r (eqr_nat _ 0 1).
   apply/matrix3P/and9P; split; apply/eqP;
         rewrite !mxE //= ?(cosN, sinN, cos_pihalf, sin_pihalf, cos0, sin0);
         rewrite ?(cos_atan2_0, sin_atan2_0, (negPf NM21D));
         rewrite ?(mulr0, mulr1, add0r, addr0, subr0) //.
-    have/eqP := F22; rewrite -subr_eq0 -expr2 subr_sqr_1 mulf_eq0 
+    have/eqP := F22; rewrite -subr_eq0 -expr2 subr_sqr_1 mulf_eq0
                                 => /orP[] /eqP HH.
       have -> : M 2%:R 1 = 1 by nsatz.
       by rewrite sgr1; nsatz.
     have -> : M 2%:R 1 = -1 by nsatz.
     by rewrite sgrN1 opprK; nsatz.
-  have/eqP := F22; rewrite -subr_eq0 -expr2 subr_sqr_1 mulf_eq0 
+  have/eqP := F22; rewrite -subr_eq0 -expr2 subr_sqr_1 mulf_eq0
                                 => /orP[] /eqP HH.
     have -> : M 2%:R 1 = 1 by nsatz.
     by rewrite sgr1.
@@ -2259,11 +2276,11 @@ case: (M 2%:R 0 =P 0) => [M20|/eqP M20D].
 apply/matrix3P/and9P; split; apply/eqP;
      rewrite !mxE //= ?(cosN, sinN, cos_pihalf, sin_pihalf, cos0, sin0);
         rewrite ?(mul0r, mulr0, oppr0, add0r, addr0, mul1r, mulN1r, opprK) //;
-        rewrite ?(sin_atan2, cos_atan2, mul0r, oppr0, expr0n, addr0, mulr1, 
+        rewrite ?(sin_atan2, cos_atan2, mul0r, oppr0, expr0n, addr0, mulr1,
                      eqxx) //;
         rewrite sqr_Mi2E // M22 expr0n subr0 sqrtr1 divr1 //.
   by nsatz.
 by nsatz.
 Qed.
 
-End euler_angles_old.
+End euler_angles.
