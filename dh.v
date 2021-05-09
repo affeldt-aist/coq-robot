@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
+(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
 From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.

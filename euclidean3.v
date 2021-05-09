@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL v3. *)
+(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra tuple mxpoly.
 From mathcomp Require Import zmodp binomial realalg  complex finset fingroup perm.
