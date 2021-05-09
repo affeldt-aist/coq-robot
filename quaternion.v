@@ -317,6 +317,9 @@ Qed.
 Definition conjq (a : quat R) := mkQuat (a`0) (- a`1).
 Local Notation "x '^*q'" := (conjq x).
 
+Lemma sqrq_conj (a : quat R) : sqrq (a^*q) = sqrq a.
+Proof. by rewrite /sqrq normN. Qed.
+
 Lemma conjq_linear : linear conjq.
 Proof.
 move=> /= k [a0 a1] [b0 b1] /=; rewrite [in LHS]/conjq /= [in RHS]/conjq /=.
@@ -339,6 +342,19 @@ Proof.
 rewrite /mulq /=; congr mkQuat.
   by rewrite /= dotmulvN dotmulvv opprK -expr2.
 by rewrite scalerN addNr add0r crossmulvN crossmulvv oppr0.
+Qed.
+
+Lemma conjd_comm (a : quat R) : a^*q * a = a * a^*q.
+Proof. by rewrite -{2}[a]conjqI conjqP sqrq_conj conjqP. Qed.
+
+Lemma conjd_comm2 (a b : quat R) :
+  b^*q * a + a^*q * b = a * b^*q + b * a^*q.
+Proof.
+apply: (addIr (a * a ^*q + b * b ^*q)).
+rewrite [RHS]addrAC !addrA -mulrDr -[RHS]addrA -mulrDr -mulrDl -linearD /=.
+rewrite addrC !addrA -conjd_comm -mulrDr -addrA -conjd_comm -mulrDr -mulrDl.
+rewrite -linearD /= [b + a]addrC.
+by apply: conjd_comm.
 Qed.
 
 Lemma conjqM a b : (a * b)^*q = b^*q * a^*q.
@@ -1169,16 +1185,38 @@ rewrite /conjdq !muldE /= conjqM; congr mkDual.
 by rewrite linearD /= 2!conjqM [in LHS]addrC.
 Qed.
 
+Lemma conjdq_comm a : a^*dq * a = a * a^*dq.
+Proof. 
+case: a => a1 a2.
+by rewrite /conjdq /= !muldE /= ![_^*q * _]conjd_comm conjd_comm2 addrC.
+Qed.
+
+Lemma conjdq_unit a : (a^*dq \is a GRing.unit) = (a \is a GRing.unit).
+Proof.
+case: a => [] [a0 av] [b0 bv].
+by rewrite !qualifE /= /unitd /= !qualifE /= /unitq /= !eq_quat /= oppr_eq0.
+Qed.
+
 (* squared norm *)
 
+(* maybe we could introduce the notion of being a dual real *)
 Definition sqrdq (a : dquat) : dquat := a * a^*dq.
 
 (* inverse *)
 
 Definition invdq (a : dquat) : dquat := a^-1.
 
-Lemma invdqE (a : dquat) : a..1 != 0 -> invdq a = 0 (*(sqrdq a)^-1*) *: (a^*dq).
-Abort.
+Lemma invdqEl (a : dquat) : a..1 != 0 -> invdq a = (sqrdq a)^-1 * (a^*dq).
+Proof.
+move=> aD; rewrite /sqrdq -conjdq_comm invrM  ?conjdq_unit //.
+by rewrite divrK ?conjdq_unit.
+Qed.
+
+Lemma invdqEr (a : dquat) : a..1 != 0 -> invdq a = (a^*dq) * (sqrdq a)^-1.
+Proof.
+move=> aD; rewrite /sqrdq invrM  ?conjdq_unit // mulrA.
+by rewrite mulrV ?mul1r // ?conjdq_unit.
+Qed.
 
 (* unit dual quaternions *)
 
