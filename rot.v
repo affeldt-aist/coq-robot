@@ -751,7 +751,37 @@ Lemma eigenvalue_ekew a w : norm w = 1 ->
 Proof.
 move=> u1 /= k.
 rewrite inE eigenvalue_root_char -map_char_poly.
-Abort.
+rewrite /= !inE.
+rewrite  char_poly3 /= trace_eskew // det_eskew //.
+rewrite [`e(_,_) ^+ _]expr2 eskewM // trace_eskew //.
+rewrite (_ : _ - _ = (1 + cos a *+ 2) *+ 2); last first.
+  rewrite !mulr_natl cosD -!expr2 sin2cos2 [1 + _]addrC sqrrD1.
+  rewrite exprMn_n -mulrnA opprB addrA -mulr2n mulrnBl 2!opprD opprK -mulrnA.
+  rewrite addrA addrK addrAC addrA subrr add0r.
+  by rewrite [RHS]mulrnDl addrC mulrnA.
+rewrite -[(_ + _) *+ _]mulr_natl mulrA divfK ?(eqr_nat _ 2 0) // mul1r.
+rewrite linearB /= map_polyC /= !(linearB, linearD, linearZ) /=.
+rewrite !map_polyXn map_polyX.
+  rewrite (_ : _ - _ = ('X - 1) * ('X - (expi a)%:P) * ('X - (expi (-a))%:P)).
+  by rewrite !rootM !root_XsubC orbA.
+have expiDexpiN  : expi a + expi (-a) = (cos a + cos a)%:C%C.
+  rewrite !expi_cos_sin cosN sinN.
+  by apply/eqP; rewrite eq_complex /= subrr !eqxx.
+rewrite !(mulrBr, mulrBl, mulrDr, mulrDl, mul1r, mulr1).
+rewrite -expr2 -exprSr !addrA !scalerN.
+rewrite ['X * _ * 'X]mulrAC -expr2 !['X * _]mulrC !['X^2 * _]mulrC.
+rewrite [_* 'X * _]mulrAC -rmorphM /= -expiD subrr expi0 mul1r.
+rewrite -!addrA; congr (_ + _); rewrite !(addrA, opprB, opprD).
+rewrite -[_ - _ * 'X^2]addrA -opprD -mulrDl -rmorphD /= expiDexpiN.
+rewrite -[1 + _ + _]addrA ![_%:C%C]rmorphD /= scalerDl !(opprB, opprD).
+rewrite -!addrA scale1r; congr (_ + _); rewrite !addrA opprK.
+rewrite [RHS]addrC !addrA -mulrDl.
+rewrite -[_%:P + _]rmorphD /= [expi (- _) + _]addrC expiDexpiN.
+rewrite -![RHS]addrA [RHS]addrC -!addrA; congr (- _ + _).
+  by rewrite -rmorphD /= mul_polyC.
+rewrite scalerDl scale1r -!addrA; congr (_ + _).
+by rewrite addrC mul_polyC.
+Qed.
 
 Lemma Rz_eskew a : Rz a = `e^(a, 'e_2%:R).
 Proof.
