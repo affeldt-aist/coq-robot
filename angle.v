@@ -3,28 +3,44 @@ From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
-
 Require Import ssr_ext.
+
+(******************************************************************************)
+(*                               Angles                                       *)
+(*                                                                            *)
+(* This files provides a theory of angles defined using complex numbers and   *)
+(* develops the theory of trigonometric functions including trigonometric     *)
+(* laws such as the cancellation laws between trigonometric functions and     *)
+(* their inverse, Pythagorean identity, double-angle and half-angle formulas, *)
+(* law of cosines and of sines, etc.                                          *)
+(*                                                                            *)
+(*      angle T == type of angles over the rcfType T, i.e., a complex number  *)
+(*                 whose modulus is 1                                         *)
+(*       angle0 == 0 angle corresponding to the complex number 1              *)
+(*        arg x == angle corresponding to the complex number x/|x|            *)
+(*           pi == the angle corresponding to the complete number -1          *)
+(*                                                                            *)
+(* Angles form a ZmodType, so that we can do scalar multiplication of angles: *)
+(* half_angle a == the angle corresponding to a/2                             *)
+(*       pihalf == pi/2                                                       *)
+(*    piquarter == pi/4                                                       *)
+(*                                                                            *)
+(* Trigonometric functions:                                                   *)
+(*       cos a == the real part of the angle a                                *)
+(*       sin a == the imaginary part of angle a                               *)
+(*       tan a == tangent a                                                   *)
+(*      acos x == arccosine, the inverse trigonometric function of cosine     *)
+(*      asin x == arcsin x                                                    *)
+(*      atan x == arctan x                                                    *)
+(*   atan2 x y == the 2-argument arctangent, i.e., the angle between the      *)
+(*                positive x axis and the ray to the point (x, y)             *)
+(*       cot a == cotangent a                                                 *)
+(*                                                                            *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-(************************************************************************************)
-(* (addition, scalar multiplication, half-angle)                                    *)
-(*     (definitions of cos, sin, tan, acos, asin, and atan, and various properties) *)
-(************************************************************************************)
-
-(* OUTLINE
-  1. Section angle_def
-     - includes definition of pi
-  2. Section angle_basic_prop
-     - standard trigonometric relations
-     - arccos/arcsin/arctan
-     - cancellation laws
-  3. Section half_angle
-  4. Section derived_trigonometric_functions
-*)
 
 Local Open Scope ring_scope.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
@@ -221,8 +237,6 @@ Proof.
 case: z => a b z0 /=; by rewrite {2}/arg opp_angleE /opp_angle expi_conjc //= expiK.
 Qed.
 
-(* cos *)
-
 Definition cos a := complex.Re (expi a).
 
 Lemma cos0 : cos 0 = 1.
@@ -243,8 +257,6 @@ rewrite invc_norm (eqP ab) expr1n invr1 mul1r expi_arg; last first.
   by rewrite conjc_eq0 -normr_eq0 (eqP ab) oner_eq0.
 by rewrite normcJ (eqP ab) divr1.
 Qed.
-
-(* sin *)
 
 Definition sin a := complex.Im (expi a).
 
@@ -435,8 +447,6 @@ Proof. by rewrite -sqrf_eq0 sin2cos2 subr_eq0 eq_sym sqrf_eq1 cos_eq1 cos_eqN1. 
 Lemma sin0_inv a : sin a = 0 -> {a = 0} + { a = pi }.
 Proof. by move/eqP; rewrite sin_eq0; case: eqP => /= ?/eqP?; [left|right]. Qed.
 
-(* tan *)
-
 Definition tan a := sin a / cos a.
 
 Lemma tan0 : tan 0 = 0 :> T.
@@ -453,8 +463,6 @@ Proof.
 move=> cosx; rewrite /tan exprMn sin2cos2 mulrBl -exprMn divrr ?unitfE //.
 by rewrite expr1n addrCA subrr addr0 div1r mul1r exprVn.
 Qed.
-
-(* pi/2 *)
 
 Definition pihalf : angle T := arg 'i.
 
@@ -510,8 +518,6 @@ have [b1|b1] : {b = 1} + {b = - 1}.
   by apply/eqP; rewrite /pihalf a0 b1 expiNi eq_complex /= oppr0 2!eqxx.
 Qed.
 
-(* pi/4 *)
-
 Definition piquarter : angle T := arg (Num.sqrt (2%:R^-1) +i* Num.sqrt (2%:R^-1))%C.
 
 Lemma expi_piquarter :
@@ -526,8 +532,6 @@ sin(t) = ( exp(it) - exp(-it) )/2i
 cos(t) = ( exp(it) + exp(-it) )/2
 *)
 
-(* arccos *)
-
 Definition acos (x : T) : angle T := arg (x +i* Num.sqrt (1 - x ^+ 2))%C.
 
 Lemma acos1 : acos 1 = 0.
@@ -539,8 +543,6 @@ rewrite /acos sqrrN expr1n subrr sqrtr0 complexr0 (_ : ((_)%:C)%C = -1) //.
 apply/eqP; by rewrite eq_complex /= oppr0 eqxx eqxx.
 Qed.
 
-(* arcsin *)
-
 Definition asin (x : T) : angle T := arg (Num.sqrt (1 - x ^+ 2) +i* x)%C.
 
 Lemma asinN x : asin (- x) = - asin x.
@@ -550,9 +552,8 @@ case/boolP : (x == 0) => [/eqP ->|]; last by rewrite orbT.
 by rewrite expr0n /= subr0 sqrtr1 oner_neq0.
 Qed.
 
-(* arctan *)
-
-Definition atan (x : T) : angle T := if x == 0 then 0 else arg ((x^-1 +i* 1)%C *~ sgz x).
+Definition atan (x : T) : angle T :=
+  if x == 0 then 0 else arg ((x^-1 +i* 1)%C *~ sgz x).
 
 Lemma atan0 : atan 0 = 0.
 Proof. by rewrite /atan eqxx. Qed.
@@ -579,8 +580,6 @@ move: x0; rewrite neq_lt => /orP [] x0.
   by rewrite eqr_oppLR oppr0 oner_neq0.
 by rewrite gtr0_sgz ?oppr_gt0 // mulr1z eq_complex /= negb_and oner_neq0 orbC.
 Qed.
-
-(* atan2 *)
 
 Definition atan2 x y :=
   if y > 0 then atan (x / y) else
@@ -668,7 +667,6 @@ rewrite inE => adoml.
 rewrite -{1}[a]addr0 -pi2 mulr2n addrA tanDpi tanK // inE cosDpi.
 by rewrite oppr_cp0 ltNge.
 Qed.
-
 
 Lemma cosK a : a \in Opi_closed -> acos (cos a) = a.
 Proof.
