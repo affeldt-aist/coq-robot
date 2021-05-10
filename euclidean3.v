@@ -1,40 +1,37 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
-From mathcomp Require Import closed_field polyrcf matrix mxalgebra tuple mxpoly.
-From mathcomp Require Import zmodp binomial realalg  complex finset fingroup perm.
-
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly.
+From mathcomp Require Import zmodp realalg complex finset fingroup perm.
 From mathcomp.analysis Require Import forms.
-
 Require Import ssr_ext.
 
-(*
- OUTLINE:
- 1. section dot_product
- 2. section norm
-    includes section norm1 (unit norm)
- 3. section row2
-    section row3
- 4. section col_mx2_col_mx3
-    specialization of col_mx to row vectors of length 2, 3
- 5. section extra_linear3
-    extra lemmas about linear algebra specialized to dimensions <= 3
- 6. section normal
- 7. section crossmul
-    (sample lemma: double_crossmul)
- 8. section orthogonal_rotation_def
-    section orthogonal_rotation_properties.
-    section orthogonal_crossmul
-    (most lemmas specialized for dim 3)
-    (sample lemma: Euler's theorem,
-                   orth_preserves_dotmul)
-    (sample lemma: multiplication by O_3[R] preserves norm)
- 9. section norm3
-    (some specialized lemmas for dimension 3)
- 10. section properties_of_canonical_vectors
- 11. section normalize
- 12. section characteristic_polynomial_dim3
-     closed formula for the characteristic polynomial of a 3x3 matrix
-*)
+(******************************************************************************)
+(*                     Elements of Euclidean geometry                         *)
+(*                                                                            *)
+(* This file provides elements of Euclidean geometry, with specializations to *)
+(* the 3D case. It develops the theory of the dot-product and of the          *)
+(* cross-product with lemmas such as the double cross-product. It also        *)
+(* develops the theory of rotation matrices with lemmas such as the           *)
+(* preservation of the dot-product by orthogonal matrices or a closed formula *)
+(* for the characteristic polynomial of a 3x3 matrix.                         *)
+(*                                                                            *)
+(*        u *d w == the dot-product of the vectors u and v, i.e., the only    *)
+(*                  component of the 1x1-matrix u * v^T                       *)
+(*        norm u == the norm of vector u, i.e., the square root of u *d u     *)
+(*   normalize u == scales vector u to be of unit norm                        *)
+(*      row2 a b == the row vector [a,b]                                      *)
+(*    row3 a b c == the row vector [a,b,c]                                    *)
+(*   col_mx2 u v == specialization of col_mx two row vectors of size 2        *)
+(* col_mx3 u v w == specialization of col_mx two row vectors of size 3        *)
+(*        u *v v == the cross-product of the vectors u and v, defined using   *)
+(*                  determinants                                              *)
+(*       'O[T]_n == the type of orthogonal matrices of size n                 *)
+(*      'SO[T]_n == the type of rotation matrices of size n                   *)
+(* vaxis_euler M == the vector-axis of the rotation matrix M of Euler's       *)
+(*                  theorem                                                   *)
+(*                                                                            *)
+(******************************************************************************)
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -1416,10 +1413,10 @@ Lemma vecji : 'e_1 *v 'e_0 = - 'e_2%:R :> 'rV[T]__.
 Proof.
 apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
-Qed.  
+Qed.
 
 Lemma vecjk : 'e_1 *v 'e_2%:R = 'e_0%:R :> 'rV[T]__.
-Proof. 
+Proof.
 apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
@@ -1431,11 +1428,10 @@ by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
 
 Lemma veckj : 'e_2%:R *v 'e_1 = - 'e_0 :> 'rV[T]__.
-Proof. 
+Proof.
 apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
-
 
 End properties_of_canonical_vectors.
 
