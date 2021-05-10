@@ -1,53 +1,43 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_ssreflect ssralg ssrint.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import zmodp realalg complex fingroup perm.
 From mathcomp.analysis Require Import reals.
-
 Require Import ssr_ext angle euclidean3 skew vec_angle frame rot rigid.
 
-(*
- OUTLINE:
- 1. Section taylor_exponential.
-    special case of the exponential map
- 2. Module Lie.
-    experiment with the bracket notation
-      Section lie_square_matrix.
-      Section lie_euclidean_3.
- 3. Module Twist.
-      twists defined as a vector with 6 elements
-      Section twist_coordinates.
-      Section twist_coordinates_properties.
- 4. Section se3_qualifier.
-      twists defined as 4x4 matrices
-    Section twist_properties.
-      conversions twist <-> 4x4 matrices
- 6. Section twist_and_adjoint.
-    see differential_kinematics.v for an application
- 7. Section sample_rigid_transformation.
- 8. Section exponential_coordinates_rigid_using_taylor.
- 9. Module Rad
-    radian <-> angle
-    RadTheory.
- 10. Section exponential_coordinates_rigid
- 11. Module TwistComputationExample
- 12. Module Screw
- 13. Section screw_motion
- 14. Section screw_coordinates_of_a_twist.
-     Section screw_coordinates_of_a_twist_realType.
-     Section screw_motion_utwist.
-     Section etwist_alt.
- 17. Section Chasles.
-     Chasles' theorem, computation of a point on the axis
- 18  Section screw_axis_point_helper.
-     Section screw_axis_point_def.
-     Section screw_axis_point.
-     Section murray_exercise_13. (wip)
-*)
+(******************************************************************************)
+(*                             Screw Motions                                  *)
+(*                                                                            *)
+(* This file develops the theory of screws and twists. It establishes in      *)
+(* particular Chasles' theorem (given a rigid body motion, it shows           *)
+(* constructively the existence of an angle and a twist that represent this   *)
+(* rigid body motion), Mozzi-Chasles' theorem (it shows that existence of a   *)
+(* set of points that undergo just a translation---this is the screw axis).   *)
+(*                                                                            *)
+(*   'se3[R] == the set of twists (the Lie algebra of SE(3) in matrix form    *)
+(*   wedge t == form a twist in 'se3[R] given twist (coordinates)             *)
+(*              (essentially a vector in R^6 )                                *)
+(*     vee E == extract the 6-dimensional vector (the twist coordinates) from *)
+(*              a twist in 'se3[R]                                            *)
+(*   emx M k == the Taylor expansion of matrix M                              *)
+(*   screw T == type of screw, defined by a line (the screw axis), and angle  *)
+(*              (the screw magnitude), and a pitch                            *)
+(*   Rad.f a == the measure in radians of the angle a                         *)
+(* screw_motion s p == motion of the point p by the screw s                   *)
+(*   twist T == the type of twists, i.e., two vectors v and w, v representing *)
+(*              the linear velocity of the motion and w representing the      *)
+(*              angular velocity                                              *)
+(*     \v{t} == linear velocity of the twist t                                *)
+(*     \w{t} == angular velocity of the twist t                               *)
+(* `e$(a, t) == the exponential of a twist t with angle a                     *)
+(*                                                                            *)
+(******************************************************************************)
 
 Reserved Notation "''se3[' R ]" (at level 8, format "''se3[' R ]").
+Reserved Notation "'\T(' v , w ')'" (at level 3,
+  w, v at next level, format "'\T(' v ,  w ')'").
+Reserved Notation "'\v(' t ')'" (format "'\v('  t  ')'", at level 3).
+Reserved Notation "'\w(' t ')'" (format "'\w('  t  ')'", at level 3).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -284,10 +274,9 @@ End twist_coordinates.
 End Twist.
 Notation twist := Twist.t.
 
-Notation "'\T(' v , w ')'" := (Twist.mk v w)
-  (at level 3, w, v at next level, format "'\T(' v ,  w ')'").
-Notation "'\v(' t ')'" := (Twist.lin t) (format "'\v('  t  ')'", at level 3).
-Notation "'\w(' t ')'" := (Twist.ang t) (format "'\w('  t  ')'", at level 3).
+Notation "'\T(' v , w ')'" := (Twist.mk v w).
+Notation "'\v(' t ')'" := (Twist.lin t).
+Notation "'\w(' t ')'" := (Twist.ang t).
 
 Section twist_coordinates_properties.
 
@@ -346,8 +335,7 @@ Section se3_qualifier.
 Variable T : comUnitRingType.
 Implicit Types E : 'M[T]_4.
 
-(* the set of twists, [murray] p.40 *)
-(* NB: a.k.a. the Lie algebra of SE(3) *)
+(* [murray] p.40 *)
 Definition se3 := [qualify E : 'M[T]_4 |
   [&& @ulsubmx _ 3 1 3 1 E \is 'so[T]_3,
       @ursubmx _ 3 1 3 1 E == 0 &
@@ -404,12 +392,8 @@ Let vector := 'rV[T]_3.
 Implicit Types t : twist T.
 Implicit Types E : 'M[T]_4.
 
-(* forms a matrix in se(3) (i.e., a twist)
-   out of a given vector in R^6 (i.e., twist coordinates) *)
 Definition wedge t : 'M_4 := block_mx \S(\w( t )) 0 (\v( t )) 0.
 
-(* extract the 6-dimensional vector (i.e., the twist coordinates)
-   which parameterizes a twist *)
 Definition vee E : twist T :=  \T(lin_of_twist E, ang_of_twist E).
 (* NB: se3 is isomorphic to R^6 via this mapping *)
 
@@ -531,6 +515,7 @@ Qed.
 End twist_properties.
 
 Section twist_and_adjoint.
+(*see differential_kinematics.v for an application*)
 
 Variable T : realFieldType.
 Implicit Types t : twist T.
@@ -1122,9 +1107,9 @@ Module Screw.
 Section screw.
 Variable T : rcfType.
 Record t := mk {
-  l : Line.t T (* axis *) ;
-  a : angle T (* magnitude *) ;
-  h : T (* pitch *) }.
+  l : Line.t T ;
+  a : angle T ;
+  h : T }.
 End screw.
 End Screw.
 Notation screw := Screw.t.
@@ -1721,7 +1706,7 @@ Abort.
 
 End screw_axis_point.
 
-(* [murray] exercise 13, p.77 *)
+(* [murray] exercise 13, p.77 (wip) *)
 Section twist_coor_trans.
 
 Variable T : rcfType.
