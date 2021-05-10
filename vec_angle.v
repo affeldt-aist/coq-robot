@@ -1,10 +1,41 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_ssreflect ssralg ssrint.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean3.
+
+(******************************************************************************)
+(*                          Vector angles and lines                           *)
+(*                                                                            *)
+(* This file defines angles between two vectors and develops their theory     *)
+(* (e.g., multiplication by an orthogonal matrix preserves the angle between  *)
+(* two vectors, etc.) and a theory of lines.                                  *)
+(*                                                                            *)
+(*         vec_angle v w == angle in [0;pi] formed by the vectors v and w     *)
+(*          colinear u v == the vectors u and v are colinear, defined using   *)
+(*                          the cross-product                                 *)
+(*         axialcomp v e == the axial component of vector v along e, or the   *)
+(*                          projection of v on e                              *)
+(*        normalcomp v e == the normal component of vector v w.r.t. e         *)
+(*                                                                            *)
+(*              Line.t T == the type of lines defined in a parametric way     *)
+(*                          using a point belonging to the line and a vector  *)
+(*                          (the direction of the line)                       *)
+(*                \pt{l} == the point used to define the line l               *)
+(*               \vec{l} == the direction of the line l                       *)
+(*        parallel l1 l2 == the lines l1 and l2 are parallel                  *)
+(*   perpendicular l1 l2 == the lines l1 and l2 are perpendicular             *)
+(*  coplanar p1 p2 p3 p3 == the four points p1, p2, p3, and p4 are coplanar   *)
+(*            skew l1 l2 == l1 and l2 are skew lines                          *)
+(*      intersects l1 l2 == the lines l1 and l2 intersects                    *)
+(* is_interpoint p l1 l2 == the lines l1 and l2 intersects at the point p     *)
+(* distance_point_line p l == the distance between the point p and the line l *)
+(* distance_between_lines l1 l2 == the distance between the lines l1 and l2   *)
+(******************************************************************************)
+
+Reserved Notation "'\pt(' l ')'" (at level 3, format "'\pt(' l ')'").
+Reserved Notation "'\pt2(' l ')'" (at level 3, format "'\pt2(' l ')'").
+Reserved Notation "'\vec(' l ')'" (at level 3, format "'\vec(' l ')'").
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -13,22 +44,6 @@ Unset Printing Implicit Defensive.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
-
-(* OUTLINE:
- 1. section vec_angle
-    definition of vec_angle (restricted to [0,pi])
-    (sample lemma: multiplication by a O_3[R] matrix preserves vec_angle)
- 2. section colinear
-    (simple definition using crossmul, but seemed clearer to me to have a dedicated definition)
- 3. section axial_normal_decomposition.
-    axialcomp, normalcomp
-    (easy definitions to construct frames out of already available points/vectors)
- 4. section line
- 5. section line_line_intersection
- 6. section line_distance
-      distance_point_line
-      distance_between_lines
-*)
 
 Lemma norm1_cossin (T : rcfType) (v : 'rV[T]_2) :
   norm v = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
@@ -500,7 +515,6 @@ Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types u v e : vector.
 
-(* axial component of v along e or projection of v on e *)
 Definition axialcomp v e := normalize e *d v *: normalize e.
 
 Lemma axialcomp0v e : axialcomp 0 e = 0.
@@ -579,7 +593,6 @@ rewrite /axialcomp scalerA vec_anglevZ // divr_gt0 // ?norm_gt0 //.
 by rewrite /normalize dotmulZv mulr_gt0 // invr_gt0 norm_gt0.
 Qed.
 
-(* normal component of v w.r.t. u *)
 Definition normalcomp v e := v - axialcomp v e.
 
 Lemma axialnormalcomp v e : v = axialcomp v e + normalcomp v e.
@@ -815,9 +828,9 @@ Proof. by rewrite /point2 addrAC subrr add0r. Qed.
 End line_def.
 End Line.
 
-Notation "'\pt(' l ')'" := (Line.point l) (at level 3, format "'\pt(' l ')'").
-Notation "'\pt2(' l ')'" := (Line.point2 l) (at level 3, format "'\pt2(' l ')'").
-Notation "'\vec(' l ')'" := (Line.vector l) (at level 3, format "'\vec(' l ')'").
+Notation "'\pt(' l ')'" := (Line.point l).
+Notation "'\pt2(' l ')'" := (Line.point2 l).
+Notation "'\vec(' l ')'" := (Line.vector l).
 
 Coercion line_pred (T : comRingType) (l : Line.t T) : pred 'rV[T]_3 :=
   [pred p | (p == \pt( l )) ||
@@ -872,8 +885,6 @@ Definition parallel (T : comRingType) : rel (Line.t T) :=
 
 Definition perpendicular (T : comRingType) : rel (Line.t T) :=
   [rel l1 l2 | \vec( l1 ) *d \vec( l2 ) == 0].
-
-(* skew lines *)
 
 Definition coplanar (T : comRingType) (p1 p2 p3 p4 : 'rV[T]_3) : bool :=
   (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
