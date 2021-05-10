@@ -166,9 +166,10 @@ Qed.
 End two_dimensional_rotation.
 
 Section elementary_rotations.
-
 Variable T : rcfType.
 Implicit Types a b : angle T.
+
+Local Open Scope frame_scope.
 
 Definition Rx a := col_mx3
   'e_0

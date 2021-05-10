@@ -1,27 +1,21 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From Coq Require Import ssreflect ssrfun ssrbool.
-From mathcomp
-Require Import eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrnum ssrint div rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial.
-From mathcomp
-Require Import perm finset path fingroup complex.
+From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import perm path fingroup complex.
+
+(******************************************************************************)
+(*                                                                            *)
+(* Minor additions to MathComp libraries ssrbool, ssralg, ssrnum, and complex *)
+(*                                                                            *)
+(* 'e_0, 'e_1, 'e_2 == the canonical vectors                                  *)
+(*                                                                            *)
+(******************************************************************************)
+
+Reserved Notation "''e_' i" (format "''e_' i", at level 3).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-(*
- OUTLINE:
- 1. Section extra_ssrbool
- 2. various lemmas about ssralg and ssrnum
- 3. section extra_perm3
- 4. Section extra_linear
-    notation 'e_i
- 5. Section extra_complex
-*)
 
 Section extra_ssrbool.
 
@@ -238,8 +232,7 @@ End extra_perm3.
 Reserved Notation "u '``_' i"
     (at level 3, i at level 2, left associativity, format "u '``_' i").
 Notation "u '``_' i" := (u (GRing.zero (Zp_zmodType O)) i) : ring_scope.
-Notation "''e_' i" := (delta_mx 0 i)
- (format "''e_' i", at level 3) : ring_scope.
+Notation "''e_' i" := (delta_mx 0 i) : ring_scope.
 Local Open Scope ring_scope.
 
 Section extra_linear.

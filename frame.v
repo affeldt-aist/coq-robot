@@ -1,35 +1,31 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_ssreflect ssralg ssrint.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly.
+From mathcomp Require Import zmodp realalg complex finset fingroup perm.
 Require Import ssr_ext angle euclidean3 skew vec_angle.
 
-(* OUTLINE:
-  1. Module NOFrame
-     Section non_oriented_frame_properties
-  2. Module Frame
-     Section oriented_frame_properties
-     mostly about positive frames
-  3. Module TFrame
-     positive frames with an origin
-  3. definition of the canonical frame <e_0, e_1, e_2>
-  4. Module Base1
-     build a positive frame out of a unit vector
-  5. Module Base
-     build a positive frame out of a non-zero vector
-  6. section relative_frame.
-  7. Module FromTo.
-     definition of the rotation from one frame to another
-     FromTo.mkT
-  8. section triad
-    (construction of a frame out of three non-colinear points)
-  9. section transformation_given_three_points
-     (construction d'une transformation (rotation + translation) etant donnes
-     trois points de depart et leurs positions d'arrivee)
-     sample lemma: the rotation obtained behaves like a change of coordinates from left to right
-*)
+(******************************************************************************)
+(*                                Frames                                      *)
+(*                                                                            *)
+(* This defines frames to describe robot manipulators.                        *)
+(*                                                                            *)
+(* NOFrame.t R == the type of non-oriented frames defined using an orthogonal *)
+(*                matrix                                                      *)
+(*   Frame.t R == the type of oriented frames, i.e., non-oriented frames f    *)
+(*                such that f \is 'SO[R]_3                                    *)
+(*   can_frame == the positive frame consisting of the canonical vectors      *)
+(*                'e_0, 'e_1, 'e_2                                            *)
+(*  TFrame.t R == tangent frames, i.e., positive frames with an origin        *)
+(*       \o{F} == origin of the tangent frame F                               *)
+(*       \x{F} == x-vector of the tangent frame F                             *)
+(*     xaxis F == the x-axis defined by the tangent frame F                   *)
+(*                (resp. yaxis, zaxis)                                        *)
+(* Module Base == given a vector u, the vectors Base.i u, Base.j, and         *)
+(*                Base.k u form a positive frame                              *)
+(*     A _R^ B == the rotation matrix that transforms a vector expressed in   *)
+(*                frame A into a vector expressed in frame B                  *)
+(*                                                                            *)
+(******************************************************************************)
 
 Declare Scope frame_scope.
 
@@ -39,6 +35,7 @@ Reserved Notation "'\o{' F '}'" (at level 3, format "'\o{' F '}'").
 Reserved Notation "'\x{' F '}'" (at level 3, format "'\x{' F '}'").
 Reserved Notation "'\y{' F '}'" (at level 3, format "'\y{' F '}'").
 Reserved Notation "'\z{' F '}'" (at level 3, format "'\z{' F '}'").
+Reserved Notation "A _R^ B" (at level 5).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -781,7 +778,7 @@ Definition FromTo (T : comRingType) (A B : frame T) :=
    to a vector expressed in coordinate frame B *)
 (* = orientation of frame A relative to B *)
 
-Notation "A _R^ B" := (@FromTo _ A B) (at level 5).
+Notation "A _R^ B" := (@FromTo _ A B) : frame_scope.
 
 Section FromTo_properties.
 
@@ -944,6 +941,7 @@ Proof. by rewrite /= -mulmxA mulVmx // ?Frame.unit // mulmx1. Qed.
 
 End about_frame.*)
 
+(* construction of a frame out of three non-colinear points *)
 Module triad.
 Section triad.
 Variable T : rcfType.
@@ -1015,6 +1013,9 @@ Definition frame := Frame.mk is_SO.
 End triad.
 End triad.
 
+(* construction d'une transformation (rotation + translation) etant donnes
+   trois points de depart et leurs positions d'arrivee
+   sample lemma: the rotation obtained behaves like a change of coordinates from left to right *)
 Section transformation_given_three_points.
 
 Variable T : rcfType.
