@@ -827,15 +827,6 @@ move=> ?; rewrite -[RHS]mul1r -[X in _ = X *m _](@VAdjoint g) ?rot_of_hom_is_SO 
 by rewrite mulmxE -mulrA mulrV ?mulr1 // Adjoint_in_unitmx.
 Qed.
 
-(*Lemma inv_Adjoint' g :
-  let r := rot_of_hom g in
-  let t := trans_of_hom g in
-  inv_Adjoint g = block_mx r^T 0 (- \S(t) * r^T) r^T.
-Proof.
-move=> r t; rewrite /inv_Adjoint; f_equal.
-rewrite -mulmxE mulNmx -spin_similarity ?rotationV ?rot_of_hom_SO //.
- rewrite trmxK -/t -/r.*)
-
 (* [murray] exercise 14 (a), p.77 *)
 Lemma inv_Adjoint_inv g : g \is 'SE3[T] -> (Adjoint g)^-1 = Adjoint g^-1.
 Proof.

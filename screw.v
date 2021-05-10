@@ -11,7 +11,7 @@ Require Import ssr_ext angle euclidean3 skew vec_angle frame rot rigid.
 (* This file develops the theory of screws and twists. It establishes in      *)
 (* particular Chasles' theorem (given a rigid body motion, it shows           *)
 (* constructively the existence of an angle and a twist that represent this   *)
-(* rigid body motion), Mozzi-Chasles' theorem (it shows that existence of a   *)
+(* rigid body motion), Mozzi-Chasles' theorem (it shows the existence of a    *)
 (* set of points that undergo just a translation---this is the screw axis).   *)
 (*                                                                            *)
 (*   'se3[R] == the set of twists (the Lie algebra of SE(3) in matrix form    *)
@@ -515,17 +515,11 @@ Import sqmatLie.Exports.
 Lemma lie_wedgeE t1 t2 :
   let v1 := \v( t1 ) in let v2 := \v( t2 ) in
   let w1 := \w( t1 ) in let w2 := \w( t2 ) in
-  lie[wedge t1, wedge t2] = wedge t1 * wedge t2 - wedge t2 * wedge t1.
-Proof. by []. Qed.
-
-Lemma lie_wedgeE1 t1 t2 :
-  let v1 := \v( t1 ) in let v2 := \v( t2 ) in
-  let w1 := \w( t1 ) in let w2 := \w( t2 ) in
   lie[wedge t1, wedge t2] =
   block_mx \S( w2 *v w1 ) 0 (w2 *v v1 + v2 *v w1) 0.
 Proof.
 move=> v1 v2 w1 w2.
-rewrite lie_wedgeE.
+transitivity (wedge t1 * wedge t2 - wedge t2 * wedge t1) => //.
 rewrite /wedge -/v1 -/v2 -/w1 -/w2.
 rewrite -mulmxE.
 rewrite (mulmx_block \S(w1) 0 v1 0 \S(w2)).
@@ -536,14 +530,13 @@ rewrite (add_block_mx (\S(w1) *m \S(w2))) !addr0.
 by rewrite 2!spinE spin_crossmul (crossmulC w1 v2) opprK.
 Qed.
 
-Lemma lie_wedgeE2 t1 t2 :
+Lemma lie_wedgeE' t1 t2 :
   let v1 := \v( t1 ) in let v2 := \v( t2 ) in
   let w1 := \w( t1 ) in let w2 := \w( t2 ) in
   lie[wedge t1, wedge t2] = wedge \T( w2 *v v1 + v2 *v w1, w2 *v w1).
 Proof.
 move=> v1 v2 w1 w2.
-rewrite lie_wedgeE1.
-by rewrite -/v1 -/v2 -/w1 -/w2 /wedge Twist.lin_of Twist.ang_of.
+by rewrite lie_wedgeE -/v1 -/v2 -/w1 -/w2 /wedge Twist.lin_of Twist.ang_of.
 Qed.
 
 End twist_properties.
@@ -590,11 +583,7 @@ Proof. by rewrite /SE3_action Adjoint1 mulmx1. Qed.
 Lemma SE3_action_comp (g1 g2 : 'M[T]_4) t :
   g1 \is 'SE3[T] -> g2 \is 'SE3[T] ->
   SE3_action g1 (SE3_action g2 t) = SE3_action (g2 * g1) t.
-Proof.
-move=> ? ?; rewrite action_Adjoint // action_Adjoint // veeK ?conj_SE3_se3 //.
-rewrite action_Adjoint; last by rewrite rpredM.
-by rewrite !mulrA invrM // ?SE3_in_unitmx.
-Qed.
+Proof. by move=> ? ?; rewrite /SE3_action -mulmxA AdjointM. Qed.
 
 Lemma linear_action_Adjoint g : g \is 'SE3[T] -> linear (SE3_action g).
 Proof. move=> Hg k y x; by rewrite /SE3_action mulmxDl scalemxAl. Qed.
@@ -605,7 +594,7 @@ Import sqmatLie.Exports.
 Lemma AdjointE t1 t2 :
   t1 *m Adjoint (wedge t2) = vee lie[wedge t1, wedge t2].
 Proof.
-rewrite lie_wedgeE2 wedgeK.
+rewrite lie_wedgeE' wedgeK.
 rewrite /Adjoint.
 rewrite -{1}(twist_mkE t1).
 rewrite (mulmx_block \v(_) \w(_) 0 0 (rot_of_hom (wedge _))).
