@@ -1,28 +1,25 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import  mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex finset fingroup perm.
 Require Import ssr_ext euclidean3 vec_angle.
 Require vec_angle.
 
-(*
- OUTLINE:
- 1. Section sym_anti
-    Section anti_rcfType.
-    Section anti_rcfType_dim3.
-    Section sym_anti_numFieldType.
-      sections on symmetric and antisymmetry matrices.
- 2. Section axial_vector.
- 3. Section spin_matrix
-    Section spin_matrix_axial_vector_rcfType.
-      properties of spin matrices and axial vectors
- 4. Section spectral_properties.
-      sample lemma: eigenvalues of spin matrices
- 5. Section cayley_transform
-*)
+(******************************************************************************)
+(*                         Skew-symmetric matrices                            *)
+(*                                                                            *)
+(* This file develops the theory of skew-symmetric matrices to be used in     *)
+(* particular to represent the exponential coordinates of rotation matrices.  *)
+(*                                                                            *)
+(* 'so[R]_n == the type of skew-symmetric matrices, i.e., matrices M such     *)
+(*              that M = -M^T                                                 *)
+(*    \S(w) == the spin of vector w, i.e., the (row-vector convention)        *)
+(*             skew-symmetric matrix corresponding to the vector w            *)
+(*   symp A == symmetric part of matrix A                                     *)
+(*  antip A == antisymmetric part of matrix A                                 *)
+(*  spin_eigenvalues u == eigenvalues of \S(u)                                *)
+(*                                                                            *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -190,7 +187,6 @@ Section sym_anti_numFieldType.
 Variables (R : numFieldType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
 
-(* (anti)symmetric parts of a matrix *)
 Definition symp A := 1/2%:R *: (A + A^T).
 Definition antip A := 1/2%:R *: (A - A^T).
 

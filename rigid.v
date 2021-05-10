@@ -1,35 +1,43 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex finset fingroup perm.
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
 
-(*
- OUTLINE:
- 1. Section central_isometry_n.
- 2. Section central_isometry_3.
- 3. Section isometry_3_properties.
- 4. Section direct_isometry_3_properties.
- 5. section derivative_map
-     definition of what it means to preserve the cross-product by a transformation
-     (sample lemma: preservation of the cross-product by derivative maps)
- 6. Section homogeneous_points_and_vectors
- 7. Section homogeneous_matrices.
- 8. Section SE3_qualifier.
- 9. Section SE3_hom.
-    lemmas about the homogeneous representation of SE3
- 10. Section Adjoint.
-     adjoint transformation associated with an homogeneous matrix
- 11. Module EuclideanMotion.
-     definition of Euclidean motions as a record
- 12. Section coordinate_transformation.
- 13. section rigid_transformation_is_homogeneous_transformation
-     a direct isometry (i.e., cross-product preserving) can be expressed
-     as an Euclidean motion
-*)
+(******************************************************************************)
+(*                         Rigid Body Transformations                         *)
+(*                                                                            *)
+(* This file develops the theory of isometries, proving basic properties such *)
+(* as the preservation of the cross-product by derivative maps, the facts     *)
+(* that a direct isometry preserves orientation and that an isometry that     *)
+(* preserves the cross-product of two non-colinear vectors is direct. Rigid   *)
+(* body transformations are represented by elements of the special Euclidean  *)
+(* group and are shown to preserve norms.                                     *)
+(*                                                                            *)
+(*      'Iso[T]_n == the type of isometries                                   *)
+(*     'CIso[T]_n == the type of central isometries, i.e., isometries f such  *)
+(*                   that f 0 = 0                                             *)
+(* ortho_of_iso f == orthogonal part of the isometry f                        *)
+(* trans_of_iso f == translation part of the isometry f                       *)
+(*      iso_sgn f == sign of the isometry f                                   *)
+(*            f`* == derivative map of f, action on vectors induced by f      *)
+(* preserves_orientation f == the isometry f preserves orientation, i.e., f`* *)
+(*                   preserves the cross-product                              *)
+(*     'DIso_3[T] == the type of direct isometries                            *)
+(*        'SE3[T] == the type of special Euclidean group                      *)
+(*        hom r v == homogeneous representation of the element of 'SE3[T]     *)
+(*                   where r is a rotation matrix and t a vector representing *)
+(*                   a translation                                            *)
+(*          hRx a == homogeneous representation of the rotation about the     *)
+(*                   x-axis of angle a (resp. hRy, hRz)                       *)
+(*          hTx d == homogeneous representation of the translation of length  *)
+(*                   d along the x-axis (resp. hTy, hTz)                      *)
+(*      inv_hom M == inverse of the rigid body transformation M in            *)
+(*                   homogeneous representation                               *)
+(*      Adjoint g == adjoint transformation associated with the homogeneous   *)
+(*                   matrix g                                                 *)
+(*                                                                            *)
+(******************************************************************************)
 
 Reserved Notation "''Iso[' T ]_ n"
   (at level 8, n at level 2, format "''Iso[' T ]_ n").
@@ -776,7 +784,6 @@ Section Adjoint.
 Variables (T : comRingType).
 Implicit Types g : 'M[T]_4.
 
-(* adjoint transformation associated with g *)
 Definition Adjoint g : 'M_6 :=
   let r := rot_of_hom g in
   let t := trans_of_hom g in

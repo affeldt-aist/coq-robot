@@ -4,11 +4,15 @@ From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
-
 Require Import ssr_ext angle euclidean3 skew vec_angle frame.
 
 (******************************************************************************)
-(*                             Rotations                                      *)
+(*                              Rotations                                     *)
+(*                                                                            *)
+(* This file develops the theory of 3D rotations with results such as         *)
+(* Rodrigues formula, the fact that any rotation matrix can be represented    *)
+(* by its exponential coordinates, angle-axis representation, Euler angles,   *)
+(* etc. See also quaternion.v for rotations using quaternions.                *)
 (*                                                                            *)
 (*  RO a, RO' a == two dimensional rotations of angle a                       *)
 (*                                                                            *)
@@ -22,7 +26,9 @@ Require Import ssr_ext angle euclidean3 skew vec_angle frame.
 (*    all rotations around a vector of angle a have trace "1 + 2 * cos a"     *)
 (*    equivalence SO[R]_3 <-> Rot (isRot_SO, SO_is_Rot)                       *)
 (*                                                                            *)
-(*  emx3 a M == specialized exponential map for angle a and matrix M          *)
+(*   `e(a, M) == specialized exponential map for angle a and matrix M         *)
+(*  `e^(a, w) == specialized exponential map for the matrix \S(w), i.e., the  *)
+(*               skew-symmetric matrix corresponding to vector w              *)
 (*    sample lemmas:                                                          *)
 (*    inverse of the exponential map,                                         *)
 (*    exponential map of a skew matrix is a rotation                          *)
