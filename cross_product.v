@@ -5,7 +5,7 @@ From mathcomp Require Import perm path fingroup.
 Require Import ssr_ext.
 
 (******************************************************************************)
-(* This filw is wip. It contains a generalization of the cross-product.       *)
+(* This file is wip. It contains a generalization of the cross-product.       *)
 (******************************************************************************)
 
 Set Implicit Arguments.
