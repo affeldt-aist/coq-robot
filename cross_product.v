@@ -89,12 +89,26 @@ Lemma cross_multilinear (A B C : 'M_(n',n)) (i0 : 'I_n') (b c : F) :
  row' i0 C = row' i0 A -> cross A = b *: cross B + c *: cross C.
 Proof.
 move=> rABC rBA rCA; apply/rowP=> k; rewrite !mxE.
+have bumpD (i k1 : 'I_n') : bump (bump 0 i0) i = (1 + k1)%N -> i0 != k1.
+  move=> Bi; apply/eqP => i0Ek1; move: Bi; rewrite -i0Ek1.
+  rewrite /bump !add1n; case: ltnP => [u0Li He|iLi0 He].
+    by rewrite -He leqNgt ltnS leqnn in u0Li.
+  by rewrite -ltnS -He ltnn in iLi0.
 apply: (@determinant_multilinear _ _ _ _ _ (fintype.lift 0 i0));
 do ?[apply/matrixP => i j; rewrite !mxE; case: splitP => //= l;
      rewrite ?ord1 ?mxE //].
-(* - by move=> [] /val_inj <-; *)
-(*   have := congr1 (fun M : 'M__ => M 0 j) rABC; rewrite !mxE. *)
-Admitted.
+- apply/rowP => i; rewrite !mxE; case: fintype.splitP; first by do 2 case.
+  move=> k1 H; rewrite (_ : k1 = i0).
+    by move/rowP : rABC => /(_ i); rewrite !mxE.
+  apply/val_eqP/eqP=> /=. 
+  by rewrite /= /bump !add1n in H; case: H.
+- apply/matrixP => i j; rewrite !mxE /=; case: fintype.splitP => // k1 /= H1.
+  have /unlift_some[k2 k2E _] := bumpD i k1 H1. 
+  by move/matrixP : rBA => /(_ k2 j); rewrite !mxE k2E.
+apply/matrixP => i j; rewrite !mxE /=; case: fintype.splitP => // k1 /= H1.
+have /unlift_some[k2 k2E _] := bumpD i k1 H1. 
+by move/matrixP : rCA => /(_ k2 j); rewrite !mxE k2E.
+Qed.
 
 Lemma dot_cross (u : 'rV[F]_n) (V : 'M[F]_(n',n)) :
   u *d (cross V) = \det (col_mx u V).
