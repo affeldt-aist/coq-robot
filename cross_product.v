@@ -1,14 +1,12 @@
-Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp
-Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-From mathcomp
-Require Import bigop ssralg ssrint div rat poly closed_field polyrcf.
-From mathcomp
-Require Import matrix mxalgebra tuple mxpoly zmodp binomial.
-From mathcomp
-Require Import perm finset path fingroup.
-
+(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From mathcomp Require Import all_ssreflect ssralg ssrint rat poly closed_field.
+From mathcomp Require Import polyrcf matrix mxalgebra mxpoly zmodp perm path.
+From mathcomp Require Import perm path fingroup.
 Require Import ssr_ext.
+
+(******************************************************************************)
+(* This filw is wip. It contains a generalization of the cross-product.       *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -46,6 +44,7 @@ Lemma normalmD  k m p (A : 'M[F]_(k,n)) (B : 'M[F]_(m,n)) (C : 'M[F]_(p,n)) :
   (A _|_ B + C) = (A _|_ B) && (A _|_ C).
 Proof. by rewrite ![A _|_ _]normal_sym normalDm. Qed.
 
+(* TODO: already defined in euclidean3.v! *)
 Definition dotmul (u v : 'rV[F]_n) : F := (u *m v^T) 0 0.
 Local Notation "*d%R" := (@dotmul _).
 Local Notation "u *d w" := (dotmul u w) (at level 40).
@@ -100,13 +99,13 @@ do ?[apply/matrixP => i j; rewrite !mxE; case: splitP => //= l;
 - apply/rowP => i; rewrite !mxE; case: fintype.splitP; first by do 2 case.
   move=> k1 H; rewrite (_ : k1 = i0).
     by move/rowP : rABC => /(_ i); rewrite !mxE.
-  apply/val_eqP/eqP=> /=. 
+  apply/val_eqP/eqP=> /=.
   by rewrite /= /bump !add1n in H; case: H.
 - apply/matrixP => i j; rewrite !mxE /=; case: fintype.splitP => // k1 /= H1.
-  have /unlift_some[k2 k2E _] := bumpD i k1 H1. 
+  have /unlift_some[k2 k2E _] := bumpD i k1 H1.
   by move/matrixP : rBA => /(_ k2 j); rewrite !mxE k2E.
 apply/matrixP => i j; rewrite !mxE /=; case: fintype.splitP => // k1 /= H1.
-have /unlift_some[k2 k2E _] := bumpD i k1 H1. 
+have /unlift_some[k2 k2E _] := bumpD i k1 H1.
 by move/matrixP : rCA => /(_ k2 j); rewrite !mxE k2E.
 Qed.
 
@@ -421,7 +420,7 @@ Definition cross_product_mat (u : vector ^ n) :=
 (*   \row_(k < n) \det (mixed_product_mat (delta_mx 0 k)). *)
 
 Definition cross_product (u v : vector) : vector :=
-  \row_(k < n) \det 
+  \row_(k < n) \det
    (cross_product_mat (finfun [eta delta_mx 0 with 1%:R |-> u, 2%:R |-> v])).
 
 (*Definition cross_product (u v : vector) : vector :=

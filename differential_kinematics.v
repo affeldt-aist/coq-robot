@@ -1,15 +1,17 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_ssreflect ssralg ssrint.
-From mathcomp Require Import ssrnum rat (*poly*) closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp.analysis Require Import boolp reals Rstruct classical_sets posnum.
 From mathcomp.analysis Require Import topology normedtype landau forms derive.
-
 Require Import ssr_ext euclidean3 rot skew rigid.
 
-(* contents (roughly follows [sciavicco] chap. 3):
+(******************************************************************************)
+(* This file is wip. It contains an on-going formalization of                 *)
+(* [sciavicco] chap. 3.                                                       *)
+(******************************************************************************)
+
+(* contents:
   1. Section derive_mx.
      Section derive_mx_R.
      Section derive_mx_SE.

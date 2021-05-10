@@ -2,6 +2,7 @@
 
 ssr_ext.v
 euclidean3.v
+cross_product.v
 angle.v
 vec_angle.v
 skew.v

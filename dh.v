@@ -1,19 +1,21 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame rigid.
 
-(* OUTLINE
-  1. Module Plucker.
-  2. Section plucker_of_line.
-  3. Section denavit_hartenberg_homogeneous_matrix.
-  4. Section denavit_hartenberg_convention.
-  5. Section open_chain. (wip)
-*)
+(******************************************************************************)
+(*                       Denavit-Hartenberg convention                        *)
+(*                                                                            *)
+(* This file provides an account of the Denavit-Hartenberg (DH) convention    *)
+(* convention which specifies the position of successive frames in robot      *)
+(* manipulator. It shows that under the DH hypotheses the DH matrix can be    *)
+(* used to represent the relation position of two frames.                     *)
+(*                                                                            *)
+(* dh_mat == DH matrix, i.e., a 4x4-matrix built from the four DH parameters  *)
+(* dh_rot == rotation matrix corresponding to the DH matrix                   *)
+(*                                                                            *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -30,7 +32,7 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B))
  (A at next level, at level 8,
  format "u  _|_  A , B ").
 
-(* [ angeles2014: p.102-203] *)
+(* [ angeles 2014: p.102-203] *)
 Module Plucker.
 Section plucker.
 Variable T : ringType.

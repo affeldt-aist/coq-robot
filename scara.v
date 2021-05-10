@@ -1,13 +1,24 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
-From mathcomp Require Import fintype tuple finfun bigop ssralg ssrint div.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
-
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean3 skew vec_angle rot frame rigid screw.
-
 From mathcomp.analysis Require Import reals.
+
+(******************************************************************************)
+(*                        SCARA Robot Manipulator                             *)
+(*                                                                            *)
+(* This file addresses the forward kinematics problem for the SCARA robot     *)
+(* manipulator in two ways: (1) it first provides the DH parameters,          *)
+(* (2) using screw motions.                                                   *)
+(*                                                                            *)
+(* B10,B21,B32,B43 == relative positions of the consecutive frames of the     *)
+(*                    SCARA robot manipulator using DH parameters             *)
+(*     t1,t2,t3,t4 == twists of the SCARA robot manipulator                   *)
+(*              g0 == position of the end-effector using twists               *)
+(*               g == orientation of the end-effector using twists            *)
+(*                                                                            *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -18,7 +29,6 @@ Import Num.Theory.
 
 Local Open Scope ring_scope.
 
-(* SCARA robot manipulator as an example *)
 Section scara.
 
 Variable R : realType.

@@ -30,6 +30,8 @@ Require Import ssr_ext angle euclidean3 skew vec_angle frame rot rigid.
 (*     \v{t} == linear velocity of the twist t                                *)
 (*     \w{t} == angular velocity of the twist t                               *)
 (* `e$(a, t) == the exponential of a twist t with angle a                     *)
+(* rjoint_twist w p == twist of a revolute joint                              *)
+(* pjoint_twist v == twist of a prismatic joint                               *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -1239,10 +1241,8 @@ Definition pitch (t : twist T) : T :=
 Lemma pitch_nolin (w : 'rV[T]_3) : pitch \T(0, w) = 0.
 Proof. by rewrite /pitch ang_tcoorE lin_tcoorE scaler0 dotmul0v. Qed.
 
-(* twist of a revolute joint *)
 Definition rjoint_twist (w : vector) (q : point) := \T(- w *v q, w).
 
-(* twist of a prismatic joint *)
 Definition pjoint_twist (v : vector) := \T(v, 0).
 
 Lemma pitch_perp (w u : 'rV[T]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
