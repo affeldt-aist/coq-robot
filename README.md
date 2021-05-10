@@ -12,20 +12,16 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 
 
 
-This library is a formalization of the mathematics of rigid body
-transformations in the Coq proof-assistant. It can be used to address
-the forward kinematics problem of robot manipulators. It contains
-theories for angles, three-dimensional geometry (including
-three-dimensional rotations, skew-symmetric matrices, quaternions),
-rigid body transformations (isometries, homogeneous representation,
-Denavit-Hartenberg convention, screw motions), and an application to
-the SCARA robot manipulator.
+This repository contains an experimental library for the mathematics
+of rigid body transformations using the Coq proof-assistant and the
+Mathematical Components library.
 
 ## Meta
 
 - Author(s):
   - Reynald Affeldt, AIST (initial)
   - Cyril Cohen, Inria (initial)
+  - Laurent Thery, Inria
 - License: [LGPL-2.1-or-later](LICENSE)
 - Compatible Coq versions: Coq 8.13
 - Additional dependencies:
@@ -66,17 +62,30 @@ Contribution by Damien Rouhling (9b7badc25bf6492f6b84611c7f9d32594b345308)
 
 Grant-in-Aid for Scientific Research Number 15H02687
 
+## Disclaimer
+
+This library is still at an experimental stage.  Contents may change
+and definitions and theorems may be renamed.  Use at your own risk.
+
 ## Documentation
 
-Each file is documented in its header.
+This library can be used to address the forward kinematics problem
+of robot manipulators.  It contains theories for angles,
+three-dimensional geometry (including three-dimensional rotations,
+skew-symmetric matrices, quaternions), rigid body transformations
+(isometries, homogeneous representation, Denavit-Hartenberg
+convention, screw motions), and an application to the SCARA robot
+manipulator.
+
+Each file is documented more precisely in its header.
 
 Some references used in this work:
 - [murray] Murray, Li, Shankar Sastry: A Mathematical Introduction to Robotic Manipulation
 - [springer] Siciliano, Khatib (Eds.): Springer Handbook of Robotics
-- [angeles] Angeles: Fundamentals of Robotic Mechanical Systems
+- [angeles] Angeles: Fundamentals of Robotic Mechanical Systems, Springer 2014
 - [oneill] O'Neill: Elementary Differential Geometry
 - [spong] Spong, Hutchinson, Vidyasagar: Robot Modeling and Control
-- [sciavicco] Sciavicco, L., Siciliano, B.: Modelling and Control of Robot Manipulators
+- [sciavicco] Sciavicco, L., Siciliano, B.: Modelling and Control of Robot Manipulators, Springer 2000
 
 ## Original License
 

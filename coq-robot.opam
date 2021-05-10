@@ -12,14 +12,9 @@ license: "LGPL-2.1-or-later"
 
 synopsis: "Formal Foundations for Modeling Robot Manipulators"
 description: """
-This library is a formalization of the mathematics of rigid body
-transformations in the Coq proof-assistant. It can be used to address
-the forward kinematics problem of robot manipulators. It contains
-theories for angles, three-dimensional geometry (including
-three-dimensional rotations, skew-symmetric matrices, quaternions),
-rigid body transformations (isometries, homogeneous representation,
-Denavit-Hartenberg convention, screw motions), and an application to
-the SCARA robot manipulator."""
+This repository contains an experimental library for the mathematics
+of rigid body transformations using the Coq proof-assistant and the
+Mathematical Components library."""
 
 build: [make "-j%{jobs}%" ]
 install: [make "install"]
@@ -42,4 +37,5 @@ tags: [
 authors: [
   "Reynald Affeldt, AIST"
   "Cyril Cohen, Inria"
+  "Laurent Thery, Inria"
 ]
