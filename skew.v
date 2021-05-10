@@ -449,14 +449,12 @@ Qed.
 Lemma axialE M : axial M = unspin (M - M^T).
 Proof. by rewrite -(spin_axial M) spinK. Qed.
 
-Lemma axial_vecP (M : 'M[R]_3) u : u *v axial M = u *m antip M.
+Lemma axial_vecP (M : 'M[R]_3) u : axial M *v u  = u *m (2%:R *: antip M).
 Proof.
-rewrite /antip.
-rewrite crossmulC.
-rewrite -spinE.
-rewrite axialE.
-rewrite unspinK.
-Abort.
+rewrite axialE -spinE (_ : _ - _ = 2%:R *: antip M); last first.
+  by rewrite scalerA mulrC divfK ?scale1r // (eqr_nat _ 2 0).
+by rewrite unspinZ spinZ unspinK ?antip_is_so.
+Qed.
 
 Lemma sqr_spin' u : \S( u ) ^+ 2 = col_mx3
   (row3 (- u 0 2%:R ^+ 2 - u 0 1 ^+ 2) (u 0 0 * u 0 1) (u 0 0 * u 0 2%:R))
