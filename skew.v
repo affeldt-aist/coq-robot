@@ -253,6 +253,7 @@ Variable R : comRingType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
+Import rv3LieAlgebra.Exports.
 
 Definition spin u : 'M[R]_3 := \matrix_i (u *v 'e_i).
 
@@ -260,7 +261,7 @@ Local Notation "'\S(' u ')'" := (spin u).
 
 Lemma spinE u v : u *m \S( v ) = v *v u.
 Proof.
-rewrite crossmulC -crossmulNv [RHS]crossmulC -crossmulvN [u]row_sum_delta.
+rewrite lie_anti -crossmulNv [RHS]lie_anti -crossmulvN [u]row_sum_delta.
 rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
 by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK crossmulvN opprK.
 Qed.
@@ -281,7 +282,7 @@ Proof. apply/eqP/mulmatP => w; by rewrite mulmxDr !spinE crossmulDl. Qed.
 Lemma spinZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
 apply/matrixP => i j.
-by rewrite mxE crossmulC linearZ /= -scalerN crossmulC opprK mxE 2![in RHS]mxE.
+by rewrite mxE lie_anti /= linearZ /= -scalerN lie_anti opprK mxE 2![in RHS]mxE.
 Qed.
 
 Lemma spinN u : \S( - u ) = - \S( u ).
@@ -366,11 +367,11 @@ apply/eqP/det0P; exists u => //; by rewrite spinE crossmulvv.
 Qed.
 
 Section spin_matrix_axial_vector_rfType.
-
 Variable R : realFieldType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
+Import rv3LieAlgebra.Exports.
 
 (* [sciavicco] eqn 3.9 *)
 Lemma spin_similarity (M : 'M[R]_3) (w : 'rV[R]_3) :
@@ -385,9 +386,9 @@ Lemma spin_crossmul u v : \S(v *v u) = \S(u) *m \S(v) - \S(v) *m \S(u).
 Proof.
 apply/eqP/mulmxP => w.
 rewrite [in LHS]spinE mulmxBr !mulmxA ![in RHS]spinE.
-rewrite (crossmulC v w) crossmulvN opprK.
-move/eqP: (jacobi_crossmul v u w); rewrite eq_sym -subr_eq eq_sym => /eqP ->.
-by rewrite add0r (crossmulC w) opprK.
+rewrite (lie_anti v w) crossmulvN opprK.
+move/eqP: (jacobi v u w); rewrite eq_sym -subr_eq eq_sym => /eqP -> /=.
+by rewrite add0r (lie_anti w) opprK.
 Qed.
 
 Lemma spinii u i : \S( u ) i i = 0.
@@ -474,7 +475,7 @@ Qed.
 (* [murray] second half of exercise 9(a), p. 75 *)
 Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
 Proof.
-apply/andP; split; last by apply/sub_kermxP; rewrite spinE crossmulvv.
+apply/andP; split; last by apply/sub_kermxP; rewrite spinE liexx.
 apply/rV_subP => v /sub_kermxP.
 rewrite spinE => /eqP/vec_angle.colinearP[|[_[k Hk]]].
   move/eqP => ->.

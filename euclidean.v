@@ -1,8 +1,8 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
-From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly.
-From mathcomp Require Import zmodp realalg complex fingroup perm.
-From mathcomp.analysis Require Import forms.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex fingroup perm.
+From mathcomp.analysis Require Import reals forms.
 Require Import ssr_ext.
 
 (******************************************************************************)
@@ -14,6 +14,10 @@ Require Import ssr_ext.
 (* develops the theory of rotation matrices with lemmas such as the           *)
 (* preservation of the dot-product by orthogonal matrices or a closed formula *)
 (* for the characteristic polynomial of a 3x3 matrix.                         *)
+(*                                                                            *)
+(*  jacobi_identity == Jacobi identity                                        *)
+(* lieAlgebraType R == the type of Lie algebra over R                         *)
+(*        lie[x, y] == Lie brackets                                           *)
 (*                                                                            *)
 (*        u *d w == the dot-product of the vectors u and v, i.e., the only    *)
 (*                  component of the 1x1-matrix u * v^T                       *)
@@ -30,16 +34,12 @@ Require Import ssr_ext.
 (* col_mx3 u v w == specialization of col_mx two row vectors of size 3        *)
 (*        u *v v == the cross-product of the vectors u and v, defined using   *)
 (*                  determinants                                              *)
+(* Module rv3LieAlgebra == the space R^3 with the cross-product is a Lie      *)
+(*                  algebra                                                   *)
 (* vaxis_euler M == the vector-axis of the rotation matrix M of Euler's       *)
 (*                  theorem                                                   *)
 (*                                                                            *)
 (******************************************************************************)
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.
-
-Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Reserved Notation "*d%R".
 Reserved Notation "u *d w" (at level 40).
@@ -53,7 +53,96 @@ Reserved Notation "A _|_ B"  (at level 69). (* NB: used to be level 8 *)
 Reserved Notation "u _|_ A , B " (A at next level, at level 69,
  format "u  _|_  A , B ").
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+Import Order.TTheory GRing.Theory Num.Def Num.Theory.
+
 Local Open Scope ring_scope.
+
+Definition jacobi_identity (T : zmodType) (op : T -> T -> T) := forall x y z,
+  op x (op y z) + op y (op z x) + op z (op x y) = 0.
+
+Reserved Notation "lie[ t1 , t2 ]" (format "lie[ t1 ,  t2 ]").
+
+Module LieAlgebra.
+Record mixin_of (R : ringType) (L : lmodType R) := Mixin {
+  bracket : {bilinear L -> L -> L} ;
+  _ : forall x, bracket x x = 0 ;
+  _ : jacobi_identity bracket }.
+
+Section ClassDef.
+Variable R : ringType.
+
+Record class_of L := Class {
+  base : GRing.Lmodule.class_of R L ;
+  mixin : mixin_of (GRing.Lmodule.Pack _ base) }.
+Local Coercion base : class_of >-> GRing.Lmodule.class_of.
+
+Structure type (phR : phant R) := Pack { sort; _ : class_of sort }.
+Local Coercion sort : type >-> Sortclass.
+Variable (phR : phant R) (T : Type) (cT : type phR).
+Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack phR T c.
+
+Definition pack b0 (m0 : @mixin_of R (@GRing.Lmodule.Pack R _ T b0)) :=
+  fun bT b & phant_id (@GRing.Lmodule.class R phR bT) b =>
+  fun m & phant_id m0 m => Pack phR (@Class T b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition zmodType := @GRing.Zmodule.Pack cT class.
+Definition lmodType := @GRing.Lmodule.Pack R phR cT class.
+
+End ClassDef.
+
+Module Exports.
+Coercion base : class_of >-> GRing.Lmodule.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Canonical eqType.
+Coercion choiceType : type >-> Choice.type.
+Canonical choiceType.
+Coercion zmodType : type >-> GRing.Zmodule.type.
+Canonical zmodType.
+Coercion lmodType : type >-> GRing.Lmodule.type.
+Canonical lmodType.
+Notation lieAlgebraType R := (type (Phant R)).
+Notation LieAlgebraType R T m := (@pack _ (Phant R) T _ m _ _ id _ id).
+Notation LieAlgebraMixin := Mixin.
+Notation "[ 'lieAlgebraType' R 'of' T 'for' cT ]" :=
+  (@clone _ (Phant R) T cT _ idfun)
+  (at level 0, format "[ 'lieAlgebraType' R 'of' T 'for' cT ]") : form_scope.
+Notation "[ 'lieAlgebraType' R 'of' T ]" := (@clone _ (Phant R) T _ _ id)
+  (at level 0, format "[ 'lieAlgebraType' R 'of' T ]") : form_scope.
+End Exports.
+End LieAlgebra.
+Import LieAlgebra.Exports.
+
+Definition liebracket (R : ringType) (G : lieAlgebraType R) :
+  {bilinear G -> G -> G} := LieAlgebra.bracket (LieAlgebra.class G).
+Notation "lie[ t1 , t2 ]" := (@liebracket _ _ t1 t2).
+
+Section liealgebra.
+Variables (R : ringType) (G : lieAlgebraType R).
+
+Lemma liexx (x : G) : lie[x, x] = 0.
+Proof. by case: G x => ? [? []]. Qed.
+
+Lemma jacobi : jacobi_identity (@liebracket _ G).
+Proof. by case: G => ? [? []]. Qed.
+
+(* Lie brackets are anticommutative *)
+Lemma lie_anti (x y : G) : lie[x, y] = - lie[y, x].
+Proof.
+apply/eqP; rewrite -subr_eq0 opprK; apply/eqP.
+rewrite -[RHS](liexx (x + y)) linearDl 2!linearDr.
+by rewrite 2!liexx !(addr0,add0r).
+Qed.
+
+End liealgebra.
 
 Section dot_product0.
 
@@ -1161,19 +1250,6 @@ rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC crossmulvv.
 by rewrite dotmul0v scale0r subr0.
 Qed.
 
-(* TODO: move *)
-Definition jacobi (T : zmodType) (op : T -> T -> T) := forall x y z,
-  op x (op y z) + op y (op z x) + op z (op x y) = 0.
-
-Lemma jacobi_crossmul : jacobi crossmul.
-Proof.
-move=> u v w.
-rewrite 3!double_crossmul.
-rewrite !addrA -(addrA (_ *: v)) (dotmulC u v) -(addrC (_ *: w)) subrr addr0.
-rewrite -!addrA addrC -!addrA (dotmulC w u) -(addrC (_ *: v)) subrr addr0.
-by rewrite addrC dotmulC subrr.
-Qed.
-
 Lemma crossmul0_dotmul (u v : 'rV[T]_3) : u *v v == 0 -> (u *d v) ^+ 2 = u *d u * (v *d v).
 Proof.
 rewrite crossmul0E => uv0.
@@ -1191,6 +1267,52 @@ End crossmul.
 Notation "*v%R" := (@crossmul _) : ring_scope.
 Notation "u *v w" := (crossmul u w) : ring_scope.
 
+(* TODO: make better use of the bilinear theory? *)
+Section crossmul_bilinear.
+
+Variables (R : comRingType).
+
+Definition crossmul_rev (v u : 'rV[R]_3) := u *v v.
+Canonical rev_crossmul := @RevOp _ _ _ crossmul_rev (@crossmul R)
+  (fun _ _ => erefl).
+
+(*Lemma crossmul_is_linear u : GRing.linear (crossmul u : 'rV[R]_3 -> 'rV[R]_3).
+Proof. move=> /= k v w; by rewrite crossmulDr crossmulvZ. Qed.
+Canonical crossmul_linear x := Linear (crossmul_is_linear x).*)
+
+Lemma crossmul_rev_is_linear v : GRing.linear (crossmul_rev v : 'rV[R]_3 -> 'rV[R]_3).
+Proof. move=> /= k u w; by rewrite /crossmul_rev crossmulDl crossmulZv. Qed.
+Canonical crossmul_rev_linear v := Linear (crossmul_rev_is_linear v).
+
+Canonical crossmul_bilinear := [bilinear of (@crossmul R)].
+
+End crossmul_bilinear.
+
+Module rv3LieAlgebra.
+Section rv3liealgebra.
+Variable R : comRingType.
+
+Lemma liexx (u : 'rV[R]_3) : u *v u = 0.
+Proof. exact: crossmulvv. Qed.
+
+Lemma jacobi : jacobi_identity (@crossmul R).
+Proof.
+move=> u v w; rewrite 3!double_crossmul.
+rewrite !addrA -(addrA (_ *: v)) (dotmulC u v) -(addrC (_ *: w)) subrr addr0.
+rewrite -!addrA addrC -!addrA (dotmulC w u) -(addrC (_ *: v)) subrr addr0.
+by rewrite addrC dotmulC subrr.
+Qed.
+
+Definition rv3liealgebra_mixin := LieAlgebra.Mixin liexx jacobi.
+Definition rv3liealgebra_type :=
+  LieAlgebra.Pack (Phant _) (LieAlgebra.Class rv3liealgebra_mixin).
+End rv3liealgebra.
+Module Exports.
+Canonical rv3liealgebra_type.
+End Exports.
+End rv3LieAlgebra.
+Import rv3LieAlgebra.Exports.
+
 Section comUnit_crossmul.
 
 Variable (T : comUnitRingType).
@@ -1201,7 +1323,7 @@ Lemma vece2 (i j : 'I_3) (k := - (i + j) : 'I_3) :
   'e_i *v 'e_j = (-1)^(perm3 i j)%N *+ (i != j) *: 'e_k :> 'rV[T]__.
 Proof.
 have [->|neq_ij] := altP (i =P j); rewrite (mulr0n,mulr1n).
-  by rewrite scale0r crossmulvv.
+  by rewrite scale0r liexx.
 apply/rowP => k'; case: (I3P k' neq_ij); rewrite !mxE.
 - rewrite (@determinant_alternate _ _ _ 0 1) //=.
     by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
@@ -1245,27 +1367,6 @@ by rewrite crossmulC normalmN crossmul_normal.
 Qed.
 
 End field_crossmul.
-
-(* TODO: make better use of the bilinear theory? *)
-Section crossmul_bilinear.
-
-Variables (R : comRingType).
-
-Definition crossmul_rev (v u : 'rV[R]_3) := u *v v.
-Canonical rev_crossmul := @RevOp _ _ _ crossmul_rev (@crossmul R)
-  (fun _ _ => erefl).
-
-(*Lemma crossmul_is_linear u : GRing.linear (crossmul u : 'rV[R]_3 -> 'rV[R]_3).
-Proof. move=> /= k v w; by rewrite crossmulDr crossmulvZ. Qed.
-Canonical crossmul_linear x := Linear (crossmul_is_linear x).*)
-
-Lemma crossmul_rev_is_linear v : GRing.linear (crossmul_rev v : 'rV[R]_3 -> 'rV[R]_3).
-Proof. move=> /= k u w; by rewrite /crossmul_rev crossmulDl crossmulZv. Qed.
-Canonical crossmul_rev_linear v := Linear (crossmul_rev_is_linear v).
-
-Canonical crossmul_bilinear := [bilinear of (@crossmul R)].
-
-End crossmul_bilinear.
 
 Section orthogonal_crossmul.
 
@@ -1525,7 +1626,7 @@ apply (iffP idP).
   rewrite rotationE; apply/andP; split.
     apply/orthogonal3P.
     rewrite ni nj /= zxy0 norm_crossmul_normal // xy0 !eqxx /= dot_crossmulC.
-    by rewrite crossmulvv dotmul0v dot_crossmulCA crossmulvv dotmulv0 !eqxx.
+    by rewrite liexx dotmul0v dot_crossmulCA liexx dotmulv0 !eqxx.
   rewrite (col_mx3_rowE M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
   by rewrite scale1r (dotmulC (row 1 M)) xy0 scale0r subr0 dotmulvv ni expr1n.
 - move=> MSO; move: (MSO).

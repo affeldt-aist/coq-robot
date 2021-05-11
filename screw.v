@@ -1,8 +1,8 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
-From mathcomp Require Import zmodp realalg complex fingroup perm.
-From mathcomp.analysis Require Import reals.
+From mathcomp Require Import realalg complex fingroup perm.
+From mathcomp.analysis Require Import reals forms.
 Require Import ssr_ext angle euclidean skew vec_angle frame rot rigid.
 
 (******************************************************************************)
@@ -14,7 +14,8 @@ Require Import ssr_ext angle euclidean skew vec_angle frame rot rigid.
 (* rigid body motion), Mozzi-Chasles' theorem (it shows the existence of a    *)
 (* set of points that undergo just a translation---this is the screw axis).   *)
 (*                                                                            *)
-(*   'se3[R] == the set of twists (the Lie algebra of SE(3) in matrix form    *)
+(* Module sqLieAlgebra == square matrices form a Lie algebra                  *)
+(*   'se3[R] == the set of twists                                             *)
 (*   wedge t == form a twist in 'se3[R] given twist (coordinates)             *)
 (*              (essentially a vector in R^6 )                                *)
 (*     vee E == extract the 6-dimensional vector (the twist coordinates) from *)
@@ -149,107 +150,44 @@ Qed.
 
 End taylor_exponential.
 
-Reserved Notation "lie[ t1 , t2 ]" (format "lie[ t1 ,  t2 ]").
+Module sqLieAlgebra.
+Section sqliealgebra.
+Variables (R : comRingType) (n : nat).
 
-Definition bilinear (R : ringType) (T : lmodType R) (op : T -> T -> T) :=
-  forall y, linear (op^~ y) /\ linear (op y).
+Definition sq (t1 t2 : 'M[R]_n.+1) := t1 * t2 - t2 * t1.
 
-Module Lie.
-Record mixin_of (R : ringType) (L : lmodType R) := Mixin {
-  bracket : L -> L -> L ;
-  _ : forall x, bracket x x = 0 ;
-  _ : bilinear bracket ;
-  _ : jacobi bracket }.
-
-Section ClassDef.
-Variable R : ringType.
-
-Record class_of L := Class {
-  base : GRing.Lmodule.class_of R L ;
-  mixin : mixin_of (GRing.Lmodule.Pack _ base) }.
-Local Coercion base : class_of >-> GRing.Lmodule.class_of.
-
-Structure type (phR : phant R) := Pack { sort; _ : class_of sort }.
-Local Coercion sort : type >-> Sortclass.
-Variable (phR : phant R) (T : Type) (cT : type phR).
-Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack phR T c.
-
-(* TODO: Definition pack *)
-
-Definition eqType := @Equality.Pack cT class.
-Definition choiceType := @Choice.Pack cT class.
-Definition zmodType := @GRing.Zmodule.Pack cT class.
-Definition lmodType := @GRing.Lmodule.Pack R phR cT class.
-
-End ClassDef.
-
-Module Exports.
-Coercion base : class_of >-> GRing.Lmodule.class_of.
-Coercion mixin : class_of >-> mixin_of.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
-Canonical eqType.
-Coercion choiceType : type >-> Choice.type.
-Canonical choiceType.
-Coercion zmodType : type >-> GRing.Zmodule.type.
-Canonical zmodType.
-Coercion lmodType : type >-> GRing.Lmodule.type.
-Canonical lmodType.
-Notation lieType R := (type (Phant R)).
-End Exports.
-End Lie.
-Import Lie.Exports.
-
-Definition bracket (R : ringType) (G : lieType R) : G -> G -> G :=
-  Lie.bracket (Lie.class G).
-Notation "lie[ t1 , t2 ]" := (@bracket _ _ t1 t2).
-
-Section lie_lemmas.
-Variables (R : ringType) (G : lieType R).
-
-Lemma liexx (x : G) : lie[x, x] = 0.
-Proof. by case: G x => ? [? []]. Qed.
-
-Lemma liebilinear : bilinear (@bracket _ G).
-Proof. by case: G => ? [? []]. Qed.
-
-Lemma liejacobi : jacobi (@bracket _ G).
-Proof. by case: G => ? [? []]. Qed.
-
-Lemma lie_anticommutative (x y : G) : lie[x, y] = - lie[y, x].
+Lemma sq_is_linear w : GRing.linear (sq w : 'M[R]_n.+1 -> 'M[R]_n.+1).
 Proof.
-apply/eqP; rewrite -subr_eq0 opprK; apply/eqP.
-rewrite -[RHS](liexx (x + y)).
-move: (proj1 (liebilinear (x + y)) 1 x y); rewrite !scale1r => ->.
-move: (proj2 (liebilinear x) 1 x y); rewrite !scale1r => ->.
-move: (proj2 (liebilinear y) 1 x y); rewrite !scale1r => ->.
-by rewrite 2!liexx !(addr0,add0r).
+move=> k v u; rewrite /sq.
+rewrite mulrDr -addrA addrCA [in RHS]addrCA; congr (_ + _).
+rewrite scalerDr scalerAr -addrA; congr (_ + _).
+rewrite mulrDl opprD; congr (_ - _).
+by rewrite scalerN scalerAl.
 Qed.
+Canonical sq_linear x := Linear (sq_is_linear x).
 
-End lie_lemmas.
+Definition sq_rev t1 t2 := sq t2 t1.
+Canonical rev_seq := @RevOp _ _ _ sq_rev sq (fun _ _ => erefl).
 
-Module sqmatLie.
-Section sqmatlie.
-Variables (T : comRingType) (n : nat).
-
-Definition lie_sqmat (t1 t2 : 'M[T]_n.+1) := t1 * t2 - t2 * t1.
-
-Lemma lie_sqmat_bilinear : bilinear lie_sqmat.
+Lemma sq_rev_is_linear w : GRing.linear (sq_rev w : 'M[R]_n.+1 -> 'M[R]_n.+1).
 Proof.
-split => [k /= x1 x2 | k /= y1 y2]; rewrite /lie_sqmat.
-- rewrite mulrDl -scalerAl scalerDr -!addrA; congr (_ + _).
-  rewrite addrCA scalerN -opprD; congr (_ - _); by rewrite scalemxAr -mulmxDr.
-- rewrite /lie_sqmat mulrDr -scalerAr scalerBr -!addrA; congr (_ + _).
-  rewrite addrCA -opprD; congr (_ - _); by rewrite mulrDl scalemxAl.
+move=> k u v; rewrite /sq_rev /sq /=.
+rewrite mulrDl scalerBr scalerAl -2!addrA; congr (_ + _).
+rewrite addrCA; congr (_ + _).
+rewrite -opprD; congr (- _).
+rewrite mulrDr; congr (_ + _).
+by rewrite scalerAr.
 Qed.
+Canonical sq_rev_linear v := Linear (sq_rev_is_linear v).
 
-Lemma lie_sqmat_alternative x : lie_sqmat x x = 0.
+Canonical sq_bilinear := [bilinear of sq].
+
+Lemma sqxx x : sq x x = 0.
 Proof. apply/eqP; by rewrite subr_eq0. Qed.
 
-Lemma lie_sqmat_jacobi : jacobi lie_sqmat.
+Lemma sq_jacobi : jacobi_identity sq.
 Proof.
-move=> x y z; rewrite /lie_sqmat.
+move=> x y z; rewrite /sq.
 rewrite mulrBr (mulrBl z) opprB !addrA addrC !addrA (mulrA x).
 rewrite (addrC _ (x * y * z)) subrr add0r.
 rewrite (mulrBl y) opprB addrA (addrC _ (x * z * y)) mulrA !addrA subrr add0r.
@@ -257,38 +195,13 @@ rewrite (mulrBr y) !addrA (addrC _ (- (y * (x * z)))) addrC !addrA mulrA subrr.
 by rewrite add0r mulrBl opprB mulrA subrK mulrBr addrA mulrA subrK mulrA subrr.
 Qed.
 
-Definition lie_sqmat_mixin := Lie.Mixin
-  lie_sqmat_alternative lie_sqmat_bilinear lie_sqmat_jacobi.
-Definition lie_sqmat_type :=
-  Lie.Pack (Phant _) (Lie.Class lie_sqmat_mixin).
-End sqmatlie.
+Definition sq_mixin := LieAlgebra.Mixin sqxx sq_jacobi.
+Definition sq_type := LieAlgebra.Pack (Phant _) (LieAlgebra.Class sq_mixin).
+End sqliealgebra.
 Module Exports.
-Canonical lie_sqmat_type.
+Canonical sq_type.
 End Exports.
-End sqmatLie.
-
-Module rv3Lie.
-Section rv3lie.
-Variable R : comRingType.
-
-Lemma lie_rv3_bilinear : bilinear (@crossmul R).
-Proof. split; [exact: crossmulr_linear | exact: crossmul_linear]. Qed.
-
-Lemma lie_rv3_alternative (u : 'rV[R]_3) : u *v u = 0.
-Proof. exact: crossmulvv. Qed.
-
-Lemma lie_rv3_jacobi : jacobi (@crossmul R).
-Proof. exact: jacobi_crossmul. Qed.
-
-Definition lie_rv3_mixin := Lie.Mixin
-  lie_rv3_alternative lie_rv3_bilinear lie_rv3_jacobi.
-Definition lie_rv3_type :=
-  Lie.Pack (Phant _) (Lie.Class lie_rv3_mixin).
-End rv3lie.
-Module Exports.
-Canonical lie_rv3_type.
-End Exports.
-End rv3Lie.
+End sqLieAlgebra.
 
 Module Twist.
 Section twist_coordinates.
@@ -510,7 +423,7 @@ rewrite /vee /wedge /lin_of_twist /ang_of_twist block_mxKdl block_mxKul spinK.
 by rewrite twist_mkE.
 Qed.
 
-Import sqmatLie.Exports.
+Import sqLieAlgebra.Exports.
 
 Lemma lie_wedgeE t1 t2 :
   let v1 := \v( t1 ) in let v2 := \v( t2 ) in
@@ -588,7 +501,7 @@ Proof. by move=> ? ?; rewrite /SE3_action -mulmxA AdjointM. Qed.
 Lemma linear_action_Adjoint g : g \is 'SE3[T] -> linear (SE3_action g).
 Proof. move=> Hg k y x; by rewrite /SE3_action mulmxDl scalemxAl. Qed.
 
-Import sqmatLie.Exports.
+Import sqLieAlgebra.Exports.
 
 (* NB: wrong? *)
 Lemma AdjointE t1 t2 :
