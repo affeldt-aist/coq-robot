@@ -3,6 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean skew vec_angle rot frame rigid.
+From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
 (*                       Denavit-Hartenberg convention                        *)
@@ -46,9 +47,9 @@ Coercion plucker_array_mx (T : ringType) (p : Plucker.array T) :=
 
 (* wip *)
 Section plucker_of_line.
-
 Variable T : rcfType.
 Implicit Types l : Line.t T.
+Import rv3LieAlgebra.Exports.
 
 Definition normalized_plucker_direction l :=
   let p1 := \pt( l ) in let p2 := \pt2( l ) in
@@ -70,8 +71,9 @@ Definition normalized_plucker_position l :=
 Lemma normalized_plucker_positionP l :
   normalized_plucker_position l *d normalized_plucker_direction l == 0.
 Proof.
-rewrite /normalized_plucker_position /normalized_plucker_direction -Line.vectorE crossmulvZ.
-by rewrite dotmulvZ dotmulZv -dot_crossmulC crossmulvv dotmulv0 2!mulr0.
+rewrite /normalized_plucker_position /normalized_plucker_direction -Line.vectorE.
+rewrite (linearZr_LR (crossmul_bilinear _)) /=.
+by rewrite dotmulvZ dotmulZv -dot_crossmulC liexx dotmulv0 2!mulr0.
 Qed.
 
 Definition normalized_plucker l : 'rV[T]_6 :=
@@ -89,7 +91,7 @@ Lemma normalized_pluckerP l :
 Proof.
 move=> p1 p2 l0.
 rewrite /normalized_plucker /normalized_plucker_direction /normalized_plucker_position.
-rewrite -/p1 -/p2 crossmulvZ -scale_row_mx scalerA.
+rewrite -/p1 -/p2 (linearZr_LR (crossmul_bilinear _)) -scale_row_mx scalerA.
 by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 -Line.vectorE.
 Qed.
 
@@ -98,7 +100,8 @@ Lemma plucker_of_lineE l (l0 : \vec( l ) != 0) :
   (Plucker.mkArray (normalized_plucker_directionP l0) (normalized_plucker_positionP l) : 'M__).
 Proof.
 rewrite /plucker_of_line /plucker_array_mx /=.
-rewrite /normalized_plucker_direction /normalized_plucker_position crossmulvZ -scale_row_mx.
+rewrite /normalized_plucker_direction /normalized_plucker_position.
+rewrite (linearZr_LR (crossmul_bilinear _)) -scale_row_mx.
 by rewrite scalerA divrr ?scale1r // unitfE norm_eq0 -Line.vectorE.
 Qed.
 
@@ -109,19 +112,19 @@ Definition plucker_eqn p l :=
 Lemma plucker_eqn0 p l : \vec( l ) = 0 -> plucker_eqn p l = 0.
 Proof.
 move => l0; rewrite /plucker_eqn -spinN -spinD -Line.vectorE.
-by rewrite spinE l0 crossmul0v crossmulv0 addr0.
+by rewrite spinE l0 linear0l linear0r addr0.
 Qed.
 
 Lemma plucker_eqn_self l : plucker_eqn \pt( l ) l = 0.
 Proof.
-rewrite /plucker_eqn -spinN -spinD spinE crossmulC addrC.
-by rewrite -crossmulBl subrr crossmul0v.
+rewrite /plucker_eqn -spinN -spinD spinE lieC addrC.
+by rewrite -linearBl /= subrr linear0l.
 Qed.
 
 Lemma in_plucker p l : p \in (l : pred _) -> plucker_eqn p l = 0.
 Proof.
 rewrite inE => /orP[/eqP ->|/andP[l0 H]]; first by rewrite plucker_eqn_self.
-rewrite /plucker_eqn -spinN -spinD spinE crossmulC addrC -crossmulBl.
+rewrite /plucker_eqn -spinN -spinD spinE lieC addrC -linearBl.
 apply/eqP.
 rewrite -/(colinear _ _) -colinearNv opprB colinear_sym.
 apply: (colinear_trans l0 _ H).

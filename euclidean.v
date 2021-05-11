@@ -135,7 +135,7 @@ Lemma jacobi : jacobi_identity (@liebracket _ G).
 Proof. by case: G => ? [? []]. Qed.
 
 (* Lie brackets are anticommutative *)
-Lemma lie_anti (x y : G) : lie[x, y] = - lie[y, x].
+Lemma lieC (x y : G) : lie[x, y] = - lie[y, x].
 Proof.
 apply/eqP; rewrite -subr_eq0 opprK; apply/eqP.
 rewrite -[RHS](liexx (x + y)) linearDl 2!linearDr.
@@ -241,7 +241,6 @@ Proof. by rewrite /dotmul trmx_mul mulmxA. Qed.
 
 End com_dot_product.
 
-(* TODO: make better use of the bilinear theory? *)
 Section dotmul_bilinear.
 
 Variables (R : comRingType) (n : nat).
@@ -354,7 +353,6 @@ Proof. by rewrite dotmulP dotmulvv u1 expr1n. Qed.
 End norm1.
 
 End norm.
-
 
 Section normalize.
 
@@ -1061,80 +1059,15 @@ Qed.
 
 End extra_linear3.
 
-Section crossmul.
+Definition crossmul {R : ringType} (u v : 'rV[R]_3) :=
+  \row_(k < 3) \det (col_mx3 'e_k u v).
 
-Variable T : comRingType.
+Notation "*v%R" := (@crossmul _) : ring_scope.
+Notation "u *v w" := (crossmul u w) : ring_scope.
 
-Implicit Types u v w : 'rV[T]_3.
-
-Definition crossmul u v := \row_(k < 3) \det (col_mx3 'e_k u v).
-
-Local Notation "*v%R" := (@crossmul _).
-Local Notation "u *v w" := (crossmul u w).
-
-Lemma crossmulC u v : u *v v = - (v *v u).
-Proof.
-rewrite /crossmul; apply/rowP => k; rewrite !mxE.
-set M := (X in - \det X).
-transitivity (\det (row_perm (tperm (1 : 'I__) 2%:R) M)); last first.
-  by rewrite row_permE detM det_perm odd_tperm /= expr1 mulN1r.
-congr (\det _); apply/matrixP => i j; rewrite !mxE permE /=.
-by case: i => [[|[|[]]]] ?.
-Qed.
-
-Lemma crossmulvv u : u *v u = 0.
-Proof.
-apply/rowP=> i; rewrite !mxE (@determinant_alternate _ _ _ 1 2%:R) //.
-by move=> j; rewrite !mxE.
-Qed.
-
-Lemma crossmul0v u : 0 *v u = 0.
-Proof.
-apply/rowP=> k; rewrite !mxE (expand_det_row _ 1) big1 // => i _.
-by rewrite 2!mxE mul0r.
-Qed.
-
-Lemma crossmulv0 u : u *v 0 = 0.
-Proof. by rewrite crossmulC crossmul0v oppr0. Qed.
-
-Lemma crossmul_triple u v w : u *d (v *v w) = \det (col_mx3 u v w).
-Proof.
-pose M (k : 'I_3) : 'M_3 := col_mx3 ('e_k) v w.
-pose Mu12 := col_mx3 (u``_1 *: 'e_1 + u``_2%:R *: 'e_2%:R) v w.
-rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u``_0) 1) ?mul1r
-        ?row'_col_mx3 //; last first.
-  apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
-  by case: j => [[|[|[]]]] ? //=; Simp.ord; Simp.r.
-rewrite [\det Mu12](@determinant_multilinear _ _ _
-  (M 1) (M 2%:R) 0 (u``_1) (u``_2%:R)) ?row'_col_mx3 //; last first.
-  apply/matrixP => i j; rewrite !mxE !eqxx.
-  by case: j => [[|[|[]]]] ? //=; Simp.ord; Simp.r.
-by rewrite dotmulE !big_ord_recl big_ord0 addr0 /= !mxE; Simp.ord.
-Qed.
-
-(* u /\ (v + w) = u /\ v + u /\ w *)
-Lemma crossmul_linear u : linear (crossmul u).
-Proof.
-move=> a v w; apply/rowP => k; rewrite !mxE.
-pose M w := col_mx3 ('e_k) u w.
-rewrite (@determinant_multilinear _ _ (M _) (M v) (M w) 2%:R a 1);
-  rewrite ?row'_col_mx3 ?mul1r ?scale1r ?mxE //=.
-by apply/rowP => j; rewrite !mxE.
-Qed.
-
-Canonical crossmul_is_additive u := Additive (crossmul_linear u).
-Canonical crossmul_is_linear u := AddLinear (crossmul_linear u).
-
-Definition crossmulr u := crossmul^~ u.
-
-Lemma crossmulr_linear u : linear (crossmulr u).
-Proof.
-move=> a v w; rewrite /crossmulr crossmulC linearD linearZ /=.
-by rewrite opprD -scalerN -!crossmulC.
-Qed.
-
-Canonical crossmulr_is_additive u := Additive (crossmulr_linear u).
-Canonical crossmulr_is_linear u := AddLinear (crossmulr_linear u).
+Section crossmullie.
+Variable R : comRingType.
+Implicit Types u v w : 'rV[R]_3.
 
 Lemma crossmulE u v : (u *v v) = row3
   (u``_1 * v``_2%:R - u``_2%:R * v``_1)
@@ -1146,85 +1079,6 @@ rewrite !(mxE, big_ord_recl, big_ord0) !(mul0r, mul1r, addr0).
 rewrite /cofactor !det_mx22 !mxE /= mul1r mulN1r opprB -signr_odd mul1r.
 by Simp.ord; case: i => [[|[|[]]]] //= ?; rewrite ?(mul1r,mul0r,add0r,addr0).
 Qed.
-
-Lemma nth_crossmul u v i :
-  (u *v v)``_i = u``_(i + 1) * v``_(i + 2%:R) - u``_(i + 2%:R) * v``_(i + 1).
-Proof. by case: i => [[|[|[|?]]] ?]; rewrite crossmulE !mxE; Simp.ord. Qed.
-
-Lemma crossmulNv u v : - u *v v = - (u *v v).
-Proof. by rewrite crossmulC linearN /= opprK crossmulC. Qed.
-
-Lemma crossmulvN u v : u *v (- v) = - (u *v v).
-Proof. by rewrite linearN. Qed.
-
-Lemma crossmulZv u v k : ((k *: u) *v v) = k *: (u *v v).
-Proof. by rewrite crossmulC linearZ /= crossmulC scalerN opprK. Qed.
-
-Lemma crossmulvZ u v k : (u *v (k *: v)) = k *: (u *v v).
-Proof. by rewrite linearZ. Qed.
-
-Lemma crossmulDl u v w : (u + v) *v w = u *v w + v *v w.
-Proof.
-rewrite crossmulC linearD /= opprD; congr (_ + _); by rewrite crossmulC opprK.
-Qed.
-
-Lemma crossmulDr u v w : w *v (u + v) = w *v u + w *v v.
-Proof.
-by rewrite crossmulC crossmulDl opprD crossmulC opprK (crossmulC v) opprK.
-Qed.
-
-Lemma crossmulBl u v w : (u - v) *v w = u *v w - v *v w.
-Proof.
-rewrite crossmulC linearD /= opprD; congr (_ + _);
-  by rewrite ?crossmulvN crossmulC ?opprK.
-Qed.
-
-Lemma crossmul0E u v :
-  (u *v v == 0) =
-  [forall i, [forall j, (i != j) ==> (u``_j * v``_i == u``_i * v``_j)]].
-Proof.
-apply/eqP/'forall_'forall_implyP; last first.
-  move=> uv_eq_vu; apply/rowP=> k; rewrite nth_crossmul mxE.
-  rewrite (eqP (uv_eq_vu _ _ _)) ?subrr //.
-  by case: k => [[|[|[|?]]] ?] //=.
-move=> uv_eq0 i j neq_ij; have := nth_crossmul u v (-(i + j)).
-rewrite uv_eq0 !mxE => /(canLR (@addrNK _ _)); rewrite add0r.
-move: i j neq_ij; do 2![move=> [[|[|[|?]]] ?] //=; Simp.ord => //=];
-by do ?[move=> _ -> //].
-Qed.
-
-Lemma mulmxl_crossmulr M u v : M *m (u *v v) = u *v (M *m v).
-Proof. by rewrite -(mul_rV_lin1 [linear of crossmul u]) mulmxA mul_rV_lin1. Qed.
-
-Lemma mulmxl_crossmull M u v : M *m (u *v v) = ((M *m u) *v v).
-Proof. by rewrite crossmulC mulmxN mulmxl_crossmulr -crossmulC. Qed.
-
-Lemma dotmul_crossmul_shift u v w : u *d (v *v w) = w *d (u *v v).
-Proof.
-rewrite crossmul_triple.
-rewrite -col_mx3_perm_12 xrowE det_mulmx det_perm /= odd_tperm /=.
-rewrite -col_mx3_perm_01 xrowE det_mulmx det_perm /= odd_tperm /=.
-by rewrite expr1 mulrA mulrNN 2!mul1r -crossmul_triple.
-Qed.
-
-Lemma dot_crossmulC u v x : u *d (v *v x) = (u *v v) *d x.
-Proof. by rewrite dotmul_crossmul_shift dotmulC. Qed.
-
-Lemma dot_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
-Proof. do 2 rewrite dot_crossmulC; by rewrite crossmulNv crossmulC. Qed.
-
-Lemma det_crossmul_dotmul M u v x :
-  (\det M *: (u *v v)) *d x = (((u *m M) *v (v *m M)) *m M^T) *d x.
-Proof.
-transitivity (\det M * \det (col_mx3 u v x)).
-  by rewrite dotmulZv -dot_crossmulC crossmul_triple.
-transitivity (\det (col_mx3 (u *m M) (v *m M) (x *m M))).
-  by rewrite mulrC -det_mulmx mulmx_col3.
-by rewrite -crossmul_triple dot_crossmulC dotmul_trmx.
-Qed.
-
-Lemma mulmx_crossmul' M u v : \det M *: (u *v v) = ((u *m M) *v (v *m M)) *m M^T.
-Proof. by apply/rowP=> i; rewrite -!dotmul_delta_mx det_crossmul_dotmul. Qed.
 
 Lemma double_crossmul u v w :
   u *v (v *v w) = (u *d w) *: v - (u *d v) *: w.
@@ -1244,56 +1098,44 @@ rewrite addrACA mulrAC subrr add0r addrACA -!mulrA -!mulrBr ![w``__ * _]mulrC.
 by congr (_ + _); rewrite -[RHS]mulrN opprB.
 Qed.
 
-Lemma dotmul_crossmul2 u v w : (u *v v) *v (u *v w) = (u *d (v *v w)) *: u.
+Lemma crossmul_linear u : linear (crossmul u).
 Proof.
-rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC crossmulvv.
-by rewrite dotmul0v scale0r subr0.
+move=> a v w; apply/rowP => k; rewrite !mxE.
+pose M w := col_mx3 ('e_k) u w.
+rewrite (@determinant_multilinear _ _ (M _) (M v) (M w) 2%:R a 1);
+  rewrite ?row'_col_mx3 ?mul1r ?scale1r ?mxE //=.
+by apply/rowP => j; rewrite !mxE.
 Qed.
+Canonical crossmul_is_additive u := Additive (crossmul_linear u).
+Canonical crossmul_is_linear u := AddLinear (crossmul_linear u).
 
-Lemma crossmul0_dotmul (u v : 'rV[T]_3) : u *v v == 0 -> (u *d v) ^+ 2 = u *d u * (v *d v).
-Proof.
-rewrite crossmul0E => uv0.
-rewrite !dotmulE expr2 !big_distrl /=.
-apply eq_bigr => i _; rewrite -!mulrA; congr (_ * _).
-rewrite 2!big_distrr /=.
-apply eq_bigr => j /= _; rewrite mulrCA !mulrA; congr (_ * _).
-case/boolP : (i == j) => [/eqP ->|ij]; first by rewrite mulrC.
-move/forallP : uv0 => /(_ i)/forallP/(_ j).
-by rewrite ij implyTb => /eqP.
-Qed.
-
-End crossmul.
-
-Notation "*v%R" := (@crossmul _) : ring_scope.
-Notation "u *v w" := (crossmul u w) : ring_scope.
-
-(* TODO: make better use of the bilinear theory? *)
-Section crossmul_bilinear.
-
-Variables (R : comRingType).
-
-Definition crossmul_rev (v u : 'rV[R]_3) := u *v v.
-Canonical rev_crossmul := @RevOp _ _ _ crossmul_rev (@crossmul R)
+Definition crossmulr u := crossmul^~ u.
+Canonical RevOp_crossmulr := @RevOp _ _ _ crossmulr (@crossmul R)
   (fun _ _ => erefl).
 
-(*Lemma crossmul_is_linear u : GRing.linear (crossmul u : 'rV[R]_3 -> 'rV[R]_3).
-Proof. move=> /= k v w; by rewrite crossmulDr crossmulvZ. Qed.
-Canonical crossmul_linear x := Linear (crossmul_is_linear x).*)
-
-Lemma crossmul_rev_is_linear v : GRing.linear (crossmul_rev v : 'rV[R]_3 -> 'rV[R]_3).
-Proof. move=> /= k u w; by rewrite /crossmul_rev crossmulDl crossmulZv. Qed.
-Canonical crossmul_rev_linear v := Linear (crossmul_rev_is_linear v).
-
+Lemma crossmulr_linear u : linear (crossmulr u).
+Proof.
+move=> a v w; apply/rowP => k; rewrite !mxE.
+pose M w := col_mx3 ('e_k) w u.
+rewrite (@determinant_multilinear _ _ _ (M v) (M w) 1%:R a 1);
+  rewrite ?row'_col_mx3 ?mul1r ?scale1r ?mxE //=.
+by apply/rowP => j; rewrite !mxE.
+Qed.
+Canonical crossmulr_is_additive u := Additive (crossmulr_linear u).
+Canonical crossmulr_is_linear u := AddLinear (crossmulr_linear u).
 Canonical crossmul_bilinear := [bilinear of (@crossmul R)].
 
-End crossmul_bilinear.
+End crossmullie.
 
 Module rv3LieAlgebra.
 Section rv3liealgebra.
 Variable R : comRingType.
 
 Lemma liexx (u : 'rV[R]_3) : u *v u = 0.
-Proof. exact: crossmulvv. Qed.
+Proof.
+apply/rowP=> i; rewrite !mxE (@determinant_alternate _ _ _ 1 2%:R) //.
+by move=> j; rewrite !mxE.
+Qed.
 
 Lemma jacobi : jacobi_identity (@crossmul R).
 Proof.
@@ -1312,6 +1154,96 @@ Canonical rv3liealgebra_type.
 End Exports.
 End rv3LieAlgebra.
 Import rv3LieAlgebra.Exports.
+
+Section crossmul_lemmas.
+Variable R : comRingType.
+Implicit Types u v w : 'rV[R]_3.
+
+Lemma mulmxl_crossmulr M u v : M *m (u *v v) = u *v (M *m v).
+Proof. by rewrite -(mul_rV_lin1 [linear of crossmul u]) mulmxA mul_rV_lin1. Qed.
+
+Lemma mulmxl_crossmull M u v : M *m (u *v v) = ((M *m u) *v v).
+Proof. by rewrite lieC mulmxN mulmxl_crossmulr -lieC. Qed.
+
+Lemma crossmul_triple u v w : u *d (v *v w) = \det (col_mx3 u v w).
+Proof.
+pose M (k : 'I_3) : 'M_3 := col_mx3 ('e_k) v w.
+pose Mu12 := col_mx3 (u``_1 *: 'e_1 + u``_2%:R *: 'e_2%:R) v w.
+rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u``_0) 1) ?mul1r
+        ?row'_col_mx3 //; last first.
+  apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
+  by case: j => [[|[|[]]]] ? //=; Simp.ord; Simp.r.
+rewrite [\det Mu12](@determinant_multilinear _ _ _
+  (M 1) (M 2%:R) 0 (u``_1) (u``_2%:R)) ?row'_col_mx3 //; last first.
+  apply/matrixP => i j; rewrite !mxE !eqxx.
+  by case: j => [[|[|[]]]] ? //=; Simp.ord; Simp.r.
+by rewrite dotmulE !big_ord_recl big_ord0 addr0 /= !mxE; Simp.ord.
+Qed.
+
+Lemma nth_crossmul u v i :
+  (u *v v)``_i = u``_(i + 1) * v``_(i + 2%:R) - u``_(i + 2%:R) * v``_(i + 1).
+Proof. by case: i => [[|[|[|?]]] ?]; rewrite crossmulE !mxE; Simp.ord. Qed.
+
+Lemma crossmul0E u v :
+  (u *v v == 0) =
+  [forall i, [forall j, (i != j) ==> (u``_j * v``_i == u``_i * v``_j)]].
+Proof.
+apply/eqP/'forall_'forall_implyP; last first.
+  move=> uv_eq_vu; apply/rowP=> k; rewrite nth_crossmul mxE.
+  rewrite (eqP (uv_eq_vu _ _ _)) ?subrr //.
+  by case: k => [[|[|[|?]]] ?] //=.
+move=> uv_eq0 i j neq_ij; have := nth_crossmul u v (-(i + j)).
+rewrite uv_eq0 !mxE => /(canLR (@addrNK _ _)); rewrite add0r.
+move: i j neq_ij; do 2![move=> [[|[|[|?]]] ?] //=; Simp.ord => //=];
+by do ?[move=> _ -> //].
+Qed.
+
+Lemma dotmul_crossmul_shift u v w : u *d (v *v w) = w *d (u *v v).
+Proof.
+rewrite crossmul_triple.
+rewrite -col_mx3_perm_12 xrowE det_mulmx det_perm /= odd_tperm /=.
+rewrite -col_mx3_perm_01 xrowE det_mulmx det_perm /= odd_tperm /=.
+by rewrite expr1 mulrA mulrNN 2!mul1r -crossmul_triple.
+Qed.
+
+Lemma dot_crossmulC u v x : u *d (v *v x) = (u *v v) *d x.
+Proof. by rewrite dotmul_crossmul_shift dotmulC. Qed.
+
+Lemma dot_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
+Proof. by do 2 rewrite dot_crossmulC; rewrite linearNl lieC. Qed.
+
+Lemma det_crossmul_dotmul M u v x :
+  (\det M *: (u *v v)) *d x = (((u *m M) *v (v *m M)) *m M^T) *d x.
+Proof.
+transitivity (\det M * \det (col_mx3 u v x)).
+  by rewrite dotmulZv -dot_crossmulC crossmul_triple.
+transitivity (\det (col_mx3 (u *m M) (v *m M) (x *m M))).
+  by rewrite mulrC -det_mulmx mulmx_col3.
+by rewrite -crossmul_triple dot_crossmulC dotmul_trmx.
+Qed.
+
+Lemma mulmx_crossmul' M u v : \det M *: (u *v v) = ((u *m M) *v (v *m M)) *m M^T.
+Proof. by apply/rowP=> i; rewrite -!dotmul_delta_mx det_crossmul_dotmul. Qed.
+
+Lemma dotmul_crossmul2 u v w : (u *v v) *v (u *v w) = (u *d (v *v w)) *: u.
+Proof.
+rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC liexx.
+by rewrite dotmul0v scale0r subr0.
+Qed.
+
+Lemma crossmul0_dotmul u v : u *v v == 0 -> (u *d v) ^+ 2 = u *d u * (v *d v).
+Proof.
+rewrite crossmul0E => uv0.
+rewrite !dotmulE expr2 !big_distrl /=.
+apply eq_bigr => i _; rewrite -!mulrA; congr (_ * _).
+rewrite 2!big_distrr /=.
+apply eq_bigr => j /= _; rewrite mulrCA !mulrA; congr (_ * _).
+case/boolP : (i == j) => [/eqP ->|ij]; first by rewrite mulrC.
+move/forallP : uv0 => /(_ i)/forallP/(_ j).
+by rewrite ij implyTb => /eqP.
+Qed.
+
+End crossmul_lemmas.
 
 Section comUnit_crossmul.
 
@@ -1363,7 +1295,7 @@ Qed.
 Lemma common_normal_crossmul u v : (u *v v) _|_ u + v.
 Proof.
 rewrite normalmD ![(_ *v _) _|_ _]normal_sym crossmul_normal.
-by rewrite crossmulC normalmN crossmul_normal.
+by rewrite lieC normalmN crossmul_normal.
 Qed.
 
 End field_crossmul.

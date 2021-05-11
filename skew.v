@@ -3,6 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex finset fingroup perm.
 Require Import ssr_ext euclidean vec_angle.
+From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
 (*                         Skew-symmetric matrices                            *)
@@ -261,13 +262,13 @@ Local Notation "'\S(' u ')'" := (spin u).
 
 Lemma spinE u v : u *m \S( v ) = v *v u.
 Proof.
-rewrite lie_anti -crossmulNv [RHS]lie_anti -crossmulvN [u]row_sum_delta.
+rewrite lieC -linearNr [RHS]lieC -linearNr [u]row_sum_delta.
 rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
-by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK crossmulvN opprK.
+by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK linearNl opprK.
 Qed.
 
 Lemma spin0 : \S( 0 ) = 0.
-Proof. by apply/matrixP => i j; rewrite /spin mxE crossmul0v 2!mxE. Qed.
+Proof. by apply/matrixP => i j; rewrite /spin mxE linear0l 2!mxE. Qed.
 
 (* this should generalize mulmxP *)
 Lemma mulmatP M N : reflect (forall u, u *m M = u *m N) (M == N).
@@ -277,12 +278,12 @@ by apply/eqP/row_matrixP => i; rewrite !rowE.
 Qed.
 
 Lemma spinD u v : \S(u + v) = \S(u) + \S(v).
-Proof. apply/eqP/mulmatP => w; by rewrite mulmxDr !spinE crossmulDl. Qed.
+Proof. apply/eqP/mulmatP => w; by rewrite mulmxDr !spinE linearDl. Qed.
 
 Lemma spinZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
 apply/matrixP => i j.
-by rewrite mxE lie_anti /= linearZ /= -scalerN lie_anti opprK mxE 2![in RHS]mxE.
+by rewrite mxE lieC /= linearZ /= -scalerN lieC opprK mxE 2![in RHS]mxE.
 Qed.
 
 Lemma spinN u : \S( - u ) = - \S( u ).
@@ -322,7 +323,7 @@ Proof. move/eqP: (spin_is_so u) => ->; by rewrite 2!mxE spin12. Qed.
 Lemma spin_mul_tr u : \S( u ) *m u^T = 0.
 Proof.
 rewrite -(trmxK (spin u)) -trmx_mul tr_spin.
-by rewrite mulmxN spinE crossmulvv oppr0 trmx0.
+by rewrite mulmxN spinE liexx oppr0 trmx0.
 Qed.
 
 End spin_matrix.
@@ -363,7 +364,8 @@ End unspin_matrix.
 Lemma det_spin (R : idomainType) (u : 'rV[R]_3) : \det \S( u ) = 0.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite spin0 det0.
-apply/eqP/det0P; exists u => //; by rewrite spinE crossmulvv.
+apply/eqP/det0P; exists u => //.
+by rewrite spinE (@liexx _ (rv3LieAlgebra.rv3liealgebra_type _)).
 Qed.
 
 Section spin_matrix_axial_vector_rfType.
@@ -386,9 +388,9 @@ Lemma spin_crossmul u v : \S(v *v u) = \S(u) *m \S(v) - \S(v) *m \S(u).
 Proof.
 apply/eqP/mulmxP => w.
 rewrite [in LHS]spinE mulmxBr !mulmxA ![in RHS]spinE.
-rewrite (lie_anti v w) crossmulvN opprK.
+rewrite (lieC v w) linearNr opprK.
 move/eqP: (jacobi v u w); rewrite eq_sym -subr_eq eq_sym => /eqP -> /=.
-by rewrite add0r (lie_anti w) opprK.
+by rewrite add0r (lieC w) opprK.
 Qed.
 
 Lemma spinii u i : \S( u ) i i = 0.
@@ -537,10 +539,10 @@ Qed.
 End spin_matrix_axial_vector_rcfType.
 
 Section spectral_properties.
-
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
+Import rv3LieAlgebra.Exports.
 
 (* TODO: useful? *)
 Lemma row'0_triple_prod_mat tmp (XM : 'M[{poly R}]_3) :
@@ -615,7 +617,7 @@ have skewrrT : \S( - axial r ) = Q.
   rewrite axialE // -scaleN1r spinZ scaleN1r unspinK ?opprB //.
   by rewrite antiE linearD /= linearN /= trmxK opprB.
 move/eqP: nrrT.
-by rewrite -skewrrT spinE crossmulC crossmulvN opprK.
+by rewrite -skewrrT spinE (lieC (- (axial r))) /= linearNr opprK.
 Qed.
 
 Lemma axial_vec_eigenspace M : M \is 'SO[R]_3 ->

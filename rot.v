@@ -1,10 +1,10 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 Require Import Nsatz.
-From mathcomp Require Import all_ssreflect ssralg ssrint.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean skew vec_angle frame.
+From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
 (*                              Rotations                                     *)
@@ -804,6 +804,8 @@ rewrite axialE unspinD unspin_eskew tr_eskew unspinN unspin_eskew scalerN.
 by rewrite opprK -mulr2n scalerMnl.
 Qed.
 
+Import rv3LieAlgebra.Exports.
+
 Section rodrigues_formula.
 
 Definition rodrigues u a w :=
@@ -814,8 +816,8 @@ Proof.
 rewrite /rodrigues.
 rewrite addrAC !mulmxDr mulmx1 -!scalemxAr mulmxA !spinE -!addrA; congr (_ + _).
 rewrite !addrA.
-rewrite [in X in _ = _ + X]crossmulC scalerN.
-rewrite [in X in _ = _ - X]crossmulC.
+rewrite [in X in _ = _ + X]lieC scalerN.
+rewrite [in X in _ = _ - X]lieC /=.
 rewrite double_crossmul dotmulvv.
 rewrite scalerN opprK.
 rewrite scalerBr [in RHS]addrA [in RHS]addrC -!addrA; congr (_ + (_ + _)).
@@ -841,7 +843,7 @@ pose f := Base.frame w.
 apply/isRotP; split => /=.
 - rewrite -rodriguesP // /rodrigues (norm_normalize w0) expr1n scale1r.
   rewrite dotmul_normalize_norm scalerA -mulrA divrr ?mulr1 ?unitfE ?norm_eq0 //.
-  by rewrite subrK crossmulZv crossmulvv 2!scaler0 addr0.
+  by rewrite subrK linearZl_LR /= liexx 2!scaler0 addr0.
 - rewrite -rodriguesP // /rodrigues dotmulC norm_normalize // expr1n scale1r.
   rewrite (_ : normalize w = Base.i w) (*NB: lemma?*); last by rewrite /Base.i (negbTE w0).
   rewrite -Base.jE -Base.kE.
@@ -878,6 +880,7 @@ by rewrite vaxis_euler_neq0.
 Qed.
 
 Section alternative_definition_of_eskew.
+Import rv3LieAlgebra.Exports.
 
 (* rotation of angle a around (unit) vector e *)
 Definition eskew_unit (a : angle T) (e : 'rV[T]_3) :=
@@ -900,11 +903,11 @@ Lemma normalcomp_double_crossmul p (e : 'rV[T]_3) : norm e = 1 ->
   normalcomp p e *v ((Base.frame e)|,2%:R *v (Base.frame e)|,1) = e *v p.
 Proof.
 move=> u1.
-rewrite 2!rowframeE (crossmulC (row _ _)) SO_jcrossk; last first.
+rewrite 2!rowframeE (lieC (row _ _)) /= SO_jcrossk; last first.
   by rewrite (col_mx3_rowE (NOFrame.M (Base.frame e))) -!rowframeE Base.is_SO.
 rewrite -rowframeE Base.frame0E ?norm1_neq0 //.
 rewrite normalizeI // {2}(axialnormalcomp p e) linearD /=.
-by rewrite crossmul_axialcomp add0r crossmulC crossmulNv opprK.
+by rewrite crossmul_axialcomp add0r lieC /= linearNl opprK.
 Qed.
 
 Lemma normalcomp_mulO' a Q u p : norm u = 1 -> isRot a u (mx_lin1 Q) ->
@@ -1501,12 +1504,10 @@ End properties_of_orthogonal_matrices.
 
 (* wip *)
 Section euler_angles.
-
-Variables (T : rcfType).
-
+Variable T : rcfType.
 Implicit Types R : 'M[T]_3.
-
 Local Open Scope frame_scope.
+Import rv3LieAlgebra.Exports.
 
 (* two orthogonal vectors belonging to the plan (y,z) projected on y and z *)
 Lemma exists_rotation_angle (F : frame T) (u v : 'rV[T]_3) :
@@ -1515,15 +1516,15 @@ Lemma exists_rotation_angle (F : frame T) (u v : 'rV[T]_3) :
                   v = - sin w *: (F|,1) + cos w *: (F|,2%:R) }.
 Proof.
 move=> normu normv u_perp_v uva0.
-have u0 : u *d F|,0 = 0 by rewrite -uva0 dot_crossmulC crossmulvv dotmul0v.
-have v0 : v *d F|,0 = 0 by rewrite -uva0 dot_crossmulCA crossmulvv dotmulv0.
+have u0 : u *d F|,0 = 0 by rewrite -uva0 dot_crossmulC liexx dotmul0v.
+have v0 : v *d F|,0 = 0 by rewrite -uva0 dot_crossmulCA liexx dotmulv0.
 case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
   suff [?|?] : {u = F|,1 /\ v = F|,2%:R} + {u = - F|,1 /\ v = - F|,2%:R}.
   - exists 0; by rewrite sin0 cos0 !(scale1r,oppr0,scale0r,addr0,add0r).
   - exists pi; by rewrite sinpi cospi !(scaleN1r,scale0r,oppr0,add0r,addr0).
   have v1 : v *d F|,1 = 0.
     move/eqP: (frame_icrossk F); rewrite -eqr_oppLR => /eqP <-.
-    rewrite dotmulvN -uva0 crossmulC dotmulvN opprK double_crossmul.
+    rewrite dotmulvN -uva0 lieC /= dotmulvN opprK double_crossmul.
     rewrite dotmulDr dotmulvN (dotmulC _ u) u2 scale0r dotmulv0 subr0.
     by rewrite dotmulvZ (dotmulC v) u_perp_v mulr0.
   rewrite (orthogonal_expansion F u) (orthogonal_expansion F v).
@@ -1535,7 +1536,7 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
   - have v2 : v *d F|,2%:R = 1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0).
-      rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r) crossmulvZ.
+      rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r) linearZr_LR /=.
       rewrite (frame_jcrossk F) => /scaler_eq1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scale1r; by left.
@@ -1543,7 +1544,7 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r,scale1r,addr0,scaleN1r).
-      rewrite crossmulNv crossmulvZ (frame_jcrossk F) -scaleNr => /scaler_eqN1; apply.
+      rewrite linearNl linearZr_LR /= (frame_jcrossk F) -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scaleN1r; by right.
 case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
@@ -1555,8 +1556,8 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scale1r,addr0).
-      rewrite crossmulDr crossmulvZ crossmulC (frame_jcrossk F).
-      rewrite crossmulvZ crossmulvv scaler0 addr0 scalerN -scaleNr => /scaler_eqN1; apply.
+      rewrite linearDr /= linearZr_LR /= lieC /= (frame_jcrossk F).
+      rewrite linearZr_LR /= liexx scaler0 addr0 scalerN -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     have v2 : v *d F|,2%:R = 0.
       move: normv => /(congr1 (fun x => x ^+ 2)).
@@ -1570,8 +1571,8 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scaleN1r).
-      rewrite crossmulDr !crossmulNv !crossmulvZ crossmulvv scaler0 subr0.
-      rewrite -scalerN crossmulC opprK (frame_jcrossk F) => /scaler_eq1; apply.
+      rewrite linearDr 2!linearNl 2!linearZr_LR /= liexx scaler0 subr0.
+      rewrite -scalerN lieC /= opprK (frame_jcrossk F) => /scaler_eq1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     have v2 : v *d F|,2%:R = 0.
       move: normv => /(congr1 (fun x => x ^+ 2)).
@@ -1582,9 +1583,9 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
     rewrite (orthogonal_expansion F u) (orthogonal_expansion F v).
     by rewrite u1 u0 u2 v1 v0 v2 !(scale0r,addr0,add0r,scale1r,scaleN1r).
 move: (orthogonal_expansion F u).
-rewrite -{1}uva0 dot_crossmulC crossmulvv dotmul0v scale0r add0r => Hr2.
+rewrite -{1}uva0 dot_crossmulC liexx dotmul0v scale0r add0r => Hr2.
 move: (orthogonal_expansion F v).
-rewrite -{1}uva0 crossmulC dotmulvN dot_crossmulC crossmulvv dotmul0v oppr0 scale0r add0r => Hr3.
+rewrite -{1}uva0 lieC dotmulvN dot_crossmulC liexx dotmul0v oppr0 scale0r add0r => Hr3.
 have [w [Hw1 Hw2]] : {w : angle T | u *d F|,1 = cos w /\ (u *d F|,2%:R) = sin w}.
   apply sqrD1_cossin.
   move/(congr1 (fun x => norm x)) : Hr2.
@@ -1611,7 +1612,7 @@ have [w [Hw1 Hw2]] : {w : angle T | u *d F|,1 = cos w /\ (u *d F|,2%:R) = sin w}
         rewrite le_eqVlt eq_sym (negbTE u1) /= => {}u1.
         rewrite vec_angleZv; last by [].
         rewrite vec_anglevZN; last by [].
-        by rewrite /cos /vec_angle dotmulvN noframe_jdotk oppr0 crossmulvN normN frame_jcrossk noframe_norm expii.
+        by rewrite /cos /vec_angle dotmulvN noframe_jdotk oppr0 linearNr /= normN frame_jcrossk noframe_norm expii.
       move=> {}u1.
       rewrite vec_anglevZN; last by [].
       rewrite vec_angleZNv; last by [].
@@ -1626,7 +1627,7 @@ have [w [Hw1 Hw2]] : {w : angle T | u *d F|,1 = cos w /\ (u *d F|,2%:R) = sin w}
 have uRv : u *m `e^(pihalf T, F|,0) = v.
   rewrite -rodriguesP /rodrigues noframe_norm ?expr1n scale1r cos_pihalf subr0.
   rewrite scale1r mul1r sin_pihalf scale1r subrr add0r -uva0 dot_crossmulC.
-  rewrite crossmulvv dotmul0v scale0r add0r crossmulC double_crossmul dotmulvv.
+  rewrite liexx dotmul0v scale0r add0r lieC /= double_crossmul dotmulvv.
   by rewrite normu expr1n scale1r opprB u_perp_v scale0r subr0.
 have RO : `e^(pihalf T, F|,0) \in 'O[T]_3 by apply eskew_is_O; rewrite noframe_norm.
 have H' : vec_angle u F|,2%:R = vec_angle v (- F|,1).
@@ -1908,7 +1909,7 @@ rewrite sqrtr_sqrN2 ?gt_eqF // gtr0_norm // invrM ?invrK //.
 by rewrite unitfE sqrtr_eq0 -ltNge ltr_paddr // ?sqr_ge0 // exprn_gt0.
 by rewrite unitfE invr_neq0 // gt_eqF.
 Qed.
- 
+
 Lemma cos_atan2_yarc (x : T) : `| x | < 1 -> cos (atan2 (- x) (yarc x)) = yarc x.
 Proof.
 move=> x1; by rewrite cos_atan2 ?yarc_neq0 // sqr_yarc // sqrrN subrK sqrtr1 divr1.
@@ -2317,6 +2318,7 @@ apply/matrix3P/and9P; split; apply/eqP;
                      eqxx) //;
         rewrite sqr_Mi2E // M22 expr0n subr0 sqrtr1 divr1 //.
   by nsatz.
+
 by nsatz.
 Qed.
 

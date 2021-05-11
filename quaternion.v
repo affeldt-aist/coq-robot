@@ -1,9 +1,9 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_ssreflect ssralg ssrint.
-From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
-From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
-From mathcomp Require Import complex finset fingroup perm.
+From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext euclidean angle vec_angle frame rot.
+From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
 (*                            Quaternions                                     *)
@@ -174,6 +174,8 @@ Notation "a *`i" := (mkQuat 0 (a *: 'e_0)) : quat_scope.
 Notation "a *`j" := (mkQuat 0 (a *: 'e_1)) : quat_scope.
 Notation "a *`k" := (mkQuat 0 (a *: 'e_2%:R)) : quat_scope.
 
+Import rv3LieAlgebra.Exports.
+
 Section quaternion.
 Variable R : comRingType.
 
@@ -201,11 +203,11 @@ move=> [a a'] [b b'] [c c']; congr mkQuat => /=.
   rewrite -![in LHS]addrA ![in LHS]addrA (addrC (- _ *: a'))
           -![in LHS]addrA; congr (_ + _).
     by rewrite linearZ.
-  rewrite [in RHS]crossmulC linearD /= opprD [in RHS]addrCA
+  rewrite [in RHS]lieC /= linearD /= opprD [in RHS]addrCA
          ![in LHS]addrA addrC -[in LHS]addrA.
-  congr (_ + _); first by rewrite linearZ /= crossmulC scalerN.
+  congr (_ + _); first by rewrite linearZ /= lieC scalerN.
   rewrite addrA addrC linearD /= opprD [in RHS]addrCA; congr (_ + _).
-    by rewrite !linearZ /= crossmulC.
+    by rewrite !linearZ /= lieC.
   rewrite 2!double_crossmul opprD opprK
          [in RHS]addrC addrA; congr (_ + _); last first.
     by rewrite scaleNr.
@@ -216,14 +218,14 @@ Lemma mul1q : left_id 1%:q mulq.
 Proof.
 case=> a a'; rewrite /mulq /=; congr mkQuat; Simp.r => /=.
   by rewrite dotmul0v subr0.
-by rewrite crossmul0v addr0.
+by rewrite linear0l addr0.
 Qed.
 
 Lemma mulq1 : right_id 1%:q mulq.
 Proof.
 case=> a a'; rewrite /mulq /=; congr mkQuat; Simp.r => /=.
   by rewrite dotmulv0 subr0.
-by rewrite crossmulv0 addr0.
+by rewrite linear0r addr0.
 Qed.
 
 Lemma mulqDl : left_distributive mulq (@addq R).
@@ -234,7 +236,7 @@ rewrite scalerDl -!addrA; congr (_ + _).
 rewrite [in RHS](addrCA (a' *v c')) [in RHS](addrCA (c *: a')); congr (_ + _).
 rewrite scalerDr -addrA; congr (_ + _).
 rewrite addrCA; congr (_ + _).
-by rewrite crossmulC linearD /= crossmulC opprD opprK (crossmulC b').
+by rewrite lieC linearD /= lieC opprD opprK (lieC b').
 Qed.
 
 Lemma mulqDr : right_distributive mulq (@addq R).
@@ -259,10 +261,10 @@ Canonical Structure quat_Ring := Eval hnf in RingType (quat R) quat_RingMixin.
 Lemma mulqE a b : a * b = mulq a b. Proof. done. Qed.
 
 Lemma quat_realM (x y : R) : (x * y)%:q = x%:q * y%:q.
-Proof. by congr mkQuat; rewrite /= (dotmul0v, crossmul0v); Simp.r. Qed.
+Proof. by congr mkQuat; rewrite /= (dotmul0v, linear0l); Simp.r. Qed.
 
 Lemma iiN1 : `i * `i = -1.
-Proof.  by congr mkQuat; rewrite (dote2, crossmulvv) /=; Simp.r. Qed.
+Proof.  by congr mkQuat; rewrite (dote2, liexx) /=; Simp.r. Qed.
 
 Lemma ijk : `i * `j = `k.
 Proof. by congr mkQuat; rewrite /= (dote2, vecij); Simp.r. Qed.
@@ -274,7 +276,7 @@ Lemma jiNk : `j * `i = - `k.
 Proof. by congr mkQuat; rewrite /= (dote2, vecji); Simp.r. Qed.
 
 Lemma jjN1 : `j * `j = -1.
-Proof. by congr mkQuat; rewrite /= (dote2, crossmulvv); Simp.r. Qed.
+Proof. by congr mkQuat; rewrite /= (dote2, liexx); Simp.r. Qed.
 
 Lemma kij : `k * `i = `j.
 Proof. by congr mkQuat; rewrite /= (dote2, vecki); Simp.r. Qed.
@@ -283,7 +285,7 @@ Lemma kjNi : `k * `j = - `i.
 Proof. by congr mkQuat; rewrite /= (dote2, veckj); Simp.r. Qed.
 
 Lemma kkN1 : `k * `k = -1.
-Proof. by congr mkQuat; rewrite /= (dote2, crossmulvv); Simp.r. Qed.
+Proof. by congr mkQuat; rewrite /= (dote2, liexx); Simp.r. Qed.
 
 Definition scaleq k (a : quat R) := mkQuat (k * a`0) (k *: a`1).
 
@@ -324,8 +326,8 @@ rewrite !mulqE /mulq /= scaleqE /= eq_quat /=.
 apply/andP; split; first by rewrite mulr0 !addr0 mulrBr mulrA dotmulZv.
 apply/eqP.
 rewrite scaler0 add0r -2!scalerDr -vec3E -scalerA (scalerA b0 k) mulrC.
-rewrite -scalerA [in RHS]crossmulC [in X in _ = _ + _ + X]linearZ /=.
-by rewrite -scalerDr -scalerBr crossmulC.
+rewrite -scalerA [in RHS]lieC [in X in _ = _ + _ + X]linearZ /=.
+by rewrite -scalerDr -scalerBr lieC.
 Qed.
 
 Canonical quat_lAlgType := Eval hnf in LalgType _ (quat R) quatAl.
@@ -366,11 +368,11 @@ Lemma conjq0 : (0%:v)^*q = 0.
 Proof. apply/eqP; by rewrite eq_quat /= oppr0 !eqxx. Qed.
 
 Lemma conjd_comm (a : quat R) : a^*q * a = a * a^*q.
-Proof. 
-apply/eqP; 
-by rewrite eq_quat /= 
-     !(crossmulNv, crossmulvN, crossmulvv, 
-       dotmulvN, dotmulNv, subr0, opprK, scaleNr, scalerN, eqxx) addrC /= eqxx.
+Proof.
+apply/eqP; rewrite eq_quat /=.
+do ! rewrite (linearNl,linearNr,liexx,dotmulvN,dotmulNv,subr0,opprK,
+              scaleNr,scalerN,eqxx) /=.
+by rewrite addrC.
 Qed.
 
 Lemma conjd_comm2 (a b : quat R) :
@@ -388,7 +390,7 @@ Proof.
 case: a b => [a0 a1] [b0 b1].
 rewrite /conjq /= mulqE /mulq /= mulrC dotmulC dotmulvN dotmulNv opprK;
     congr mkQuat.
-by rewrite 2!opprD 2!scalerN linearN /= -(crossmulC a1) linearN
+by rewrite 2!opprD 2!scalerN linearN /= -(lieC a1) linearN
            /= -2!scaleNr -addrA addrCA addrA.
 Qed.
 
@@ -422,7 +424,7 @@ Lemma conjqP a : a * a^*q = (sqrq a)%:q.
 Proof.
 rewrite /mulq /=; congr mkQuat.
   by rewrite /= dotmulvN dotmulvv opprK -expr2.
-by rewrite scalerN addNr add0r crossmulvN crossmulvv oppr0.
+by rewrite scalerN addNr add0r linearNr liexx oppr0.
 Qed.
 
 Lemma conjqE (a : quat R) :
@@ -432,23 +434,21 @@ apply/eqP; rewrite eq_quat; apply/andP; split; apply/eqP.
   rewrite [in LHS]/= scaleqE /=.
   rewrite !(mul0r,mulr0,addr0) scale0r !add0r !dotmulDl.
   rewrite dotmulZv dotmulvv normeE expr1n mulr1 dotmulC
-          dot_crossmulC crossmulvv dotmul0v addr0.
+          dot_crossmulC liexx dotmul0v addr0.
   rewrite subrr add0r dotmulZv dotmulvv normeE expr1n mulr1
-          dotmulC dot_crossmulC crossmulvv.
+          dotmulC dot_crossmulC liexx.
   rewrite dotmul0v addr0 dotmulZv dotmulvv normeE expr1n mulr1
           opprD addrA dotmulC dot_crossmulC.
-  rewrite crossmulvv dotmul0v subr0 -opprD mulrN mulNr
+  rewrite liexx dotmul0v subr0 -opprD mulrN mulNr
           opprK -mulr2n -(mulr_natl (a`0)) mulrA.
   by rewrite div1r mulVr ?mul1r // unitfE pnatr_eq0.
 rewrite /= !(mul0r,scale0r,add0r,addr0).
-rewrite [_ *v 'e_0]crossmulC ['e_0 *v _]linearD /= ['e_0 *v _]linearZ /=
-        crossmulvv.
+rewrite [_ *v 'e_0]lieC /= ['e_0 *v _]linearD /= ['e_0 *v _]linearZ /= liexx.
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
-rewrite [_ *v 'e_1]crossmulC ['e_1 *v _]linearD /= ['e_1 *v _]linearZ
-        /= crossmulvv.
+rewrite [_ *v 'e_1]lieC /= ['e_1 *v _]linearD /= ['e_1 *v _]linearZ /= liexx.
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
-rewrite [_ *v 'e_2%:R]crossmulC ['e_2%:R *v _]linearD /=
-        ['e_2%:R *v _]linearZ /= crossmulvv.
+rewrite [_ *v 'e_2%:R]lieC /= ['e_2%:R *v _]linearD /=
+        ['e_2%:R *v _]linearZ /= liexx.
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
 rewrite [X in _ = - _ *: X](_ : _ = 2%:R *:a`1).
   by rewrite scalerA mulNr div1r mulVr ?unitfE ?pnatr_eq0 // scaleN1r.
@@ -493,7 +493,7 @@ rewrite /invq /mulq /=; congr mkQuat.
   rewrite dotmulZv -mulrA -mulrBr dotmulNv opprK dotmulvv.
   by rewrite div1r mulVr // unitfE sqrq_eq0.
 rewrite scalerA scalerN -scalerBl mulrC subrr scale0r.
-by rewrite scalerN crossmulNv crossmulZv crossmulvv scaler0 subrr.
+by rewrite scalerN linearNl /= linearZl_LR liexx scaler0 subrr.
 Qed.
 
 Lemma mulqV : {in unitq, right_inverse 1 invq (@mulq R)}.
@@ -503,7 +503,7 @@ rewrite /invq /mulq /=; congr mkQuat.
   by rewrite scalerN dotmulvN opprK dotmulvZ mulrCA -mulrDr
              dotmulvv div1r mulVr // unitfE sqrq_eq0.
 by rewrite scalerA scalerN -scaleNr -scalerDl mulrC addNr scale0r linearZ /=
-           crossmulvN crossmulvv scalerN scaler0 subrr.
+           linearNr liexx scalerN scaler0 subrr.
 Qed.
 
 Lemma quat_integral (x y : quat R) : (x * y == 0) = ((x == 0) || (y == 0)).
@@ -767,9 +767,9 @@ case: a => a0 a1 /=.
 rewrite /quat_rot /= /conjq /= mulqE /mulq /=.
 rewrite mulr0 scale0r addr0 add0r; congr mkQuat.
   rewrite dotmulvN opprK dotmulDl (dotmulC (_ *v _) a1) dot_crossmulC.
-  by rewrite crossmulvv dotmul0v addr0 dotmulZv mulNr mulrC dotmulC addrC subrr.
+  by rewrite liexx dotmul0v addr0 dotmulZv mulNr mulrC dotmulC addrC subrr.
 rewrite scalerDr scalerA -expr2 addrCA scalerBl -!addrA; congr (_ + _).
-rewrite [in X in _ + X = _]linearN /= (crossmulC _ a1) linearD /= opprK.
+rewrite [in X in _ + X = _]linearN /= (lieC _ a1) linearD /= opprK.
 rewrite linearZ /= (addrA (a0 *: _ )) -mulr2n.
 rewrite [in LHS]addrCA 2![in RHS]addrA [in RHS]addrC; congr (_ + _).
 rewrite scalerN scaleNr opprK -addrA addrCA; congr (_ + _).
@@ -800,8 +800,7 @@ Proof. done. Qed.
 Lemma quat_rot_axis q k : q \is uquat -> quat_rot q (k *: q`1) = (k *: q`1)%:v.
 Proof.
 rewrite uquatE' /sqrq => /eqP q_is_uquat; rewrite quat_rotE.
-rewrite [in X in (_ + _ + X)%:v = _]linearZ /=
-        crossmulvv 2!scaler0 mul0rn addr0.
+rewrite [in X in (_ + _ + X)%:v = _]linearZ /= liexx 2!scaler0 mul0rn addr0.
 rewrite dotmulvZ dotmulvv scalerBl !scalerA (mulrC (norm _ ^+ 2)) mulr2n addrA.
 by rewrite subrK -scalerDl mulrC -mulrDl q_is_uquat mul1r.
 Qed.
@@ -852,30 +851,24 @@ have uv2 : u *v f|,2%:R = -f|,1.
   rewrite -Base.jE -Base.icrossk -Base.kE; congr (_ *v _).
   by rewrite Base.iE Base.frame0E // ?normalizeI.
 apply/isRotP; split;
-    rewrite /= !(mul0r, mulr0, sub0r, scale0r, add0r, addr0) -!scaleNr;
-    rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ, crossmulNv, scalerA).
-  rewrite dotmulvv u1 expr1n mulr1 crossmulvv !(scaler0, addr0);
-  rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ,
-            crossmulNv, scalerA).
-  rewrite crossmulvv scaler0 addr0.
-  rewrite mulNr mulrN opprK -!expr2 addrC -scalerDl.
-  by rewrite cos2Dsin2 scale1r.
-- rewrite ud1 uv1.
-  rewrite /= !(mul0r, mulr0, sub0r, scale0r, add0r, addr0, oppr0).
-  rewrite -/f crossmulC.
-  rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ,
-            crossmulNv, crossmulDr, scalerA).
+    rewrite /=; Simp.r; rewrite -!scaleNr;
+    (do ! rewrite !(linearZr_LR, linearZl_LR, dotmulZv, dotmulvZ, linearNl, scalerA) /=).
+  rewrite /= dotmulvv u1 expr1n liexx; Simp.r;
+  rewrite !(linearZr_LR,linearZl_LR,linearNl,scalerA).
+  rewrite /= liexx scaler0 addr0.
+  by rewrite -mulrA mul1r -scalerDl -2!expr2 addrC cos2Dsin2 scale1r.
+- rewrite ud1 uv1 /=; Simp.r; rewrite -/f lieC.
+  do ! rewrite (linearZr_LR, linearZl_LR, dotmulZv, dotmulvZ, linearNl,
+                linearDr, scalerA) /=.
   rewrite uv1 uv2.
   rewrite !scalerN scaleNr !scalerDr scalerN !scalerA.
   rewrite [in RHS]mulr2n sinD cosD scalerBl scalerDl.
   rewrite -!addrA; congr (_ + _).
   rewrite [RHS]addrC !opprD !opprK !addrA; congr (_ - _).
   by rewrite addrC.
-rewrite ud2 uv2 -/f.
-rewrite !(mul0r, mulr0, oppr0, scale0r, add0r).
-rewrite -/f crossmulC.
-rewrite !(crossmulZv, crossmulvZ, dotmulZv, dotmulvZ,
-          crossmulNv, crossmulvN, crossmulDr, scalerA).
+rewrite ud2 uv2 -/f; Simp.r; rewrite -/f lieC.
+do ! rewrite (linearZr_LR, linearZl_LR, dotmulZv, dotmulvZ,
+              linearNr, linearNl, linearDr, scalerA) /=.
 rewrite uv2 uv1.
 rewrite !(scaleNr, scalerN, scalerBr) -!scaleNr !scalerA.
 rewrite !(mulNr, mulrN) !scaleNr !opprK !addrA -!expr2.
@@ -1208,7 +1201,7 @@ Lemma conjdqI a : (a^*dq)^*dq = a.
 Proof. by rewrite /conjdq /= !conjqI; case: a. Qed.
 
 Lemma conjdq0 : 0^*dq = 0.
-Proof. by rewrite /conjdq /= conjq0. Qed. 
+Proof. by rewrite /conjdq /= conjq0. Qed.
 
 Lemma conjdqM (a b : dquat) : (a * b)^*dq = b^*dq * a^*dq.
 Proof.
@@ -1238,15 +1231,15 @@ Proof. done. Qed.
 Lemma dnumE' a : (a \is dnum) = (a..1`1 == 0) && (a..2`1 == 0).
 Proof.
 case: a => [] [a1 a2] [b1 b2]; rewrite dnumE /conjdq /=.
-by rewrite -[a2 == 0]andTb -[b2 == 0]andTb; 
-   congr ((_ && _) && (_ && _)); rewrite ?eqxx //= eq_sym 
+by rewrite -[a2 == 0]andTb -[b2 == 0]andTb;
+   congr ((_ && _) && (_ && _)); rewrite ?eqxx //= eq_sym
      -subr_eq0 opprK -mulr2n -scaler_nat scalemx_eq0 (eqr_nat _ 2 0).
 Qed.
 
 Lemma dnumE'' a : (a \is dnum) = (a == (a..1`0)%:q +ɛ* (a..2`0)%:q).
 Proof.
 case: a => [] [a1 a2] [b1 b2]; rewrite dnumE' /=.
-by rewrite -[a2 == 0]andTb -[b2 == 0]andTb; 
+by rewrite -[a2 == 0]andTb -[b2 == 0]andTb;
    congr ((_ && _) && (_ && _)); rewrite /= !eqxx.
 Qed.
 
@@ -1266,9 +1259,9 @@ by rewrite -add1n natrD dnumD // dnum1.
 Qed.
 
 Lemma dnumM a b : a \is dnum -> b \is dnum -> a * b \is dnum.
-Proof. 
+Proof.
 rewrite 3!dnumE' muldE /= => /andP[/eqP-> /eqP->] /andP[/eqP-> /eqP->].
-by rewrite !crossmulv0 !scaler0 !add0r eqxx.
+by rewrite !linear0r !scaler0 !add0r eqxx.
 Qed.
 
 Lemma dnumM_comm a b : a \is dnum -> b * a = a * b.

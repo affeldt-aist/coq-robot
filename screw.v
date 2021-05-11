@@ -440,7 +440,7 @@ rewrite (mulmx_block \S(w2) 0 v2 0 \S(w1)).
 rewrite !(mul0mx,addr0,mulmx0).
 rewrite (opp_block_mx (\S(w2) *m \S(w1))) !oppr0.
 rewrite (add_block_mx (\S(w1) *m \S(w2))) !addr0.
-by rewrite 2!spinE spin_crossmul (crossmulC w1 v2) opprK.
+by rewrite 2!spinE spin_crossmul (@lieC _ (rv3LieAlgebra.rv3liealgebra_type _) w1 v2) opprK.
 Qed.
 
 Lemma lie_wedgeE' t1 t2 :
@@ -486,7 +486,7 @@ rewrite /vee /lin_of_twist block_mxKdl /ang_of_twist block_mxKul /Twist.mk.
 f_equal.
 - rewrite {}/a' {}/b [in RHS]addrC; congr (_ + _).
   rewrite -mulmxE -mulmxA mulmxE mulNmx mulrA spin_similarity ?rot_of_hom_is_SO //.
-  by rewrite -!mulmxE mulmxA spinE crossmulC -spinE.
+  by rewrite -!mulmxE mulmxA spinE (@lieC _ (rv3LieAlgebra.rv3liealgebra_type _)) /= -spinE.
 - by rewrite {}/a {}/b' mulmxA !mulmxE spin_similarity // ?rot_of_hom_is_SO // spinK.
 Qed.
 
@@ -534,12 +534,12 @@ Definition inv_rigid_trans w v := hom 1 (- v *v w).
 
 Lemma Vrigid_trans w v : inv_rigid_trans w v * rigid_trans w v = 1.
 Proof.
-by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 addrC crossmulNv subrr hom10.
+by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 addrC linearNl subrr hom10.
 Qed.
 
 Lemma rigid_transV w v : rigid_trans w v * inv_rigid_trans w v = 1.
 Proof.
-by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 crossmulNv subrr hom10.
+by rewrite /inv_rigid_trans /rigid_trans homM mulr1 mulmx1 linearNl subrr hom10.
 Qed.
 
 End sample_rigid_transformation.
@@ -571,10 +571,10 @@ End sample_rigid_cont.
 (* exponential coordinates for rbt using taylor expansion of the exponential function *)
 (* [murray] proposition 2.8, p. 41-42 *)
 Section exponential_coordinates_rigid_using_taylor.
-
 Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types w v : vector.
+Import rv3LieAlgebra.Exports.
 
 Lemma exp_twist0v v n : (wedge \T(v, 0)) ^+ n.+2 = 0.
 Proof.
@@ -604,7 +604,7 @@ move=> w1 g h.
 rewrite inv_rigid_transE /inv_rigid_trans /rigid_trans.
 rewrite /wedge !Twist.ang_of !Twist.lin_of.
 rewrite (mulmx_block 1 0 (- _ *v _) 1 \S( w )) !(mulmx0,addr0,mul0mx,mul1mx).
-rewrite spinE crossmulNv crossmulvN.
+rewrite spinE linearNl linearNr /=.
 rewrite double_crossmul dotmulvv w1 expr1n scale1r opprB subrK.
 by rewrite (mulmx_block \S( w ) 0 _ 0 1 0) !(mulmx0,addr0,mul0mx,mul1mx,mulmx1).
 Qed.
@@ -631,11 +631,12 @@ rewrite /e' (p41eq234 _ w1).
 set h := w *d v.
 rewrite /wedge Twist.ang_of Twist.lin_of.
 elim: k => [|k ih].
-  rewrite (@expr2 _ (block_mx \S( w ) _ _ _)) -mulmxE (mulmx_block \S( w ) _ _ _ \S( w )).
-  by rewrite !(mulmx0,addr0,mul0mx) mulmxE -expr2 spinE /= crossmulvZ crossmulvv scaler0.
+  rewrite (@expr2 _ (block_mx \S( w ) _ _ _)) -mulmxE.
+  rewrite (mulmx_block \S( w ) _ _ _ \S( w )).
+  by rewrite !(mulmx0,addr0,mul0mx) mulmxE -expr2 spinE linearZr_LR liexx scaler0.
 rewrite exprS ih -mulmxE (mulmx_block \S( w ) _ _ _ (\S( w ) ^+ k.+2)).
 rewrite !(mulmx0,addr0,mul0mx) mulmxE -exprS; congr (block_mx (\S( w ) ^+ k.+3) 0 _ 0).
-by rewrite exprS mulmxA spinE /= crossmulvZ crossmulvv scaler0 mul0mx.
+by rewrite exprS mulmxA spinE linearZr_LR liexx scaler0 mul0mx.
 Qed.
 
 Lemma emx2_twist w v a : norm w = 1 ->
@@ -654,8 +655,8 @@ rewrite {1}/g /rigid_trans mulmxE homM mul1r.
 rewrite inv_rigid_transE /inv_rigid_trans homM mulr1 mulmx1 emx2.
 rewrite -spinZ.
 congr (block_mx (1 + \S( a *: w )) 0 _ 1).
-rewrite mulmxDr mulmx1 crossmulNv -addrA addrC addrA subrK spinE.
-rewrite scalerA (mulrC h) -scalerA /= crossmulZv -scalerDr; congr (_ *: _).
+rewrite mulmxDr mulmx1 linearNl -addrA addrC addrA subrK spinE.
+rewrite scalerA (mulrC h) -scalerA /= linearZl_LR /= -scalerDr; congr (_ *: _).
 by rewrite double_crossmul dotmulvv w1 expr1n scale1r -/h addrCA subrr addr0.
 Qed.
 
@@ -715,19 +716,19 @@ rewrite /emx_twist /hom_twist.
 
 rewrite ang_tcoorE (negbTE w0) [in RHS]spinZ; congr hom.
 
-rewrite crossmulZv crossmulvZ scalerA.
+rewrite linearZl_LR /= linearZr_LR /= scalerA.
 rewrite dotmulZv dotmulvZ !mulrA -[in X in _ + X + _]scalerA.
 rewrite /normalize.
-rewrite (crossmulvZ _ w).
-rewrite crossmulNv.
-rewrite crossmulZv.
+rewrite (linearZr_LR (crossmul_bilinear _) _ _ w) /=.
+rewrite linearNl /=.
+rewrite (linearZl_LR (crossmul_bilinear _)) /=.
 rewrite [in X in _ + _ + X = _]scalerN.
 rewrite [in X in _ + _ + X]scalerA.
 rewrite -[in LHS]scalemxAl -scalerDr -scalerBr; congr (_ *: _).
   by rewrite -invrM ?unitfE ?norm_eq0.
 rewrite -/w' /= [in X in _ = X + _]mulmxBr mulmx1.
 rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
-- rewrite lin_tcoorE crossmulC mulNmx.
+- rewrite lin_tcoorE lieC mulNmx.
   by rewrite scalerA divrr ?scale1r // ?unitfE ?norm_eq0.
 - rewrite lin_tcoorE.
   rewrite (scalerA (norm w)) divrr ?scale1r ?unitfE ?norm_eq0 //.
@@ -735,7 +736,7 @@ rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
   rewrite mulmxA.
   rewrite dotmulP mul_scalar_mx dotmulC.
   by rewrite scalerA mulrC -scalerA.
-- rewrite crossmulC opprK; congr (_ *v _).
+- rewrite lieC opprK; congr (_ *v _).
   by rewrite lin_tcoorE scalerA divrr ?scale1r ?lin_of_twistE // unitfE norm_eq0.
 Qed.
 
@@ -1053,10 +1054,10 @@ End Screw.
 Notation screw := Screw.t.
 
 Section screw_motion.
-
 Variable T : realType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
+Import rv3LieAlgebra.Exports.
 
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
 Definition screw_motion s (p : point) : 'rV_3 :=
@@ -1107,15 +1108,15 @@ Proof.
 move=> l a h q w v.
 rewrite /etwist /hom_twist.
 case: ifPn => [/eqP|]; rewrite ang_tcoorE => w0.
-  by rewrite hom_screww0 // /v lin_tcoorE w0 crossmulNv crossmul0v oppr0 scaler0 addr0 scaler0.
+  by rewrite hom_screww0 // /v lin_tcoorE w0 linearNl /= linear0l oppr0 scaler0 addr0 scaler0.
 rewrite /hom_screw_motion.
 rewrite -/l -/a -/h -/q -/w.
 congr hom.
 rewrite {1}/v.
 rewrite lin_tcoorE.
 rewrite [w *v _]linearD /=.
-rewrite crossmulvZ crossmulvv scaler0 addr0.
-rewrite crossmulNv crossmulvN.
+rewrite linearZr_LR /= liexx scaler0 addr0.
+rewrite linearNl linearNr /=.
 rewrite double_crossmul dotmulvv.
 rewrite [in X in _ = _ *: (X + _)]mulNmx.
 rewrite [in X in _ = _ *: (X + _)]mulmxBl.
@@ -1138,22 +1139,24 @@ rewrite mulrC -[LHS]addr0.
 congr (_ + _).
 rewrite mulmxBr mulmx1.
 rewrite -rodriguesP /rodrigues.
-rewrite crossmulvZ crossmulvv 2!scaler0 addr0.
+rewrite linearZr_LR /= liexx 2!scaler0 addr0.
 rewrite dotmulZv dotmulvv.
 rewrite !scalerA mulrAC -mulrA opprB subrK.
 apply/esym/eqP; rewrite scaler_eq0; apply/orP; right.
 rewrite subrr add0r.
-rewrite crossmulC mulNmx scalerN.
-by rewrite crossmulC opprK -spinE -mulmxA (mulmxA \S( w )) spin_mul_tr mul0mx mulmx0 scaler0 oppr0.
+rewrite lieC /= opprK.
+rewrite lieC /=.
+rewrite -spinE mulNmx scalerN.
+by rewrite -mulmxA (mulmxA \S( w )) spin_mul_tr mul0mx mulmx0 scaler0 oppr0.
 Qed.
 
 End screw_motion.
 
 Section screw_coordinates_of_a_twist.
-
 Variable T : rcfType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
+Import rv3LieAlgebra.Exports.
 
 (* [murray] 2.43, p.47 *)
 Definition axis (t : twist T) : Line.t T :=
@@ -1166,7 +1169,7 @@ Definition axis (t : twist T) : Line.t T :=
 Lemma point_axis_nolin w : w != 0 -> \pt( axis \T(0, w) ) = 0.
 Proof.
 move=> w0; rewrite /axis ang_tcoorE (negbTE w0) /=.
-by rewrite lin_tcoorE /= crossmulv0 scaler0.
+by rewrite lin_tcoorE /= linear0r scaler0.
 Qed.
 
 (* [murray] 2.42, p.47 *)
@@ -1184,7 +1187,7 @@ Definition pjoint_twist (v : vector) := \T(v, 0).
 Lemma pitch_perp (w u : 'rV[T]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
 Proof.
 move=> w1; rewrite /pitch ang_tcoorE lin_tcoorE w1 expr1n invr1 scale1r.
-by rewrite {1}crossmulC crossmulvN opprK -dot_crossmulC crossmulvv dotmulv0.
+by rewrite {1}lieC linearNr opprK -dot_crossmulC liexx dotmulv0.
 Qed.
 
 (* [murray] 2.44, p.48 *)
@@ -1258,7 +1261,7 @@ set q := \pt( l ).
 set v := - w *v q + h *: w.
 case/boolP : (w == 0) => [/eqP|]w0.
   exists \T(v, 0).
-  by rewrite /v w0 oppr0 crossmul0v add0r scaler0 etwistv0 hom_screww0.
+  by rewrite /v w0 oppr0 linear0l add0r scaler0 etwistv0 hom_screww0.
 exists \T(v, w).
 by rewrite hom_screw_motion_etwist -/a -/w -/q -/h -/v.
 Qed.
@@ -1417,10 +1420,10 @@ Definition screw_axis_point (p : point) : point :=
 End screw_axis_point_def.
 
 Section screw_axis_point.
-
 Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
+Import rv3LieAlgebra.Exports.
 
 Variable f : 'DIso_3[T].
 Let Q : 'M[T]_3 := ortho_of_iso f.
@@ -1453,7 +1456,7 @@ rewrite addrC addrA (addrC (- _)) subrr add0r.
 rewrite linearD /= [w]lock 2!linearZ /= tr_spin scalerN -lock.
 rewrite mulrDr -scalerAr linearD /= trmx1 linearN /= trmx_mul trmxK mulrBr.
 rewrite mulr1 -expr2 (mulmx_tr_uvect w1) // subrr scaler0 add0r.
-by rewrite mulrN -scalerAr -mulmxE -mulmxA spinE crossmulvv mulmx0 scaler0 oppr0.
+by rewrite mulrN -scalerAr -mulmxE -mulmxA spinE liexx mulmx0 scaler0 oppr0.
 Qed.
 
 Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
@@ -1644,7 +1647,6 @@ End screw_axis_point.
 
 (* [murray] exercise 13, p.77 (wip) *)
 Section twist_coor_trans.
-
 Variable T : rcfType.
 Variable s : screw T.
 Let h := Screw.h s.
@@ -1652,6 +1654,7 @@ Let l := Screw.l s.
 Let q_a := \pt( l ).
 Let w_a := \vec( l ).
 Let twist_a := \T(- w_a *v q_a + h *: w_a, w_a).
+Import rv3LieAlgebra.Exports.
 
 Variable g_ab : EuclideanMotion.t T.
 Let map_v := coortrans_vector g_ab.
@@ -1684,19 +1687,19 @@ congr (@block_mx _ 1 0 3 3).
     rewrite /map_v coortrans_vectorE scalemxAl.
     by rewrite EuclideanMotion.rot_inv.
   rewrite /map_p coortrans_pointE from_hD to_hpointK.
-  rewrite crossmulDr; congr (_ + _).
+  rewrite linearDr /=; congr (_ + _).
     rewrite /map_v coortrans_vectorE EuclideanMotion.rot_inv.
-    rewrite !crossmulNv mulNmx; congr (- _).
+    rewrite !(linearNl (crossmul_bilinear _)) /= mulNmx; congr (- _).
     rewrite mul_mx_row mulmx0 to_hvectorK -mulmxr_crossmulr_SO //.
     by rewrite rotationV EuclideanMotion.rotP.
   rewrite /map_v coortrans_vectorE EuclideanMotion.rot_inv.
-  rewrite EuclideanMotion.trans_inv mulNmx crossmulvN crossmulNv opprK.
+  rewrite EuclideanMotion.trans_inv mulNmx linearNl linearNr /= opprK.
   rewrite -spin_similarity; last by rewrite rotationV EuclideanMotion.rotP.
   rewrite trmxK mulrA mulNr -mulmxE mulmxA orthogonal_tr_mul ?mul1mx; last first.
     by rewrite rotation_sub // EuclideanMotion.rotP.
   rewrite mulNmx mulmxN mulmxA spinE -mulmxr_crossmulr_SO; last first.
     by rewrite rotationV EuclideanMotion.rotP.
-  by rewrite crossmulC mulNmx.
+  by rewrite lieC /= linearNl.
 - by rewrite /map_v coortrans_vectorE EuclideanMotion.rot_inv.
 Qed.
 

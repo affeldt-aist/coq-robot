@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean skew vec_angle rot frame rigid screw.
-From mathcomp.analysis Require Import reals.
+From mathcomp.analysis Require Import reals forms.
 
 (******************************************************************************)
 (*                        SCARA Robot Manipulator                             *)
@@ -111,7 +111,7 @@ Definition g := g0 * `e$(theta4, t4) *
 
 Lemma S1 : `e$(theta1, t1) = hRz theta1.
 Proof.
-rewrite /t1 /rjoint_twist crossmulNv crossmulv0 oppr0 etwist_Rz; last first.
+rewrite /t1 /rjoint_twist linearNl /= linear0r oppr0 etwist_Rz; last first.
   by rewrite -norm_eq0 normeE oner_eq0.
 by rewrite -Rz_eskew.
 Qed.
@@ -121,7 +121,7 @@ Lemma point_axis_twist (d : R) :
   \pt( axis \T((- 'e_2%:R *v row3 d 0 0), 'e_2%:R) ) = row3 d 0 0.
 Proof.
 rewrite {1}/axis ang_tcoorE (negbTE (norm1_neq0 (normeE _ _))) /=.
-rewrite normeE expr1n invr1 scale1r lin_tcoorE crossmulNv crossmulvN.
+rewrite normeE expr1n invr1 scale1r lin_tcoorE linearNl linearNr /=.
 rewrite double_crossmul dotmulvv normeE expr1n scale1r /w2 /q2 e2row.
 rewrite dotmulE sum3E !mxE /=. by Simp.r.
 Qed.

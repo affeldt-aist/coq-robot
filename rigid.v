@@ -257,10 +257,10 @@ Qed.
 End direct_isometry_3_properties.
 
 Section derivative_map.
-
 Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types f : 'Iso[T]_3.
+Import rv3LieAlgebra.Exports.
 
 (* [oneill] theorem 2.1, p. 104 *)
 Definition dmap f (v : vector) : vector :=
@@ -376,11 +376,11 @@ have : (((f`* u) *v (f`* v))) =
   rewrite [in RHS]linearZ [in RHS]/=.
   rewrite [in RHS]linearZ [in RHS]/=.
   rewrite [in RHS]linearZ [in RHS]/=.
-  rewrite crossmulC scalerN.
+  rewrite (lieC _ 'e_0) /= scalerN.
   rewrite linearD [in RHS]/=.
   rewrite [in X in _ = - (_ *: X) *m _ + _ + _]linearD.
   rewrite [in RHS]/=.
-  rewrite (_ : 'e_0 *v (u1 *: _) = 0); last by rewrite linearZ /= crossmulvv scaler0.
+  rewrite (_ : 'e_0 *v (u1 *: _) = 0); last by rewrite linearZ /= liexx scaler0.
   rewrite (_ : 'e_0 *v (u2 *: _) = u2 *: 'e_2%:R); last first.
     rewrite linearZ /=.
     by rewrite vecij.
@@ -393,34 +393,27 @@ have : (((f`* u) *v (f`* v))) =
   rewrite -![in RHS]scalemxAl.
   rewrite [in RHS]scalerDr.
   rewrite opprD.
-  rewrite crossmulC [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
+  rewrite (lieC _ 'e_1) /= [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
   rewrite opprD.
   rewrite [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
   rewrite scaleNr scalerN opprK.
   rewrite (_ : _ *v _ = - u1 *: 'e_2%:R); last first.
-    rewrite linearZ /= crossmulC.
-    rewrite vecij.
-    by rewrite scalerN scaleNr.
-  rewrite (_ : _ *v _ = 0); last first.
-    by rewrite linearZ /= crossmulvv scaler0.
+    by rewrite linearZ /= lieC /= vecij scalerN scaleNr.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= liexx scaler0.
   rewrite addr0.
-  rewrite (_ : _ *v _ = u3 *: 'e_0); last first.
-    by rewrite linearZ /= vecjk.
+  rewrite (_ : _ *v _ = u3 *: 'e_0); last by rewrite linearZ /= vecjk.
   rewrite scaleNr opprK mulmxBl.
   rewrite -![in RHS]scalemxAl.
   rewrite scalerDr scalerN.
-  rewrite crossmulC [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
+  rewrite (lieC _ 'e_2%:R) /= [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
   rewrite opprD.
   rewrite [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
   rewrite opprD.
   rewrite (_ : _ *v _ = u1 *: 'e_1); last first.
-    rewrite linearZ /= crossmulC.
-    by rewrite vecik opprK.
+    by rewrite linearZ /= lieC /= vecik opprK.
   rewrite (_ : _ *v _ = - u2 *: 'e_0); last first.
-    rewrite linearZ /= crossmulC.
-    by rewrite vecjk scalerN scaleNr.
-  rewrite (_ : _ *v _ = 0); last first.
-    by rewrite linearZ /= crossmulvv scaler0.
+    by rewrite linearZ /= lieC /= vecjk scalerN scaleNr.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= liexx scaler0.
   rewrite subr0 scaleNr opprK mulmxDl mulNmx.
   rewrite -![in RHS]scalemxAl.
   rewrite -![in RHS]addrA [in RHS]addrC -[in RHS]addrA [in RHS]addrCA -[in RHS]addrA [in RHS]addrC.
