@@ -2,7 +2,7 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly.
 From mathcomp Require Import zmodp realalg complex finset fingroup perm.
-Require Import ssr_ext angle euclidean3 skew vec_angle.
+Require Import ssr_ext angle euclidean skew vec_angle.
 
 (******************************************************************************)
 (*                                Frames                                      *)

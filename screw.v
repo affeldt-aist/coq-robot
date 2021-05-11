@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import zmodp realalg complex fingroup perm.
 From mathcomp.analysis Require Import reals.
-Require Import ssr_ext angle euclidean3 skew vec_angle frame rot rigid.
+Require Import ssr_ext angle euclidean skew vec_angle frame rot rigid.
 
 (******************************************************************************)
 (*                             Screw Motions                                  *)
@@ -877,7 +877,7 @@ Qed.
 
 End RadTheory.
 
-Hint Resolve rad_ge0 rad_lt_pi rad_pi_gt1 : core.
+Global Hint Resolve rad_ge0 rad_lt_pi rad_pi_gt1 : core.
 
 Section exponential_coordinates_rigid.
 

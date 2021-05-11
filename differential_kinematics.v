@@ -4,7 +4,7 @@ From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp.analysis Require Import boolp reals Rstruct classical_sets posnum.
 From mathcomp.analysis Require Import topology normedtype landau forms derive.
-Require Import ssr_ext euclidean3 rot skew rigid.
+Require Import ssr_ext euclidean rot skew rigid.
 
 (******************************************************************************)
 (* This file is wip. It contains an on-going formalization of                 *)

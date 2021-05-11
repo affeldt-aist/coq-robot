@@ -1,7 +1,8 @@
--arg "-w -notation-overridden"
+-arg -w -arg -parsing
+-arg -w -arg -ambiguous-paths
 
 ssr_ext.v
-euclidean3.v
+euclidean.v
 cross_product.v
 angle.v
 vec_angle.v

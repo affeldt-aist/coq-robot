@@ -4,7 +4,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
-Require Import ssr_ext angle euclidean3 skew vec_angle frame.
+Require Import ssr_ext angle euclidean skew vec_angle frame.
 
 (******************************************************************************)
 (*                              Rotations                                     *)

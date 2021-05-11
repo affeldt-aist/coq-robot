@@ -2,7 +2,7 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex finset fingroup perm.
-Require Import ssr_ext angle euclidean3 skew vec_angle rot frame.
+Require Import ssr_ext angle euclidean skew vec_angle rot frame.
 
 (******************************************************************************)
 (*                         Rigid Body Transformations                         *)
@@ -455,7 +455,7 @@ move: (orthogonal_det (ortho_of_iso_is_O f)).
 rewrite -/(iso_sgn _).
 case: (lerP 0 (iso_sgn f)) => K; first by rewrite ger0_norm.
 rewrite ltr0_norm // => /eqP.
-rewrite eqr_oppLR => /eqP {K}K.
+rewrite eqr_oppLR => /eqP {}K.
 exfalso.
 move: H.
 rewrite K scaleN1r => /eqP; rewrite Neqxx_mat.
@@ -888,7 +888,7 @@ Definition rot m := (trans_rot m).2.
 Lemma rotP m : rot m \is 'SO[T]_3.
 Proof. by case: m. Qed.
 
-Local Hint Resolve rotP.
+Local Hint Resolve rotP : core.
 
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.

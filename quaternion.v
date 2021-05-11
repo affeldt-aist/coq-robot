@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
 From mathcomp Require Import complex finset fingroup perm.
-Require Import ssr_ext euclidean3 angle vec_angle frame rot.
+Require Import ssr_ext euclidean angle vec_angle frame rot.
 
 (******************************************************************************)
 (*                            Quaternions                                     *)
@@ -52,12 +52,12 @@ Reserved Notation "x '^*q'" (at level 2, format "x '^*q'").
 Reserved Notation "a *`i" (at level 3).
 Reserved Notation "a *`j" (at level 3).
 Reserved Notation "a *`k" (at level 3).
-
 Reserved Notation "x +ɛ* y"
   (at level 40, left associativity, format "x  +ɛ*  y").
 Reserved Notation "x '^*dq'" (at level 2, format "x '^*dq'").
 
 Declare Scope quat_scope.
+Declare Scope dual_scope.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1118,8 +1118,7 @@ Qed.
 
 End dual_number.
 
-Local Notation "x +ɛ* y" := (mkDual x y)
-  (at level 40, left associativity, format "x  +ɛ*  y") : dual_scope.
+Local Notation "x +ɛ* y" := (mkDual x y) : dual_scope.
 
 Section dual_comm.
 
