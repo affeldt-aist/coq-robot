@@ -31,9 +31,10 @@ Require Import ssr_ext euclidean3 angle vec_angle frame rot.
 (*                        angle a and vector u                                *)
 (*                                                                            *)
 (* Dual quaternions:                                                          *)
-(*   x +ɛ* y == dual number formed by x and y                                 *)
-(*     dquat == type of dual quaternions                                      *)
-(*     x^*dq == conjugate of dual quaternion x                                *)
+(*    x +ɛ* y == dual number formed by x and y                                *)
+(*      dquat == type of dual quaternions                                     *)
+(* a \is dnum == a is a pure dual number (no vector part)                     *)
+(*      x^*dq == conjugate of dual quaternion x                               *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -316,26 +317,36 @@ Qed.
 Lemma quat_vectZ (k : R) (x : 'rV[R]_3) : (k *: x)%:v = k *: x%:v.
 Proof. by congr mkQuat; rewrite /= mulr0. Qed.
 
-End quaternion.
-
-Section quaternion1.
-Variable R : rcfType.
-
-Definition sqrq (a : quat R) := a`0 ^+ 2 + norm (a`1) ^+ 2.
-
-Lemma sqrq_eq0 a : (sqrq a == 0) = (a == 0).
+Lemma quatAl k (a b : quat R) : k *: (a * b) = k *: a * b.
 Proof.
-case: a => a a' /=; apply/idP/idP.
-  by rewrite /sqrq /= paddr_eq0 ?sqr_ge0 // ?norm_ge0 //
-             2!sqrf_eq0 norm_eq0 => /andP[/eqP -> /eqP ->].
-by case/eqP => -> ->; rewrite /sqrq /= norm0 expr0n addr0.
+case: a b => [a0 a1] [b0 b1]; apply/eqP.
+rewrite !mulqE /mulq /= scaleqE /= eq_quat /=.
+apply/andP; split; first by rewrite mulr0 !addr0 mulrBr mulrA dotmulZv.
+apply/eqP.
+rewrite scaler0 add0r -2!scalerDr -vec3E -scalerA (scalerA b0 k) mulrC.
+rewrite -scalerA [in RHS]crossmulC [in X in _ = _ + _ + X]linearZ /=.
+by rewrite -scalerDr -scalerBr crossmulC.
 Qed.
+
+Canonical quat_lAlgType := Eval hnf in LalgType _ (quat R) quatAl.
+
+Lemma quatAr k (a b : quat R) : k *: (a * b) = a * (k *: b).
+Proof.
+case: a b => [a0 a1] [b0 b1]; apply/eqP.
+rewrite !mulqE /mulq /= scaleqE /= eq_quat /=.
+apply/andP; split; first by rewrite mulr0 !addr0 mulrBr mulrCA dotmulvZ.
+apply/eqP.
+rewrite scaler0 add0r -2!scalerDr -vec3E -scalerA (scalerA a0 k) mulrC.
+by rewrite -scalerA [in X in _ = _ + _ + X]linearZ /= -2!scalerDr.
+Qed.
+
+Canonical quat_algType := Eval hnf in AlgType _ (quat R) quatAr.
+
+Lemma quat_algE x : x%:q = x%:A.
+Proof. by apply/eqP; rewrite eq_quat //=; Simp.r. Qed.
 
 Definition conjq (a : quat R) := mkQuat (a`0) (- a`1).
 Local Notation "x '^*q'" := (conjq x).
-
-Lemma sqrq_conj (a : quat R) : sqrq (a^*q) = sqrq a.
-Proof. by rewrite /sqrq normN. Qed.
 
 Lemma conjq_linear : linear conjq.
 Proof.
@@ -354,15 +365,13 @@ Proof. by case: a => a0 a1; rewrite /conjq /= opprK. Qed.
 Lemma conjq0 : (0%:v)^*q = 0.
 Proof. apply/eqP; by rewrite eq_quat /= oppr0 !eqxx. Qed.
 
-Lemma conjqP a : a * a^*q = (sqrq a)%:q.
-Proof.
-rewrite /mulq /=; congr mkQuat.
-  by rewrite /= dotmulvN dotmulvv opprK -expr2.
-by rewrite scalerN addNr add0r crossmulvN crossmulvv oppr0.
-Qed.
-
 Lemma conjd_comm (a : quat R) : a^*q * a = a * a^*q.
-Proof. by rewrite -{2}[a]conjqI conjqP sqrq_conj conjqP. Qed.
+Proof. 
+apply/eqP; 
+by rewrite eq_quat /= 
+     !(crossmulNv, crossmulvN, crossmulvv, 
+       dotmulvN, dotmulNv, subr0, opprK, scaleNr, scalerN, eqxx) addrC /= eqxx.
+Qed.
 
 Lemma conjd_comm2 (a b : quat R) :
   b^*q * a + a^*q * b = a * b^*q + b * a^*q.
@@ -383,7 +392,40 @@ by rewrite 2!opprD 2!scalerN linearN /= -(crossmulC a1) linearN
            /= -2!scaleNr -addrA addrCA addrA.
 Qed.
 
-Lemma conjqE a :
+Lemma quat_realC (x : R) : (x%:q)^*q = x%:q.
+Proof. by congr mkQuat; rewrite /= oppr0. Qed.
+
+Lemma quat_vectC (x : 'rV_3) : (x%:v)^*q = -(x%:v).
+Proof. by congr mkQuat; rewrite /= oppr0. Qed.
+
+End quaternion.
+
+Notation "x '^*q'" := (conjq x) : quat_scope.
+
+Section quaternion1.
+Variable R : rcfType.
+
+Definition sqrq (a : quat R) := a`0 ^+ 2 + norm (a`1) ^+ 2.
+
+Lemma sqrq_eq0 a : (sqrq a == 0) = (a == 0).
+Proof.
+case: a => a a' /=; apply/idP/idP.
+  by rewrite /sqrq /= paddr_eq0 ?sqr_ge0 // ?norm_ge0 //
+             2!sqrf_eq0 norm_eq0 => /andP[/eqP -> /eqP ->].
+by case/eqP => -> ->; rewrite /sqrq /= norm0 expr0n addr0.
+Qed.
+
+Lemma sqrq_conj (a : quat R) : sqrq (a^*q) = sqrq a.
+Proof. by rewrite /sqrq normN. Qed.
+
+Lemma conjqP a : a * a^*q = (sqrq a)%:q.
+Proof.
+rewrite /mulq /=; congr mkQuat.
+  by rewrite /= dotmulvN dotmulvv opprK -expr2.
+by rewrite scalerN addNr add0r crossmulvN crossmulvv oppr0.
+Qed.
+
+Lemma conjqE (a : quat R) :
   a^*q = - (1 / 2%:R) *: (a + `i * a * `i + `j * a * `j + `k * a * `k).
 Proof.
 apply/eqP; rewrite eq_quat; apply/andP; split; apply/eqP.
@@ -426,25 +468,19 @@ rewrite !['e__ *d _]dotmulC !dotmul_delta_mx /=.
 by rewrite addrA addrAC -addrA addrC [X in _ == X]vec3E.
 Qed.
 
-Lemma conjq_scalar a : (a`0)%:q = (1 / 2%:R) *: (a + a^*q).
+Lemma conjq_scalar (a : quat R) : (a`0)%:q = (1 / 2%:R) *: (a + a^*q).
 Proof.
 case: a => a0 a1.
 rewrite /conjq /= addqE /addq /= subrr quat_realD scalerDr -scalerDl.
 by rewrite -mulr2n -mulr_natr div1r mulVr ?scale1r // unitfE pnatr_eq0.
 Qed.
 
-Lemma conjq_vector a : (a`1)%:v = (1 / 2%:R) *: (a - a^*q).
+Lemma conjq_vector (a : quat R) : (a`1)%:v = (1 / 2%:R) *: (a - a^*q).
 Proof.
 case: a => a0 a1.
 rewrite /conjq /= addqE /addq /= subrr opprK quat_vectD scalerDr -scalerDl.
 by rewrite -mulr2n -mulr_natr div1r mulVr ?scale1r // unitfE pnatr_eq0.
 Qed.
-
-Lemma quat_realC (x : R) : (x%:q)^*q = x%:q.
-Proof. by congr mkQuat; rewrite /= oppr0. Qed.
-
-Lemma quat_vectC (x : 'rV_3) : (x%:v)^*q = -(x%:v).
-Proof. by congr mkQuat; rewrite /= oppr0. Qed.
 
 Definition invq a := (1 / sqrq a) *: (a ^*q).
 
@@ -516,38 +552,6 @@ Lemma normq_eq0 a : (normq a == 0) = (a == 0).
 Proof.
 rewrite /normq /sqrq -sqrtr0 eqr_sqrt //; last by rewrite addr_ge0 // sqr_ge0.
 by rewrite paddr_eq0 ?sqr_ge0 // 2!sqrf_eq0 norm_eq0 eq_quat.
-Qed.
-
-Lemma quatAl k (a b : quat R) : k *: (a * b) = k *: a * b.
-Proof.
-case: a b => [a0 a1] [b0 b1]; apply/eqP.
-rewrite !mulqE /mulq /= scaleqE /= eq_quat /=.
-apply/andP; split; first by rewrite mulr0 !addr0 mulrBr mulrA dotmulZv.
-apply/eqP.
-rewrite scaler0 add0r -2!scalerDr -vec3E -scalerA (scalerA b0 k) mulrC.
-rewrite -scalerA [in RHS]crossmulC [in X in _ = _ + _ + X]linearZ /=.
-by rewrite -scalerDr -scalerBr crossmulC.
-Qed.
-
-Canonical quat_lAlgType := Eval hnf in LalgType _ (quat R) quatAl.
-
-Lemma quatAr k (a b : quat R) : k *: (a * b) = a * (k *: b).
-Proof.
-case: a b => [a0 a1] [b0 b1]; apply/eqP.
-rewrite !mulqE /mulq /= scaleqE /= eq_quat /=.
-apply/andP; split; first by rewrite mulr0 !addr0 mulrBr mulrCA dotmulvZ.
-apply/eqP.
-rewrite scaler0 add0r -2!scalerDr -vec3E -scalerA (scalerA a0 k) mulrC.
-by rewrite -scalerA [in X in _ = _ + _ + X]linearZ /= -2!scalerDr.
-Qed.
-
-Canonical quat_algType := Eval hnf in AlgType _ (quat R) quatAr.
-
-Lemma quat_algE x : x%:q = x%:A.
-Proof.
-apply/eqP.
-rewrite scaleqE !mxE eq_quat /= mulr0 mulr1 !addr0 eqxx /= scaler0 add0r.
-by Simp.r.
 Qed.
 
 Lemma normqM (Q P : quat R) : normq (Q * P) = normq Q * normq P.
@@ -948,8 +952,6 @@ Qed.
 
 End quaternion1.
 
-Notation "x '^*q'" := (conjq x) : quat_scope.
-
 Section dual_number.
 
 Variables (R : ringType).
@@ -1084,6 +1086,9 @@ Proof. move=> a b; by rewrite /scaled /= !mulrDl adddE. Qed.
 Definition dual_lmodMixin := LmodMixin scaledA scaled1 scaledDr scaledDl.
 Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
 
+Lemma scaledE k (a : dual) : k *: a = k * a``0 +ɛ* (k * a``1).
+Proof. by []. Qed.
+
 Definition duall (x : R) := x +ɛ* 0.
 
 Local Notation "*%:dl" := duall  (at level 2).
@@ -1184,7 +1189,10 @@ Notation "x '..2'" := (rdual x) (at level 1, format "x '..2'") : dual_scope.
 
 (* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
+
 Variable R : rcfType (*realType*).
+
+Open Scope dual_scope.
 
 Definition dquat := @dual (quat_unitRing R).
 
@@ -1193,6 +1201,15 @@ Local Open Scope dual_scope.
 Definition conjdq (a : dquat) : dquat := (a..1)^*q +ɛ* (a..2)^*q.
 
 Local Notation "x '^*dq'" := (conjdq x).
+
+Lemma conjdqD x y : (x + y)^*dq = x^*dq + y^*dq.
+Proof. by rewrite /conjdq !(adddE, linearD). Qed.
+
+Lemma conjdqI a : (a^*dq)^*dq = a.
+Proof. by rewrite /conjdq /= !conjqI; case: a. Qed.
+
+Lemma conjdq0 : 0^*dq = 0.
+Proof. by rewrite /conjdq /= conjq0. Qed. 
 
 Lemma conjdqM (a b : dquat) : (a * b)^*dq = b^*dq * a^*dq.
 Proof.
@@ -1212,10 +1229,61 @@ case: a => [] [a0 av] [b0 bv].
 by rewrite !qualifE /= /unitd /= !qualifE /= /unitq /= !eq_quat /= oppr_eq0.
 Qed.
 
+Definition dnum := [qualify x : dquat | x^*dq == x].
+Fact dnum_key : pred_key dnum. Proof. by []. Qed.
+Canonical dnum_keyed := KeyedQualifier dnum_key.
+
+Lemma dnumE a : (a \is dnum) = (a^*dq == a).
+Proof. done. Qed.
+
+Lemma dnumE' a : (a \is dnum) = (a..1`1 == 0) && (a..2`1 == 0).
+Proof.
+case: a => [] [a1 a2] [b1 b2]; rewrite dnumE /conjdq /=.
+by rewrite -[a2 == 0]andTb -[b2 == 0]andTb; 
+   congr ((_ && _) && (_ && _)); rewrite ?eqxx //= eq_sym 
+     -subr_eq0 opprK -mulr2n -scaler_nat scalemx_eq0 (eqr_nat _ 2 0).
+Qed.
+
+Lemma dnumE'' a : (a \is dnum) = (a == (a..1`0)%:q +ɛ* (a..2`0)%:q).
+Proof.
+case: a => [] [a1 a2] [b1 b2]; rewrite dnumE' /=.
+by rewrite -[a2 == 0]andTb -[b2 == 0]andTb; 
+   congr ((_ && _) && (_ && _)); rewrite /= !eqxx.
+Qed.
+
+Lemma dnumD a b : a \is dnum -> b \is dnum -> a + b \is dnum.
+Proof. by rewrite 3!dnumE conjdqD => /eqP-> /eqP->. Qed.
+
+Lemma dnum0 : 0 \is dnum.
+Proof.  by rewrite dnumE' eqxx. Qed.
+
+Lemma dnum1 : 1 \is dnum.
+Proof.  by rewrite dnumE' eqxx. Qed.
+
+Lemma dnum_nat n : n%:R \is dnum.
+Proof.
+elim: n => [|n IH]; first by rewrite dnum0.
+by rewrite -add1n natrD dnumD // dnum1.
+Qed.
+
+Lemma dnumM a b : a \is dnum -> b \is dnum -> a * b \is dnum.
+Proof. 
+rewrite 3!dnumE' muldE /= => /andP[/eqP-> /eqP->] /andP[/eqP-> /eqP->].
+by rewrite !crossmulv0 !scaler0 !add0r eqxx.
+Qed.
+
+Lemma dnumM_comm a b : a \is dnum -> b * a = a * b.
+Proof.
+case: b => b1 b2; rewrite dnumE'' => /eqP->.
+by rewrite !muldE /= !quat_algE -!quatAr -!quatAl !mulr1 !mul1r addrC.
+Qed.
+
 (* squared norm *)
 
-(* maybe we could introduce the notion of being a dual real *)
 Definition sqrdq (a : dquat) : dquat := a * a^*dq.
+
+Lemma dnum_sqrdq a : sqrdq a \in dnum.
+Proof. by rewrite dnumE conjdqM conjdqI. Qed.
 
 (* inverse *)
 
