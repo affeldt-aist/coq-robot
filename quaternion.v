@@ -1302,6 +1302,15 @@ Canonical udquat_keyed := KeyedQualifier udquat_key.
 Lemma udquatE (x : dquat) : (x \is udquat) = (sqrdq x == 1).
 Proof. done. Qed.
 
+Lemma invdq_udquat a : a \is udquat -> a^-1 = a^*dq.
+Proof.
+rewrite udquatE => /eqP sqE.
+suff a1NZ : a..1 != 0 by rewrite [a^-1]invdqEl // sqE invr1 mul1r.
+apply/eqP=> a1Z.
+move/eqP: sqE; rewrite [sqrdq _]muldE a1Z !mul0r => /andP[] /=.
+by rewrite eq_sym oner_eq0.
+Qed.
+
 (* dual quaternions and rbt's *)
 
 Definition dquat_from_rot_trans (r t : quat R)
