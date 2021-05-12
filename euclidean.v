@@ -26,6 +26,7 @@ Require Import ssr_ext.
 (*       A _|_ B == A and B are normal                                        *)
 (*       'O[T]_n == the type of orthogonal matrices of size n                 *)
 (*      'SO[T]_n == the type of rotation matrices of size n                   *)
+(*       cross M == generalized cross-product                                 *)
 (*                                                                            *)
 (* Specializations to the 3D case:                                            *)
 (*      row2 a b == the row vector [a,b]                                      *)
@@ -739,6 +740,67 @@ rewrite expr1n addrC eq_sym -subr_eq subrr eq_sym psumr_eq0 /=; last first.
 by move/allP => /(_ j (mem_index_enum _)); rewrite eq_sym ij implyTb mxE sqrf_eq0 => /eqP.
 Qed.
 
+Section Crossproduct.
+Variable (R : comRingType) (n' : nat).
+Let n := n'.+1.
+
+Definition cross (u : 'M[R]_(n', n)) : 'rV_n :=
+  \row_(k < n) \det (col_mx (@delta_mx _ 1%N _ 0 k) u).
+
+Lemma cross_multilinear (A B C : 'M_(n',n)) (i0 : 'I_n') (b c : R) :
+ row i0 A = b *: row i0 B + c *: row i0 C ->
+ row' i0 B = row' i0 A ->
+ row' i0 C = row' i0 A -> cross A = b *: cross B + c *: cross C.
+Proof.
+move=> rABC rBA rCA; apply/rowP=> k; rewrite !mxE.
+have bumpD (i k1 : 'I_n') : bump (bump 0 i0) i = (1 + k1)%N -> i0 != k1.
+  move=> Bi; apply/eqP => i0Ek1; move: Bi; rewrite -i0Ek1.
+  rewrite /bump !add1n; case: ltnP => [u0Li He|iLi0 He].
+    by rewrite -He leqNgt ltnS leqnn in u0Li.
+  by rewrite -ltnS -He ltnn in iLi0.
+apply: (@determinant_multilinear _ _ _ _ _ (fintype.lift 0 i0)).
+-apply/rowP => i; rewrite !mxE; case: fintype.splitP; first by do 2 case.
+  move=> k1 H; rewrite (_ : k1 = i0).
+    by move/rowP : rABC => /(_ i); rewrite !mxE.
+  apply/val_eqP/eqP=> /=.
+  by rewrite /= /bump !add1n in H; case: H.
+- apply/matrixP => i j; rewrite !mxE /=; case: fintype.splitP => // k1 /= H1.
+  have /unlift_some[k2 k2E _] := bumpD i k1 H1.
+  by move/matrixP : rBA => /(_ k2 j); rewrite !mxE k2E.
+apply/matrixP => i j; rewrite !mxE /=; case: fintype.splitP => // k1 /= H1.
+have /unlift_some[k2 k2E _] := bumpD i k1 H1.
+by move/matrixP : rCA => /(_ k2 j); rewrite !mxE k2E.
+Qed.
+
+Lemma dot_cross (u : 'rV[R]_n) (V : 'M[R]_(n', n)) :
+  u *d (cross V) = \det (col_mx u V).
+Proof.
+rewrite dotmulE (expand_det_row _ 0); apply: eq_bigr => k _; rewrite !mxE /=.
+case: fintype.splitP => j //=; rewrite ?ord1 //= => _ {j}; congr (_ * _).
+rewrite (expand_det_row _ 0) (bigD1 k) //= big1 ?addr0; last first.
+  move=> i neq_ik; rewrite !mxE; case: fintype.splitP=> //= j.
+  by rewrite ord1 mxE (negPf neq_ik) mul0r.
+rewrite !mxE; case: fintype.splitP => //= j _; rewrite ord1 !mxE !eqxx mul1r.
+rewrite !expand_cofactor; apply: eq_bigr => s s0; congr (_ * _).
+apply: eq_bigr => i; rewrite !mxE.
+by case: fintype.splitP => //= j'; rewrite ord1 {j'} -val_eqE => /= ->.
+Qed.
+
+End Crossproduct.
+
+Section Crossproduct_fieldType.
+Variable (F : fieldType) (n' : nat).
+Let n := n'.+1.
+
+Lemma cross_normal (A : 'M[F]_(n', n)) : A _|_ cross A.
+Proof.
+apply/rV_subP => v /submxP [M ->]; rewrite normalvv dot_cross; apply/det0P.
+exists (row_mx (- 1) M); rewrite ?row_mx_eq0 ?oppr_eq0 ?oner_eq0 //.
+by rewrite mul_row_col mulNmx mul1mx addNr.
+Qed.
+
+End Crossproduct_fieldType.
+
 Section row2.
 
 Variable T : ringType.
@@ -1064,6 +1126,12 @@ Definition crossmul {R : ringType} (u v : 'rV[R]_3) :=
 
 Notation "*v%R" := (@crossmul _) : ring_scope.
 Notation "u *v w" := (crossmul u w) : ring_scope.
+
+Lemma cross3E {R : comRingType} (u v : 'rV[R]_3) :
+  cross (col_mx u v) = u *v v.
+Proof.
+by apply/rowP => /= i; rewrite !mxE col_mx3E.
+Qed.
 
 Section crossmullie.
 Variable R : comRingType.
