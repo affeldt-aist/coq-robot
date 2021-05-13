@@ -17,8 +17,8 @@ From mathcomp.analysis Require Import forms.
 (*       x%:q == quaternion with scalar part x and vector part 0              *)
 (*       u%:v == pure quaternion with scalar part 0 and vector part u         *)
 (* `i, `j, `k == basic quaternions                                            *)
-(*        x`0 == scalar part of the quaternion x                              *)
-(*        x`1 == vector part of the quaternion x                              *)
+(*        x.1 == scalar part of the quaternion x                              *)
+(*        x.2 == vector part of the quaternion x                              *)
 (*       a^*q == conjugate of quaternion a                                    *)
 (*    normq a == norm of the quaternion a                                     *)
 (*    uquat R == type of unit quaternions, i.e., quaternions with norm 1      *)
@@ -48,8 +48,6 @@ From mathcomp.analysis Require Import forms.
 
 Reserved Notation "x %:q" (at level 2, format "x %:q").
 Reserved Notation "x %:v" (at level 2, format "x %:v").
-Reserved Notation "Q '`0'" (at level 1, format "Q '`0'").
-Reserved Notation "Q '`1'" (at level 1, format "Q '`1'").
 Reserved Notation "Q '_i'" (at level 1, format "Q '_i'").
 Reserved Notation "Q '_j'" (at level 1, format "Q '_j'").
 Reserved Notation "Q '_k'" (at level 1, format "Q '_k'").
@@ -88,14 +86,12 @@ Local Notation "x %:v" := (mkQuat 0 x).
 Local Notation "'`i'" := ('e_0)%:v.
 Local Notation "'`j'" := ('e_1)%:v.
 Local Notation "'`k'" := ('e_2%:R)%:v.
-Local Notation "Q '`0'" := (quatl Q).
-Local Notation "Q '`1'" := (quatr Q).
-Local Notation "Q '_i'" := ((quatr Q)``_0).
-Local Notation "Q '_j'" := ((quatr Q)``_1).
-Local Notation "Q '_k'" := ((quatr Q)``_(2%:R : 'I_3)).
+Local Notation "Q '_i'" := ((Q.2)``_0).
+Local Notation "Q '_j'" := ((Q.2)``_1).
+Local Notation "Q '_k'" := ((Q.2)``_(2%:R : 'I_3)).
 
-Definition pair_of_quat (a : quat) := let: mkQuat a0 a1 := a in (a0, a1).
-Definition quat_of_pair (x : R * 'rV[R]_3) :=
+Coercion pair_of_quat (a : quat) := let: mkQuat a0 a1 := a in (a0, a1).
+Let quat_of_pair (x : R * 'rV[R]_3) :=
   let: (x0, x1) := x in mkQuat x0 x1.
 
 Lemma quat_of_pairK : cancel pair_of_quat quat_of_pair.
@@ -106,13 +102,13 @@ Canonical Structure quat_eqType := EqType quat quat_eqMixin.
 Definition quat_choiceMixin := CanChoiceMixin quat_of_pairK.
 Canonical Structure quat_choiceType := ChoiceType quat quat_choiceMixin.
 
-Lemma eq_quat (a b : quat) : (a == b) = (a`0 == b`0) && (a`1 == b`1).
+Lemma eq_quat (a b : quat) : (a == b) = (a.1 == b.1) && (a.2 == b.2).
 Proof.
 case: a b => [a0 a1] [b0 b1] /=.
 apply/idP/idP => [/eqP [ -> ->]|/andP[/eqP -> /eqP -> //]]; by rewrite !eqxx.
 Qed.
 
-Definition addq (a b : quat) := mkQuat (a`0 + b`0) (a`1 + b`1).
+Definition addq (a b : quat) := mkQuat (a.1 + b.1) (a.2 + b.2).
 
 Lemma addqC : commutative addq.
 Proof. move=> *; congr mkQuat; by rewrite addrC. Qed.
@@ -123,7 +119,7 @@ Proof. move=> *; congr mkQuat; by rewrite addrA. Qed.
 Lemma add0q : left_id 0%:q addq.
 Proof. case=> *; by rewrite /addq /= 2!add0r. Qed.
 
-Definition oppq (a : quat) := mkQuat (- a`0) (- a`1).
+Definition oppq (a : quat) := mkQuat (- a.1) (- a.2).
 
 Lemma addNq : left_inverse 0%:q oppq addq.
 Proof. move=> *; congr mkQuat; by rewrite addNr. Qed.
@@ -139,7 +135,7 @@ Local Notation "a *`i" := (mkQuat 0 (a *: 'e_0)) (at level 3).
 Local Notation "a *`j" := (mkQuat 0 (a *: 'e_1)) (at level 3).
 Local Notation "a *`k" := (mkQuat 0 (a *: 'e_2%:R)) (at level 3).
 
-Lemma quatE (a : quat) : a = (a`0)%:q + a _i *`i + a _j *`j + a _k *`k.
+Lemma quatE (a : quat) : a = a.1%:q + a _i *`i + a _j *`j + a _k *`k.
 Proof.
 apply/eqP; rewrite eq_quat /= !addr0 eqxx /= add0r.
 by case: a => /= _ v; rewrite {1}[v]vec3E.
@@ -176,11 +172,9 @@ Notation "x %:v" := (mkQuat 0 x) : quat_scope.
 Notation "'`i'" := ('e_0)%:v : quat_scope.
 Notation "'`j'" := ('e_1)%:v : quat_scope.
 Notation "'`k'" := ('e_2%:R)%:v : quat_scope.
-Notation "Q '`0'" := (quatl Q) : quat_scope.
-Notation "Q '`1'" := (quatr Q) : quat_scope.
-Notation "Q '_i'" := ((quatr Q)``_0) : quat_scope.
-Notation "Q '_j'" := ((quatr Q)``_1) : quat_scope.
-Notation "Q '_k'" := ((quatr Q)``_(2%:R : 'I_3)) : quat_scope.
+Notation "Q '_i'" := ((Q.2)``_0) : quat_scope.
+Notation "Q '_j'" := ((Q.2)``_1) : quat_scope.
+Notation "Q '_k'" := ((Q.2)``_(2%:R : 'I_3)) : quat_scope.
 Notation "a *`i" := (mkQuat 0 (a *: 'e_0)) : quat_scope.
 Notation "a *`j" := (mkQuat 0 (a *: 'e_1)) : quat_scope.
 Notation "a *`k" := (mkQuat 0 (a *: 'e_2%:R)) : quat_scope.
@@ -191,7 +185,7 @@ Section quaternion.
 Variable R : comRingType.
 
 Definition mulq (a b : quat R) :=
-  mkQuat (a`0 * b`0 - a`1 *d b`1) (a`0 *: b`1 + b`0 *: a`1 + a`1 *v b`1).
+  mkQuat (a.1 * b.1 - a.2 *d b.2) (a.1 *: b.2 + b.1 *: a.2 + a.2 *v b.2).
 
 Lemma mulqA : associative mulq.
 Proof.
@@ -298,7 +292,7 @@ Proof. by congr mkQuat; rewrite /= (dote2, veckj); Simp.r. Qed.
 Lemma kkN1 : `k * `k = -1.
 Proof. by congr mkQuat; rewrite /= (dote2, liexx); Simp.r. Qed.
 
-Definition scaleq k (a : quat R) := mkQuat (k * a`0) (k *: a`1).
+Definition scaleq k (a : quat R) := mkQuat (k * a.1) (k *: a.2).
 
 Lemma scaleqA a b w : scaleq a (scaleq b w) = scaleq (a * b) w.
 Proof.
@@ -321,10 +315,10 @@ Canonical quat_lmodType := Eval hnf in LmodType R (quat R) quat_lmodMixin.
 
 Lemma scaleqE (k : R) (a : quat R) :
   k *: a =
-  k *: (a `0) %:q + k *: (a _i) *`i + k *: (a _j) *`j + k *: (a _k) *`k.
+  k *: (a .1) %:q + k *: (a _i) *`i + k *: (a _j) *`j + k *: (a _k) *`k.
 Proof.
 apply/eqP; rewrite eq_quat //=; Simp.r.
-by rewrite {1}[a`1]vec3E -!scalerDr.
+by rewrite {1}[a.2]vec3E -!scalerDr.
 Qed.
 
 Lemma quat_vectZ (k : R) (x : 'rV[R]_3) : (k *: x)%:v = k *: x%:v.
@@ -358,7 +352,7 @@ Canonical quat_algType := Eval hnf in AlgType _ (quat R) quatAr.
 Lemma quat_algE x : x%:q = x%:A.
 Proof. by apply/eqP; rewrite eq_quat //=; Simp.r. Qed.
 
-Definition conjq (a : quat R) := mkQuat (a`0) (- a`1).
+Definition conjq (a : quat R) := mkQuat (a.1) (- a.2).
 Local Notation "x '^*q'" := (conjq x).
 
 Lemma conjq_linear : linear conjq.
@@ -418,7 +412,7 @@ Notation "x '^*q'" := (conjq x) : quat_scope.
 Section quaternion1.
 Variable R : rcfType.
 
-Definition sqrq (a : quat R) := a`0 ^+ 2 + norm (a`1) ^+ 2.
+Definition sqrq (a : quat R) := a.1 ^+ 2 + norm (a.2) ^+ 2.
 
 Lemma sqrq_eq0 a : (sqrq a == 0) = (a == 0).
 Proof.
@@ -451,7 +445,7 @@ apply/eqP; rewrite eq_quat; apply/andP; split; apply/eqP.
   rewrite dotmul0v addr0 dotmulZv dotmulvv normeE expr1n mulr1
           opprD addrA dotmulC dot_crossmulC.
   rewrite liexx dotmul0v subr0 -opprD mulrN mulNr
-          opprK -mulr2n -(mulr_natl (a`0)) mulrA.
+          opprK -mulr2n -(mulr_natl (a.1)) mulrA.
   by rewrite div1r mulVr ?mul1r // unitfE pnatr_eq0.
 rewrite /= !(mul0r,scale0r,add0r,addr0).
 rewrite [_ *v 'e_0]lieC /= ['e_0 *v _]linearD /= ['e_0 *v _]linearZ /= liexx.
@@ -461,11 +455,11 @@ rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
 rewrite [_ *v 'e_2%:R]lieC /= ['e_2%:R *v _]linearD /=
         ['e_2%:R *v _]linearZ /= liexx.
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
-rewrite [X in _ = - _ *: X](_ : _ = 2%:R *:a`1).
+rewrite [X in _ = - _ *: X](_ : _ = 2%:R *:a.2).
   by rewrite scalerA mulNr div1r mulVr ?unitfE ?pnatr_eq0 // scaleN1r.
-rewrite !opprB (addrCA _ a`1) addrA -mulr2n scaler_nat -[RHS]addr0 -3!addrA;
+rewrite !opprB (addrCA _ a.2) addrA -mulr2n scaler_nat -[RHS]addr0 -3!addrA;
     congr (_ + _).
-do 3 rewrite (addrCA _ a`1).
+do 3 rewrite (addrCA _ a.2).
 do 2 rewrite addrC -!addrA.
 rewrite -opprB (scaleNr _ 'e_0) opprK -mulr2n addrA -mulr2n.
 rewrite addrC addrA -opprB scaleNr opprK -mulr2n.
@@ -479,14 +473,14 @@ rewrite !['e__ *d _]dotmulC !dotmul_delta_mx /=.
 by rewrite addrA addrAC -addrA addrC [X in _ == X]vec3E.
 Qed.
 
-Lemma conjq_scalar (a : quat R) : (a`0)%:q = (1 / 2%:R) *: (a + a^*q).
+Lemma conjq_scalar (a : quat R) : (a.1)%:q = (1 / 2%:R) *: (a + a^*q).
 Proof.
 case: a => a0 a1.
 rewrite /conjq /= addqE /addq /= subrr quat_realD scalerDr -scalerDl.
 by rewrite -mulr2n -mulr_natr div1r mulVr ?scale1r // unitfE pnatr_eq0.
 Qed.
 
-Lemma conjq_vector (a : quat R) : (a`1)%:v = (1 / 2%:R) *: (a - a^*q).
+Lemma conjq_vector (a : quat R) : (a.2)%:v = (1 / 2%:R) *: (a - a^*q).
 Proof.
 case: a => a0 a1.
 rewrite /conjq /= addqE /addq /= subrr opprK quat_vectD scalerDr -scalerDl.
@@ -609,8 +603,8 @@ Definition lequat (Q P : quat R) :=
 Lemma lequat_normD x y : lequat (normQ (x + y)) (normQ x + normQ y).
 Proof.
 rewrite /lequat /= add0r eqxx andTb /normq /sqrq !sqr_norm !sum3E /= !mxE.
-pose X := nth 0 [:: x`0; x _i; x _j; x _k].
-pose Y := nth 0 [:: y`0; y _i; y _j; y _k].
+pose X := nth 0 [:: x.1; x _i; x _j; x _k].
+pose Y := nth 0 [:: y.1; y _i; y _j; y _k].
 suff: Num.sqrt (\sum_(i < 4) (X i + Y i)^+2) <=
       Num.sqrt (\sum_(i < 4) (X i) ^+ 2) + Num.sqrt (\sum_(i < 4) (Y i) ^+ 2).
   by rewrite !sum4E /X /Y /= !addrA.
@@ -770,9 +764,9 @@ Definition quat_rot (a : quat R) (v : vector) : quat R :=
   (a : quat R) * v%:v * a^*q.
 
 Lemma quat_rotE a v : quat_rot a v =
-  ((a`0 ^+ 2 - norm a`1 ^+ 2) *: v +
-   ((a`1 *d v) *: a`1) *+ 2 +
-   (a`0 *: (a`1 *v v)) *+ 2)%:v.
+  ((a.1 ^+ 2 - norm a.2 ^+ 2) *: v +
+   ((a.2 *d v) *: a.2) *+ 2 +
+   (a.1 *: (a.2 *v v)) *+ 2)%:v.
 Proof.
 case: a => a0 a1 /=.
 rewrite /quat_rot /= /conjq /= mulqE /mulq /=.
@@ -787,12 +781,12 @@ rewrite scalerN scaleNr opprK -addrA addrCA; congr (_ + _).
 by rewrite double_crossmul [in RHS]addrC dotmulvv.
 Qed.
 
-Definition pureq (q : quat R) : bool := q`0 == 0.
+Definition pureq (q : quat R) : bool := q.1 == 0.
 
 Lemma quat_rot_is_vector a v : pureq (quat_rot a v).
 Proof. by rewrite quat_rotE /pureq /=. Qed.
 
-Lemma quat_rot_is_linear a : linear (fun v => (quat_rot a v)`1).
+Lemma quat_rot_is_linear a : linear (fun v => (quat_rot a v).2).
 Proof.
 move=> k x y.
 rewrite !quat_rotE /= scalerDr scalerA (mulrC _ k) -scalerA.
@@ -805,10 +799,10 @@ by rewrite linearZ /= scalerA mulrC -scalerA -scalerMnr.
 Qed.
 
 Lemma quat_rot_is_linearE q v :
-  Linear (quat_rot_is_linear q) v = (quat_rot q v)`1.
+  Linear (quat_rot_is_linear q) v = (quat_rot q v).2.
 Proof. done. Qed.
 
-Lemma quat_rot_axis q k : q \is uquat -> quat_rot q (k *: q`1) = (k *: q`1)%:v.
+Lemma quat_rot_axis q k : q \is uquat -> quat_rot q (k *: q.2) = (k *: q.2)%:v.
 Proof.
 rewrite uquatE' /sqrq => /eqP q_is_uquat; rewrite quat_rotE.
 rewrite [in X in (_ + _ + X)%:v = _]linearZ /= liexx 2!scaler0 mul0rn addr0.
@@ -817,22 +811,22 @@ by rewrite subrK -scalerDl mulrC -mulrDl q_is_uquat mul1r.
 Qed.
 
 Lemma cos_atan_uquat q : q \is uquat -> ~~ pureq q ->
-  let a := atan (norm q`1 / q`0) in cos a ^+ 2 = q`0 ^+ 2.
+  let a := atan (norm q.2 / q.1) in cos a ^+ 2 = q.1 ^+ 2.
 Proof.
 move=> nq q00 a.
 rewrite /a cos_atan exprMn expr1n mul1r.
-have /divrr <- : q`0 ^+ 2 \in GRing.unit by rewrite unitfE sqrf_eq0.
+have /divrr <- : q.1 ^+ 2 \in GRing.unit by rewrite unitfE sqrf_eq0.
 rewrite uquatE' /sqrq in nq.
 rewrite expr_div_n -mulrDl (eqP nq) sqrtrM ?ler01 // sqrtr1 mul1r.
 by rewrite -exprVn sqrtr_sqr normrV ?unitfE // invrK sqr_normr.
 Qed.
 
 Lemma sin_atan_uquat q : q \is uquat -> ~~ pureq q ->
-  let a := atan (norm q`1 / q`0) in sin a ^+ 2 = norm q`1 ^+ 2.
+  let a := atan (norm q.2 / q.1) in sin a ^+ 2 = norm q.2 ^+ 2.
 Proof.
 move=> nq q00 a.
 rewrite /a sqr_sin_atan.
-have /divrr <- : q`0 ^+ 2 \in GRing.unit by rewrite unitfE sqrf_eq0.
+have /divrr <- : q.1 ^+ 2 \in GRing.unit by rewrite unitfE sqrf_eq0.
 rewrite uquatE' /sqrq in nq.
 rewrite expr_div_n -mulrDl.
 by rewrite (eqP nq) mul1r invrK -mulrA mulVr ?mulr1 // unitrX // unitfE.
@@ -890,12 +884,12 @@ by rewrite addrC.
 Qed.
 
 Definition polar_of_quat (a : quat R)  : ('rV_3 * angle R)%type :=
-  if a`1 == 0 then
-    if a`0 == 1 then ('e_1, 0) else ('e_1, pi)
-  else if a`0 == 0 then (a`1, pihalf R) else
-  let: u := normalize a`1 in
-  let: theta := atan (norm a`1 / a`0) in
-  if 0 < a`0 then (u, theta) else (u, theta + pi).
+  if a.2 == 0 then
+    if a.1 == 1 then ('e_1, 0) else ('e_1, pi)
+  else if a.1 == 0 then (a.2, pihalf R) else
+  let: u := normalize a.2 in
+  let: theta := atan (norm a.2 / a.1) in
+  if 0 < a.1 then (u, theta) else (u, theta + pi).
 
 Lemma polar_of_quatK (a : quat R) : a \is uquat ->
   let: (u, theta) := polar_of_quat a in a = quat_of_polar theta u.
@@ -1225,7 +1219,7 @@ Canonical dnum_keyed := KeyedQualifier dnum_key.
 Lemma dnumE x : (x \is dnum) = (x^*dq == x).
 Proof. by []. Qed.
 
-Lemma dnumE' x : (x \is dnum) = (x.1`1 == 0) && (x.2`1 == 0).
+Lemma dnumE' x : (x \is dnum) = (x.1.2 == 0) && (x.2.2 == 0).
 Proof.
 case: x => [] [a1 a2] [b1 b2]; rewrite dnumE /conjdq /=.
 by rewrite -[a2 == 0]andTb -[b2 == 0]andTb;
@@ -1233,7 +1227,7 @@ by rewrite -[a2 == 0]andTb -[b2 == 0]andTb;
      -subr_eq0 opprK -mulr2n -scaler_nat scalemx_eq0 (eqr_nat _ 2 0).
 Qed.
 
-Lemma dnumE'' x : (x \is dnum) = (x == (x.1`0)%:q +ɛ* (x.2`0)%:q).
+Lemma dnumE'' x : (x \is dnum) = (x == (x.1.1)%:q +ɛ* (x.2.1)%:q).
 Proof.
 case: x => [] [a1 a2] [b1 b2]; rewrite dnumE' /=.
 by rewrite -[a2 == 0]andTb -[b2 == 0]andTb;
