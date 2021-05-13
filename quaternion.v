@@ -30,6 +30,14 @@ From mathcomp.analysis Require Import forms.
 (*   quat_of_polar a u == quaternion corresponding to the polar coordinates   *)
 (*                        angle a and vector u                                *)
 (*                                                                            *)
+(* Dual numbers:                                                              *)
+(*     dual R == the type of dual numbers over a ringType R                   *)
+(*        x.1 == left part of the dual number x                               *)
+(*        x.2 == right part of the dual number x                              *)
+(* Dual numbers are equipped with a structure of ZmodType, RingType, and of   *)
+(* LmodType when R is a ringType, of Com/UnitRingType when R is a             *)
+(* Com/UnitRingType.                                                          *)
+(*                                                                            *)
 (* Dual quaternions:                                                          *)
 (*    x +ɛ* y == dual number formed by x and y                                *)
 (*      dquat == type of dual quaternions                                     *)
@@ -946,22 +954,19 @@ Qed.
 End quaternion1.
 
 Section dual_number.
+Variable R : ringType.
+Implicit Types r : R.
+Record dual := mkDual {ldual : R ; rdual : R}.
+Implicit Types x y : dual.
 
-Variables (R : ringType).
-
-Record dual := mkDual {ldual : R ; rdual : R }.
-
-Local Notation "x +ɛ* y" := (mkDual x y)
-  (at level 40, left associativity, format "x  +ɛ*  y").
+Local Notation "x +ɛ* y" := (mkDual x y).
 
 Definition dual0 : dual := 0 +ɛ* 0.
 Definition dual1 : dual := 1 +ɛ* 0.
 
-Local Notation "x '``0'" := (ldual x) (at level 1, format "x '``0'").
-Local Notation "x '``1'" := (rdual x) (at level 1, format "x '``1'").
+Coercion pair_of_dual x : R * R := let: mkDual x1 x2 := x in (x1, x2).
 
-Definition pair_of_dual (a : dual) := let: mkDual a0 a1 := a in (a0, a1).
-Definition dual_of_pair (x : R * R) := let: (x0, x1) := x in x0 +ɛ* x1.
+Let dual_of_pair (z : R * R) := let: (z1, z2) := z in z1 +ɛ* z2.
 
 Lemma dual_of_pairK : cancel pair_of_dual dual_of_pair.
 Proof. by case. Qed.
@@ -971,7 +976,7 @@ Canonical Structure dual_eqType := EqType dual dual_eqMixin.
 Definition dual_choiceMixin := CanChoiceMixin dual_of_pairK.
 Canonical Structure dual_choiceType := ChoiceType dual dual_choiceMixin.
 
-Definition oppd a := (- a``0) +ɛ* (- a``1).
+Definition oppd x := (- x.1) +ɛ* (- x.2).
 
 Definition deps : 'M[R]_2 :=
   \matrix_(i < 2, j < 2) ((i == 0) && (j == 1))%:R.
@@ -982,23 +987,22 @@ rewrite expr2; apply/matrixP => i j.
 by rewrite !mxE sum2E !mxE /= mulr0 addr0 -ifnot01 eqxx andbF mul0r.
 Qed.
 
-Definition mat_of_dual (x : dual) : 'M[R]_2 := x``0%:M + x``1 *: deps.
+Definition mat_of_dual x : 'M[R]_2 := x.1%:M + x.2 *: deps.
 
 Definition dual_of_mat (M : 'M[R]_2) := (M 0 0) +ɛ* (M 0 1).
 
-Definition addd (x y : dual) := dual_of_mat (mat_of_dual x + mat_of_dual y).
+Definition addd x y := dual_of_mat (mat_of_dual x + mat_of_dual y).
 
-Definition muld (x y : dual) := dual_of_mat (mat_of_dual x * mat_of_dual y).
+Definition muld x y := dual_of_mat (mat_of_dual x * mat_of_dual y).
 
-Let adddE' (a b : dual) : addd a b = (a``0 + b``0) +ɛ* (a``1 + b``1).
+Let adddE' x y : addd x y = (x.1 + y.1) +ɛ* (x.2 + y.2).
 Proof.
 rewrite /addd /dual_of_mat /mat_of_dual /= !mxE; congr mkDual.
 by rewrite !eqxx !(mulr1n,andbF,mulr1,mulr0,addr0).
 by rewrite !mulr0n !eqxx !mulr1 !add0r.
 Qed.
 
-Let muldE' (a b : dual) : muld a b =
-  a``0 * b``0 +ɛ* (a``0 * b``1 + a``1 * b``0).
+Let muldE' x y : muld x y = x.1 * y.1 +ɛ* (x.1 * y.2 + x.2 * y.1).
 Proof.
 rewrite /muld /dual_of_mat /mat_of_dual /= !mxE !sum2E !mxE; congr mkDual.
 by rewrite !eqxx !(mulr0n,mulr1n,mulr0,mulr1,addr0).
@@ -1006,18 +1010,18 @@ by rewrite !eqxx !(mulr0n,mulr1n,mulr0,add0r,addr0,mulr1).
 Qed.
 
 Lemma adddA : associative addd.
-Proof. move=> x y z; by rewrite !adddE' /= 2!addrA. Qed.
+Proof. by move=> x y z; rewrite !adddE' /= 2!addrA. Qed.
 
 Lemma adddC : commutative addd.
 Proof.
-move=> x y; by rewrite !adddE' /= addrC [in X in _ +ɛ* X = _]addrC.
+by move=> x y; rewrite !adddE' /= addrC [in X in _ +ɛ* X = _]addrC.
 Qed.
 
 Lemma add0d : left_id dual0 addd.
-Proof. move=> x; rewrite adddE' /= 2!add0r; by case: x. Qed.
+Proof. by move=> x; rewrite adddE' /= 2!add0r; case: x. Qed.
 
 Lemma addNd : left_inverse dual0 oppd addd.
-Proof. move=> x; by rewrite adddE' /= 2!addNr. Qed.
+Proof. by move=> x; rewrite adddE' /= 2!addNr. Qed.
 
 Definition dual_ZmodMixin := ZmodMixin adddA adddC add0d addNd.
 Canonical dual_ZmodType := ZmodType dual dual_ZmodMixin.
@@ -1029,63 +1033,63 @@ by rewrite mulrDr mulrDl !mulrA addrA.
 Qed.
 
 Lemma mul1d : left_id dual1 muld.
-Proof. case=> x0 x1; by rewrite muldE' /= 2!mul1r mul0r addr0. Qed.
+Proof. by case=> x0 x1; rewrite muldE' /= 2!mul1r mul0r addr0. Qed.
 
 Lemma muld1 : right_id dual1 muld.
-Proof. case=> x0 x1; by rewrite muldE' /= 2!mulr1 mulr0 add0r. Qed.
+Proof. by case=> x0 x1; rewrite muldE' /= 2!mulr1 mulr0 add0r. Qed.
 
 Lemma muldDl : left_distributive muld addd.
 Proof.
 move=> x y z; rewrite !muldE' !adddE' /= mulrDl; congr mkDual.
-rewrite mulrDl -!addrA; congr (_ + _); by rewrite mulrDl addrCA.
+by rewrite mulrDl -!addrA; congr (_ + _); rewrite mulrDl addrCA.
 Qed.
 
 Lemma muldDr : right_distributive muld addd.
 Proof.
 move=> x y z; rewrite !muldE' !adddE' /= mulrDr; congr mkDual.
-rewrite mulrDr -!addrA; congr (_ + _); by rewrite mulrDr addrCA.
+by rewrite mulrDr -!addrA; congr (_ + _); rewrite mulrDr addrCA.
 Qed.
 
 Lemma oned_neq0 : dual1 != 0 :> dual.
-Proof. apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
+Proof. by apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
 
 Definition dual_RingMixin := RingMixin muldA mul1d muld1 muldDl muldDr oned_neq0.
 Canonical Structure dual_Ring := Eval hnf in RingType dual dual_RingMixin.
 
-Lemma adddE (a b : dual) : a + b = (a``0 + b``0) +ɛ* (a``1 + b``1).
+Lemma adddE x y : x + y = (x.1 + y.1) +ɛ* (x.2 + y.2).
 Proof. exact: adddE'. Qed.
 
-Lemma muldE (a b : dual) : a * b = (a``0 * b``0) +ɛ* (a``0 * b``1 + a``1 * b``0).
+Lemma muldE x y : x * y = (x.1 * y.1) +ɛ* (x.1 * y.2 + x.2 * y.1).
 Proof. exact: muldE'. Qed.
 
-Definition scaled k (a : dual) := k * a``0 +ɛ* (k * a``1).
+Definition scaled r x := r * x.1 +ɛ* (r * x.2).
 
-Lemma scaledA a b w : scaled a (scaled b w) = scaled (a * b) w.
+Lemma scaledA a b x : scaled a (scaled b x) = scaled (a * b) x.
 Proof. by rewrite /scaled /=; congr mkDual; rewrite mulrA. Qed.
 
 Lemma scaled1 : left_id 1 scaled.
-Proof. rewrite /left_id /scaled /=; case=> a1 a2 /=; by rewrite !mul1r. Qed.
+Proof. by rewrite /left_id /scaled /=; case=> ? ? /=; rewrite !mul1r. Qed.
 
 Lemma scaledDr : @right_distributive R dual scaled +%R.
 Proof.
-move=> a b c; rewrite /scaled; congr mkDual; by rewrite !mxE /=
+move=> r x y; rewrite /scaled; congr mkDual; by rewrite !mxE /=
   !(mulr0,addr0,mulr1n,mulr1,mulr0n,add0r) mxE mulrDr !mxE /=
   !(eqxx,mulr1n,mulr0,addr0,mulr1,mulr0n,add0r).
 Qed.
 
-Lemma scaledDl w : {morph (scaled^~ w : R -> dual) : a b / a + b}.
-Proof. move=> a b; by rewrite /scaled /= !mulrDl adddE. Qed.
+Lemma scaledDl x : {morph (scaled^~ x : R -> dual) : a b / a + b}.
+Proof. by move=> a b; rewrite /scaled /= !mulrDl adddE. Qed.
 
 Definition dual_lmodMixin := LmodMixin scaledA scaled1 scaledDr scaledDl.
 Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
 
-Lemma scaledE k (a : dual) : k *: a = k * a``0 +ɛ* (k * a``1).
+Lemma scaledE r x : r *: x = r * x.1 +ɛ* (r * x.2).
 Proof. by []. Qed.
 
-Definition duall (x : R) := x +ɛ* 0.
+Definition duall (r : R) := r +ɛ* 0.
 
-Local Notation "*%:dl" := duall  (at level 2).
-Local Notation "v %:dl" := (duall v) (at level 2).
+Local Notation "*%:dl" := duall (at level 2).
+Local Notation "r %:dl" := (duall r) (at level 2).
 
 Fact duall_is_rmorphism : rmorphism *%:dl.
 Proof.
@@ -1099,22 +1103,21 @@ Qed.
 Canonical duall_rmorphism := RMorphism duall_is_rmorphism.
 
 (* Sanity check : Taylor series for polynomial *)
-Lemma dual_deriv_poly (p : {poly R}) (a : R) :
-  (map_poly *%:dl p).[a +ɛ* 1] = p.[a] +ɛ* p^`().[a].
+Lemma dual_deriv_poly (p : {poly R}) r :
+  (map_poly *%:dl p).[r +ɛ* 1] = p.[r] +ɛ* p^`().[r].
 Proof.
 elim/poly_ind : p => [|p b IH]; first by rewrite map_poly0 deriv0 !horner0.
 rewrite !(rmorphD, rmorphM) /= map_polyX (map_polyC duall_rmorphism) /=.
 rewrite derivD derivC derivM derivX mulr1 addr0.
 rewrite !hornerMXaddC hornerD hornerMX IH.
-by rewrite muldE adddE /= mulr1 addr0 [p.[a] + _]addrC.
+by rewrite muldE adddE /= mulr1 addr0 [p.[r] + _]addrC.
 Qed.
 
 End dual_number.
 
-Local Notation "x +ɛ* y" := (mkDual x y) : dual_scope.
+Local Notation "a +ɛ* b" := (mkDual a b) : dual_scope.
 
 Section dual_comm.
-
 Variable R : comRingType.
 
 Fact muld_comm (p q : dual R) : p * q = q * p.
@@ -1128,17 +1131,14 @@ Canonical dual_comRingType := Eval hnf in ComRingType (dual R) muld_comm.
 End dual_comm.
 
 Section dual_number_unit.
+Variable R : unitRingType.
+Local Open Scope dual_scope.
 
-Variable (R : unitRingType).
-
-Local Notation "x '``0'" := (ldual x) (at level 1, format "x '``0'").
-Local Notation "x '``1'" := (rdual x) (at level 1, format "x '``1'").
-
-Definition unitd : pred (dual R) := [pred a | a``0 \is a GRing.unit].
+Definition unitd : pred (dual R) := [pred a : dual R | a.1 \is a GRing.unit].
 
 Definition invd (a : dual R) :=
   if a \in unitd then
-    dual_of_mat ((a``0)^-1%:M * (1 - deps R * a``1%:M * (a``0)^-1%:M))
+    dual_of_mat (a.1^-1%:M * (1 - deps R * a.2%:M * (a.1)^-1%:M))
   else
     a.
 
@@ -1165,7 +1165,7 @@ by rewrite !(mulrN,mulNr) mulrA divrr // mul1r addrC subrr.
 Qed.
 
 Lemma unitdP a b : b * a = 1 /\ a * b = 1 -> unitd a.
-Proof. rewrite 2!muldE => -[[ba1 _] [ab1 _]]; apply/unitrP; by exists b``0. Qed.
+Proof. by rewrite 2!muldE => -[[ba1 _] [ab1 _]]; apply/unitrP; exists b.1. Qed.
 
 (* The inverse of a non-unit x is constrained to be x itself *)
 Lemma invd0id : {in [predC unitd], invd =1 id}.
@@ -1176,48 +1176,42 @@ Canonical dual_unitRing := UnitRingType (dual R) dual_UnitRingMixin.
 
 End dual_number_unit.
 
-Notation "x '..1'" := (ldual x) (at level 1, format "x '..1'") : dual_scope.
-Notation "x '..2'" := (rdual x) (at level 1, format "x '..2'") : dual_scope.
-
 (* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
-
 Variable R : rcfType (*realType*).
-
-Open Scope dual_scope.
+Local Open Scope dual_scope.
 
 Definition dquat := @dual (quat_unitRing R).
 
-Local Open Scope dual_scope.
+Implicit Types x y : dquat.
 
-Definition conjdq (a : dquat) : dquat := (a..1)^*q +ɛ* (a..2)^*q.
+Definition conjdq x : dquat := (x.1)^*q +ɛ* (x.2)^*q.
 
 Local Notation "x '^*dq'" := (conjdq x).
 
 Lemma conjdqD x y : (x + y)^*dq = x^*dq + y^*dq.
 Proof. by rewrite /conjdq !(adddE, linearD). Qed.
 
-Lemma conjdqI a : (a^*dq)^*dq = a.
-Proof. by rewrite /conjdq /= !conjqI; case: a. Qed.
+Lemma conjdqI x : (x^*dq)^*dq = x.
+Proof. by rewrite /conjdq /= !conjqI; case: x. Qed.
 
 Lemma conjdq0 : 0^*dq = 0.
 Proof. by rewrite /conjdq /= conjq0. Qed.
 
-Lemma conjdqM (a b : dquat) : (a * b)^*dq = b^*dq * a^*dq.
+Lemma conjdqM x y : (x * y)^*dq = y^*dq * x^*dq.
 Proof.
 rewrite /conjdq !muldE /= conjqM; congr mkDual.
 by rewrite linearD /= 2!conjqM [in LHS]addrC.
 Qed.
 
-Lemma conjdq_comm a : a^*dq * a = a * a^*dq.
+Lemma conjdq_comm x : x^*dq * x = x * x^*dq.
 Proof.
-case: a => a1 a2.
 by rewrite /conjdq /= !muldE /= ![_^*q * _]conjd_comm conjd_comm2 addrC.
 Qed.
 
-Lemma conjdq_unit a : (a^*dq \is a GRing.unit) = (a \is a GRing.unit).
+Lemma conjdq_unit x : (x^*dq \is a GRing.unit) = (x \is a GRing.unit).
 Proof.
-case: a => [] [a0 av] [b0 bv].
+case: x => [] [a0 av] [b0 bv].
 by rewrite !qualifE /= /unitd /= !qualifE /= /unitq /= !eq_quat /= oppr_eq0.
 Qed.
 
@@ -1225,32 +1219,32 @@ Definition dnum := [qualify x : dquat | x^*dq == x].
 Fact dnum_key : pred_key dnum. Proof. by []. Qed.
 Canonical dnum_keyed := KeyedQualifier dnum_key.
 
-Lemma dnumE a : (a \is dnum) = (a^*dq == a).
-Proof. done. Qed.
+Lemma dnumE x : (x \is dnum) = (x^*dq == x).
+Proof. by []. Qed.
 
-Lemma dnumE' a : (a \is dnum) = (a..1`1 == 0) && (a..2`1 == 0).
+Lemma dnumE' x : (x \is dnum) = (x.1`1 == 0) && (x.2`1 == 0).
 Proof.
-case: a => [] [a1 a2] [b1 b2]; rewrite dnumE /conjdq /=.
+case: x => [] [a1 a2] [b1 b2]; rewrite dnumE /conjdq /=.
 by rewrite -[a2 == 0]andTb -[b2 == 0]andTb;
    congr ((_ && _) && (_ && _)); rewrite ?eqxx //= eq_sym
      -subr_eq0 opprK -mulr2n -scaler_nat scalemx_eq0 (eqr_nat _ 2 0).
 Qed.
 
-Lemma dnumE'' a : (a \is dnum) = (a == (a..1`0)%:q +ɛ* (a..2`0)%:q).
+Lemma dnumE'' x : (x \is dnum) = (x == (x.1`0)%:q +ɛ* (x.2`0)%:q).
 Proof.
-case: a => [] [a1 a2] [b1 b2]; rewrite dnumE' /=.
+case: x => [] [a1 a2] [b1 b2]; rewrite dnumE' /=.
 by rewrite -[a2 == 0]andTb -[b2 == 0]andTb;
    congr ((_ && _) && (_ && _)); rewrite /= !eqxx.
 Qed.
 
-Lemma dnumD a b : a \is dnum -> b \is dnum -> a + b \is dnum.
+Lemma dnumD x y : x \is dnum -> y \is dnum -> x + y \is dnum.
 Proof. by rewrite 3!dnumE conjdqD => /eqP-> /eqP->. Qed.
 
 Lemma dnum0 : 0 \is dnum.
-Proof.  by rewrite dnumE' eqxx. Qed.
+Proof. by rewrite dnumE' eqxx. Qed.
 
 Lemma dnum1 : 1 \is dnum.
-Proof.  by rewrite dnumE' eqxx. Qed.
+Proof. by rewrite dnumE' eqxx. Qed.
 
 Lemma dnum_nat n : n%:R \is dnum.
 Proof.
@@ -1258,56 +1252,53 @@ elim: n => [|n IH]; first by rewrite dnum0.
 by rewrite -add1n natrD dnumD // dnum1.
 Qed.
 
-Lemma dnumM a b : a \is dnum -> b \is dnum -> a * b \is dnum.
+Lemma dnumM x y : x \is dnum -> y \is dnum -> x * y \is dnum.
 Proof.
 rewrite 3!dnumE' muldE /= => /andP[/eqP-> /eqP->] /andP[/eqP-> /eqP->].
 by rewrite !linear0r !scaler0 !add0r eqxx.
 Qed.
 
-Lemma dnumM_comm a b : a \is dnum -> b * a = a * b.
+Lemma dnumM_comm x y : x \is dnum -> y * x = x * y.
 Proof.
-case: b => b1 b2; rewrite dnumE'' => /eqP->.
+case: y => done1 y2; rewrite dnumE'' => /eqP->.
 by rewrite !muldE /= !quat_algE -!quatAr -!quatAl !mulr1 !mul1r addrC.
 Qed.
 
 (* squared norm *)
+Definition sqrdq x : dquat := x * x^*dq.
 
-Definition sqrdq (a : dquat) : dquat := a * a^*dq.
-
-Lemma dnum_sqrdq a : sqrdq a \in dnum.
+Lemma dnum_sqrdq x : sqrdq x \in dnum.
 Proof. by rewrite dnumE conjdqM conjdqI. Qed.
 
 (* inverse *)
+Definition invdq x : dquat := x^-1.
 
-Definition invdq (a : dquat) : dquat := a^-1.
-
-Lemma invdqEl (a : dquat) : a..1 != 0 -> invdq a = (sqrdq a)^-1 * (a^*dq).
+Lemma invdqEl x : x.1 != 0 -> invdq x = (sqrdq x)^-1 * (x^*dq).
 Proof.
 move=> aD; rewrite /sqrdq -conjdq_comm invrM  ?conjdq_unit //.
 by rewrite divrK ?conjdq_unit.
 Qed.
 
-Lemma invdqEr (a : dquat) : a..1 != 0 -> invdq a = (a^*dq) * (sqrdq a)^-1.
+Lemma invdqEr x : x.1 != 0 -> invdq x = (x^*dq) * (sqrdq x)^-1.
 Proof.
 move=> aD; rewrite /sqrdq invrM  ?conjdq_unit // mulrA.
 by rewrite mulrV ?mul1r // ?conjdq_unit.
 Qed.
 
 (* unit dual quaternions *)
-
 Definition udquat := [qualify x : dquat | sqrdq x == 1].
 Fact udquat_key : pred_key udquat. Proof. by []. Qed.
 Canonical udquat_keyed := KeyedQualifier udquat_key.
 
-Lemma udquatE (x : dquat) : (x \is udquat) = (sqrdq x == 1).
-Proof. done. Qed.
+Lemma udquatE x : (x \is udquat) = (sqrdq x == 1).
+Proof. by []. Qed.
 
-Lemma invdq_udquat a : a \is udquat -> a^-1 = a^*dq.
+Lemma invdq_udquat x : x \is udquat -> x^-1 = x^*dq.
 Proof.
 rewrite udquatE => /eqP sqE.
-suff a1NZ : a..1 != 0 by rewrite [a^-1]invdqEl // sqE invr1 mul1r.
-apply/eqP=> a1Z.
-move/eqP: sqE; rewrite [sqrdq _]muldE a1Z !mul0r => /andP[] /=.
+suff x1NZ : x.1 != 0 by rewrite [x^-1]invdqEl // sqE invr1 mul1r.
+apply/eqP=> x1Z.
+move/eqP: sqE; rewrite [sqrdq _]muldE x1Z !mul0r => /andP[] /=.
 by rewrite eq_sym oner_eq0.
 Qed.
 
@@ -1319,8 +1310,8 @@ Definition dquat_from_rot_trans (r t : quat R)
   (_ : pureq t)
   : dquat := r +ɛ* t.
 
-Definition rot_trans_from_dquat (x : dquat) :=
-  (x..1, 2%:R *: (x..2 * x..1^*q)).
+Definition rot_trans_from_dquat x :=
+  (x.1, 2%:R *: (x.2 * x.1^*q)).
 
 End dual_quaternion.
 
