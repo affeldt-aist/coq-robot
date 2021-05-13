@@ -372,7 +372,7 @@ Proof. by case: a => a0 a1; rewrite /conjq /= opprK. Qed.
 Lemma conjq0 : (0%:v)^*q = 0.
 Proof. apply/eqP; by rewrite eq_quat /= oppr0 !eqxx. Qed.
 
-Lemma conjqd_comm (a : quat R) : a^*q * a = a * a^*q.
+Lemma conjq_comm (a : quat R) : a^*q * a = a * a^*q.
 Proof.
 apply/eqP; rewrite eq_quat /=.
 do ! rewrite (linearNl,linearNr,liexx,dotmulvN,dotmulNv,subr0,opprK,
@@ -380,14 +380,14 @@ do ! rewrite (linearNl,linearNr,liexx,dotmulvN,dotmulNv,subr0,opprK,
 by rewrite addrC.
 Qed.
 
-Lemma conjqd_comm2 (a b : quat R) :
+Lemma conjq_comm2 (a b : quat R) :
   b^*q * a + a^*q * b = a * b^*q + b * a^*q.
 Proof.
 apply: (addIr (a * a ^*q + b * b ^*q)).
 rewrite [RHS]addrAC !addrA -mulrDr -[RHS]addrA -mulrDr -mulrDl -linearD /=.
-rewrite addrC !addrA -conjqd_comm -mulrDr -addrA -conjqd_comm -mulrDr -mulrDl.
+rewrite addrC !addrA -conjq_comm -mulrDr -addrA -conjq_comm -mulrDr -mulrDl.
 rewrite -linearD /= [b + a]addrC.
-by apply: conjqd_comm.
+by apply: conjq_comm.
 Qed.
 
 Lemma conjqM a b : (a * b)^*q = b^*q * a^*q.
@@ -1189,7 +1189,7 @@ Qed.
 
 Lemma conjdq_comm x : x^*dq * x = x * x^*dq.
 Proof.
-by rewrite /conjdq /= !muld_def /= ![_^*q * _]conjqd_comm conjqd_comm2 addrC.
+by rewrite /conjdq /= !muld_def /= ![_^*q * _]conjq_comm conjq_comm2 addrC.
 Qed.
 
 Lemma conjdq_unit x : (x^*dq \is a GRing.unit) = (x \is a GRing.unit).
