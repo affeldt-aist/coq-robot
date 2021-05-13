@@ -13,17 +13,18 @@ From mathcomp.analysis Require Import forms.
 (* form a ZmodType, a RingType, a LmodType, a UnitRingType. It also defines   *)
 (* polar coordinates and dual quaternions.                                    *)
 (*                                                                            *)
-(*     quat R == type of quaternions over the ringType R                      *)
-(*       x%:q == quaternion with scalar part x and vector part 0              *)
-(*       u%:v == pure quaternion with scalar part 0 and vector part u         *)
-(* `i, `j, `k == basic quaternions                                            *)
-(*        x.1 == scalar part of the quaternion x                              *)
-(*        x.2 == vector part of the quaternion x                              *)
-(*       a^*q == conjugate of quaternion a                                    *)
-(*    normq a == norm of the quaternion a                                     *)
-(*    uquat R == type of unit quaternions, i.e., quaternions with norm 1      *)
-(* quat_rot a == rotation v |-> ava^*, characterized by the lemma             *)
-(*               quat_rot_isRot                                               *)
+(*      quat R == type of quaternions over the ringType R                     *)
+(*        x%:q == quaternion with scalar part x and vector part 0             *)
+(*        u%:v == pure quaternion with scalar part 0 and vector part u        *)
+(* x \is pureq == the quaternion x has no scalar part                         *)
+(*  `i, `j, `k == basic quaternions                                           *)
+(*         x.1 == scalar part of the quaternion x                             *)
+(*         x.2 == vector part of the quaternion x                             *)
+(*        a^*q == conjugate of quaternion a                                   *)
+(*     normq a == norm of the quaternion a                                    *)
+(*     uquat R == type of unit quaternions, i.e., quaternions with norm 1     *)
+(*  quat_rot a == rotation v |-> ava^*, characterized by the lemma            *)
+(*                quat_rot_isRot                                              *)
 (*                                                                            *)
 (* Polar coordinates:                                                         *)
 (*     polar_of_quat a == polar coordinates of the quaternion a               *)
@@ -39,10 +40,11 @@ From mathcomp.analysis Require Import forms.
 (* Com/UnitRingType.                                                          *)
 (*                                                                            *)
 (* Dual quaternions:                                                          *)
-(*    x +ɛ* y == dual number formed by x and y                                *)
-(*      dquat == type of dual quaternions                                     *)
-(* a \is dnum == a is a pure dual number (no vector part)                     *)
-(*      x^*dq == conjugate of dual quaternion x                               *)
+(*     x +ɛ* y  == dual number formed by x and y                              *)
+(*        dquat == type of dual quaternions                                   *)
+(* x \is puredq == the dual quaternion x is pure                              *)
+(*   a \is dnum == a has no vector part                                       *)
+(*        x^*dq == conjugate of dual quaternion x                             *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -162,6 +164,10 @@ Proof. by rewrite quat_realD quat_realN. Qed.
 Lemma quat_vectB (x y : 'rV[R]_3) : (x - y)%:v = x%:v - y%:v.
 Proof. by rewrite quat_vectD quat_vectN. Qed.
 
+Definition pureq := [qualify x : quat | x.1 == 0].
+Fact pureq_key : pred_key pureq. Proof. by []. Qed.
+Canonical pureq_keyed := KeyedQualifier pureq_key.
+
 End quaternion0.
 
 Delimit Scope quat_scope with quat.
@@ -178,6 +184,8 @@ Notation "Q '_k'" := ((Q.2)``_(2%:R : 'I_3)) : quat_scope.
 Notation "a *`i" := (mkQuat 0 (a *: 'e_0)) : quat_scope.
 Notation "a *`j" := (mkQuat 0 (a *: 'e_1)) : quat_scope.
 Notation "a *`k" := (mkQuat 0 (a *: 'e_2%:R)) : quat_scope.
+
+Arguments pureq {R}.
 
 Import rv3LieAlgebra.Exports.
 
@@ -781,10 +789,8 @@ rewrite scalerN scaleNr opprK -addrA addrCA; congr (_ + _).
 by rewrite double_crossmul [in RHS]addrC dotmulvv.
 Qed.
 
-Definition pureq (q : quat R) : bool := q.1 == 0.
-
-Lemma quat_rot_is_vector a v : pureq (quat_rot a v).
-Proof. by rewrite quat_rotE /pureq /=. Qed.
+Lemma quat_rot_is_vector a v : (quat_rot a v) \is pureq.
+Proof. by rewrite quat_rotE qualifE. Qed.
 
 Lemma quat_rot_is_linear a : linear (fun v => (quat_rot a v).2).
 Proof.
@@ -810,7 +816,7 @@ rewrite dotmulvZ dotmulvv scalerBl !scalerA (mulrC (norm _ ^+ 2)) mulr2n addrA.
 by rewrite subrK -scalerDl mulrC -mulrDl q_is_uquat mul1r.
 Qed.
 
-Lemma cos_atan_uquat q : q \is uquat -> ~~ pureq q ->
+Lemma cos_atan_uquat q : q \is uquat -> q \isn't pureq ->
   let a := atan (norm q.2 / q.1) in cos a ^+ 2 = q.1 ^+ 2.
 Proof.
 move=> nq q00 a.
@@ -821,7 +827,7 @@ rewrite expr_div_n -mulrDl (eqP nq) sqrtrM ?ler01 // sqrtr1 mul1r.
 by rewrite -exprVn sqrtr_sqr normrV ?unitfE // invrK sqr_normr.
 Qed.
 
-Lemma sin_atan_uquat q : q \is uquat -> ~~ pureq q ->
+Lemma sin_atan_uquat q : q \is uquat -> q \isn't pureq ->
   let a := atan (norm q.2 / q.1) in sin a ^+ 2 = norm q.2 ^+ 2.
 Proof.
 move=> nq q00 a.
@@ -1198,6 +1204,10 @@ case: x => [] [a0 av] [b0 bv].
 by rewrite !qualifE /= /unitd /= !qualifE /= /unitq /= !eq_quat /= oppr_eq0.
 Qed.
 
+Definition puredq := [qualify x : dquat | (x.1 \is pureq) && (x.2 \is pureq)].
+Fact puredq_key : pred_key puredq. Proof. by []. Qed.
+Canonical puredq_keyed := KeyedQualifier puredq_key.
+
 Definition dnum := [qualify x : dquat | x^*dq == x].
 Fact dnum_key : pred_key dnum. Proof. by []. Qed.
 Canonical dnum_keyed := KeyedQualifier dnum_key.
@@ -1296,12 +1306,11 @@ Local Open Scope dual_scope.
 Implicit Types x : dquat R.
 
 Definition dquat_from_rot_trans (r t : quat R)
-  (_ : r \is uquat R) (_ : ~~ pureq r) (_ : (polar_of_quat r).1 != 0)
+  (_ : r \is uquat R) (_ : r \isn't pureq) (_ : (polar_of_quat r).1 != 0)
   (* i.e., rotation around (polar_of_quat r).1 of angle (polar_of_quat r).2 *+ 2 *)
-  (_ : pureq t)
+  (_ : t \is pureq)
   : dquat R := r +ɛ* t.
 
-Definition rot_trans_from_dquat x :=
-  (x.1, 2%:R *: (x.2 * x.1^*q)).
+Definition rot_trans_from_dquat x := (x.1, 2%:R *: (x.2 * x.1^*q)).
 
 End dquat_rbt.
