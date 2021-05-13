@@ -62,6 +62,7 @@ Reserved Notation "a *`j" (at level 3).
 Reserved Notation "a *`k" (at level 3).
 Reserved Notation "x +ɛ* y"
   (at level 40, left associativity, format "x  +ɛ*  y").
+Reserved Notation "x '^*d'" (at level 2, format "x '^*d'").
 Reserved Notation "x '^*dq'" (at level 2, format "x '^*dq'").
 
 Declare Scope quat_scope.
@@ -375,7 +376,7 @@ Proof. by case: a => a0 a1; rewrite /conjq /= opprK. Qed.
 Lemma conjq0 : (0%:v)^*q = 0.
 Proof. apply/eqP; by rewrite eq_quat /= oppr0 !eqxx. Qed.
 
-Lemma conjd_comm (a : quat R) : a^*q * a = a * a^*q.
+Lemma conjqd_comm (a : quat R) : a^*q * a = a * a^*q.
 Proof.
 apply/eqP; rewrite eq_quat /=.
 do ! rewrite (linearNl,linearNr,liexx,dotmulvN,dotmulNv,subr0,opprK,
@@ -383,14 +384,14 @@ do ! rewrite (linearNl,linearNr,liexx,dotmulvN,dotmulNv,subr0,opprK,
 by rewrite addrC.
 Qed.
 
-Lemma conjd_comm2 (a b : quat R) :
+Lemma conjqd_comm2 (a b : quat R) :
   b^*q * a + a^*q * b = a * b^*q + b * a^*q.
 Proof.
 apply: (addIr (a * a ^*q + b * b ^*q)).
 rewrite [RHS]addrAC !addrA -mulrDr -[RHS]addrA -mulrDr -mulrDl -linearD /=.
-rewrite addrC !addrA -conjd_comm -mulrDr -addrA -conjd_comm -mulrDr -mulrDl.
+rewrite addrC !addrA -conjqd_comm -mulrDr -addrA -conjqd_comm -mulrDr -mulrDl.
 rewrite -linearD /= [b + a]addrC.
-by apply: conjd_comm.
+by apply: conjqd_comm.
 Qed.
 
 Lemma conjqM a b : (a * b)^*q = b^*q * a^*q.
@@ -1086,6 +1087,9 @@ Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
 Lemma scaledE r x : r *: x = r * x.1 +ɛ* (r * x.2).
 Proof. by []. Qed.
 
+Definition conjd x := x.1 +ɛ* (- x.2).
+Local Notation "x '^*d'" := (conjd x).
+
 Definition duall (r : R) := r +ɛ* 0.
 
 Local Notation "*%:dl" := duall (at level 2).
@@ -1133,39 +1137,35 @@ End dual_comm.
 Section dual_number_unit.
 Variable R : unitRingType.
 Local Open Scope dual_scope.
+Implicit Types x : dual R.
 
 Definition unitd : pred (dual R) := [pred a : dual R | a.1 \is a GRing.unit].
 
-Definition invd (a : dual R) :=
-  if a \in unitd then
-    dual_of_mat (a.1^-1%:M * (1 - deps R * a.2%:M * (a.1)^-1%:M))
-  else
-    a.
+Definition invd x :=
+  if x \in unitd then x.1^-1 +ɛ* (- x.1^-1 * x.2 * x.1^-1) else x.
 
-Lemma mulVd : {in unitd, left_inverse 1 invd (@muld R)}.
+(* invd was previously written using matrices *)
+Fact invdE x : x \in unitd ->
+  invd x = dual_of_mat (x.1^-1%:M * (1 - deps R * x.2%:M * (x.1)^-1%:M)).
 Proof.
-move=> a0 ua0.
-rewrite /invd ua0 /dual_of_mat; congr mkDual.
-  rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
-  by rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1) mulVr.
-rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
-rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1,mulr0n,add0r,mul1r).
-by rewrite !(mulrN,mulNr) -!mulrA mulVr // mulr1 subrr.
+move : x => [q r] /=; rewrite inE /= => qu; rewrite /invd inE /= qu.
+by rewrite /dual_of_mat !(mxE,sum2E) /=; Simp.r.
 Qed.
 
-Lemma muldV : {in unitd, right_inverse 1 invd (@muld R)}.
+Lemma mulVd : {in unitd, left_inverse 1 invd *%R}.
 Proof.
-move=> a0 ua0.
-rewrite /invd ua0 /dual_of_mat; congr mkDual.
-  rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
-  by rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1) divrr.
-rewrite !mxE !sum2E !mxE !sum2E !mxE !sum2E !mxE /=.
-rewrite !(mul0r,mulr1n,addr0,mulr0,subr0,mulr1,mulr0n,add0r,mul1r).
-by rewrite !(mulrN,mulNr) mulrA divrr // mul1r addrC subrr.
+move=> [q r]; rewrite inE /= => qu.
+by rewrite /invd inE qu muldE /= -mulrA !mulVr // mulr1 mulNr subrr.
 Qed.
 
-Lemma unitdP a b : b * a = 1 /\ a * b = 1 -> unitd a.
-Proof. by rewrite 2!muldE => -[[ba1 _] [ab1 _]]; apply/unitrP; exists b.1. Qed.
+Lemma muldV : {in unitd, right_inverse 1 invd *%R}.
+Proof.
+move=> [q r]; rewrite inE /= => qu; rewrite /invd inE qu /= muldE /=.
+by rewrite 2!mulrA mulrN divrr // mulN1r mulNr addrC subrr.
+Qed.
+
+Lemma unitdP x y : y * x = 1 /\ x * y = 1 -> unitd x.
+Proof. by rewrite 2!muldE => -[[yx1 _] [xy1 _]]; apply/unitrP; exists y.1. Qed.
 
 (* The inverse of a non-unit x is constrained to be x itself *)
 Lemma invd0id : {in [predC unitd], invd =1 id}.
@@ -1206,7 +1206,7 @@ Qed.
 
 Lemma conjdq_comm x : x^*dq * x = x * x^*dq.
 Proof.
-by rewrite /conjdq /= !muldE /= ![_^*q * _]conjd_comm conjd_comm2 addrC.
+by rewrite /conjdq /= !muldE /= ![_^*q * _]conjqd_comm conjqd_comm2 addrC.
 Qed.
 
 Lemma conjdq_unit x : (x^*dq \is a GRing.unit) = (x \is a GRing.unit).
