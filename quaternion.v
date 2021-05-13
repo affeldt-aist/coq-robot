@@ -976,6 +976,10 @@ Canonical Structure dual_choiceType := ChoiceType dual dual_choiceMixin.
 
 Definition oppd x := (- x.1) +ɛ* (- x.2).
 
+Definition addd x y := (x.1 + y.1) +ɛ* (x.2 + y.2).
+
+Definition muld x y := x.1 * y.1 +ɛ* (x.1 * y.2 + x.2 * y.1).
+
 Definition deps : 'M[R]_2 :=
   \matrix_(i < 2, j < 2) ((i == 0) && (j == 1))%:R.
 
@@ -989,18 +993,14 @@ Definition mat_of_dual x : 'M[R]_2 := x.1%:M + x.2 *: deps.
 
 Definition dual_of_mat (M : 'M[R]_2) := (M 0 0) +ɛ* (M 0 1).
 
-Definition addd x y := dual_of_mat (mat_of_dual x + mat_of_dual y).
-
-Definition muld x y := dual_of_mat (mat_of_dual x * mat_of_dual y).
-
-Let adddE' x y : addd x y = (x.1 + y.1) +ɛ* (x.2 + y.2).
+Lemma adddE x y : addd x y = dual_of_mat (mat_of_dual x + mat_of_dual y).
 Proof.
 rewrite /addd /dual_of_mat /mat_of_dual /= !mxE; congr mkDual.
 by rewrite !eqxx !(mulr1n,andbF,mulr1,mulr0,addr0).
 by rewrite !mulr0n !eqxx !mulr1 !add0r.
 Qed.
 
-Let muldE' x y : muld x y = x.1 * y.1 +ɛ* (x.1 * y.2 + x.2 * y.1).
+Lemma muldE x y : muld x y = dual_of_mat (mat_of_dual x * mat_of_dual y).
 Proof.
 rewrite /muld /dual_of_mat /mat_of_dual /= !mxE !sum2E !mxE; congr mkDual.
 by rewrite !eqxx !(mulr0n,mulr1n,mulr0,mulr1,addr0).
@@ -1008,43 +1008,44 @@ by rewrite !eqxx !(mulr0n,mulr1n,mulr0,add0r,addr0,mulr1).
 Qed.
 
 Lemma adddA : associative addd.
-Proof. by move=> x y z; rewrite !adddE' /= 2!addrA. Qed.
+Proof. by move=> x y z; rewrite /addd 2!addrA. Qed.
 
 Lemma adddC : commutative addd.
-Proof.
-by move=> x y; rewrite !adddE' /= addrC [in X in _ +ɛ* X = _]addrC.
-Qed.
+Proof. by move=> x y; rewrite /addd addrC [in X in _ +ɛ* X = _]addrC. Qed.
 
 Lemma add0d : left_id dual0 addd.
-Proof. by move=> x; rewrite adddE' /= 2!add0r; case: x. Qed.
+Proof. by move=> x; rewrite /addd 2!add0r; case: x. Qed.
 
 Lemma addNd : left_inverse dual0 oppd addd.
-Proof. by move=> x; rewrite adddE' /= 2!addNr. Qed.
+Proof. by move=> x; rewrite /addd 2!addNr. Qed.
 
 Definition dual_ZmodMixin := ZmodMixin adddA adddC add0d addNd.
 Canonical dual_ZmodType := ZmodType dual dual_ZmodMixin.
 
+Lemma addd_def x y : x + y = (x.1 + y.1) +ɛ* (x.2 + y.2).
+Proof. by []. Qed.
+
 Lemma muldA : associative muld.
 Proof.
-move=> x y z; rewrite !muldE' /=; congr mkDual; first by rewrite mulrA.
+move=> x y z; rewrite /muld; congr mkDual; first by rewrite mulrA.
 by rewrite mulrDr mulrDl !mulrA addrA.
 Qed.
 
 Lemma mul1d : left_id dual1 muld.
-Proof. by case=> x0 x1; rewrite muldE' /= 2!mul1r mul0r addr0. Qed.
+Proof. by case=> x0 x1; rewrite /muld 2!mul1r mul0r addr0. Qed.
 
 Lemma muld1 : right_id dual1 muld.
-Proof. by case=> x0 x1; rewrite muldE' /= 2!mulr1 mulr0 add0r. Qed.
+Proof. by case=> x0 x1; rewrite /muld 2!mulr1 mulr0 add0r. Qed.
 
 Lemma muldDl : left_distributive muld addd.
 Proof.
-move=> x y z; rewrite !muldE' !adddE' /= mulrDl; congr mkDual.
+move=> x y z; rewrite /muld /addd mulrDl; congr mkDual.
 by rewrite mulrDl -!addrA; congr (_ + _); rewrite mulrDl addrCA.
 Qed.
 
 Lemma muldDr : right_distributive muld addd.
 Proof.
-move=> x y z; rewrite !muldE' !adddE' /= mulrDr; congr mkDual.
+move=> x y z; rewrite /muld /addd mulrDr; congr mkDual.
 by rewrite mulrDr -!addrA; congr (_ + _); rewrite mulrDr addrCA.
 Qed.
 
@@ -1054,11 +1055,8 @@ Proof. by apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
 Definition dual_RingMixin := RingMixin muldA mul1d muld1 muldDl muldDr oned_neq0.
 Canonical Structure dual_Ring := Eval hnf in RingType dual dual_RingMixin.
 
-Lemma adddE x y : x + y = (x.1 + y.1) +ɛ* (x.2 + y.2).
-Proof. exact: adddE'. Qed.
-
-Lemma muldE x y : x * y = (x.1 * y.1) +ɛ* (x.1 * y.2 + x.2 * y.1).
-Proof. exact: muldE'. Qed.
+Lemma muld_def x y : x * y = x.1 * y.1 +ɛ* (x.1 * y.2 + x.2 * y.1).
+Proof. by []. Qed.
 
 Definition scaled r x := r * x.1 +ɛ* (r * x.2).
 
@@ -1069,20 +1067,13 @@ Lemma scaled1 : left_id 1 scaled.
 Proof. by rewrite /left_id /scaled /=; case=> ? ? /=; rewrite !mul1r. Qed.
 
 Lemma scaledDr : @right_distributive R dual scaled +%R.
-Proof.
-move=> r x y; rewrite /scaled; congr mkDual; by rewrite !mxE /=
-  !(mulr0,addr0,mulr1n,mulr1,mulr0n,add0r) mxE mulrDr !mxE /=
-  !(eqxx,mulr1n,mulr0,addr0,mulr1,mulr0n,add0r).
-Qed.
+Proof. by move=> r x y; rewrite /scaled /= !mulrDr. Qed.
 
 Lemma scaledDl x : {morph (scaled^~ x : R -> dual) : a b / a + b}.
-Proof. by move=> a b; rewrite /scaled /= !mulrDl adddE. Qed.
+Proof. by move=> a b; rewrite /scaled !mulrDl. Qed.
 
 Definition dual_lmodMixin := LmodMixin scaledA scaled1 scaledDr scaledDl.
 Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
-
-Lemma scaledE r x : r *: x = r * x.1 +ɛ* (r * x.2).
-Proof. by []. Qed.
 
 Definition conjd x := x.1 -ɛ* x.2.
 Local Notation "x '^*d'" := (conjd x).
@@ -1094,13 +1085,9 @@ Local Notation "r %:dl" := (duall r) (at level 2).
 
 Fact duall_is_rmorphism : rmorphism *%:dl.
 Proof.
-split => [p q|].
-  by congr mkDual; rewrite /= !mxE //= oppr0 !mul0r !addr0 ?mulr1n //.
-split => [p q|] //.
-by congr mkDual; rewrite !mxE /= !big_ord_recr big_ord0 !mxE /=
-                          !(add0r, mul0r, addr0, mulr0) ?mulr1n.
+split => [p q|]; first by congr mkDual; rewrite /= subrr.
+split => [p q|] //; by congr mkDual; rewrite /=; Simp.r.
 Qed.
-
 Canonical duall_rmorphism := RMorphism duall_is_rmorphism.
 
 (* Sanity check : Taylor series for polynomial *)
@@ -1109,9 +1096,9 @@ Lemma dual_deriv_poly (p : {poly R}) r :
 Proof.
 elim/poly_ind : p => [|p b IH]; first by rewrite map_poly0 deriv0 !horner0.
 rewrite !(rmorphD, rmorphM) /= map_polyX (map_polyC duall_rmorphism) /=.
-rewrite derivD derivC derivM derivX mulr1 addr0.
-rewrite !hornerMXaddC hornerD hornerMX IH.
-by rewrite muldE adddE /= mulr1 addr0 [p.[r] + _]addrC.
+rewrite derivD derivC derivM derivX; Simp.r.
+rewrite !hornerMXaddC hornerD hornerMX IH; congr mkDual => /=.
+by Simp.r; rewrite addrC.
 Qed.
 
 End dual_number.
@@ -1124,10 +1111,9 @@ Variable R : comRingType.
 
 Fact muld_comm (p q : dual R) : p * q = q * p.
 Proof.
-case: p => p1 p2; case: q => q1 q2.
-by rewrite !muldE /= addrC mulrC [p2 * _]mulrC [q2 * _]mulrC.
+case: p => p1 p2; case: q => q1 q2; rewrite !muld_def /=.
+by rewrite addrC mulrC [p2 * _]mulrC [q2 * _]mulrC.
 Qed.
-
 Canonical dual_comRingType := Eval hnf in ComRingType (dual R) muld_comm.
 
 End dual_comm.
@@ -1153,17 +1139,17 @@ Qed.
 Lemma mulVd : {in unitd, left_inverse 1 invd *%R}.
 Proof.
 move=> [q r]; rewrite inE /= => qu.
-by rewrite /invd inE qu muldE /= mulNr -mulrA !mulVr// mulr1 subrr.
+by rewrite /invd inE qu muld_def /= mulNr -mulrA !mulVr// mulr1 subrr.
 Qed.
 
 Lemma muldV : {in unitd, right_inverse 1 invd *%R}.
 Proof.
-move=> [q r]; rewrite inE /= => qu; rewrite /invd inE qu /= muldE /=.
+move=> [q r]; rewrite inE /= => qu; rewrite /invd inE qu /= muld_def /=.
 by rewrite mulrN 2!mulrA divrr// mul1r addrC subrr.
 Qed.
 
 Lemma unitdP x y : y * x = 1 /\ x * y = 1 -> unitd x.
-Proof. by rewrite 2!muldE => -[[yx1 _] [xy1 _]]; apply/unitrP; exists y.1. Qed.
+Proof. by rewrite 2!muld_def => -[[? _] [? _]]; apply/unitrP; exists y.1. Qed.
 
 (* The inverse of a non-unit x is constrained to be x itself *)
 Lemma invd0id : {in [predC unitd], invd =1 id}.
@@ -1197,13 +1183,13 @@ Proof. by rewrite /conjdq /= conjq0. Qed.
 
 Lemma conjdqM x y : (x * y)^*dq = y^*dq * x^*dq.
 Proof.
-rewrite /conjdq !muldE /= conjqM; congr mkDual.
+rewrite /conjdq !muld_def /= conjqM; congr mkDual.
 by rewrite linearD /= 2!conjqM [in LHS]addrC.
 Qed.
 
 Lemma conjdq_comm x : x^*dq * x = x * x^*dq.
 Proof.
-by rewrite /conjdq /= !muldE /= ![_^*q * _]conjqd_comm conjqd_comm2 addrC.
+by rewrite /conjdq /= !muld_def /= ![_^*q * _]conjqd_comm conjqd_comm2 addrC.
 Qed.
 
 Lemma conjdq_unit x : (x^*dq \is a GRing.unit) = (x \is a GRing.unit).
@@ -1251,14 +1237,14 @@ Qed.
 
 Lemma dnumM x y : x \is dnum -> y \is dnum -> x * y \is dnum.
 Proof.
-rewrite 3!dnumE' muldE /= => /andP[/eqP-> /eqP->] /andP[/eqP-> /eqP->].
+rewrite 3!dnumE' muld_def /= => /andP[/eqP-> /eqP->] /andP[/eqP-> /eqP->].
 by rewrite !linear0r !scaler0 !add0r eqxx.
 Qed.
 
 Lemma dnumM_comm x y : x \is dnum -> y * x = x * y.
 Proof.
 case: y => done1 y2; rewrite dnumE'' => /eqP->.
-by rewrite !muldE /= !quat_algE -!quatAr -!quatAl !mulr1 !mul1r addrC.
+by rewrite !muld_def /= !quat_algE -!quatAr -!quatAl !mulr1 !mul1r addrC.
 Qed.
 
 (* squared norm *)
@@ -1295,7 +1281,7 @@ Proof.
 rewrite udquatE => /eqP sqE.
 suff x1NZ : x.1 != 0 by rewrite [x^-1]invdqEl // sqE invr1 mul1r.
 apply/eqP=> x1Z.
-move/eqP: sqE; rewrite [sqrdq _]muldE x1Z !mul0r => /andP[] /=.
+move/eqP: sqE; rewrite [sqrdq _]muld_def x1Z !mul0r => /andP[] /=.
 by rewrite eq_sym oner_eq0.
 Qed.
 
