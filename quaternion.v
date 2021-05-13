@@ -62,6 +62,8 @@ Reserved Notation "a *`j" (at level 3).
 Reserved Notation "a *`k" (at level 3).
 Reserved Notation "x +ɛ* y"
   (at level 40, left associativity, format "x  +ɛ*  y").
+Reserved Notation "x -ɛ* y"
+  (at level 40, left associativity, format "x  -ɛ*  y").
 Reserved Notation "x '^*d'" (at level 2, format "x '^*d'").
 Reserved Notation "x '^*dq'" (at level 2, format "x '^*dq'").
 
@@ -961,6 +963,7 @@ Record dual := mkDual {ldual : R ; rdual : R}.
 Implicit Types x y : dual.
 
 Local Notation "x +ɛ* y" := (mkDual x y).
+Local Notation "x -ɛ* y" := (mkDual x (- y)).
 
 Definition dual0 : dual := 0 +ɛ* 0.
 Definition dual1 : dual := 1 +ɛ* 0.
@@ -1087,7 +1090,7 @@ Canonical dual_lmodType := Eval hnf in LmodType R dual dual_lmodMixin.
 Lemma scaledE r x : r *: x = r * x.1 +ɛ* (r * x.2).
 Proof. by []. Qed.
 
-Definition conjd x := x.1 +ɛ* (- x.2).
+Definition conjd x := x.1 -ɛ* x.2.
 Local Notation "x '^*d'" := (conjd x).
 
 Definition duall (r : R) := r +ɛ* 0.
@@ -1119,7 +1122,8 @@ Qed.
 
 End dual_number.
 
-Local Notation "a +ɛ* b" := (mkDual a b) : dual_scope.
+Notation "a +ɛ* b" := (mkDual a b) : dual_scope.
+Notation "a -ɛ* b" := (mkDual a (- b)) : dual_scope.
 
 Section dual_comm.
 Variable R : comRingType.
@@ -1137,14 +1141,14 @@ End dual_comm.
 Section dual_number_unit.
 Variable R : unitRingType.
 Local Open Scope dual_scope.
-Implicit Types x : dual R.
+Implicit Types x y : dual R.
 
-Definition unitd : pred (dual R) := [pred a : dual R | a.1 \is a GRing.unit].
+Definition unitd : pred (dual R) := [pred x : dual R | x.1 \is a GRing.unit].
 
 Definition invd x :=
-  if x \in unitd then x.1^-1 +ɛ* (- x.1^-1 * x.2 * x.1^-1) else x.
+  if x \in unitd then x.1^-1 -ɛ* (x.1^-1 * x.2 * x.1^-1) else x.
 
-(* invd was previously written using matrices *)
+(* NB: invd was previously written using matrices *)
 Fact invdE x : x \in unitd ->
   invd x = dual_of_mat (x.1^-1%:M * (1 - deps R * x.2%:M * (x.1)^-1%:M)).
 Proof.
@@ -1155,13 +1159,13 @@ Qed.
 Lemma mulVd : {in unitd, left_inverse 1 invd *%R}.
 Proof.
 move=> [q r]; rewrite inE /= => qu.
-by rewrite /invd inE qu muldE /= -mulrA !mulVr // mulr1 mulNr subrr.
+by rewrite /invd inE qu muldE /= mulNr -mulrA !mulVr// mulr1 subrr.
 Qed.
 
 Lemma muldV : {in unitd, right_inverse 1 invd *%R}.
 Proof.
 move=> [q r]; rewrite inE /= => qu; rewrite /invd inE qu /= muldE /=.
-by rewrite 2!mulrA mulrN divrr // mulN1r mulNr addrC subrr.
+by rewrite mulrN 2!mulrA divrr// mul1r addrC subrr.
 Qed.
 
 Lemma unitdP x y : y * x = 1 /\ x * y = 1 -> unitd x.
@@ -1169,14 +1173,13 @@ Proof. by rewrite 2!muldE => -[[yx1 _] [xy1 _]]; apply/unitrP; exists y.1. Qed.
 
 (* The inverse of a non-unit x is constrained to be x itself *)
 Lemma invd0id : {in [predC unitd], invd =1 id}.
-Proof. move=> a; by rewrite inE /= /invd => /negbTE ->. Qed.
+Proof. by move=> x; rewrite inE /= /invd => /negbTE ->. Qed.
 
 Definition dual_UnitRingMixin := UnitRingMixin mulVd muldV unitdP invd0id.
 Canonical dual_unitRing := UnitRingType (dual R) dual_UnitRingMixin.
 
 End dual_number_unit.
 
-(* TODO: dual quaternions and rigid body transformations *)
 Section dual_quaternion.
 Variable R : rcfType (*realType*).
 Local Open Scope dual_scope.
@@ -1302,17 +1305,23 @@ move/eqP: sqE; rewrite [sqrdq _]muldE x1Z !mul0r => /andP[] /=.
 by rewrite eq_sym oner_eq0.
 Qed.
 
-(* dual quaternions and rbt's *)
+End dual_quaternion.
+
+Notation "x '^*dq'" := (conjdq x) : dual_scope.
+
+(* TODO: dual quaternions and rigid body transformations *)
+Section dquat_rbt.
+Variable R : rcfType (*realType*).
+Local Open Scope dual_scope.
+Implicit Types x : dquat R.
 
 Definition dquat_from_rot_trans (r t : quat R)
   (_ : r \is uquat R) (_ : ~~ pureq r) (_ : (polar_of_quat r).1 != 0)
   (* i.e., rotation around (polar_of_quat r).1 of angle (polar_of_quat r).2 *+ 2 *)
   (_ : pureq t)
-  : dquat := r +ɛ* t.
+  : dquat R := r +ɛ* t.
 
 Definition rot_trans_from_dquat x :=
   (x.1, 2%:R *: (x.2 * x.1^*q)).
 
-End dual_quaternion.
-
-Notation "x '^*dq'" := (conjdq x) : dual_scope.
+End dquat_rbt.
