@@ -4,7 +4,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean skew vec_angle frame.
-From mathcomp.analysis Require Import forms.
+From mathcomp.analysis Require Import reals forms.
 
 (******************************************************************************)
 (*                              Rotations                                     *)
@@ -72,7 +72,7 @@ Local Open Scope ring_scope.
 
 Section two_dimensional_rotation.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types (a b : angle T) (M : 'M[T]_2).
 
 Definition RO a := col_mx2 (row2 (cos a) (sin a)) (row2 (- sin a) (cos a)).
@@ -172,7 +172,7 @@ Qed.
 End two_dimensional_rotation.
 
 Section elementary_rotations.
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types a b : angle T.
 
 Local Open Scope frame_scope.
@@ -325,7 +325,7 @@ Section isRot.
 
 Local Open Scope frame_scope.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types a : angle T.
 
 Definition isRot a (u : 'rV[T]_3) (f : {linear 'rV_3 -> 'rV_3}) : bool :=
@@ -569,7 +569,7 @@ End isRot.
 
 Section exponential_map_rot.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Implicit Types (u v w : vector) (a b : angle T) (M : 'M[T]_3).
 
@@ -989,7 +989,7 @@ Notation "'`e^(' a ',' w ')'" := (emx3 a \S( w )).
 Module Aa.
 Section angle_of_angle_axis_representation.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Implicit Types M : 'M[T]_3.
 
@@ -1198,7 +1198,7 @@ End angle_of_angle_axis_representation.
 
 Section axis_of_angle_axis_representation.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 
 Definition naxial a (M : 'M[T]_3) := ((sin a) *+ 2)^-1 *: axial M.
@@ -1263,7 +1263,7 @@ End Aa.
 
 Section angle_axis_of_rot.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 
 Definition log_rot (M : 'M[T]_3) : angle T * 'rV[T]_3 :=
@@ -1372,7 +1372,7 @@ End angle_axis_of_rot.
 
 Section angle_axis_representation.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 
 Record angle_axis := AngleAxis {
@@ -1504,7 +1504,7 @@ End properties_of_orthogonal_matrices.
 
 (* wip *)
 Section euler_angles.
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types R : 'M[T]_3.
 Local Open Scope frame_scope.
 Import rv3LieAlgebra.Exports.
@@ -1827,7 +1827,7 @@ End euler_angles.
 
 Section euler_angles2.
 
-Variables (T : rcfType).
+Variables (T : realType).
 
 (* Nsatz *)
 Lemma Tsth : Setoid_Theory T (@eq T).

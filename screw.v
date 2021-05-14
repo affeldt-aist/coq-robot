@@ -1044,7 +1044,7 @@ End TwistComputationExample.
 
 Module Screw.
 Section screw.
-Variable T : rcfType.
+Variable T : realType.
 Record t := mk {
   l : Line.t T ;
   a : angle T ;
@@ -1306,7 +1306,7 @@ End etwist_alt.
 
 Section Chasles.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 
@@ -1379,7 +1379,7 @@ End Chasles.
 
 Section screw_axis_point_helper.
 
-Variables (T : rcfType) (a : angle T).
+Variables (T : realType) (a : angle T).
 
 Definition Ncos2 := (1 - cos a) *+ 2.
 
@@ -1408,7 +1408,7 @@ End screw_axis_point_helper.
 
 Section screw_axis_point_def.
 
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 Variable f : 'DIso_3[T].
 Let Q : 'M[T]_3 := ortho_of_iso f.
@@ -1420,7 +1420,7 @@ Definition screw_axis_point (p : point) : point :=
 End screw_axis_point_def.
 
 Section screw_axis_point.
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 Import rv3LieAlgebra.Exports.
@@ -1647,7 +1647,7 @@ End screw_axis_point.
 
 (* [murray] exercise 13, p.77 (wip) *)
 Section twist_coor_trans.
-Variable T : rcfType.
+Variable T : realType.
 Variable s : screw T.
 Let h := Screw.h s.
 Let l := Screw.l s.

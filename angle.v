@@ -84,9 +84,11 @@ Abort.
 
 End nthroot.
 
+From mathcomp Require Import reals.
+
 Section angle_def.
 
-Variable T : rcfType.
+Variable T : realType.
 
 Record angle := Angle {
   expi : T[i];
@@ -223,7 +225,7 @@ Arguments pi {T}.
 
 Section angle_basic_prop.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types a b : angle T.
 
 Lemma add_angleE a b : a + b = add_angle a b.
@@ -835,7 +837,7 @@ End angle_basic_prop.
 
 Section half_angle.
 
-Variable T : rcfType.
+Variable T : realType.
 
 Definition half_anglec (x : T[i]) :=
   (if 0 <= complex.Im x then
@@ -1040,7 +1042,7 @@ Qed.
 
 End half_angle.
 
-Lemma atan2_N1N1 (T : rcfType) : atan2 (- 1) (- 1) = - piquarter T *+ 3.
+Lemma atan2_N1N1 (T : realType) : atan2 (- 1) (- 1) = - piquarter T *+ 3.
 Proof.
 rewrite /atan2 ltr0N1 ltrN10 ler0N1 divrr; last first.
   by rewrite unitfE eqr_oppLR oppr0 oner_neq0.
@@ -1050,7 +1052,7 @@ Qed.
 
 Section properties_of_atan2.
 
-Variables (T : rcfType).
+Variables (T : realType).
 
 Lemma sqrtr_sqrN2 (x : T) : x != 0 -> Num.sqrt (x ^- 2) = `|x|^-1.
 Proof.
@@ -1195,7 +1197,7 @@ End properties_of_atan2.
 
 Section derived_trigonometric_functions.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types a : angle T.
 
 Definition cot a := (tan a)^-1.
