@@ -13,24 +13,25 @@ From mathcomp.analysis Require Import forms.
 (* form a ZmodType, a RingType, a LmodType, a UnitRingType. It also defines   *)
 (* polar coordinates and dual quaternions.                                    *)
 (*                                                                            *)
-(*      quat R == type of quaternions over the ringType R                     *)
-(*        x%:q == quaternion with scalar part x and vector part 0             *)
-(*        u%:v == pure quaternion with scalar part 0 and vector part u        *)
-(* x \is pureq == the quaternion x has no scalar part                         *)
-(*  `i, `j, `k == basic quaternions                                           *)
-(*         x.1 == scalar part of the quaternion x                             *)
-(*         x.2 == vector part of the quaternion x                             *)
-(*        a^*q == conjugate of quaternion a                                   *)
-(*     normq a == norm of the quaternion a                                    *)
-(*     uquat R == type of unit quaternions, i.e., quaternions with norm 1     *)
+(*        quat R == type of quaternions over the ringType R                   *)
+(*          x%:q == quaternion with scalar part x and vector part 0           *)
+(*          u%:v == pure quaternion with scalar part 0 and vector part u      *)
+(*   x \is pureq == the quaternion x has no scalar part                       *)
+(*    `i, `j, `k == basic quaternions                                         *)
+(*           x.1 == scalar part of the quaternion x                           *)
+(*           x.2 == vector part of the quaternion x                           *)
+(*          a^*q == conjugate of quaternion a                                 *)
+(*       normq a == norm of the quaternion a                                  *)
+(*       uquat R == type of unit quaternions, i.e., quaternions with norm 1   *)
+(* conjugation x == v |-> x v x^*                                             *)
 (*                                                                            *)
 (* Polar coordinates:                                                         *)
 (*     polar_of_quat a == polar coordinates of the quaternion a               *)
 (*   quat_of_polar a u == quaternion corresponding to the polar coordinates   *)
 (*                        angle a and vector u                                *)
-(*          quat_rot a == rotation v |-> ava^*, characterized by the lemma    *)
-(*                        quat_rot_isRot                                      *)
-(*                                                                            *)
+(*          quat_rot x == snd \o conjugation x (rotation of angle 2a about    *)
+(*                        vector v where a,v are the polar coordinates of x,  *)
+(*                        a unit quaternion                                   *)
 (* Dual numbers:                                                              *)
 (*     dual R == the type of dual numbers over a ringType R                   *)
 (*        x.1 == left part of the dual number x                               *)
@@ -767,6 +768,43 @@ Qed.
 End quaternion1.
 Arguments uquat {R}.
 
+Section conjugation.
+Variable R : rcfType.
+Implicit Types (a : quat R) (v : 'rV[R]_3).
+
+Definition conjugation x v : quat R := x * v%:v * x^*q.
+
+Lemma conjugationE x v : conjugation x v =
+  ((x.1 ^+ 2 - norm x.2 ^+ 2) *: v +
+   ((x.2 *d v) *: x.2) *+ 2 +
+   (x.1 *: (x.2 *v v)) *+ 2)%:v.
+Proof.
+case: x => x1 x2 /=; rewrite /conjugation /= /conjq /= mulqE /mulq /=.
+rewrite mulr0 scale0r addr0 add0r; congr mkQuat.
+  rewrite dotmulvN opprK dotmulDl (dotmulC (_ *v _) x2) dot_crossmulC.
+  by rewrite liexx dotmul0v addr0 dotmulZv mulNr mulrC dotmulC addrC subrr.
+rewrite scalerDr scalerA -expr2 addrCA scalerBl -!addrA; congr (_ + _).
+rewrite [in X in _ + X = _]linearN /= (lieC _ x2) linearD /= opprK.
+rewrite linearZ /= (addrA (x1 *: _ )) -mulr2n.
+rewrite [in LHS]addrCA 2![in RHS]addrA [in RHS]addrC; congr (_ + _).
+rewrite scalerN scaleNr opprK -addrA addrCA; congr (_ + _).
+by rewrite double_crossmul [in RHS]addrC dotmulvv.
+Qed.
+
+Lemma conjugation_is_pure x v : conjugation x v \is pureq.
+Proof. by rewrite conjugationE qualifE. Qed.
+
+Lemma conjugation_axis x k : x \is uquat ->
+  conjugation x (k *: x.2) = (k *: x.2)%:v.
+Proof.
+rewrite uquatE /sqrq => /eqP q_is_uquat; rewrite conjugationE.
+rewrite [in X in (_ + _ + X)%:v = _]linearZ /= liexx 2!scaler0 mul0rn addr0.
+rewrite dotmulvZ dotmulvv scalerBl !scalerA (mulrC (norm _ ^+ 2)) mulr2n addrA.
+by rewrite subrK -scalerDl mulrC -mulrDr q_is_uquat mulr1.
+Qed.
+
+End conjugation.
+
 Section polar_coordinates.
 Variable R : rcfType.
 Implicit Types (x : quat R) (v : 'rV[R]_3) (a : angle R).
@@ -786,6 +824,43 @@ Lemma uquat_of_polar a v (v1 : norm v = 1) : quat_of_polar a v \is uquat.
 Proof.
 by rewrite qualifE /quat_of_polar /normq /sqrq /= normZ v1 mulr1 sqr_normr
            cos2Dsin2 sqrtr1.
+Qed.
+
+Lemma conjugation_quat_of_polarii v a : norm v = 1 ->
+  (conjugation (quat_of_polar a v) v).2 = v.
+Proof.
+move=> v1; rewrite conjugationE /= normZ exprMn v1 expr1n mulr1 sqr_normr.
+rewrite dotmulZv dotmulvv v1 expr1n mulr1 linearZl_LR liexx 2!scaler0 mul0rn.
+rewrite addr0 scalerA -expr2 mulr2n scalerBl addrA subrK -scalerDl cos2Dsin2.
+by rewrite scale1r.
+Qed.
+
+Local Open Scope frame_scope.
+
+Lemma conjugation_quat_of_polarij v a : norm v = 1 ->
+  (conjugation (quat_of_polar a v) (Base.frame v)|,1).2 =
+  cos (a *+ 2) *: (Base.frame v)|,1 + sin (a *+ 2) *: (Base.frame v)|,2%:R.
+Proof.
+move=> v1; rewrite conjugationE /= normZ v1 mulr1 sqr_normr dotmulZv.
+have v0 : v != 0 by rewrite -norm_eq0 v1 oner_neq0.
+move: (noframe_idotj (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
+rewrite mulr0 scale0r mul0rn addr0 linearZl_LR /=.
+move: (frame_icrossj (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
+rewrite scalerA [in RHS]mulr2n cosD sinD -!expr2; congr (_ + _).
+by rewrite (mulrC (sin a)) -mulr2n -scalerMnl.
+Qed.
+
+Lemma conjugation_quat_of_polarik v a : norm v = 1 ->
+  (conjugation (quat_of_polar a v) (Base.frame v)|,2%:R).2 =
+  - sin (a *+ 2) *: (Base.frame v)|,1 + cos (a *+ 2) *: (Base.frame v)|,2%:R.
+Proof.
+move=> v1; rewrite conjugationE /= normZ v1 mulr1 sqr_normr dotmulZv.
+have v0 : v != 0 by rewrite -norm_eq0 v1 oner_neq0.
+move: (noframe_idotk (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
+rewrite mulr0 scale0r mul0rn addr0 linearZl_LR /=.
+move: (frame_icrossk (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
+rewrite 2!scalerN scalerA sinD cosD -!expr2 addrC scaleNr; congr (_ + _).
+by rewrite (mulrC (sin a)) -mulr2n -scalerMnl mulNrn.
 Qed.
 
 Definition polar_of_quat x : ('rV_3 * angle R)%type :=
@@ -830,33 +905,13 @@ move: u1; have [-> _|a0P /eqP u1 |a0N /eqP u1] := sgzP a0.
   by rewrite invrK opprK -mulrA mulVf ?lt_eqF// mulr1 norm_scale_normalize.
 Qed.
 
-Definition quat_rot x v : quat R := x * v%:v * x^*q.
+Definition quat_rot x : 'rV[R]_3 -> 'rV[R]_3 := snd \o locked (conjugation x).
 
-Lemma quat_rotE x v : quat_rot x v =
-  ((x.1 ^+ 2 - norm x.2 ^+ 2) *: v +
-   ((x.2 *d v) *: x.2) *+ 2 +
-   (x.1 *: (x.2 *v v)) *+ 2)%:v.
-Proof.
-case: x => a0 a1 /=.
-rewrite /quat_rot /= /conjq /= mulqE /mulq /=.
-rewrite mulr0 scale0r addr0 add0r; congr mkQuat.
-  rewrite dotmulvN opprK dotmulDl (dotmulC (_ *v _) a1) dot_crossmulC.
-  by rewrite liexx dotmul0v addr0 dotmulZv mulNr mulrC dotmulC addrC subrr.
-rewrite scalerDr scalerA -expr2 addrCA scalerBl -!addrA; congr (_ + _).
-rewrite [in X in _ + X = _]linearN /= (lieC _ a1) linearD /= opprK.
-rewrite linearZ /= (addrA (a0 *: _ )) -mulr2n.
-rewrite [in LHS]addrCA 2![in RHS]addrA [in RHS]addrC; congr (_ + _).
-rewrite scalerN scaleNr opprK -addrA addrCA; congr (_ + _).
-by rewrite double_crossmul [in RHS]addrC dotmulvv.
-Qed.
-
-Lemma quat_rot_is_vector x v : quat_rot x v \is pureq.
-Proof. by rewrite quat_rotE qualifE. Qed.
-
-Lemma quat_rot_is_linear x : linear (fun v => (quat_rot x v).2).
+Lemma quat_rot_is_linear x : linear (quat_rot x).
 Proof.
 move=> k u v.
-rewrite !quat_rotE /= scalerDr scalerA (mulrC _ k) -scalerA.
+rewrite /quat_rot /=; unlock; rewrite !conjugationE.
+rewrite scalerDr scalerA (mulrC _ k) -scalerA.
 rewrite 2![in RHS]scalerDr -2![in LHS]addrA -3![in RHS]addrA; congr (_ + _).
 rewrite [in RHS]addrA [in RHS]addrCA -[in RHS]addrA; congr (_ + _).
 rewrite dotmulDr scalerDl mulrnDl -addrA addrCA; congr (_ + _).
@@ -864,68 +919,20 @@ rewrite dotmulvZ -scalerA scalerMnr -addrA; congr (_ + _).
 rewrite linearD /= scalerDr mulrnDl; congr (_ + _).
 by rewrite linearZ /= scalerA mulrC -scalerA -scalerMnr.
 Qed.
-
-Lemma quat_rot_is_linearE x v :
-  Linear (quat_rot_is_linear x) v = (quat_rot x v).2.
-Proof. by []. Qed.
-
-Lemma quat_rot_axis x k : x \is uquat -> quat_rot x (k *: x.2) = (k *: x.2)%:v.
-Proof.
-rewrite uquatE /sqrq => /eqP q_is_uquat; rewrite quat_rotE.
-rewrite [in X in (_ + _ + X)%:v = _]linearZ /= liexx 2!scaler0 mul0rn addr0.
-rewrite dotmulvZ dotmulvv scalerBl !scalerA (mulrC (norm _ ^+ 2)) mulr2n addrA.
-by rewrite subrK -scalerDl mulrC -mulrDl q_is_uquat mul1r.
-Qed.
-
-Local Open Scope frame_scope.
+Canonical quat_rot_linear x := Linear (quat_rot_is_linear x).
 
 Lemma quat_rot_isRot_polar v a : norm v = 1 ->
-  isRot (a *+2) v (Linear (quat_rot_is_linear (quat_of_polar a v))).
+  isRot (a *+2) v [linear of quat_rot (quat_of_polar a v)].
 Proof.
-move=> v1 /=.
-have uNZ : v != 0.
-  by apply/eqP=> uZ; move/eqP: v1; rewrite uZ norm0 //= (eqr_nat R 0 1).
-pose f := Base.frame v.
-have ud1 : v *d f|,1 = 0.
-  by move: (noframe_idotj f); rewrite Base.frame0E // normalizeI.
-have uv1 : v *v f|,1 = f|,2%:R.
-  rewrite -Base.kE -Base.icrossj Base.iE Base.jE Base.frame0E //.
-  by rewrite normalizeI // => /eqP.
-have ud2 : v *d f|,2%:R = 0.
-  by move: (noframe_idotk f); rewrite Base.frame0E // normalizeI.
-have uv2 : v *v f|,2%:R = -f|,1.
-  rewrite -Base.jE -Base.icrossk -Base.kE; congr (_ *v _).
-  by rewrite Base.iE Base.frame0E // ?normalizeI.
-apply/isRotP; split;
-    rewrite /=; Simp.r; rewrite -!scaleNr;
-    (do ! rewrite !(linearZr_LR, linearZl_LR, dotmulZv, dotmulvZ, linearNl, scalerA) /=).
-- rewrite /= dotmulvv v1 expr1n liexx; Simp.r;
-  rewrite !(linearZr_LR,linearZl_LR,linearNl,scalerA) /= liexx; Simp.r.
-  by rewrite -mulrA mul1r -scalerDl -2!expr2 addrC cos2Dsin2 scale1r.
-- rewrite ud1 uv1 /=; Simp.r; rewrite -/f lieC.
-  do ! rewrite (linearZr_LR, linearZl_LR, dotmulZv, dotmulvZ, linearNl,
-                linearDr, scalerA) /=.
-  rewrite uv1 uv2.
-  rewrite !scalerN scaleNr !scalerDr scalerN !scalerA.
-  rewrite [in RHS]mulr2n sinD cosD scalerBl scalerDl.
-  rewrite -!addrA; congr (_ + _).
-  rewrite [RHS]addrC !opprD !opprK !addrA; congr (_ - _).
-  by rewrite addrC.
-- rewrite ud2 uv2 -/f; Simp.r; rewrite -/f lieC.
-  do ! rewrite (linearZr_LR, linearZl_LR, dotmulZv, dotmulvZ,
-              linearNr, linearNl, linearDr, scalerA) /=.
-  rewrite uv2 uv1.
-  rewrite !(scaleNr, scalerN, scalerBr) -!scaleNr !scalerA.
-  rewrite !(mulNr, mulrN) !scaleNr !opprK !addrA -!expr2.
-  rewrite [in RHS]mulr2n sinD cosD scalerBl scalerDl -!expr2.
-  rewrite !opprD !addrA; congr (_ + _).
-  rewrite [RHS]addrC -!addrA; congr (_ + _).
-  by rewrite addrC.
+move=> v1 /=; apply/isRotP; split; rewrite /= /quat_rot /=; unlock.
+- by rewrite conjugation_quat_of_polarii.
+- by rewrite conjugation_quat_of_polarij.
+- by rewrite conjugation_quat_of_polarik.
 Qed.
 
 Lemma quat_rot_isRot x : x \is uquat ->
   let: (u, a) := polar_of_quat x in
-  isRot (a *+ 2) u (Linear (quat_rot_is_linear x)).
+  isRot (a *+ 2) u [linear of quat_rot x].
 Proof.
 move=> aH /=.
 have := norm_polar_of_quat aH.

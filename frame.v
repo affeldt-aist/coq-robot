@@ -480,7 +480,7 @@ Qed.
 
 Lemma normk : norm k = 1.
 Proof.
-by rewrite /k norm_crossmul_normal // ?norm_normalize // ?normj // idotj // mulr0.
+by rewrite /k norm_crossmul_normal // ?norm_normalize// ?normj// idotj // mulr0.
 Qed.
 
 Definition M := col_mx3 i j k.
@@ -519,7 +519,7 @@ Proof. by rewrite /j colinearNv normalcompvN. Qed.
 
 Lemma kN : k (- u) = - k u.
 Proof.
-rewrite /k (_ : j (- u) = j u); by [rewrite linearNl | rewrite -jN].
+by rewrite /k (_ : j (- u) = j u); [rewrite linearNl | rewrite -jN].
 Qed.
 
 End base1_lemmas.
