@@ -612,18 +612,18 @@ End derivable_FromTo.
 
 (* the coordinate transformation of a point P1 from frame F1 to frame F
   (eqn 2.33, 3.10) *)
-Definition coortrans (R : rcfType) (F : tframe [ringType of R^o]) (F1 : rframe F)
+Definition coortrans (R : realType) (F : tframe [ringType of R^o]) (F1 : rframe F)
     (P1 : bvec F1) : bvec F :=
   RFrame.o F1 \+b rmap F (FramedVect_of_Bound P1).
 
 (* motion of P1 w.r.t. the fixed frame F (eqn B.2) *)
-Definition motion (R : rcfType) (F : tframe [ringType of R^o]) (F1 : R -> rframe F)
+Definition motion (R : realType) (F : tframe [ringType of R^o]) (F1 : R -> rframe F)
   (P1 : forall t, bvec (F1 t)) t : bvec F := coortrans (P1 t).
 
 (* [sciavicco] p.351-352  *)
 Section kinematics.
 
-Variables (R : rcfType) (F : tframe [ringType of R^o]). (* fixed frame *)
+Variables (R : realType) (F : tframe [ringType of R^o]). (* fixed frame *)
 Variable F1 : R -> rframe F. (* time-varying frame (origin and basis in F) *)
 Hypothesis derivable_F1 : forall t, derivable_mx F1 t 1.
 Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o [ringType of R^o] \o F1) t 1.
@@ -728,7 +728,7 @@ End kinematics.
 (* [sciavicco] p.81-82 *)
 Section derivative_of_a_rotation_matrix_contd.
 
-Variables (R : rcfType) (F : tframe [ringType of R^o]).
+Variables (R : realType) (F : tframe [ringType of R^o]).
 Variable F1 : R -> rframe F.
 Hypothesis derivable_F1 : forall t, derivable_mx F1 t 1.
 Variable p1 : forall t, bvec (F1 t).

@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean skew vec_angle rot frame rigid.
-From mathcomp.analysis Require Import forms.
+From mathcomp.analysis Require Import reals forms.
 
 (******************************************************************************)
 (*                       Denavit-Hartenberg convention                        *)
@@ -149,7 +149,7 @@ End plucker_of_line.
 
 Section denavit_hartenberg_homogeneous_matrix.
 
-Variable T : rcfType.
+Variable T : realType.
 
 Definition dh_mat (jangle : angle T) loffset llength (ltwist : angle T) : 'M[T]_4 :=
   hRx ltwist * hTx llength * hTz loffset * hRz jangle.
@@ -190,7 +190,7 @@ Local Open Scope frame_scope.
 
 Section denavit_hartenberg_convention.
 
-Variable T : rcfType.
+Variable T : realType.
 Variables F0 F1 : tframe T.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[T]_3 := (\o{F1} - \o{F0}) *m (can_tframe T) _R^ F0.
@@ -444,7 +444,7 @@ End denavit_hartenberg_convention.
 (* TODO: in progress, [angeles] p.141-142 *)
 Module Joint.
 Section joint.
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Record t := mk {
   vaxis : vector ;
@@ -455,7 +455,7 @@ End Joint.
 
 Module Link.
 Section link.
-Variable T : rcfType.
+Variable T : realType.
 Record t := mk {
   length : T ; (* nonnegative, distance between to successive joint axes *)
   offset : T ; (* between to successive X axes *)
@@ -467,7 +467,7 @@ End Link.
 
 Section open_chain.
 
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Let frame := tframe T.

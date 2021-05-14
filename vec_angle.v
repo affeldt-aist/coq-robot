@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext angle euclidean.
-From mathcomp.analysis Require Import forms.
+From mathcomp.analysis Require Import reals forms.
 
 (******************************************************************************)
 (*                          Vector angles and lines                           *)
@@ -46,7 +46,7 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
-Lemma norm1_cossin (T : rcfType) (v : 'rV[T]_2) :
+Lemma norm1_cossin (T : realType) (v : 'rV[T]_2) :
   norm v = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
 Proof.
 move=> v1.
@@ -57,7 +57,7 @@ Qed.
 Import rv3LieAlgebra.Exports.
 
 Section vec_angle.
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types u v : 'rV[T]_3.
 
 Definition vec_angle v w : angle T := arg (v *d w +i* norm (v *v w))%C.
@@ -456,7 +456,7 @@ Qed.
 
 Section colinear1.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types u v : 'rV[T]_3.
 
 Lemma colinear_sin u v (u0 : u != 0) (v0 : v != 0) :
@@ -514,7 +514,7 @@ End colinear1.
 
 Section axial_normal_decomposition.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Implicit Types u v e : vector.
 
@@ -727,7 +727,7 @@ End law_of_sines.
 
 Section law_of_sines1.
 
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Implicit Types a b c : point.

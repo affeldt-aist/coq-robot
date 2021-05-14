@@ -3,6 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex finset fingroup perm.
 Require Import ssr_ext angle euclidean skew vec_angle rot frame.
+From mathcomp Require Import reals.
 
 (******************************************************************************)
 (*                         Rigid Body Transformations                         *)
@@ -109,7 +110,7 @@ End central_isometry_n.
 
 Section central_isometry_3.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types f : 'CIso[T]_3.
 
 Local Open Scope frame_scope.
@@ -145,7 +146,7 @@ End central_isometry_3.
 
 Section isometry_3_properties.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 Implicit Types f : 'Iso[T]_3.
@@ -234,7 +235,7 @@ End isometry_3_properties.
 
 Module DIso.
 Section direct_isometry.
-Variable (T : rcfType).
+Variable (T : realType).
 Record t := mk {
   f :> 'Iso[T]_3 ;
   P : iso_sgn f == 1 }.
@@ -247,7 +248,7 @@ Coercion disometry_coercion : DIso.t >-> Iso.t.
 
 Section direct_isometry_3_properties.
 
-Variable T : rcfType.
+Variable T : realType.
 
 Lemma ortho_of_diso_is_SO (f : 'DIso_3[T]) : ortho_of_iso f \is 'SO[T]_3.
 Proof.
@@ -257,7 +258,7 @@ Qed.
 End direct_isometry_3_properties.
 
 Section derivative_map.
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Implicit Types f : 'Iso[T]_3.
 Import rv3LieAlgebra.Exports.
@@ -614,7 +615,7 @@ Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
 
 Section homogeneous_transformations.
 
-Variable T : rcfType.
+Variable T : realType.
 Let homogeneous := 'M[T]_4.
 Implicit Types M : homogeneous.
 Implicit Types r : 'M[T]_3.
@@ -1002,7 +1003,7 @@ move=> ?; rewrite motion_vectorE orth_preserves_norm // rotation_sub //.
 exact: rotP.
 Qed.
 
-Lemma rodrigues_homogeneous (T : rcfType) M u (MSO : M \is 'SO[T]_3) :
+Lemma rodrigues_homogeneous (T : realType) M u (MSO : M \is 'SO[T]_3) :
   axial M != 0 ->
   Aa.angle M != pi ->
   let a := aangle (angle_axis_of_rot M) in
@@ -1062,7 +1063,7 @@ Record object (A : frame) := {
   body : (coor A ^ object_size)%type }.
 *)
 
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 Implicit Types m : EuclideanMotion.t T.
 

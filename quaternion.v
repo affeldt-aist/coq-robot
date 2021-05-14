@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 Require Import ssr_ext euclidean angle vec_angle frame rot.
-From mathcomp.analysis Require Import forms.
+From mathcomp.analysis Require Import reals forms.
 
 (******************************************************************************)
 (*                            Quaternions                                     *)
@@ -419,7 +419,7 @@ End quaternion.
 Notation "x '^*q'" := (conjq x) : quat_scope.
 
 Section quaternion1.
-Variable R : rcfType.
+Variable R : realType.
 
 Definition sqrq (a : quat R) := a.1 ^+ 2 + norm (a.2) ^+ 2.
 
@@ -769,7 +769,7 @@ End quaternion1.
 Arguments uquat {R}.
 
 Section conjugation.
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types (a : quat R) (v : 'rV[R]_3).
 
 Definition conjugation x v : quat R := x * v%:v * x^*q.
@@ -806,7 +806,7 @@ Qed.
 End conjugation.
 
 Section polar_coordinates.
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types (x : quat R) (v : 'rV[R]_3) (a : angle R).
 
 Definition quat_of_polar a v := mkQuat (cos a) (sin a *: v).
@@ -1154,7 +1154,7 @@ Canonical dual_unitRing := UnitRingType (dual R) dual_UnitRingMixin.
 End dual_number_unit.
 
 Section dual_quaternion.
-Variable R : rcfType (*realType*).
+Variable R : realType.
 Local Open Scope dual_scope.
 
 Definition dquat := @dual (quat_unitRing R).
@@ -1288,7 +1288,7 @@ Notation "x '^*dq'" := (conjdq x) : dual_scope.
 
 (* TODO: dual quaternions and rigid body transformations *)
 Section dquat_rbt.
-Variable R : rcfType (*realType*).
+Variable R : realType.
 Local Open Scope dual_scope.
 Implicit Types x : dquat R.
 
