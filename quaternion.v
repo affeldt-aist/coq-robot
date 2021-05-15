@@ -298,6 +298,9 @@ Proof. by congr mkQuat; rewrite /= (dote2, vecji); Simp.r. Qed.
 Lemma jjN1 : `j * `j = -1.
 Proof. by congr mkQuat; rewrite /= (dote2, liexx); Simp.r. Qed.
 
+Lemma jkNi : `j * `k = `i.
+Proof. by congr mkQuat; rewrite /= ?(dote2, vecjk) //; Simp.r. Qed.
+
 Lemma kij : `k * `i = `j.
 Proof. by congr mkQuat; rewrite /= (dote2, vecki); Simp.r. Qed.
 
