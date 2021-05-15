@@ -10,6 +10,7 @@ frame.v
 rot.v
 rigid.v
 quaternion.v
+octonion.v
 screw.v
 dh.v
 scara.v
