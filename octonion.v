@@ -157,6 +157,22 @@ Proof. apply/eqP => -[]; apply/eqP. exact: oner_neq0. Qed.
 Local Notation "a *o b" :=
   (muloct a b) (at level 40, left associativity, format "a  *o  b").
 
+(* sanity check *)
+Lemma muloAW a b : (a *o a) *o  b = a *o (a *o b).
+Proof.
+case: a => [a0 a1]; case: b => [b0 b1]; congr mkOct => /=;
+    rewrite !(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /= 
+              !conjqM ?conjqI !addrA.
+  rewrite -!addrA; congr (_ + _).
+  rewrite addrC !addrA; congr (_ + _); last first.
+    by rewrite realq_comm ?mulrA // conjq_comm realq_conjM.
+  by rewrite -opprD -mulrDr -realq_comm ?realq_conjD // mulrDl opprD !mulrA.
+rewrite -!addrA linearN /= !conjqM !conjqI !mulrN !mulrA; congr (_ + _).
+rewrite -mulrA conjq_comm -[b1 * _]realq_comm ?realq_conjM //.
+rewrite addrC !addrA; congr (_ + _).
+by rewrite -!mulrDl -!mulrDr -mulrA (realq_comm _ (realq_conjD _)) mulrA.
+Qed.
+
 Local Notation "`il" := (`i%quat)%:ol.
 Local Notation "`ir" := (`i%quat)%:or.
 Local Notation "`jl" := (`j%quat)%:ol.
@@ -528,6 +544,7 @@ rewrite opprD opprK subrK [_ + _ * a0^*q]addrC addrK.
 rewrite [_ - _ * a1 + _]addrC -!addrA; congr (_ + _).
 by rewrite [-(_ * b0) + _]addrC !addrA subrK addrK mulNr mulrN opprK.
 Qed.
+
 
 End octonion.
 

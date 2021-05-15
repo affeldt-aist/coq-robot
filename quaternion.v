@@ -17,6 +17,7 @@ From mathcomp.analysis Require Import forms.
 (*          x%:q == quaternion with scalar part x and vector part 0           *)
 (*          u%:v == pure quaternion with scalar part 0 and vector part u      *)
 (*   x \is pureq == the quaternion x has no scalar part                       *)
+(*   x \is realq == the quaternion x has no vector part                       *)
 (*    `i, `j, `k == basic quaternions                                         *)
 (*           x.1 == scalar part of the quaternion x                           *)
 (*           x.2 == vector part of the quaternion x                           *)
@@ -168,6 +169,10 @@ Definition pureq := [qualify x : quat | x.1 == 0].
 Fact pureq_key : pred_key pureq. Proof. by []. Qed.
 Canonical pureq_keyed := KeyedQualifier pureq_key.
 
+Definition realq := [qualify x : quat | x.2 == 0].
+Fact realq_key : pred_key realq. Proof. by []. Qed.
+Canonical realq_keyed := KeyedQualifier realq_key.
+
 End quaternion0.
 
 Delimit Scope quat_scope with quat.
@@ -280,6 +285,19 @@ Canonical Structure quat_Ring := Eval hnf in RingType (quat R) quat_RingMixin.
 
 Lemma mulqE a b : a * b = mulq a b. Proof. done. Qed.
 
+Lemma realq_comm (a b : quat R) : a \is realq R -> a * b = b * a.
+Proof.
+rewrite qualifE; case: a => [a0 a1]; case: b => [b1 b2] /= /eqP->.
+congr mkQuat => /=; first by rewrite dotmul0v dotmulv0 mulrC.
+by rewrite scaler0 !linear0 add0r addr0 -/(crossmulr _ _) linear0 addr0.
+Qed.
+
+Lemma realq_real (a : R) : a%:q \is realq R.
+Proof. by rewrite qualifE. Qed.
+
+Lemma realqE (a : quat R) : a \is realq R -> a = (a.1)%:q.
+Proof. by rewrite qualifE; case: a => [a0 a1] /= /eqP->. Qed.
+
 Lemma quat_realM (x y : R) : (x * y)%:q = x%:q * y%:q.
 Proof. by congr mkQuat; rewrite /= (dotmul0v, linear0l); Simp.r. Qed.
 
@@ -387,6 +405,16 @@ apply/eqP; rewrite eq_quat /=.
 do ! rewrite (linearNl,linearNr,liexx,dotmulvN,dotmulNv,subr0,opprK,
               scaleNr,scalerN,eqxx) /=.
 by rewrite addrC.
+Qed.
+
+Lemma realq_conjD (a : quat R) : a + a^*q \is realq R.
+Proof.  by case: a => [a1 a0]; rewrite addqE /addq /= subrr qualifE. Qed.
+
+Lemma realq_conjM (a : quat R) : a * a^*q \is realq R.
+Proof.
+case: a => [a1 a0].
+rewrite mulqE /mulq /= scalerN linearN /=.
+by rewrite liexx subr0 [- _ + _]addrC subrr qualifE.
 Qed.
 
 Lemma conjq_comm2 (a b : quat R) :
