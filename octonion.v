@@ -16,6 +16,8 @@ Require Import ssr_ext euclidean angle vec_angle frame rot quaternion.
 (*         x.1 == left part of the octonion x                                 *)
 (*         x.2 == right part of the octonion x                                *)
 (*        x^*o == conjugate of octonion x                                     *)
+(* x \is realo == x is a real ie only the real part of the left quaternion    *)
+(*                is not zero                                                 *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -497,7 +499,7 @@ case: a => a0 a1; congr mkOct => /=; last by rewrite opprK.
 by rewrite [a0 + _]addrC addrK conjqI [_ + a0]addrC addrK.
 Qed.
 
-Lemma conjoct0 : (0%:or)^*o = 0.
+Lemma conjoct0 : (0%:ol)^*o = 0.
 Proof. by congr mkOct; rewrite oppr0 //= linear0 !add0r. Qed.
 
 Lemma conjoctxxE (a : oct R) :
@@ -545,6 +547,36 @@ rewrite [_ - _ * a1 + _]addrC -!addrA; congr (_ + _).
 by rewrite [-(_ * b0) + _]addrC !addrA subrK addrK mulNr mulrN opprK.
 Qed.
 
+Definition realo := [qualify x : oct R | (x.1 \is realq R) && (x.2 == 0)].
+Fact realo_key : pred_key realo. Proof. by []. Qed.
+Canonical realo_keyed := KeyedQualifier realo_key.
+
+Lemma realo_comm (a b : oct R) : a \is realo -> a *o b = b *o a.
+Proof.
+rewrite !qualifE; case: a => [[a0 a1] a2]; case: b => [b1 b2].
+rewrite /= => /andP[/eqP-> /eqP->]; congr mkOct => /=.
+  by rewrite mulr0 subr0 linear0 mul0r subr0 realq_comm // realq_real.
+by rewrite !mul0r addr0 add0r quat_realC.
+Qed.
+
+Lemma realo_real (a : quat R) : a \is realq R -> a%:ol \is realo.
+Proof. by rewrite !qualifE /= eqxx andbT. Qed.
+
+Lemma realoE (a : oct R) : a \is realo -> a = (a.1.1%:q%quat)%:ol.
+Proof. 
+by rewrite !qualifE; case: a => [[a0 a1] a2] /= /andP[/eqP-> /eqP->].
+Qed.
+
+Lemma realo_conj (a : oct R) : a *o a^*o \is realo.
+Proof.
+rewrite !qualifE; case: a => a0 a1; apply/andP => /=; split;
+    rewrite !(mulrBl, mulrBr, mulrDr, mulrDl, linearN, mulNr, mulrN, opprK) /=;
+    last first.
+  by rewrite [a0 + _]addrC addrK conjqI addrC subrr.
+rewrite [- _ *: a1.2 + _]addrC !scaleNr !subrr addrK !sub0r !scalerN  add0r.
+rewrite [- _ + _]addrC subrr add0r linearN /=.
+by rewrite !rv3LieAlgebra.liexx subr0 oppr0.
+Qed.
 
 End octonion.
 
