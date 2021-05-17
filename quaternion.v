@@ -352,6 +352,9 @@ Canonical quat_lmodType := Eval hnf in LmodType R (quat R) quat_lmodMixin.
 Lemma scaleqE (k : R) (a : quat R) : k *: a = k *: a.1%:q + k *: a.2%:v.
 Proof. by apply/eqP; rewrite eq_quat /=; Simp.r. Qed.
 
+Lemma quat_realZ (k : R) (x : R) : (k * x)%:q = k *: x%:q.
+Proof. by congr mkQuat; rewrite scaler0. Qed.
+
 Lemma quat_vectZ (k : R) (x : 'rV[R]_3) : (k *: x)%:v = k *: x%:v.
 Proof. by congr mkQuat; rewrite /= mulr0. Qed.
 
@@ -444,6 +447,10 @@ Proof. by congr mkQuat; rewrite /= oppr0. Qed.
 
 End quaternion.
 
+Arguments pureq {R}.
+Arguments realq {R}.
+
+
 Section quaternion1.
 Variable R : rcfType.
 
@@ -531,21 +538,14 @@ Definition unitq : pred (quat R) := [pred a | a != 0%:q].
 Lemma mulVq : {in unitq, left_inverse 1 invq (@mulq R)}.
 Proof.
 move=> a; rewrite inE /= => a0.
-rewrite /invq /mulq /=; congr mkQuat.
-  rewrite dotmulZv -mulrA -mulrBr dotmulNv opprK dotmulvv.
-  by rewrite div1r mulVr // unitfE sqrq_eq0.
-rewrite scalerA scalerN -scalerBl mulrC subrr scale0r.
-by rewrite scalerN linearNl /= linearZl_LR liexx scaler0 subrr.
+rewrite /invq -mulqE -quatAl conjq_comm conjqP.
+by rewrite -quat_realZ mul1r mulVf // sqrq_eq0.
 Qed.
 
 Lemma mulqV : {in unitq, right_inverse 1 invq (@mulq R)}.
 Proof.
 move=> a; rewrite inE /= => a0.
-rewrite /invq /mulq /=; congr mkQuat.
-  by rewrite scalerN dotmulvN opprK dotmulvZ mulrCA -mulrDr
-             dotmulvv div1r mulVr // unitfE sqrq_eq0.
-by rewrite scalerA scalerN -scaleNr -scalerDl mulrC addNr scale0r linearZ /=
-           linearNr liexx scalerN scaler0 subrr.
+by rewrite /invq -mulqE -quatAr conjqP -quat_realZ mul1r mulVf // sqrq_eq0.
 Qed.
 
 Lemma quat_integral (x y : quat R) : (x * y == 0) = ((x == 0) || (y == 0)).
