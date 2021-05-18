@@ -19,6 +19,7 @@ Require Import ssr_ext euclidean angle vec_angle frame rot quaternion.
 (*      x *o y == product of two octonions                                    *)
 (* x \is realo == x is a real ie only the real part of the left quaternion    *)
 (*                is not zero                                                 *)
+(*      normo x == the norm of the octonion                                   *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -63,28 +64,28 @@ case: a b => [a0 a1] [b0 b1] /=.
 apply/idP/idP => [/eqP [ -> ->]|/andP[/eqP -> /eqP -> //]]; by rewrite !eqxx.
 Qed.
 
-Definition addoct (a b : oct) := mkOct (a.1 + b.1) (a.2 + b.2).
+Definition addo (a b : oct) := nosimpl (mkOct (a.1 + b.1) (a.2 + b.2)).
 
-Lemma addoctC : commutative addoct.
+Lemma addoC : commutative addo.
 Proof. move=> *; congr mkOct; by rewrite addrC. Qed.
 
-Lemma addoctA : associative addoct.
+Lemma addoA : associative addo.
 Proof. move=> *; congr mkOct; by rewrite addrA. Qed.
 
-Lemma add0oct : left_id 0%:ol addoct.
-Proof. case=> *; by rewrite /addoct /= 2!add0r. Qed.
+Lemma add0o : left_id 0%:ol addo.
+Proof. case=> *; by rewrite /addo /= 2!add0r. Qed.
 
-Definition oppoct (a : oct) := mkOct (- a.1) (- a.2).
+Definition oppo (a : oct) := nosimpl (mkOct (- a.1) (- a.2)).
 
-Lemma addNoct : left_inverse 0%:ol oppoct addoct.
+Lemma addNo : left_inverse 0%:ol oppo addo.
 Proof. move=> *; congr mkOct; by rewrite addNr. Qed.
 
-Definition oct_ZmodMixin := ZmodMixin addoctA addoctC add0oct addNoct.
+Definition oct_ZmodMixin := ZmodMixin addoA addoC add0o addNo.
 Canonical oct_ZmodType := ZmodType oct oct_ZmodMixin.
 
-Lemma addoctE (a b : oct) : a + b = addoct a b. Proof. done. Qed.
+Lemma addoE (a b : oct) : a + b = addo a b. Proof. done. Qed.
 
-Lemma oppoctE (a : oct) : - a = oppoct a. Proof. done. Qed.
+Lemma oppoE (a : oct) : - a = oppo a. Proof. done. Qed.
 
 Lemma octE (a : oct) : a = (a.1)%:ol + (a.2)%:or.
 Proof. by apply/eqP; rewrite eq_oct /= !(add0r,addr0) !eqxx. Qed.
@@ -93,16 +94,16 @@ Lemma oct_leftE (a b : quat R) : (a%:ol == b%:ol) = (a == b).
 Proof. by apply/idP/idP => [/eqP[] ->|/eqP -> //]. Qed.
 
 Lemma oct_leftN (x: quat R) : (-x)%:ol = -(x%:ol).
-Proof. by rewrite oppoctE /oppoct /= oppr0. Qed.
+Proof. by rewrite oppoE /oppo /= oppr0. Qed.
 
 Lemma oct_rightN (x: quat R) : (-x)%:or = -(x%:or).
-Proof. by rewrite oppoctE /oppoct /= oppr0. Qed.
+Proof. by rewrite oppoE /oppo /= oppr0. Qed.
 
 Lemma oct_leftD (x y : quat R) : (x + y)%:ol = x%:ol + y%:ol.
-Proof. by rewrite addoctE /addoct /= add0r. Qed.
+Proof. by rewrite addoE /addo /= add0r. Qed.
 
 Lemma oct_rightD (x y : quat R) : (x + y)%:or = x%:or + y%:or.
-Proof. by rewrite addoctE /addoct /= addr0. Qed.
+Proof. by rewrite addoE /addo /= addr0. Qed.
 
 Lemma oct_leftB (x y : quat R) : (x - y)%:ol = x%:ol - y%:ol.
 Proof. by rewrite oct_leftD oct_leftN. Qed.
@@ -122,54 +123,60 @@ Section octonion.
 
 Variable R : comRingType.
 
-Definition muloct (a b : oct R) :=
-  mkOct (a.1 * b.1 - ((b.2)^*q)%quat * a.2) (b.2 * a.1 + a.2 * ((b.1)^*q)%quat).
+Definition mulo (a b : oct R) := nosimpl
+  (mkOct (a.1 * b.1 - ((b.2)^*q)%quat * a.2) 
+         (b.2 * a.1 + a.2 * ((b.1)^*q)%quat)).
 
-Lemma mul1oct : left_id 1%:ol muloct.
+Lemma mulo1 : right_id 1%:ol mulo.
 Proof.
-by case=> a a'; rewrite /muloct /=; congr mkOct; Simp.r => /=.
+by case=> a a'; rewrite /mulo /= !quat_realC !mul0r !mulr1 subr0 add0r.
 Qed.
 
-Lemma muloctr1 : right_id 1%:ol muloct.
+Lemma mul1o : left_id 1%:ol mulo.
 Proof.
-case=> a a'; rewrite /muloct /=; congr mkOct.
+by case=> a a'; rewrite /mulo /=; congr mkOct; Simp.r => /=.
+Qed.
+
+Lemma mulor1 : right_id 1%:ol mulo.
+Proof.
+case=> a a'; rewrite /mulo /=; congr mkOct.
   by rewrite linear0 mul0r subr0 mulr1.
 by rewrite quat_realC mulr1 mul0r add0r.
 Qed.
 
-Lemma muloct1r : left_id 1%:ol muloct.
+Lemma mulo1r : left_id 1%:ol mulo.
 Proof.
-case=> a a'; rewrite /muloct /=; congr mkOct.
+case=> a a'; rewrite /mulo /=; congr mkOct.
   by rewrite mulr0 subr0 mul1r.
 by rewrite mulr1 mul0r addr0.
 Qed.
 
-Lemma muloct0r : left_zero 0%:ol muloct.
+Lemma mulo0r : left_zero 0%:ol mulo.
 Proof.
-case=> a a'; rewrite /muloct /=; congr mkOct.
+case=> a a'; rewrite /mulo /=; congr mkOct.
   by rewrite mul0r mulr0 subrr.
 by rewrite mul0r mulr0 addr0.
 Qed.
 
-Lemma muloctr0 : right_zero 0%:ol muloct.
+Lemma mulor0 : right_zero 0%:ol mulo.
 Proof.
-case=> a a'; rewrite /muloct /=; congr mkOct.
+case=> a a'; rewrite /mulo /=; congr mkOct.
   by rewrite linear0 mul0r mulr0 subrr.
 by rewrite linear0 mul0r mulr0 addr0.
 Qed.
 
-Lemma muloctDl : left_distributive muloct +%R.
+Lemma muloDl : left_distributive mulo +%R.
 Proof.
-move=> [a a'] [b b'] [c c']; rewrite /muloct /=; congr mkOct => /=.
+move=> [a a'] [b b'] [c c']; rewrite /mulo /=; congr mkOct => /=.
   rewrite !(mulrDl, mulrDr) -!addrA; congr (_ + _).
   by rewrite addrCA opprD.
 rewrite !(mulrDl, mulrDr) -!addrA; congr (_ + _).
 by rewrite addrCA.
 Qed.
 
-Lemma muloctDr : right_distributive muloct (+%R).
+Lemma muloDr : right_distributive mulo (+%R).
 Proof.
-move=> [a a'] [b b'] [c c']; rewrite /muloct /=; congr mkOct => /=.
+move=> [a a'] [b b'] [c c']; rewrite /mulo /=; congr mkOct => /=.
   rewrite !(mulrDl, mulrDr, linearD) /= -!addrA; congr (_ + _).
   by rewrite addrCA.
 rewrite !(mulrDl, mulrDr, linearD) /= -!addrA; congr (_ + _).
@@ -179,10 +186,31 @@ Qed.
 Lemma oneq_neq0 : 1%:ol != 0 :> oct R.
 Proof. apply/eqP => -[]; apply/eqP. exact: oner_neq0. Qed.
 
-Notation "a *o b" := (muloct a b).
+Notation "a *o b" := (mulo a b).
 
-(* sanity check *)
-Lemma muloAW a b : (a *o a) *o  b = a *o (a *o b).
+Lemma muloNl (x y : oct R) : (- x) *o y = - (x *o y).
+Proof.
+case: x => [x1 x2]; case: y => [y1 y2]; congr mkOct => /=.
+  by rewrite opprD !mulrN !mulNr.
+by rewrite opprD !mulrN !mulNr.
+Qed.
+
+Lemma muloNr (x y : oct R) : x *o (- y) = - (x *o y).
+Proof.
+case: x => [x1 x2]; case: y => [y1 y2]; congr mkOct => /=.
+  by rewrite linearN /= opprD !mulrN !mulNr.
+by rewrite linearN /= opprD !mulrN !mulNr.
+Qed.
+
+Lemma muloBl x y z : (x - y) *o z = x *o z - y *o z.
+Proof. by rewrite muloDl muloNl. Qed.
+
+Lemma muloBr x y z : z *o (x - y) = z *o x - z *o y.
+Proof. by rewrite muloDr muloNr. Qed.
+
+(* Alternative algebra *)
+
+Lemma muloAlt1 a b : (a *o a) *o  b = a *o (a *o b).
 Proof.
 case: a => [a0 a1]; case: b => [b0 b1]; congr mkOct => /=;
     rewrite !(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /= 
@@ -195,6 +223,24 @@ rewrite -!addrA linearN /= !conjqM !conjqI !mulrN !mulrA; congr (_ + _).
 rewrite -mulrA conjq_comm -[b1 * _]realq_comm ?realq_conjM //.
 rewrite addrC !addrA; congr (_ + _).
 by rewrite -!mulrDl -!mulrDr -mulrA (realq_comm _ (realq_conjD _)) mulrA.
+Qed.
+
+Lemma muloAlt2 a b : (a *o b) *o a = a *o (b *o a).
+Proof.
+case: a => [a0 a1]; case: b => [b0 b1]; congr mkOct => /=;
+    rewrite !(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /= 
+              !conjqM ?conjqI !addrA.
+  rewrite [RHS]addrC !{1}addrA; congr (_ - _); last first.
+    by rewrite conjq_comm (realq_comm _ (realq_conjM _)) -conjq_comm mulrA.
+  rewrite [X in _ = X - _]addrC -!{1}addrA; congr (_ + _).
+  rewrite -!opprD -mulrDl realq_comm ?mulrDr ?mulrA //.
+  by rewrite -{2}[b1]conjqI -conjqM realq_conjD. 
+rewrite -!addrA linearN /= !conjqM !conjqI !mulrN !mulrA {1}addrA.
+rewrite [X in X + _ = _]addrC !{1}addrA [RHS]addrC -!{1}addrA; congr (_ + _).
+rewrite [LHS]addrC [RHS]addrC -!{1}addrA; congr (_ + _).
+  by rewrite -mulrA -conjq_comm mulrA.
+rewrite -2!{1}mulrA -mulrDr -conjqM -2!{1}mulrA -mulrDr.
+by rewrite addrC conjq_addMC addrC conjqM.
 Qed.
 
 Local Notation "`il" := (`i%quat)%:ol.
@@ -500,31 +546,33 @@ case: a b => [a0 a1] [b0 b1]; congr mkOct => /=.
 by rewrite scalerDr !linearZ /= -!quatAr -!quatAl.
 Qed.
 
-Definition conjoct (a : oct R) := mkOct (a.1 + (a.1)^*q -a.1) (- a.2).
-Local Notation "x '^*o'" := (conjoct x).
+Definition conjo (a : oct R) :=
+  nosimpl (mkOct (a.1 + (a.1)^*q -a.1) (- a.2)).
 
-Lemma conjoct_linear : linear conjoct.
+Local Notation "x '^*o'" := (conjo x).
+
+Lemma conjo_linear : linear conjo.
 Proof.
-move=> /= k [a0 a1] [b0 b1] /=; rewrite [in LHS]/conjoct /= [in RHS]/conjoct /=.
+move=> /= k [a0 a1] [b0 b1] /=; rewrite [in LHS]/conjo /= [in RHS]/conjo /=.
 congr mkOct => /=; last by rewrite scalerN opprD.
 rewrite !(linearD, linearZ) /= !scalerN -!addrA; congr (_ + _).
 rewrite addrC -!addrA; congr (_ + _).
 by rewrite addrCA !addrA subrK [_ + b0 + _]addrC addrA addrK addrC.
 Qed.
 
-Canonical conjoct_is_additive := Additive conjoct_linear.
-Canonical conjoct_is_linear := AddLinear conjoct_linear.
+Canonical conjo_is_additive := Additive conjo_linear.
+Canonical conjo_is_linear := AddLinear conjo_linear.
 
-Lemma conjoctI a : (a^*o)^*o = a.
+Lemma conjoI a : (a^*o)^*o = a.
 Proof. 
 case: a => a0 a1; congr mkOct => /=; last by rewrite opprK.
 by rewrite [a0 + _]addrC addrK conjqI [_ + a0]addrC addrK.
 Qed.
 
-Lemma conjoct0 : (0%:ol)^*o = 0.
+Lemma conjo0 : (0%:ol)^*o = 0.
 Proof. by congr mkOct; rewrite oppr0 //= linear0 !add0r. Qed.
 
-Lemma conjoctxxE (a : oct R) :
+Lemma conjoxxE (a : oct R) :
   a *o a^*o = (a.1 * a.1^*q + a.2 * a.2^*q)%:ol.
 Proof.
 case: a => a0 a1; congr mkOct => /=; last first.
@@ -532,7 +580,7 @@ case: a => a0 a1; congr mkOct => /=; last first.
 by rewrite [a0 + _]addrC addrK linearN /= mulNr opprK conjq_comm.
 Qed.
 
-Lemma conjoct_comm (a : oct R) : a^*o *o a = a *o a^*o.
+Lemma conjo_comm (a : oct R) : a^*o *o a = a *o a^*o.
 Proof.
 case: a => a0 a1; congr mkOct => /=.
   rewrite !(mulrBl, mulrBr, mulrDr, mulrDl, linearN, mulNr, mulrN, opprK) /=.
@@ -543,19 +591,19 @@ rewrite [a1 * _ + _]addrC addrK subrr conjqI [_ + _ * a0]addrC addrK.
 by rewrite addrC subrr.
 Qed.
 
-Lemma conjoct_comm2 (a b : oct R) :
+Lemma conjo_comm2 (a b : oct R) :
   b^*o *o a + a^*o *o b = a *o b^*o + b *o a^*o.
 Proof.
 apply: (addIr (a *o a ^*o + b *o b ^*o)).
-rewrite [RHS]addrAC !addrA -muloctDr.
-rewrite -[RHS]addrA -muloctDr -muloctDl -linearD /=.
-rewrite addrC !addrA -conjoct_comm -muloctDr -addrA -conjoct_comm.
-rewrite -muloctDr -muloctDl.
+rewrite [RHS]addrAC !addrA -muloDr.
+rewrite -[RHS]addrA -muloDr -muloDl -linearD /=.
+rewrite addrC !addrA -conjo_comm -muloDr -addrA -conjo_comm.
+rewrite -muloDr -muloDl.
 rewrite -linearD /= [b + a]addrC.
-by apply: conjoct_comm.
+by apply: conjo_comm.
 Qed.
 
-Lemma conjoctM a b : (a *o b)^*o = b^*o *o a^*o.
+Lemma conjoM a b : (a *o b)^*o = b^*o *o a^*o.
 Proof.
 case: a b => [a0 a1] [b0 b1]; congr mkOct => /=; last first.
   rewrite !(linearB, linearD, mulrBl, mulrDl, mulrBr, mulrDr) /= conjqI.
@@ -567,6 +615,101 @@ rewrite [b0 * _ + _]addrC addrK [_ * a0 + _]addrC addrK.
 rewrite opprD opprK subrK [_ + _ * a0^*q]addrC addrK.
 rewrite [_ - _ * a1 + _]addrC -!addrA; congr (_ + _).
 by rewrite [-(_ * b0) + _]addrC !addrA subrK addrK mulNr mulrN opprK.
+Qed.
+
+(* This part from altermate algebra -> Moufang equations comes from           *)
+(* An Introduction to Nonassociative Algebras, by Schafer                     *)
+
+Lemma muloAlt3 a b : (b *o a) *o a = b *o (a *o a).
+Proof.
+rewrite -[LHS]conjoI conjoM [(b *o a)^*o]conjoM -muloAlt1.
+by rewrite -2!conjoM conjoI.
+Qed.
+
+Definition associator x y z := (x *o y) *o z - x *o (y *o z).
+Local Notation "`a[ x , y , z ]" := (associator x y z).
+
+Lemma associatorDl x1 x2 y z : 
+  `a[x1 + x2, y, z] = `a[x1, y, z] + `a[x2, y, z].
+Proof.
+by rewrite /associator !muloDl opprD !addrA [X in X + _ = _]addrAC.
+Qed.
+
+Lemma associatorDm x1 x2 y z : 
+  `a[y, x1 + x2, z] = `a[y, x1, z] + `a[y, x2, z].
+Proof.
+rewrite /associator !(muloDl, muloDr) !opprD {1}addrA.
+by rewrite [X in X + _ = _]addrAC {1}[RHS]addrA.
+Qed.
+
+Lemma associatorDr x1 x2 y z : 
+  `a[y, z, x1 + x2] = `a[y, z, x1] + `a[y, z, x2].
+Proof.
+rewrite /associator !(muloDl, muloDr) !opprD {1}addrA.
+by rewrite [X in X + _ = _]addrAC {1}[RHS]addrA.
+Qed.
+
+Lemma associatorP1 x y : `a[x, x, y] =  0.
+Proof. by rewrite /associator muloAlt1 subrr. Qed.
+
+Lemma associatorP2 x y : `a[x, y, y] =  0.
+Proof. by rewrite /associator muloAlt3 subrr. Qed.
+
+Lemma associator_swap x y z : `a[x, y, z] =  - `a[y, x, z].
+Proof.
+apply: subr0_eq; rewrite opprK.
+have H := associatorP1 (x + y) z.
+by rewrite !associatorDl !associatorDm !associatorP1
+            {1}add0r addrA {1}addr0 in H.
+Qed.
+
+Lemma associator_rot x y z : `a[x, y, z] =  `a[z, x, y].
+Proof.
+rewrite [RHS]associator_swap.
+apply: subr0_eq; rewrite opprK.
+have H := associatorP2 x (y + z).
+by rewrite !associatorDr !associatorDm !associatorP2
+            {1}add0r addrA {1}addr0 addrC in H.
+Qed.
+
+(* Moufang equality *)
+
+Lemma mulo_moufang1 x a y : x *o a *o x *o y = x *o (a *o (x *o y)).
+Proof.
+apply: subr0_eq.
+apply: etrans (_ : `a[x *o a, x, y] + `a[x, a, x *o y] = 0).
+  by rewrite /associator {1}addrA subrK.
+rewrite associator_swap [X in _ + X = _]associator_rot 
+                        [X in _ + X = _]associator_swap /associator.
+rewrite -{1}muloAlt1 -{1}muloAlt1 {1}opprD {1}opprK {1}opprD opprK {1}addrA.
+rewrite -{1}[X in X + _ = _]addrAC.
+have -> : - (x *o x *o a *o y) - x *o  x *o y *o a  = 
+             -`a[x *o x, a, y] - `a[x *o x, y, a] - 
+               x *o x *o (a *o y) - x *o x *o (y *o a).
+  rewrite /associator {1}opprD opprK {1}opprD opprK.
+  rewrite [X in _ = X - _]addrC {1}[X in _ = X - _]addrA.
+  rewrite {1}[X in _ = X - _]addrA {1}addrK.
+  by rewrite [X in _ = X - _]addrC addrK.
+rewrite associator_rot associator_swap opprK {1}[X in X - _ - _ + _ + _]subrr.
+rewrite sub0r muloAlt1 muloAlt1 -{1}addrA addrC {1}addrA.
+rewrite -{1}muloNr -[X in _ + X = _]muloNr -3!{1}muloDr.
+rewrite [X in _ *o (X - _)]addrAC -{1}addrA -/(associator _ _ _) 
+         -/(associator _ _ _) associator_rot associator_swap addrC subrr.
+by rewrite mulor0.
+Qed.
+
+Lemma mulo_moufang3 x a y : (x *o y) *o (a *o x) = x *o (y *o a) *o x.
+Proof.
+apply: subr0_eq.
+apply: etrans (_ : `a[x, y, a *o x] + 
+                     x *o (y *o (a *o x) - (y *o a) *o x) = 0).
+  by rewrite /associator muloBr addrA subrK -{1}muloAlt2 .
+rewrite -opprB -/(associator _ _ _).
+rewrite associator_rot associator_swap {1}/associator {1}opprD opprK.
+rewrite -{1}addrA -muloDr.
+rewrite -muloAlt2 mulo_moufang1 -muloNr -muloDr.
+rewrite {1}addrA [- _ + _]addrC -/(associator _ _ _).
+by rewrite associator_rot subrr mulor0.
 Qed.
 
 Definition realo := [qualify x : oct R | (x.1 \is realq) && (x.2 == 0)].
@@ -589,7 +732,39 @@ Proof.
 by rewrite !qualifE; case: a => [[a0 a1] a2] /= /andP[/eqP-> /eqP->].
 Qed.
 
-Lemma realo_conj (a : oct R) : a *o a^*o \is realo.
+Lemma realoMEl (a b : oct R) : a \is realo -> a *o b = a.1.1 *: b.
+Proof.
+move=> /realoE {1}->; congr mkOct; rewrite /= (mul0r, mulr0).
+  by rewrite quat_algE -scalerAl mul1r subr0.
+by rewrite quat_algE -scalerAr mulr1 addr0.
+Qed.
+
+Lemma realoMEr (a b : oct R) : a \is realo -> b *o a = a.1.1 *: b.
+Proof.
+move=> /realoE {1}->; congr mkOct; rewrite /= ?linear0 (mul0r, mulr0).
+  by rewrite quat_algE -scalerAr mulr1 subr0.
+by rewrite quat_realC quat_algE -scalerAr mulr1 add0r.
+Qed.
+
+Lemma realoMAl (a b c : oct R) : a \is realo -> a *o (b *o c) = (a *o b) *o c.
+Proof.
+by move=> aR; rewrite (realoMEl _ aR) octAl - (realoMEl _ aR).
+Qed.
+
+Lemma realoMAm (a b c : oct R) : b \is realo -> a *o (b *o c) = (a *o b) *o c.
+Proof.
+by move=> bR; rewrite (realoMEl _ bR) -octAr octAl -(realoMEr _ bR).
+Qed.
+
+Lemma realoMAr (a b c : oct R) : c \is realo -> a *o (b *o c) = (a *o b) *o c.
+Proof.
+by move=> cR; rewrite (realoMEr _ cR) -octAr -(realoMEr _ cR).
+Qed.
+
+Lemma realo_conjD (a : oct R) : a + a^*o \is realo.
+Proof. by rewrite !qualifE /= !subrr sub0r subrr eqxx /=. Qed.
+
+Lemma realo_conjM (a : oct R) : a *o a^*o \is realo.
 Proof.
 rewrite !qualifE; case: a => a0 a1; apply/andP => /=; split;
     rewrite !(mulrBl, mulrBr, mulrDr, mulrDl, linearN, mulNr, mulrN, opprK) /=;
@@ -604,39 +779,41 @@ End octonion.
 
 Arguments realo {R}.
 
-Notation "x '^*o'" := (conjoct x) : oct_scope.
-Notation "a *o b" := (muloct a b) : oct_scope.
+Notation "x '^*o'" := (conjo x) : oct_scope.
+Notation "a *o b" := (mulo a b) : oct_scope.
 
 Section octonion1.
 Variable R : rcfType.
 
-Definition sqroct (a : oct R) := sqrq a.1 + sqrq a.2.
+Definition sqro (a : oct R) := sqrq a.1 + sqrq a.2.
 
-Lemma sqroct0 : sqroct 0 = 0.
+Lemma sqro0 : sqro 0 = 0.
 Proof. 
-by apply/eqP; rewrite /sqroct paddr_eq0 ?sqrq_ge0 // sqrq_eq0 eqxx.
+by apply/eqP; rewrite /sqro paddr_eq0 ?sqrq_ge0 // sqrq_eq0 eqxx.
 Qed.
 
-Lemma sqroct_ge0 x : 0 <= sqroct x.
+Lemma sqro_ge0 x : 0 <= sqro x.
 Proof. by rewrite addr_ge0 // sqrq_ge0. Qed.
 
-Lemma sqroct_eq0 a : (sqroct a == 0) = (a == 0).
+Lemma sqro_eq0 a : (sqro a == 0) = (a == 0).
 Proof.
-by rewrite /sqroct paddr_eq0 ?sqrq_ge0// !sqrq_eq0 eq_oct.
+by rewrite /sqro paddr_eq0 ?sqrq_ge0// !sqrq_eq0 eq_oct.
 Qed.
 
-Lemma sqrqN (a : quat R) : sqrq (- a) = sqrq a.
-Proof. by rewrite /sqrq /= normN sqrrN. Qed.
+Lemma sqroN (a : oct R) : sqro (- a) = sqro a.
+Proof. by rewrite /sqro !sqrqN. Qed.
 
-Lemma sqroctN (a : oct R) : sqroct (- a) = sqroct a.
-Proof. by rewrite /sqroct !sqrqN. Qed.
+Lemma sqro_conj (a : oct R) : sqro (a^*o) = sqro a.
+Proof. by rewrite /sqro /conjo /= [a.1 + _]addrC addrK sqrq_conj sqrqN. Qed.
 
-Lemma sqroct_conj (a : oct R) : sqroct (a^*o) = sqroct a.
-Proof. by rewrite /sqroct /conjoct /= [a.1 + _]addrC addrK sqrq_conj sqrqN. Qed.
+Lemma conjoZ k (a : oct R) : (k *: a) ^*o = k *: a ^*o.
+Proof. 
+by congr mkOct; rewrite ?scalerN // !conjqZ /= -scalerDr -scalerBr.
+Qed.
 
-Lemma conjoctP (a : oct R) : a *o a^*o = ((sqroct a)%:q%quat)%:ol.
+Lemma conjoP (a : oct R) : a *o a^*o = ((sqro a)%:q%quat)%:ol.
 Proof.
-rewrite /muloct /=; congr mkOct.
+rewrite /mulo /=; congr mkOct.
   rewrite [a.1 + _]addrC addrK linearN /= mulNr opprK conjq_comm !conjqP.
   by rewrite -quat_realD.
 by rewrite [a.1 + _]addrC addrK conjqI addrC mulNr subrr.
@@ -650,7 +827,7 @@ Local Notation "`kl" := (`k%quat)%:ol.
 Local Notation "`kr" := (`k%quat)%:or.
 
 
-Lemma conjoctE (a : oct R) :
+Lemma conjoE (a : oct R) :
   a^*o = 
     - (1 / 6%:R) *: (a + `il *o a *o `il + `jl *o a *o `jl + `kl *o a *o `kl
                        + 1%:or *o a *o 1%:or
@@ -685,34 +862,117 @@ rewrite !(mulNr, mulrN) 4!mulrA mul1r mulr1.
 by rewrite 4!{1}[_ + 0]addr0 -!opprD !addrA.
 Qed.
 
-Lemma conjoct_scalar (a : oct R) : 
+Lemma conjo_scalar (a : oct R) : 
   (a.1.1)%:q%quat%:ol = (1 / 2%:R) *: (a + a^*o).
 Proof.
-rewrite /conjoct [a.1 + _]addrC addrK addoctE.
+rewrite /conjo [a.1 + _]addrC addrK addoE.
 have {2}->/= : a = mkOct a.1 a.2 by case: a.
-by rewrite /addoct /= subrr conjq_scalar oct_leftZ.
+by rewrite /addo /= subrr conjq_scalar oct_leftZ.
 Qed.
 
-Definition invoct (a : oct R) : oct R := (1 / sqroct a) *: (a ^*o).
+Definition invo (a : oct R) : oct R := (1 / sqro a) *: (a ^*o).
 
-Definition unito : pred (oct R) := [pred a | unitq (a : oct R).1].
-
-Lemma mulVoct a : a \in unito -> invoct a *o a = 1%:ol.
+Lemma mulVo a : a !=0 -> invo a *o a = 1%:ol.
 Proof.
-rewrite inE /= /unitq /= => a0.
-rewrite /invoct -octAl conjoct_comm conjoctP.
+move => aNZ.
+rewrite /invo -octAl conjo_comm conjoP.
 congr mkOct => /=; last by rewrite scaler0.
-rewrite -quat_realZ mul1r mulVf // sqroct_eq0.
-by apply: contra a0 => /eqP->.
+by rewrite -quat_realZ mul1r mulVf // sqro_eq0.
 Qed.
 
-Lemma muloctV a : a \in unito -> a *o invoct a = 1%:ol.
+Lemma muloV a : a != 0 -> a *o invo a = 1%:ol.
 Proof.
-rewrite inE /= /unitq /= => a0.
-rewrite /invoct -octAr conjoctP.
+move => aNZ.
+rewrite /invo -octAr conjoP.
 congr mkOct => /=; last by rewrite scaler0.
-rewrite -quat_realZ mul1r mulVf // sqroct_eq0.
-by apply: contra a0 => /eqP->.
+by rewrite -quat_realZ mul1r mulVf // sqro_eq0.
+Qed.
+
+Lemma realo_realq (x : R) : x%:q%quat%:ol \in realo.
+Proof. by apply/realo_real/realq_real. Qed.
+
+Lemma conjoMA (a b : oct R) : 
+  (a *o b) *o (a *o b)^*o = a *o (b *o b ^*o) *o a^*o.
+Proof.
+rewrite conjoM -[a^*o](addrK a) [a ^*o + _]addrC (realoE (realo_conjD _)).
+set x := _%:ol.
+rewrite !{1}muloBr {1}mulo_moufang3.
+rewrite {1}(realoMAr _ _ (realo_realq _)) -/x.
+rewrite -{1 3}[b^*o](addrK b) [b ^*o + _]addrC (realoE (realo_conjD _)).
+set y := _%:ol.
+rewrite !{1}muloBr {1}muloAlt3.
+by rewrite {1}(realoMAr _ _ (realo_realq _)).
+Qed.
+
+Lemma sqroM a b : sqro (a *o b) = sqro a * sqro b.
+Proof.
+have F (x y : R) : (x%:q = y%:q -> x = y)%quat by case.
+apply: F.
+have F (x y : quat R) : (x%:ol = y%:ol -> x = y)%quat by case.
+apply: F.
+rewrite quat_realM oct_leftM -!conjoP conjoMA.
+rewrite -{1}(realoMAm _ _ (realo_conjM _)).
+rewrite {1}(realo_comm _ (realo_conjM _)).
+by rewrite {1}(realoMAr _ _ (realo_conjM _)).
+Qed.
+
+Lemma sqroZ k a : sqro (k *: a) = k ^+ 2 * sqro a.
+Proof.
+have F (x y : R) : (x%:q = y%:q -> x = y)%quat by case.
+apply: F.
+have F (x y : quat R) : (x%:ol = y%:ol -> x = y)%quat by case.
+apply: F.
+rewrite -!conjoP -octAl conjoZ octAr scalerA -octAr -expr2.
+by rewrite quat_realZ oct_leftZ -conjoP.
+Qed.
+
+Lemma oct_integral (x y : oct R) : (x *o y == 0) = ((x == 0) || (y == 0)).
+Proof.
+case: (x =P 0) => [->|/eqP xNZ] /=; first by rewrite mulo0r eqxx.
+apply/eqP/eqP => [xyZ|->]; last by rewrite mulor0.
+rewrite -[y]mulo1r -(@mulVo x) // /invo -2!{1}octAl.
+rewrite -[x^*o](addrK x) [x ^*o + _]addrC (realoE (realo_conjD _)).
+set a := _%:ol.
+rewrite 2!muloBl muloAlt1 -(realoMAl  _ _ (realo_realq _)) -/a.
+by rewrite -muloBl xyZ mulor0 scaler0.
+Qed.
+
+Definition normo (a : oct R) : R := Num.sqrt (sqro a).
+
+Lemma normo0 : normo 0 = 0.
+Proof. by rewrite /normo sqro0 sqrtr0. Qed.
+
+Lemma normoc a : normo a ^*o = normo a.
+Proof. by rewrite /normo sqro_conj. Qed.
+
+Lemma normoE a : (normo a ^+ 2)%:q%quat%:ol = a ^*o *o a.
+Proof.
+rewrite -normoc /normo sqr_sqrtr ?sqro_ge0 //.
+by rewrite -conjoP conjoI.
+Qed.
+
+Lemma normo_ge0 a : 0 <= normo a.
+Proof. by apply sqrtr_ge0. Qed.
+
+Lemma normo_eq0 a : (normo a == 0) = (a == 0).
+Proof. 
+rewrite /normo sqrtr_eq0 -sqro_eq0.
+by case: ltrgt0P (sqro_ge0 a).
+Qed.
+
+Lemma normoM (a b : oct R) : normo (a *o b) = normo a * normo b.
+Proof. by rewrite /normo sqroM sqrtrM // sqro_ge0. Qed.
+
+Lemma normoZ (k : R) (a : oct R) : normo (k *: a) = `|k| * normo a.
+Proof.
+by rewrite /normo sqroZ sqrtrM ?sqr_ge0 // sqrtr_sqr.
+Qed.
+
+Lemma normoV (a : oct R) : normo (invo a) = normo a / sqro a.
+Proof.
+rewrite /invo normoZ normoc ger0_norm.
+  by rewrite mulrC mul1r.
+by rewrite mul1r invr_ge0 sqro_ge0.
 Qed.
 
 End octonion1.

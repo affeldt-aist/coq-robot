@@ -111,7 +111,7 @@ case: a b => [a0 a1] [b0 b1] /=.
 apply/idP/idP => [/eqP [ -> ->]|/andP[/eqP -> /eqP -> //]]; by rewrite !eqxx.
 Qed.
 
-Definition addq (a b : quat) := mkQuat (a.1 + b.1) (a.2 + b.2).
+Definition addq (a b : quat) := nosimpl (mkQuat (a.1 + b.1) (a.2 + b.2)).
 
 Lemma addqC : commutative addq.
 Proof. move=> *; congr mkQuat; by rewrite addrC. Qed.
@@ -122,7 +122,7 @@ Proof. move=> *; congr mkQuat; by rewrite addrA. Qed.
 Lemma add0q : left_id 0%:q addq.
 Proof. case=> *; by rewrite /addq /= 2!add0r. Qed.
 
-Definition oppq (a : quat) := mkQuat (- a.1) (- a.2).
+Definition oppq (a : quat) := nosimpl (mkQuat (- a.1) (- a.2)).
 
 Lemma addNq : left_inverse 0%:q oppq addq.
 Proof. move=> *; congr mkQuat; by rewrite addNr. Qed.
@@ -204,8 +204,8 @@ Notation "a '^*q'" := (@conjugate_op_nosimpl _ a).
 Section quaternion.
 Variable R : comRingType.
 
-Definition mulq (a b : quat R) :=
-  mkQuat (a.1 * b.1 - a.2 *d b.2) (a.1 *: b.2 + b.1 *: a.2 + a.2 *v b.2).
+Definition mulq (a b : quat R) := nosimpl
+  (mkQuat (a.1 * b.1 - a.2 *d b.2) (a.1 *: b.2 + b.1 *: a.2 + a.2 *v b.2)).
 
 Lemma mulqA : associative mulq.
 Proof.
@@ -381,7 +381,7 @@ Canonical quat_algType := Eval hnf in AlgType _ (quat R) quatAr.
 Lemma quat_algE x : x%:q = x%:A.
 Proof. by apply/eqP; rewrite eq_quat //=; Simp.r. Qed.
 
-Definition conjq (a : quat R) := mkQuat (a.1) (- a.2).
+Definition conjq (a : quat R) := nosimpl (mkQuat (a.1) (- a.2)).
 Canonical Conjugate_quaternion := @Build_Conjugate (quat R) conjq.
 
 Lemma conjq_def (x : quat R) : x^*q = mkQuat x.1 (- x.2).
@@ -408,6 +408,14 @@ apply/eqP; rewrite eq_quat /=.
 do ! rewrite (linearNl,linearNr,liexx,dotmulvN,dotmulNv,subr0,opprK,
               scaleNr,scalerN,eqxx) /=.
 by rewrite addrC.
+Qed.
+
+Lemma conjq_addMC (a b : quat R) : a * b + (a * b)^*q  = b * a + (b * a) ^*q.
+Proof.
+case: a => a1 a2; case: b => b1 b2; congr mkQuat => /=.
+  by rewrite [b1 * _]mulrC [b2 *d _]dotmulC.
+rewrite !opprD !addrA [_ + a1 *:b2]addrC -!addrA; congr (_ + (_ + _)).
+by rewrite [LHS]addrC [RHS]addrC !addrA !subrK addrC.
 Qed.
 
 Lemma realq_conjD (a : quat R) : a + a^*q \is realq R.
@@ -466,6 +474,9 @@ rewrite /sqrq paddr_eq0 ?sqr_ge0// !sqrf_eq0 norm_eq0 -xpair_eqE.
 by rewrite -surjective_pairing.
 Qed.
 
+Lemma sqrqN (a : quat R) : sqrq (- a) = sqrq a.
+Proof. by rewrite /sqrq /= normN sqrrN. Qed.
+
 Lemma sqrq_conj (a : quat R) : sqrq (a^*q) = sqrq a.
 Proof. by rewrite /sqrq normN. Qed.
 
@@ -475,6 +486,9 @@ rewrite /mulq /=; congr mkQuat.
   by rewrite /= dotmulvN dotmulvv opprK -expr2.
 by rewrite scalerN addNr add0r linearNr liexx oppr0.
 Qed.
+
+Lemma conjqZ k (q : quat R) : (k *: q) ^*q = k *: q ^*q.
+Proof. by congr mkQuat; rewrite /= scalerN. Qed.
 
 Lemma conjqE (a : quat R) :
   a^*q = - (1 / 2%:R) *: (a + `i * a * `i + `j * a * `j + `k * a * `k).
