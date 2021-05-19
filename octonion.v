@@ -170,7 +170,7 @@ Proof.
 move=> [a a'] [b b'] [c c']; rewrite /mulo /=; congr mkOct => /=.
   rewrite !(mulrDl, mulrDr) -!addrA; congr (_ + _).
   by rewrite addrCA opprD.
-rewrite !(mulrDl, mulrDr) -!addrA; congr (_ + _).
+rewrite !(mulrDl, mulrDr) -!addrA; apply: f_equal2; first by [].
 by rewrite addrCA.
 Qed.
 
@@ -179,7 +179,7 @@ Proof.
 move=> [a a'] [b b'] [c c']; rewrite /mulo /=; congr mkOct => /=.
   rewrite !(mulrDl, mulrDr, linearD) /= -!addrA; congr (_ + _).
   by rewrite addrCA.
-rewrite !(mulrDl, mulrDr, linearD) /= -!addrA; congr (_ + _).
+rewrite !(mulrDl, mulrDr, linearD) /= -!addrA; apply: f_equal2; first by [].
 by rewrite addrCA.
 Qed.
 
@@ -212,31 +212,32 @@ Proof. by rewrite muloDr muloNr. Qed.
 
 Lemma muloAlt1 a b : (a *o a) *o  b = a *o (a *o b).
 Proof.
-case: a => [a0 a1]; case: b => [b0 b1]; congr mkOct => /=;
-    rewrite !(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /= 
-              !conjqM ?conjqI !addrA.
-  rewrite -!addrA; congr (_ + _).
-  rewrite addrC !addrA; congr (_ + _); last first.
+case: a => [a0 a1]; case: b => [b0 b1]; apply: (f_equal2 (@mkOct _)) => /=;
+    rewrite !{1}(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /= 
+              !{1}conjqM ?{1}conjqI !{1}addrA.
+  rewrite -!{1}addrA; apply: f_equal2; first by []. (* congr take time *)
+  rewrite addrC !addrA; apply: f_equal2; last first. 
     by rewrite realq_comm ?mulrA // conjq_comm realq_conjM.
   by rewrite -opprD -mulrDr -realq_comm ?realq_conjD // mulrDl opprD !mulrA.
 rewrite -!addrA linearN /= !conjqM !conjqI !mulrN !mulrA; congr (_ + _).
 rewrite -mulrA conjq_comm -[b1 * _]realq_comm ?realq_conjM //.
-rewrite addrC !addrA; congr (_ + _).
+rewrite addrC !addrA; apply: f_equal2; last by [].
 by rewrite -!mulrDl -!mulrDr -mulrA (realq_comm _ (realq_conjD _)) mulrA.
 Qed.
 
 Lemma muloAlt2 a b : (a *o b) *o a = a *o (b *o a).
 Proof.
-case: a => [a0 a1]; case: b => [b0 b1]; congr mkOct => /=;
+case: a => [a0 a1]; case: b => [b0 b1]; apply: (f_equal2 (@mkOct _)) => /=;
     rewrite !(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /= 
               !conjqM ?conjqI !addrA.
-  rewrite [RHS]addrC !{1}addrA; congr (_ - _); last first.
+  rewrite [RHS]addrC !{1}addrA; apply: f_equal2; last first.
     by rewrite conjq_comm (realq_comm _ (realq_conjM _)) -conjq_comm mulrA.
-  rewrite [X in _ = X - _]addrC -!{1}addrA; congr (_ + _).
+  rewrite [X in _ = X - _]addrC -!{1}addrA; apply: f_equal2; first by [].
   rewrite -!opprD -mulrDl realq_comm ?mulrDr ?mulrA //.
   by rewrite -{2}[b1]conjqI -conjqM realq_conjD. 
 rewrite -!addrA linearN /= !conjqM !conjqI !mulrN !mulrA {1}addrA.
-rewrite [X in X + _ = _]addrC !{1}addrA [RHS]addrC -!{1}addrA; congr (_ + _).
+rewrite [X in X + _ = _]addrC !{1}addrA [RHS]addrC -!{1}addrA.
+apply: f_equal2; first by [].
 rewrite [LHS]addrC [RHS]addrC -!{1}addrA; congr (_ + _).
   by rewrite -mulrA -conjq_comm mulrA.
 rewrite -2!{1}mulrA -mulrDr -conjqM -2!{1}mulrA -mulrDr.
@@ -582,7 +583,7 @@ Qed.
 
 Lemma conjo_comm (a : oct R) : a^*o *o a = a *o a^*o.
 Proof.
-case: a => a0 a1; congr mkOct => /=.
+case: a => a0 a1; apply: (f_equal2 (@mkOct _)) => /=.
   rewrite !(mulrBl, mulrBr, mulrDr, mulrDl, linearN, mulNr, mulrN, opprK) /=.
   by rewrite conjq_comm.
 rewrite !(linearB, linearD) /=.
@@ -595,7 +596,7 @@ Lemma conjo_comm2 (a b : oct R) :
   b^*o *o a + a^*o *o b = a *o b^*o + b *o a^*o.
 Proof.
 apply: (addIr (a *o a ^*o + b *o b ^*o)).
-rewrite [RHS]addrAC !addrA -muloDr.
+rewrite [RHS]addrAC !{1}addrA -muloDr.
 rewrite -[RHS]addrA -muloDr -muloDl -linearD /=.
 rewrite addrC !addrA -conjo_comm -muloDr -addrA -conjo_comm.
 rewrite -muloDr -muloDl.
@@ -607,7 +608,7 @@ Lemma conjoM a b : (a *o b)^*o = b^*o *o a^*o.
 Proof.
 case: a b => [a0 a1] [b0 b1]; congr mkOct => /=; last first.
   rewrite !(linearB, linearD, mulrBl, mulrDl, mulrBr, mulrDr) /= conjqI.
-  rewrite !(mulNr, opprK) [-(a1 * _) - _]addrC subrK [_ - b1 * _]addrC subrK.
+rewrite !(mulNr, opprK) [-(a1 * _) - _]addrC subrK [_ - b1 * _]addrC subrK.
   by rewrite addrC.
 rewrite !(linearN, linearB, mulrBl, mulrDl, mulrBr, mulrDr) /= 
           !conjqM /= !conjqI opprK.
@@ -719,7 +720,7 @@ Canonical realo_keyed := KeyedQualifier realo_key.
 Lemma realo_comm (a b : oct R) : a \is realo -> a *o b = b *o a.
 Proof.
 rewrite !qualifE; case: a => [[a0 a1] a2]; case: b => [b1 b2].
-rewrite /= => /andP[/eqP-> /eqP->]; congr mkOct => /=.
+rewrite /= => /andP[/eqP-> /eqP->]; apply: (f_equal2 (@mkOct _)) => /=.
   by rewrite mulr0 subr0 linear0 mul0r subr0 realq_comm // realq_real.
 by rewrite !mul0r addr0 add0r quat_realC.
 Qed.
@@ -838,7 +839,7 @@ rewrite (_  : - (1/6%:R) = ((1/3%:R) * -(1/2%:R))); last first.
 rewrite -3!addrA scalerDr.
 apply/eqP; rewrite eq_oct; apply/andP; split; apply/eqP.
   rewrite [in LHS]/= scaleoctE /=.
-  rewrite !(linear0, mul0r, mulr0, sub0r, add0r, subr0).
+  rewrite !{1}(linear0, mul0r, mulr0, sub0r, add0r, subr0).
   rewrite [a.1 + _^*q]addrC addrK -scalerA addr0 -conjqE !mulrA !conjq_comm.
   rewrite !conjqP /sqrq /= norm0 !expr0n  expr1n /= !add0r !addr0.
   rewrite !normeE !mul1r expr1n mul1r -3!opprD addrA -!mulr2n scalerN.
@@ -847,19 +848,20 @@ apply/eqP; rewrite eq_oct; apply/andP; split; apply/eqP.
   rewrite  mulVf ?(eqr_nat _ _ 0) //.
   by rewrite mulNr opprK mul1r -(natrD _ 1) mulVf ?(eqr_nat _ _ 0) // scale1r.
 rewrite [in LHS]/= scaleoctE /=.
-rewrite !(linear0, mul0r, mulr0, sub0r, add0r, subr0).
+rewrite !{1}(linear0, mul0r, mulr0, sub0r, add0r, subr0).
 apply: etrans (_ : -(2%:R / 3%:R) *: a.2 + -(1 / 3%:R) *: a.2 = _).
   rewrite -scalerDl -opprD -mulrDl -(natrD _ _ 1) mulfV ?scaleN1r //.
   by rewrite (eqr_nat _ _ 0).
 congr (_ + _).
-  rewrite 3!addr0 -scalerA -!mulrA !conjqP /sqrq !normeE /= !expr0n !expr1n /=.
+  rewrite 3!addr0 -scalerA -!{1}mulrA !{1}conjqP /sqrq !normeE /= 
+          !expr0n !expr1n /=.
   rewrite !add0r !mul1r !mulr1 mulrC -mulrN -scalerA.
   rewrite -addrA -!mulr2n -mulrnA -scaler_nat !scalerA natrM mulrA.
   by rewrite !mulrN !mulNr divfK // (eqr_nat _ 2 0).
 rewrite -{1}[a.2]conjqI conjqE -scalerA scaleNr -scalerN; congr (_ *: _).
 rewrite -scalerN; congr (_ *: _); rewrite !opprD.
 rewrite !(mulNr, mulrN) 4!mulrA mul1r mulr1.
-by rewrite 4!{1}[_ + 0]addr0 -!opprD !addrA.
+by rewrite 4!{1}[_ + 0]addr0 -!{1}opprD !{1}addrA.
 Qed.
 
 Lemma conjo_scalar (a : oct R) : 
