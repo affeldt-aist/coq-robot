@@ -5,7 +5,7 @@ From mathcomp Require Import realalg complex finset fingroup perm.
 Require Import ssr_ext angle euclidean skew vec_angle rot frame.
 
 (******************************************************************************)
-(*                         Rigid Body Transformations                         *)
+(*                        Rigid Body Transformations                          *)
 (*                                                                            *)
 (* This file develops the theory of isometries, proving basic properties such *)
 (* as the preservation of the cross-product by derivative maps, the facts     *)
@@ -312,7 +312,7 @@ have e3a : e3 = row3 a31 a32 a33.
   by rewrite (row3_proj e3) !row3D !(add0r,addr0) !coorE.
 transitivity (\det ((ortho_of_iso f)^T *m
   (col_mx3 (row3 a11 a12 a13) (row3 a21 a22 a23) (row3 a31 a32 a33))^T)).
-  rewrite /= -det_tr trmx_mul trmxK mulmx_col3.
+  rewrite /= -det_tr trmx_mul mulmxE trmxK -col_mx3_mul.
   by rewrite -crossmul_triple -e1a -e2a -e3a trmxK.
 rewrite det_mulmx det_tr; congr (_ * _).
 rewrite det_tr -crossmul_triple; by congr (_ *d (_ *v _)).

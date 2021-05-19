@@ -964,9 +964,9 @@ Implicit Types (u v w : 'rV[T]_3) (M : 'M[T]_3).
 Definition col_mx3 u v w :=
   \matrix_(i < 3) [eta \0 with 0 |-> u, 1 |-> v, 2%:R |-> w] i.
 
-Lemma col_mx3_rowE M : M = col_mx3 (row 0 M) (row 1 M) (row 2%:R M).
+Lemma col_mx3_row M : col_mx3 (row 0 M) (row 1 M) (row 2%:R M) = M.
 Proof.
-apply/row_matrixP=> i; by rewrite rowK /=; case: ifPn=> [|/ifnot0P/orP[]]/eqP->.
+by apply/row_matrixP=> i; rewrite rowK /=; case: ifPn=> [|/ifnot0P/orP[]]/eqP->.
 Qed.
 
 Lemma mulmx_row3_col3 a b c u v w :
@@ -975,13 +975,13 @@ Proof. apply/rowP => n; by rewrite !mxE sum3E !mxE. Qed.
 
 Lemma col_mx3E u v w : col_mx3 u v w = col_mx u (col_mx v w).
 Proof.
-rewrite [LHS]col_mx3_rowE; apply/row_matrixP => i; rewrite !rowK /=.
+rewrite -[LHS]col_mx3_row; apply/row_matrixP => i; rewrite !rowK /=.
 case: ifPn => [|/ifnot0P/orP[]]/eqP->.
-- rewrite (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
+- by rewrite (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
 - rewrite (_ : 1 = @rshift 1 _ 0) ?(@rowKd _ 1); last exact: val_inj.
-  rewrite  (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
+  by rewrite  (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
 - rewrite (_ : 2%:R = @rshift 1 _ 1) ?(@rowKd _ 1); last exact: val_inj.
-  rewrite (_ : 1 = @rshift 1 1 0) ?(@rowKd _ 1) ?row_id //; exact: val_inj.
+  by rewrite (_ : 1 = @rshift 1 1 0) ?(@rowKd _ 1) ?row_id //; exact: val_inj.
 Qed.
 
 Lemma row'_col_mx3 (i : 'I_3) (u v w : 'rV[T]_3) :
@@ -1009,17 +1009,18 @@ Proof.
 apply/matrixP => -[[|[|[] //]] ?] [[|[|[] //]] ?]; by rewrite !mxE permE.
 Qed.
 
-Lemma mulmx_col3 M u v w : col_mx3 u v w *m M = col_mx3 (u *m M) (v *m M) (w *m M).
+Lemma col_mx3_mul M u v w :
+  col_mx3 (u *m M) (v *m M) (w *m M) = col_mx3 u v w * M.
 Proof.
-apply/matrixP => i j.
-move: i => -[[|[|[] // ]] ?]; rewrite !mxE; apply eq_bigr => /= ? _; by rewrite mxE.
+by apply/matrixP => i j; move: i => -[[|[|[] // ]] ?];
+  rewrite !mxE; apply eq_bigr => /= ? _; rewrite mxE.
 Qed.
 
-Lemma mul_tr_col_mx3 (x : 'rV[T]_3) a b c :
-  x *m (col_mx3 a b c)^T = row3 (x *d a) (x *d b) (x *d c).
+Lemma mul_tr_col_mx3 (v : 'rV[T]_3) a b c :
+  v *m (col_mx3 a b c)^T = row3 (v *d a) (v *d b) (v *d c).
 Proof.
-rewrite col_mx3E (tr_col_mx a) (tr_col_mx b) (mul_mx_row x a^T).
-by rewrite row3E (mul_mx_row x b^T) 3!dotmulP.
+rewrite col_mx3E (tr_col_mx a) (tr_col_mx b) (mul_mx_row v a^T).
+by rewrite row3E (mul_mx_row v b^T) 3!dotmulP.
 Qed.
 
 End col_mx3.
@@ -1280,13 +1281,12 @@ Proof. by rewrite dotmul_crossmul_shift dotmulC. Qed.
 Lemma dot_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
 Proof. by do 2 rewrite dot_crossmulC; rewrite linearNl lieC. Qed.
 
-Lemma det_crossmul_dotmul M u v x :
-  (\det M *: (u *v v)) *d x = (((u *m M) *v (v *m M)) *m M^T) *d x.
+Lemma det_crossmul_dotmul M u v w :
+  (\det M *: (u *v v)) *d w = (((u *m M) *v (v *m M)) *m M^T) *d w.
 Proof.
-transitivity (\det M * \det (col_mx3 u v x)).
+transitivity (\det M * \det (col_mx3 u v w)).
   by rewrite dotmulZv -dot_crossmulC crossmul_triple.
-transitivity (\det (col_mx3 (u *m M) (v *m M) (x *m M))).
-  by rewrite mulrC -det_mulmx mulmx_col3.
+rewrite (mulrC (\det M)) -det_mulmx mulmxE -col_mx3_mul.
 by rewrite -crossmul_triple dot_crossmulC dotmul_trmx.
 Qed.
 
@@ -1627,11 +1627,11 @@ apply (iffP idP).
     apply/orthogonal3P.
     rewrite ni nj /= zxy0 norm_crossmul_normal // xy0 !eqxx /= dot_crossmulC.
     by rewrite liexx dotmul0v dot_crossmulCA liexx dotmulv0 !eqxx.
-  rewrite (col_mx3_rowE M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
+  rewrite -(col_mx3_row M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
   by rewrite scale1r (dotmulC (row 1 M)) xy0 scale0r subr0 dotmulvv ni expr1n.
 - move=> MSO; move: (MSO).
   rewrite rotationE => /andP[/orthogonal3P/and6P[ni nj nk ij ik jk]].
-  rewrite ni nj ij /= => _; by rewrite !rowE -mulmxr_crossmulr_SO // vecij.
+  by rewrite ni nj ij /= => _; rewrite !rowE -mulmxr_crossmulr_SO // vecij.
 Qed.
 
 Lemma SO_icrossj (T : rcfType) (r : 'M[T]_3) : r \is 'SO[T]_3 ->

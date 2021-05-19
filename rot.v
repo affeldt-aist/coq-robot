@@ -1,5 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-Require Import Nsatz.
+Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
@@ -275,7 +275,7 @@ Proof. by rewrite Rz_RO (tr_block_mx (RO a)) !(trmx0,trmx1) trmx_RO -Rz_RO. Qed.
 
 Lemma RzM a b : Rz a * Rz b = Rz (a + b).
 Proof.
-rewrite {1 2}/Rz e2row -mulmxE !mulmx_col3 !mulmx_row3_col3. Simp.r.
+rewrite {1 2}/Rz e2row -col_mx3_mul 3!mulmx_row3_col3. Simp.r.
 rewrite !row3Z !row3D. Simp.r. rewrite -e2row; congr col_mx3.
 - by rewrite -cosD sinD (addrC (_ * _)).
 - by rewrite -opprD -sinD [in X in row3 _ X _]addrC -cosD.
@@ -307,8 +307,7 @@ Definition Rzy a b := col_mx3
 
 Lemma RzyE a b : Rz a * Ry b = Rzy a b.
 Proof.
-rewrite /Rz /Ry -mulmxE mulmx_col3(* TODO * -> *m *).
-congr col_mx3.
+rewrite /Rz /Ry -col_mx3_mul; congr col_mx3.
 - rewrite mulmx_row3_col3 scale0r addr0 row3Z mulr0.
   by rewrite e1row row3Z row3D ?(addr0,mulr0,add0r,mulr1,mulrN,mulNr).
 - rewrite mulmx_row3_col3 scale0r addr0 row3Z mulr0.
@@ -558,7 +557,7 @@ case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
   rewrite crossmul_triple => /eqP.
   rewrite /i /j /k.
   rewrite !rowframeE.
-  rewrite -col_mx3_rowE => ->.
+  rewrite col_mx3_row => ->.
   rewrite invr1 mulr1 mul1r => /eqP.
   by rewrite Neqxx oner_eq0.
 Qed.
@@ -904,7 +903,7 @@ Lemma normalcomp_double_crossmul p (e : 'rV[T]_3) : norm e = 1 ->
 Proof.
 move=> u1.
 rewrite 2!rowframeE (lieC (row _ _)) /= SO_jcrossk; last first.
-  by rewrite (col_mx3_rowE (NOFrame.M (Base.frame e))) -!rowframeE Base.is_SO.
+  by rewrite -(col_mx3_row (NOFrame.M (Base.frame e))) -!rowframeE Base.is_SO.
 rewrite -rowframeE Base.frame0E ?norm1_neq0 //.
 rewrite normalizeI // {2}(axialnormalcomp p e) linearD /=.
 by rewrite crossmul_axialcomp add0r lieC /= linearNl opprK.
@@ -1825,11 +1824,9 @@ Qed.
 
 End euler_angles.
 
-Section euler_angles2.
+Section Nsatz_rcfType.
+Variable T : rcfType.
 
-Variables (T : rcfType).
-
-(* Nsatz *)
 Lemma Tsth : Setoid_Theory T (@eq T).
 by constructor => [x //|x y //|x y z ->].
 Qed.
@@ -1841,9 +1838,11 @@ Definition Tmul (x y : T) := (x * y)%R.
 Definition Tsub (x y : T) := (x - y)%R.
 Definition Topp (x  : T) := (- x)%R.
 
+#[global]
 Instance Tops: (@Ring_ops T T0 T1 Tadd Tmul Tsub Topp (@eq T)).
 Defined.
 
+#[global]
 Instance Tri : (Ring (Ro:=Tops)).
 Proof.
 constructor => //.
@@ -1863,11 +1862,13 @@ constructor => //.
 - exact: subrr.
 Defined.
 
+#[global]
 Instance Tcri: (Cring (Rr:=Tri)).
 Proof.
 exact: mulrC.
 Defined.
 
+#[global]
 Instance Rdi : (Integral_domain (Rcr:=Tcri)).
 Proof.
 constructor.
@@ -1877,6 +1878,12 @@ constructor.
 rewrite -[_ _ zero]/(1 = 0)%R; apply/eqP.
 by rewrite (eqr_nat T 1 0).
 Defined.
+
+End Nsatz_rcfType.
+
+Section euler_angles2.
+
+Variables (T : rcfType).
 
 Definition Rxyz (a b c : angle T) :=
   let ca := cos a in let cb := cos b in let cc := cos c in
