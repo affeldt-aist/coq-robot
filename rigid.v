@@ -114,8 +114,8 @@ Implicit Types f : 'CIso[T]_3.
 
 Local Open Scope frame_scope.
 
-Definition frame_central_iso f (p : noframe T) : noframe T.
-apply: (@NOFrame.mk _ (col_mx3 (f (p|,0)) (f (p|,1)) (f (p|,2%:R)))).
+Definition frame_central_iso f (F : noframe T) : noframe T.
+apply: (@NOFrame.mk _ (col_mx3 (f F~i) (f F~j) (f F~k))).
 apply/orthogonal3P.
 by rewrite !rowK /= 3!central_isometry_preserves_norm 3!noframe_norm
   3!central_isometry_preserves_dotmul idotj noframe_idotk jdotk !eqxx.
@@ -288,43 +288,40 @@ Local Open Scope frame_scope.
 
 (* [oneill] lemma 3.2, p.108 *)
 Lemma dmap_iso_sgnP (F : tframe T) f :
-  let e1 := F|,0 in
-  let e2 := F|,1 in
-  let e3 := F|,2%:R in
-  f`* e1 *d (f `* e2 *v f`* e3) =
-  iso_sgn f * (e1 *d (e2 *v e3)).
+  let i := F~i in let j := F~j in let k := F~k in
+  f`* i *d (f `* j *v f`* k) =
+  iso_sgn f * (i *d (j *v k)).
 Proof.
-move=> e1 e2 e3.
-move: (orthogonal_expansion (can_noframe T) e1).
+move=> i j k.
+move: (orthogonal_expansion (can_noframe T) i).
 rewrite !rowframeE !row1.
 set a11 := _ *d 'e_0. set a12 := _ *d 'e_1. set a13 := _ *d 'e_2%:R => He1.
-move: (orthogonal_expansion (can_noframe T) e2).
+move: (orthogonal_expansion (can_noframe T) j).
 rewrite !rowframeE !row1.
 set a21 := _ *d 'e_0. set a22 := _ *d 'e_1. set a23 := _ *d 'e_2%:R => He2.
-move: (orthogonal_expansion (can_noframe T) e3).
+move: (orthogonal_expansion (can_noframe T) k).
 rewrite !rowframeE !row1.
 set a31 := _ *d 'e_0. set a32 := _ *d 'e_1. set a33 := _ *d 'e_2%:R => He3.
-have e1a : e1 = row3 a11 a12 a13.
-  by rewrite (row3_proj e1) !row3D !(add0r,addr0) !coorE.
-have e2a : e2 = row3 a21 a22 a23.
-  by rewrite (row3_proj e2) !row3D !(add0r,addr0) !coorE.
-have e3a : e3 = row3 a31 a32 a33.
-  by rewrite (row3_proj e3) !row3D !(add0r,addr0) !coorE.
+have ia : i = row3 a11 a12 a13.
+  by rewrite (row3_proj i) !row3D !(add0r,addr0) !coorE.
+have ja : j = row3 a21 a22 a23.
+  by rewrite (row3_proj j) !row3D !(add0r,addr0) !coorE.
+have ka : k = row3 a31 a32 a33.
+  by rewrite (row3_proj k) !row3D !(add0r,addr0) !coorE.
 transitivity (\det ((ortho_of_iso f)^T *m
   (col_mx3 (row3 a11 a12 a13) (row3 a21 a22 a23) (row3 a31 a32 a33))^T)).
   rewrite /= -det_tr trmx_mul mulmxE trmxK -col_mx3_mul.
-  by rewrite -crossmul_triple -e1a -e2a -e3a trmxK.
+  by rewrite -crossmul_triple -ia -ja -ka trmxK.
 rewrite det_mulmx det_tr; congr (_ * _).
-rewrite det_tr -crossmul_triple; by congr (_ *d (_ *v _)).
+by rewrite det_tr -crossmul_triple; congr (_ *d (_ *v _)).
 Qed.
 
 (* [oneill] theorem 3.6, p.110 *)
 Lemma dmap_preserves_crossmul (u v : vector) f :
-  f`* (u *v v) =
-    iso_sgn f *: (f`* u *v f`* v) :> vector.
+  f`* (u *v v) = iso_sgn f *: (f`* u *v f`* v) :> vector.
 Proof.
 set tf := TFrame.trans (can_tframe T) 0.
-set u1p := tf|,0. set u2p := tf|,1. set u3p := tf|,2%:R.
+set u1p := tf~i. set u2p := tf~j. set u3p := tf~k.
 move: (orthogonal_expansion tf u).
 rewrite !rowframeE !row1.
 set u1 := _ *d 'e_0. set u2 := _ *d 'e_1. set u3 := _ *d 'e_2%:R => Hu.
@@ -354,12 +351,11 @@ apply (@NOFrame.mk _ (col_mx3 e1 e2 e3)).
 have -> : iso_sgn f = noframe_sgn f'.
   (* TODO: move as a lemma? *)
   rewrite noframe_sgnE.
-  have -> : f'|,0 = f`* u1p by rewrite rowframeE rowK.
-  have -> : f'|,1 = f`* u2p by rewrite rowframeE rowK.
-  have -> : f'|,2%:R = f`* u3p by rewrite rowframeE rowK.
+  have -> : f'~i = f`* u1p by rewrite rowframeE rowK.
+  have -> : f'~j = f`* u2p by rewrite rowframeE rowK.
+  have -> : f'~k = f`* u3p by rewrite rowframeE rowK.
   by rewrite dmap_iso_sgnP /= !rowframeE !rowE !mulmx1 vecjk dote2 mulr1.
-have : (((f`* u) *v (f`* v))) =
-         noframe_sgn f' *: (f`* (u *v v)) :> vector.
+have : (f`* u) *v (f`* v) = noframe_sgn f' *: (f`* (u *v v)) :> vector.
   rewrite /=.
   rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //; last 2 first.
     move: Ku.

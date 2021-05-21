@@ -91,9 +91,9 @@ Local Notation "x %:v" := (mkQuat 0 x).
 Local Notation "'`i'" := ('e_0)%:v.
 Local Notation "'`j'" := ('e_1)%:v.
 Local Notation "'`k'" := ('e_2%:R)%:v.
-Local Notation "Q '_i'" := ((Q.2)``_0).
-Local Notation "Q '_j'" := ((Q.2)``_1).
-Local Notation "Q '_k'" := ((Q.2)``_(2%:R : 'I_3)).
+Local Notation "x '_i'" := (x.2``_0).
+Local Notation "x '_j'" := (x.2``_1).
+Local Notation "x '_k'" := (x.2``_(2%:R : 'I_3)).
 
 Coercion pair_of_quat x := let: mkQuat x1 x2 := x in (x1, x2).
 Let quat_of_pair (a : R * 'rV[R]_3) := let: (a1, a2) := a in mkQuat a1 a2.
@@ -184,9 +184,9 @@ Notation "u %:v" := (mkQuat 0 u) : quat_scope.
 Notation "'`i'" := ('e_0)%:v : quat_scope.
 Notation "'`j'" := ('e_1)%:v : quat_scope.
 Notation "'`k'" := ('e_2%:R)%:v : quat_scope.
-Notation "Q '_i'" := ((Q.2)``_0) : quat_scope.
-Notation "Q '_j'" := ((Q.2)``_1) : quat_scope.
-Notation "Q '_k'" := ((Q.2)``_(2%:R : 'I_3)) : quat_scope.
+Notation "x '_i'" := (x.2``_0) : quat_scope.
+Notation "x '_j'" := (x.2``_1) : quat_scope.
+Notation "x '_k'" := (x.2``_(2%:R : 'I_3)) : quat_scope.
 Notation "r *`i" := (mkQuat 0 (r *: 'e_0)) : quat_scope.
 Notation "r *`j" := (mkQuat 0 (r *: 'e_1)) : quat_scope.
 Notation "r *`k" := (mkQuat 0 (r *: 'e_2%:R)) : quat_scope.
@@ -200,7 +200,7 @@ Structure Conjugate := { conjugate_type : Type ;
 
 Definition conjugate_op_nosimpl := nosimpl conjugate_op.
 
-Notation "x '^*q'" := (@conjugate_op_nosimpl _ x).
+Notation "x '^*q'" := (@conjugate_op_nosimpl _ x) : quat_scope.
 
 Section quaternion.
 Variable R : comRingType.
@@ -891,10 +891,12 @@ Proof.
 by rewrite uquatE /quat_of_polar /sqrq /= normZ v1 mulr1 sqr_normr cos2Dsin2.
 Qed.
 
-Lemma conjugation_quat_of_polarii v a : norm v = 1 ->
-  (conjugation (quat_of_polar a v) v).2 = v.
+Definition quat_rot x (v : 'rV[R]_3) : 'rV[R]_3 := (conjugation x v).2.
+
+Lemma conjugation_quat_of_polar_axis v a : norm v = 1 ->
+  quat_rot (quat_of_polar a v) v = v.
 Proof.
-move=> v1; rewrite conjugationE /= normZ exprMn v1 expr1n mulr1 sqr_normr.
+move=> v1; rewrite /quat_rot conjugationE /= normZ exprMn v1 expr1n mulr1 sqr_normr.
 rewrite dotmulZv dotmulvv v1 expr1n mulr1 linearZl_LR liexx 2!scaler0 mul0rn.
 rewrite addr0 scalerA -expr2 mulr2n scalerBl addrA subrK -scalerDl cos2Dsin2.
 by rewrite scale1r.
@@ -902,45 +904,40 @@ Qed.
 
 Local Open Scope frame_scope.
 
-Lemma conjugation_quat_of_polarij v a : norm v = 1 ->
-  (conjugation (quat_of_polar a v) (Base.frame v)|,1).2 =
-  cos (a *+ 2) *: (Base.frame v)|,1 + sin (a *+ 2) *: (Base.frame v)|,2%:R.
+Lemma conjugation_quat_of_polar_frame_j (f : frame R) a :
+  quat_rot (quat_of_polar a f~i) f~j =
+  cos (a *+ 2) *: f~j + sin (a *+ 2) *: f~k.
 Proof.
-move=> v1; rewrite conjugationE /= normZ v1 mulr1 sqr_normr dotmulZv.
-have v0 : v != 0 by rewrite -norm_eq0 v1 oner_neq0.
-move: (noframe_idotj (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
-rewrite mulr0 scale0r mul0rn addr0 linearZl_LR /=.
-move: (frame_icrossj (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
-rewrite scalerA [in RHS]mulr2n cosD sinD -!expr2; congr (_ + _).
+rewrite /quat_rot conjugationE /= normZ noframe_norm mulr1 sqr_normr dotmulZv.
+have v0 : f~i != 0 by rewrite -norm_eq0 noframe_norm oner_neq0.
+rewrite (noframe_idotj f) mulr0 scale0r mul0rn addr0 linearZl_LR /=.
+rewrite (frame_icrossj f) scalerA [in RHS]mulr2n cosD sinD -!expr2; congr (_ + _).
 by rewrite (mulrC (sin a)) -mulr2n -scalerMnl.
 Qed.
 
-Lemma conjugation_quat_of_polarik v a : norm v = 1 ->
-  (conjugation (quat_of_polar a v) (Base.frame v)|,2%:R).2 =
-  - sin (a *+ 2) *: (Base.frame v)|,1 + cos (a *+ 2) *: (Base.frame v)|,2%:R.
+Lemma conjugation_quat_of_polar_frame_k (f : frame R) a :
+  quat_rot (quat_of_polar a f~i) f~k =
+  - sin (a *+ 2) *: f~j + cos (a *+ 2) *: f~k.
 Proof.
-move=> v1; rewrite conjugationE /= normZ v1 mulr1 sqr_normr dotmulZv.
-have v0 : v != 0 by rewrite -norm_eq0 v1 oner_neq0.
-move: (noframe_idotk (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
-rewrite mulr0 scale0r mul0rn addr0 linearZl_LR /=.
-move: (frame_icrossk (Base.frame v)); rewrite Base.frame0E// normalizeI// => ->.
-rewrite 2!scalerN scalerA sinD cosD -!expr2 addrC scaleNr; congr (_ + _).
+rewrite /quat_rot conjugationE /= normZ noframe_norm mulr1 sqr_normr dotmulZv.
+have v0 : f~i != 0 by rewrite -norm_eq0 noframe_norm oner_neq0.
+rewrite (noframe_idotk f) mulr0 scale0r mul0rn addr0 linearZl_LR /=.
+rewrite (frame_icrossk f) 2!scalerN scalerA sinD cosD -!expr2 addrC scaleNr; congr (_ + _).
 by rewrite (mulrC (sin a)) -mulr2n -scalerMnl mulNrn.
 Qed.
 
-Definition polar_of_quat x : ('rV_3 * angle R)%type :=
+Definition polar_of_quat x : (angle R * 'rV_3)%type :=
   if x.2 == 0 then
-    if x.1 == 1 then ('e_1, 0) else ('e_1, pi)
-  else if x.1 == 0 then (x.2, pihalf R) else
+    if x.1 == 1 then (0, 'e_1) else (pi, 'e_1)
+  else if x.1 == 0 then (pihalf R, x.2) else
   let: u := normalize x.2 in
   let: a := atan (norm x.2 / x.1) in
-  if 0 < x.1 then (u, a) else (u, a + pi).
+  if 0 < x.1 then (a, u) else (a + pi, u).
 
-Lemma polar_of_quat0 : polar_of_quat 0 = ('e_1, pi).
+Lemma polar_of_quat0 : polar_of_quat 0 = (pi, 'e_1).
 Proof. by rewrite /polar_of_quat eqxx eq_sym oner_eq0. Qed.
 
-Lemma norm_polar_of_quat x : x \is uquat ->
-  let: (u, _) := polar_of_quat x in norm u = 1.
+Lemma norm_polar_of_quat x : x \is uquat -> norm (polar_of_quat x).2 = 1.
 Proof.
 case: x => a0 a1; rewrite /= qualifE /polar_of_quat /normq /sqrq /=.
 have [/eqP ->|a10] := ifPn; first by case: ifPn; rewrite norm_delta_mx.
@@ -949,7 +946,7 @@ by rewrite expr0n add0r sqrtr_sqr ger0_norm // norm_ge0.
 Qed.
 
 Lemma polar_of_quatK x : x \is uquat ->
-  let: (u, a) := polar_of_quat x in x = quat_of_polar a u.
+  quat_of_polar (polar_of_quat x).1 (polar_of_quat x).2 = x.
 Proof.
 case: x => a0 a1; rewrite /= qualifE /polar_of_quat /normq /sqrq /=.
 have [->|/eqP a1N u1] := a1 =P 0.
@@ -970,12 +967,9 @@ move: u1; have [-> _|a0P /eqP u1 |a0N /eqP u1] := sgzP a0.
   by rewrite invrK opprK -mulrA mulVf ?lt_eqF// mulr1 norm_scale_normalize.
 Qed.
 
-Definition quat_rot x : 'rV[R]_3 -> 'rV[R]_3 := snd \o locked (conjugation x).
-
 Lemma quat_rot_is_linear x : linear (quat_rot x).
 Proof.
-move=> k u v.
-rewrite /quat_rot /=; unlock; rewrite !conjugationE.
+move=> k u v; rewrite /quat_rot !conjugationE.
 rewrite scalerDr scalerA (mulrC _ k) -scalerA.
 rewrite 2![in RHS]scalerDr -2![in LHS]addrA -3![in RHS]addrA; congr (_ + _).
 rewrite [in RHS]addrA [in RHS]addrCA -[in RHS]addrA; congr (_ + _).
@@ -989,21 +983,21 @@ Canonical quat_rot_linear x := Linear (quat_rot_is_linear x).
 Lemma quat_rot_isRot_polar v a : norm v = 1 ->
   isRot (a *+2) v [linear of quat_rot (quat_of_polar a v)].
 Proof.
-move=> v1 /=; apply/isRotP; split; rewrite /= /quat_rot /=; unlock.
-- by rewrite conjugation_quat_of_polarii.
-- by rewrite conjugation_quat_of_polarij.
-- by rewrite conjugation_quat_of_polarik.
+move=> v1 /=.
+have vE : (Base.frame v)~i = v by rewrite Base.frame0E // ?normalizeI // norm1_neq0.
+apply/isRotP; split => /=.
+- by rewrite conjugation_quat_of_polar_axis.
+- by rewrite -{1}vE conjugation_quat_of_polar_frame_j.
+- by rewrite -{1}vE conjugation_quat_of_polar_frame_k.
 Qed.
 
 Lemma quat_rot_isRot x : x \is uquat ->
-  let: (u, a) := polar_of_quat x in
+  let: a := (polar_of_quat x).1 in
+  let: u := (polar_of_quat x).2 in
   isRot (a *+ 2) u [linear of quat_rot x].
 Proof.
-move=> aH /=.
-have := norm_polar_of_quat aH.
-have := polar_of_quatK aH.
-case: (polar_of_quat x) => u theta -> u1.
-by apply: quat_rot_isRot_polar.
+move=> ux /=; set a := _.1; set u := _.2.
+by rewrite -(polar_of_quatK ux) quat_rot_isRot_polar // norm_polar_of_quat.
 Qed.
 
 End polar_coordinates.

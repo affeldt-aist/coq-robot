@@ -542,9 +542,9 @@ Record t (F0 : tframe T) := mk {
   k : fvec F0 ;
   F : tframe T ;
   _ : BoundVect.endp o = \o{F} ;
-  _ : FramedVect.v i = (F|,0) ;
-  _ : FramedVect.v j = (F|,1) ;
-  _ : FramedVect.v k = (F|,2%:R) ;
+  _ : FramedVect.v i = F~i ;
+  _ : FramedVect.v j = F~j ;
+  _ : FramedVect.v k = F~k ;
 }.
 End rframe.
 End RFrame.
@@ -588,7 +588,7 @@ Proof.
 move=> HF HG a b.
 have @G' : forall t0, rframe (F t0).
   move=> t0.
-  exact: (@RFrame.mk _ _ (@BoundVect.mk _ _ \o{F t0}) `[(F t0)|,0 $ F t0] `[(F t0)|,1 $ F t0] `[(F t0)|,2%:R $ F t0] (F t0)).
+  exact: (@RFrame.mk _ _ (@BoundVect.mk _ _ \o{F t0}) `[(F t0)~i $ F t0] `[(F t0)~j $ F t0] `[(F t0)~k $ F t0] (F t0)).
 apply: (@derivable_mx_FromTo' R F G' G).
 by [].
 by [].
@@ -1100,10 +1100,10 @@ Let Fim1 := frame_of_chain c (prev_frame i).
 (*Let Fi := frame_of_chain c (next_frame i).*)
 Let Fmax := frame_of_chain c last_frame.
 (* contribution to the angular velocity *)
-Definition geo_jac_ang t : 'rV_3 := if j is Revolute _ then \z{Fim1 t} else 0.
+Definition geo_jac_ang t : 'rV_3 := if j is Revolute _ then (Fim1 t)~k else 0.
 (* contribution to the linear velocity *)
 Definition geo_jac_lin t : 'rV_3 :=
-  if j is Revolute _ then \z{Fim1 t} *v (\o{Fmax t} - \o{Fim1 t}) else \z{Fim1 t}.
+  if j is Revolute _ then (Fim1 t)~k *v (\o{Fmax t} - \o{Fim1 t}) else (Fim1 t)~k.
 End geo_jac_row.
 
 Definition geo_jac t : 'M_(n, 6) :=
@@ -1154,7 +1154,7 @@ Variables scara_frames : 'I_5 -> R -> tframe R.
 Let Fim1 (i : 'I_4) := scara_frames (prev_frame i).
 Let Fi (i : 'I_4) := scara_frames (next_frame i).
 Let Fmax := scara_frames ord_max.
-Hypothesis Hzvec : forall t i, \z{Fim1 i t} = 'e_2%:R.
+Hypothesis Hzvec : forall t i, (Fim1 i t)~k = 'e_2%:R.
 Hypothesis o0E : forall t, \o{Fim1 0 t} = 0.
 Hypothesis o1E : forall t, \o{Fim1 1 t} =
   a1 * Cos (Theta1 t) *: 'e_0 + a1 * Sin (Theta1 t) *: 'e_1.
@@ -1184,10 +1184,10 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     rewrite funeqE => x /=; exact: trans_of_hom_hom.
   rewrite /trans /scara_trans derive1mxE [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
   transitivity (
-      derive1 (Theta1 : R^o -> R^o) t *: \z{Fim1 0 t} *v (\o{Fmax t} - \o{Fim1 0 t}) +
-      derive1 (Theta2 : R^o -> R^o) t *: \z{Fim1 1 t} *v (\o{Fmax t} - \o{Fim1 1 t}) +
-      derive1 (d3 : R^o -> R^o) t *: \z{Fim1 2 t} +
-      derive1 (Theta4 : R^o -> R^o) t *: \z{Fim1 3%:R t} *v (\o{Fmax t} - \o{Fim1 3%:R t})).
+      derive1 (Theta1 : R^o -> R^o) t *: (Fim1 0 t)~k *v (\o{Fmax t} - \o{Fim1 0 t}) +
+      derive1 (Theta2 : R^o -> R^o) t *: (Fim1 1 t)~k *v (\o{Fmax t} - \o{Fim1 1 t}) +
+      derive1 (d3 : R^o -> R^o) t *: (Fim1 2 t)~k +
+      derive1 (Theta4 : R^o -> R^o) t *: (Fim1 3%:R t)~k *v (\o{Fmax t} - \o{Fim1 3%:R t})).
     rewrite /scara_joint_velocities /scara_joint_variables derive1mxE /geo_jac_lin /=.
     apply/rowP => i; rewrite 3![in RHS]mxE [in LHS]mxE sum4E; congr (_ + _ + _ + _).
     - by rewrite 2!mxE /= linearZl_LR [in RHS]mxE.
@@ -1295,9 +1295,9 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     exact: H1.
     exact: H2.
   rewrite [RHS]spinK.
-  transitivity (derive1 (Theta1 : R^o -> R^o) t *: \z{Fim1 0 t} +
-                derive1 (Theta2 : R^o -> R^o) t *: \z{Fim1 1 t} +
-                derive1 (Theta4 : R^o -> R^o) t *: \z{Fim1 3%:R t}).
+  transitivity (derive1 (Theta1 : R^o -> R^o) t *: (Fim1 0 t)~k +
+                derive1 (Theta2 : R^o -> R^o) t *: (Fim1 1 t)~k +
+                derive1 (Theta4 : R^o -> R^o) t *: (Fim1 3%:R t)~k).
     rewrite /scara_joint_velocities /scara_joint_variables derive1mxE /geo_jac_ang /=.
     apply/rowP => i; rewrite !mxE sum4E !mxE mulr0 addr0.
     by rewrite -!/(Fim1 _) [Fim1 0 _]lock [Fim1 1 _]lock [Fim1 3%:R _]lock /= -!lock.

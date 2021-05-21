@@ -162,7 +162,7 @@ Definition dh_rot (jangle ltwist : angle T) := col_mx3
 Local Open Scope frame_scope.
 
 Lemma dh_rot_i (f1 f0 : frame T) t a : f1 _R^ f0 = dh_rot t a ->
-  f1|,0 *m f0^T = row3 (cos t) (sin t) 0.
+  f1~i *m f0^T = row3 (cos t) (sin t) 0.
 Proof.
 rewrite rowframeE (rowE 0 f1) -mulmxA FromToE noframe_inv => ->.
 by rewrite /dh_rot e0row mulmx_row3_col3 !scale0r !addr0 scale1r.
@@ -415,7 +415,7 @@ have H4 : From1To0 = dh_rot theta alpha.
   rewrite -expr2 mulNr mulrAC -expr2 (mulrAC (cos alpha)) -expr2 -opprD -mulrDl.
   rewrite (addrC (sin _ ^+ 2)) cos2Dsin2 mul1r mulrN -expr2 -opprD cos2Dsin2 => /eqP.
   by rewrite -subr_eq0 -opprD eqr_oppLR oppr0 (_ : 1 + 1 = 2%:R) // pnatr_eq0.
-have [d [a H5]] : exists d a, \o{F1} = \o{F0} + d *: (F0|,2%:R) + a *: (F1|,0).
+have [d [a H5]] : exists d a, \o{F1} = \o{F0} + d *: F0~k + a *: F1~i.
   case/intersects_interpoint : dh2 => p [].
   rewrite /is_interpoint => /andP[/lineP[k1 /= Hk1] /lineP[k2 /= Hk2]] _.
   exists k2, (- k1).
@@ -488,15 +488,15 @@ Local Open Scope frame_scope.
 (* 1. Zi is the axis of the ith joint *)
 Definition joint_axis (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
-  (Joint.vaxis (joints i) == (frames i')|,2%:R) ||
-  (Joint.vaxis (joints i) == - (frames i')|,2%:R).
+  (Joint.vaxis (joints i) == (frames i')~k) ||
+  (Joint.vaxis (joints i) == - (frames i')~k).
 
 (* 2. Xi is the common perpendicular to Zi-1 and Zi *)
 Definition X_Z (frames : frame ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let predi : 'I_n.+1 := inord i.-1 in
-  let: (o_predi, z_predi) := let f := frames predi in (\o{f}, f|,2%:R) in
-  let: (o_i, x_i, z_i) := let f := frames i' in (\o{f}, f|,0, f|,2%:R) in
+  let: (o_predi, z_predi) := let f := frames predi in (\o{f}, f~k) in
+  let: (o_i, x_i, z_i) := let f := frames i' in (\o{f}, f~i, f~k) in
   if intersects (zaxis (frames predi)) (zaxis (frames i')) then
     x_i == z_predi *v z_i
   else if colinear z_predi z_i then
@@ -518,8 +518,8 @@ Definition link_length (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) 
 Definition link_offset (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  let: (o_succi, x_succi) := let f := frames succi in (\o{f}, f|,0) in
-  let: (o_i, x_i, z_i) := let f := frames i' in (\o{f}, f|,0, f|,2%:R) in
+  let: (o_succi, x_succi) := let f := frames succi in (\o{f}, f~i) in
+  let: (o_i, x_i, z_i) := let f := frames i' in (\o{f}, f~i, f~k) in
   if intersection (zaxis (frames i')) (xaxis (frames succi)) is some o'_i then
     (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == Link.offset (links i')) &&
     (`| Link.offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))
@@ -529,16 +529,16 @@ Definition link_offset (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) 
 Definition link_twist (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  let: (x_succi, z_succi) := let f := frames succi in (f|,0, f|,2%:R) in
-  let z_i := (frames i')|,2%:R in
+  let: (x_succi, z_succi) := let f := frames succi in (f~i, f~k) in
+  let z_i := (frames i')~k in
   Link.twist (links i') == angle_between_lines z_i z_succi x_succi.
   (*angle measured about the positive direction of Xi+1*)
 
 Definition joint_angle (frames : frame ^ n.+1) (joints : joint ^ n) (i : 'I_n) :=
   let i' := widen_ord (leqnSn _) i in
   let succi : 'I_n.+1 := inord i.+1 in
-  let: x_succi := (frames succi)|,0 in
-  let: (x_i, z_i) := let f := frames i' in (f|,0, f|,2%:R) in
+  let: x_succi := (frames succi)~i in
+  let: (x_i, z_i) := let f := frames i' in (f~i, f~k) in
   Joint.angle (joints i) = angle_between_lines x_i x_succi z_i.
   (*angle measured about the positive direction of Zi*)
 
