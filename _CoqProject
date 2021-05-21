@@ -14,6 +14,7 @@ octonion.v
 screw.v
 dh.v
 scara.v
+derive_matrix.v
 differential_kinematics.v
 
 -R . robot
