@@ -130,7 +130,9 @@ Qed.
 Definition noframe_sgn := \det f.
 
 Lemma noframe_sgnE : noframe_sgn = i *d (j *v k).
-Proof. by rewrite crossmul_triple /noframe_sgn [in LHS](col_mx3_rowE f) !rowframeE. Qed.
+Proof.
+by rewrite crossmul_triple /noframe_sgn -(col_mx3_row f) 3!rowframeE.
+Qed.
 
 Lemma abs_noframe_sgn : `| noframe_sgn | = 1.
 Proof. apply orthogonal_det; by case: f. Qed.
@@ -193,7 +195,7 @@ have /eqP : p *m (col_mx3 i j k) ^T = 0.
   by rewrite mul_tr_col_mx3 dotmulE sum3E H1 dotmulE sum3E H2 dotmulE sum3E H3 row30.
 rewrite mul_mx_rowfree_eq0; first by move/eqP.
 apply/row_freeP; exists (col_mx3 i j k).
-apply/eqP; by rewrite -orthogonalEC !rowframeE -col_mx3_rowE (NOFrame.MO _).
+by apply/eqP; rewrite -orthogonalEC !rowframeE col_mx3_row (NOFrame.MO _).
 Qed.
 
 Lemma orthogonal_expansion p :
@@ -439,8 +441,8 @@ Lemma basis_change (T : rcfType) (M : 'M[T]_3) (F : noframe T) (A : 'M[T]_3) :
 Proof.
 move=> i j k H1 H2 H3 P.
 have : P * M = A * P.
-  rewrite /P -mulmxE mulmx_col3 (col_mx3_rowE A) mulmx_col3 H1 H2 H3.
-  congr col_mx3; apply/rowP => a; by rewrite !mxE sum3E !mxE.
+  rewrite /P -(col_mx3_mul M) -(col_mx3_row A) -col_mx3_mul H1 H2 H3.
+  by congr col_mx3; apply/rowP => a; rewrite !mxE sum3E !mxE.
 rewrite -mulrA => <-.
 rewrite mulrA mulVr ?mul1r // unitmxE unitfE /P -crossmul_triple.
 by rewrite -normr_gt0 -noframe_sgnE (abs_noframe_sgn F) ltr01.
@@ -583,7 +585,7 @@ Lemma jcrossk : j *v k = i.
 Proof. by rewrite jE kE !rowframeE SO_jcrossk ?Frame.MSO // -rowframeE -iE. Qed.
 
 Lemma is_SO : col_mx3 (frame u)|,0 (frame u)|,1 (frame u)|,2%:R \is 'SO[T]_3.
-Proof. by rewrite !rowframeE -col_mx3_rowE Frame.MSO. Qed.
+Proof. by rewrite !rowframeE col_mx3_row Frame.MSO. Qed.
 
 End build_base.
 

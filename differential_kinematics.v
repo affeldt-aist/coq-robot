@@ -1057,8 +1057,8 @@ Lemma ang_vel_mx_Rz (R : realType) (a : R^o -> R^o) t : derivable a t 1 ->
   ang_vel_mx (@Rz _ \o (@Rad.angle_of _) \o a) t = \S(row3 0 0 (derive1 a t)).
 Proof.
 move=> Ha.
-rewrite /ang_vel_mx trmx_Rz (derive1mx_RzE Ha) /Rz -mulmxE.
-rewrite -!scalemxAr mulmx_col3.
+rewrite /ang_vel_mx trmx_Rz (derive1mx_RzE Ha) /Rz.
+rewrite -!scalerAr -col_mx3_mul.
 rewrite mulmx_row3_col3 scale0r addr0.
 rewrite mulmx_row3_col3 scale0r addr0.
 rewrite e2row mulmx_row3_col3 !(scale0r,scaler0,addr0).

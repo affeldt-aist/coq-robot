@@ -19,6 +19,10 @@ From mathcomp.analysis Require Import forms.
 (*  antip A == antisymmetric part of matrix A                                 *)
 (*  spin_eigenvalues u == eigenvalues of \S(u)                                *)
 (*                                                                            *)
+(* Cayley transform:                                                          *)
+(*    cayley M == (1 - M)^-1 * (1 + M)                                        *)
+(*  uncayley M == (M - 1) * (M + 1)^-1                                        *)
+(*                                                                            *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -300,7 +304,7 @@ Proof. by move: (spin_is_so u); rewrite antiE -eqr_oppLR => /eqP <-. Qed.
 
 Lemma mul_spin M u :
   M * \S( u ) = col_mx3 (u *v row 0 M) (u *v row 1 M) (u *v row 2%:R M).
-Proof. by rewrite {1}(col_mx3_rowE M) -mulmxE mulmx_col3 !spinE. Qed.
+Proof. by rewrite -3!spinE col_mx3_mul col_mx3_row. Qed.
 
 Lemma spin01 u : \S( u ) 0 1 = u``_2%:R.
 Proof. by rewrite /spin mxE crossmulE !mxE /= !(mulr0,mulr1,addr0,subr0). Qed.
@@ -637,6 +641,10 @@ Qed.
 
 End spectral_properties.
 
+Lemma skew_anti (R : rcfType) n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> M = - M^T.
+Proof. by move=> Mso; apply/eqP; rewrite -antiE. Qed.
+
+(* NB: wip *)
 Section cayley_transform.
 
 Variable R : rcfType.
@@ -644,118 +652,169 @@ Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 
 (* TODO: move? *)
-Lemma sub1radd1r_comm n (M : 'M[R]_n.+1) : (1 - M) * (1 + M) = (1 + M) * (1 - M).
-Proof. by rewrite mulrDr mulr1 mulrBl mul1r mulrDl mul1r mulrBr mulr1. Qed.
-
-Lemma det_sub1spin u : \det (1 - \S( u )) = 1 + norm u ^+ 2.
+Lemma skew_dotmulmx n (M : 'M[R]_n.+1) v : M \is 'so[R]_n.+1 ->
+  v *d (v *m M) = - v *d (v *m M).
 Proof.
-set a := \S( u ).
-rewrite det_mx33 [a]lock !mxE /=. Simp.r.
-rewrite -lock /a !spinij subr0. Simp.r.
+move=> Mso; rewrite dotmul_trmx dotmulC [in RHS](skew_anti Mso).
+by rewrite mulmxN dotmulvN dotmulNv opprK.
+Qed.
+
+(* TODO: move? *)
+Lemma skew_det1BM n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> \det (1 - M) != 0.
+Proof.
+move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxBr mulmx1 subr_eq0.
+apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
+have /eqP := skew_dotmulmx v Mso.
+by rewrite -subr_eq0 dotmulNv opprK -mulr2n mulrn_eq0.
+Qed.
+
+(* TODO: move? *)
+Lemma skew_det1DM n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> \det (1 + M) != 0.
+Proof.
+move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxDr mulmx1 addr_eq0.
+apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
+have /eqP := skew_dotmulmx v Mso.
+by rewrite dotmulNv dotmulvN -addr_eq0 -mulr2n mulrn_eq0 oppr_eq0.
+Qed.
+
+(* TODO: move? *)
+Lemma det_sub1spin3E M : M \is 'so[R]_3 -> \det (1 - M) = 1 + norm (unspin M) ^+ 2.
+Proof.
+move=> Mso; rewrite -{1}(unspinK Mso); set v := \S( _ ).
+rewrite det_mx33 [v]lock !mxE /=. Simp.r.
+rewrite -lock /v !spinij subr0. Simp.r.
 rewrite -!addrA; congr (_ + _); rewrite !addrA.
 by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC sqr_norm sum3E.
 Qed.
 
-Lemma det_add1spin u : \det (1 + \S( u )) = 1 + norm u ^+ 2.
+(* TODO: move? *)
+Lemma det_add1spin3E M : M \is 'so[R]_3 -> \det (1 + M) = 1 + norm (unspin M) ^+ 2.
 Proof.
-set a := \S( u ).
-rewrite det_mx33 [a]lock !mxE /=. Simp.r.
-rewrite -lock /a !spinij addr0. Simp.r.
+move=> Mso; rewrite -{1}(unspinK Mso); set v := \S( _ ).
+rewrite det_mx33 [v]lock !mxE /=. Simp.r.
+rewrite -lock /v !spinij addr0. Simp.r.
 rewrite -!addrA; congr (_ + _); rewrite !addrA.
 rewrite sqr_norm sum3E -!expr2 -!addrA; congr (_ + _).
 rewrite mulrDr -expr2 (addrC _ (_^+2)) -!addrA addrC; congr (_ + _).
 by rewrite mulrBr opprB -expr2 addrCA mulrCA subrr addr0.
 Qed.
 
-Lemma sym_add1r M : M \is 'so[R]_3 -> \det (1 + M) != 0.
+(* TODO: move? *)
+Lemma mul1B1D_comm n (M : 'M[R]_n.+1) : (1 - M) *m (1 + M) = (1 + M) *m (1 - M).
 Proof.
-move/unspinK => <-; by rewrite det_add1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
+by rewrite mulmxDr mulmx1 mulmxBl mul1mx mulmxDl mul1mx mulmxBr mulmx1.
 Qed.
 
-Lemma sym_sub1r M : M \is 'so[R]_3 -> \det (1 - M) != 0.
-Proof.
-move/unspinK => <-; by rewrite det_sub1spin paddr_eq0 // ?sqr_ge0 // oner_eq0.
-Qed.
+(* skew matrix -> orthogonal matrix *)
+Definition cayley n (M : 'M[R]_n.+1) := (1 - M)^-1 * (1 + M).
 
-Lemma sub1spin_inv u : 1 - \S( u ) \is a GRing.unit.
-Proof. by rewrite unitmxE unitfE sym_sub1r // spin_is_so. Qed.
+Lemma cayley_is_O n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> cayley M \is 'O[R]_n.+1.
+Proof.
+move=> Mso; rewrite qualifE /cayley trmx_mul linearD /= trmx1.
+rewrite {3}(skew_anti Mso) linearN /= trmxK.
+rewrite trmxV linearD /= trmx1 linearN /=.
+rewrite {4}(skew_anti Mso) !linearN /= trmxK opprK.
+rewrite mulmxA -(mulmxA _^-1) -mul1B1D_comm mulmxA mulVmx ?mul1mx; last first.
+  by rewrite unitmxE unitfE skew_det1BM.
+by rewrite mulmxV // unitmxE unitfE skew_det1DM.
+Qed.
 
 (* TODO: move? *)
-Lemma ortho_addr1 n M : M \is 'O[R]_n.+1 ->
+Lemma ortho_N1eigen_invertible n M : M \is 'O[R]_n.+1 ->
   -1 \notin eigenvalue M -> M + 1 \is a GRing.unit.
 Proof.
-move=> MO N1.
-rewrite unitmxE unitfE.
-apply: contra N1 => /det0P[x x0 /eqP].
+move=> MO N1; rewrite unitmxE unitfE; apply: contra N1 => /det0P[x x0 /eqP].
 rewrite mulmxDr mulmx1 addr_eq0 eq_sym eqr_oppLR => /eqP Hx.
-apply/eigenvalueP; exists x => //; by rewrite scaleN1r {2}Hx opprK.
+by apply/eigenvalueP; exists x => //; rewrite scaleN1r {2}Hx opprK.
 Qed.
 
-(* given an orthogonal matrix (-1 not eigenvalue), builds a skew-symmetric matrix *)
-Definition skew_of_ortho n (M : 'M[R]_n.+1) := (M + 1)^-1 * (M - 1).
+(* orthogonal matrix -> skew matrix *)
+Definition uncayley n (M : 'M[R]_n.+1) := (M - 1) * (M + 1)^-1.
 
-Lemma trmx_skew_of_orth n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 ->
-  -1 \notin eigenvalue M -> (skew_of_ortho M)^T = - skew_of_ortho M.
+(* TODO: move? *)
+Lemma ortho_N1eigen_comm n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 ->
+  -1 \notin eigenvalue M -> M * (M + 1)^-1 = (M + 1)^-1 * M.
 Proof.
-move=> MO N1.
-rewrite /skew_of_ortho trmx_mul trmxV linearD /= [in X in _ *m X]linearD.
-rewrite linearN /= trmx1 -(orthogonal_inv MO) -(mul1mx (_ + _)^-1).
-rewrite -[X in _ *m (X *m _) = _](orthogonal_mul_tr MO).
-rewrite !mulmxA mulmxBl mul1mx mulVmx // ?orthogonal_unit //.
-rewrite -mulmxA -(orthogonal_inv MO) mulmxE -invrM; last 2 first.
-  suff : M + 1 \is a GRing.unit.
-    by rewrite !unitmxE !unitfE -det_tr linearD /= trmx1 orthogonal_inv.
-  by rewrite ortho_addr1.
-  by rewrite orthogonal_unit.
-rewrite (mulrDl _ _ M) mul1r mulVr ?orthogonal_unit // -opprB.
-have Htmp : M * (1 + M)^-1 = (1 + M)^-1 * M.
-  rewrite -{1}(invrK M) -invrM; last 2 first.
-    by rewrite addrC ortho_addr1.
-    by rewrite orthogonal_inv // unitr_trmx ?orthogonal_unit.
-  rewrite mulrDl divrr ?orthogonal_unit // div1r (orthogonal_inv MO).
-  rewrite -{1}(orthogonal_tr_mul MO) -{1}(mulr1 M^T) -mulrDr invrM; last 2 first.
-    by rewrite unitr_trmx orthogonal_unit.
-    by rewrite addrC ortho_addr1.
-  by rewrite -trmxV (orthogonal_inv MO) trmxK.
-by rewrite mulNr mulrBl Htmp mul1r -{2}(mulr1 (1 + M)^-1) -mulrBr addrC.
+move=> MO MN1; rewrite -{1}(invrK M) -invrM; last 2 first.
+  by rewrite ortho_N1eigen_invertible.
+  by rewrite orthogonal_inv // unitr_trmx ?orthogonal_unit.
+rewrite mulrDl divrr ?orthogonal_unit // div1r (orthogonal_inv MO).
+rewrite -{1}(orthogonal_tr_mul MO) -{2}(mulr1 M^T) -mulrDr invrM; last 2 first.
+  by rewrite unitr_trmx orthogonal_unit.
+  by rewrite ortho_N1eigen_invertible.
+by rewrite -trmxV (orthogonal_inv MO) trmxK.
 Qed.
 
-Lemma skew_of_ortho_is_so n Q : Q \is 'O[R]_n.+1 ->
-  -1 \notin eigenvalue Q -> skew_of_ortho Q \is 'so[R]_n.+1.
-Proof. move=> HQ N1; by rewrite antiE trmx_skew_of_orth // ?opprK. Qed.
-
-(* given a skew-symmetric matrix, builds an orthogonal matrix *)
-Definition ortho_of_skew n (M : 'M[R]_n.+1) := (1 + M) * (1 - M)^-1.
-
-Lemma trmx_ortho_of_skew n M : M \is 'so[R]_n.+1 ->
-  (ortho_of_skew M)^T = (1 + M)^-1 * (1 - M).
+Lemma uncayley_is_so n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 ->
+  -1 \notin eigenvalue M -> uncayley M \is 'so[R]_n.+1.
 Proof.
-move=> Mso.
-rewrite /ortho_of_skew trmx_mul trmxV linearB /= trmx1 linearD /= trmx1.
-move: (Mso); rewrite antiE => /eqP {1}<-.
-move: Mso; rewrite antiE => /eqP {2}->; by rewrite linearN /= trmxK.
+move=> MO MN1; rewrite antiE; apply/eqP.
+rewrite {2}/uncayley.
+rewrite {1}mulrBl mul1r ortho_N1eigen_comm // -[X in _ - X]mulr1 -mulrBr.
+rewrite trmx_mul mulmxE trmxV !linearD /= linearN /= trmx1.
+rewrite /uncayley -(mulr1 (M - 1)) -[X in _ * X / _](orthogonal_tr_mul MO).
+rewrite mulrA mulrDl mulNr mul1r -(orthogonal_inv MO) divrr ?orthogonal_unit//.
+rewrite -mulrA -[X in _ * (X * _)](invrK M) -invrM; last 2 first.
+  by rewrite ortho_N1eigen_invertible.
+  by rewrite unitrV orthogonal_unit.
+rewrite (mulrDl _ _ M^-1) divrr ?orthogonal_unit// mul1r (addrC 1 M^-1).
+by rewrite -mulNr opprB.
 Qed.
 
-Lemma ortho_of_skew_is_O M : M \is 'so[R]_3 -> ortho_of_skew M \is 'O[R]_3.
+Lemma trmx_uncayley n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 ->
+  -1 \notin eigenvalue M -> (uncayley M)^T = - uncayley M.
 Proof.
-move=> Mso.
-rewrite orthogonalEC trmx_ortho_of_skew // /ortho_of_skew.
-rewrite -mulrA (mulrA (1 - M)) sub1radd1r_comm !mulrA.
-rewrite mulVr ?mul1r ?unitmxE ?unitfE ?sym_add1r //.
-by rewrite mulrV // unitmxE unitfE sym_sub1r.
-Qed.
-
-Lemma det_ortho_of_skew M : M \is 'so[R]_3 -> \det (ortho_of_skew M) = 1.
-Proof.
-move/unspinK => <-.
-rewrite /ortho_of_skew det_mulmx det_inv det_add1spin det_sub1spin.
-by rewrite divrr // unitfE paddr_eq0 ?oner_eq0 /= // sqr_ge0.
+by move=> MO N1; apply/esym/eqP; rewrite eqr_oppLR -antiE uncayley_is_so.
 Qed.
 
 (* [murray] exercise 5.(a), p.73 *)
-Lemma ortho_of_skew_is_SO M : M \is 'so[R]_3 -> ortho_of_skew M \is 'SO[R]_3.
+Lemma cayley_is_SO3 Q : Q \is 'so[R]_3 -> cayley Q \is 'SO[R]_3.
 Proof.
-move=> Mso; by rewrite rotationE ortho_of_skew_is_O //= det_ortho_of_skew.
+move=> Qso; rewrite qualifE cayley_is_O //= /cayley.
+rewrite det_mulmx det_inv det_sub1spin3E// det_add1spin3E //.
+by rewrite mulVr // unitfE paddr_eq0 ?sqr_ge0 // oner_eq0.
 Qed.
+
+Lemma uncayleyK n M : M \is 'O[R]_n.+1 -> -1 \notin eigenvalue M ->
+  \det (1 - uncayley M) != 0 -> cayley (uncayley M) = M.
+Proof.
+move=> MO MN1 ?; rewrite /cayley.
+suff <- : (1 - uncayley M) * M = 1 + uncayley M.
+  by rewrite mulrA mulVr ?mul1r// unitmxE unitfE.
+rewrite mulrBl ?mul1r; apply/eqP.
+rewrite subr_eq -addrA addrC -subr_eq.
+suff -> : (M - 1) = (uncayley M) * (M + 1) by rewrite mulrDr mulr1 addrC.
+by rewrite /uncayley -mulrA mulVr ?mulr1// ortho_N1eigen_invertible.
+Qed.
+
+Lemma uncayleyK3 M : M \is 'O[R]_3 -> -1 \notin eigenvalue M ->
+  cayley (uncayley M) = M.
+Proof. by move=> ? ?; rewrite uncayleyK // skew_det1BM // uncayley_is_so. Qed.
+
+(* NB: wip *)
+Definition cayley00 (a b c : R) := 1 + a ^+ 2 - b ^+ 2 - c ^+ 2.
+Definition cayley01 (a b c : R) := (a * b - c) *+ 2.
+Definition cayley02 (a b c : R) := (a * c + b) *+ 2.
+Definition cayley10 (a b c : R) := (a * b + c) *+ 2.
+Definition cayley11 (a b c : R) := 1 - a ^+ 2 + b ^+ 2 - c ^+ 2.
+Definition cayley12 (a b c : R) := (b * c - a) ^+ 2.
+Definition cayley20 (a b c : R) := (a * c - b) *+ 2.
+Definition cayley21 (a b c : R) := (b * c + a) *+ 2.
+Definition cayley22 (a b c : R) := 1 - a ^+ 2 - b ^+ 2 + c ^+ 2.
+
+Lemma cayleyE (u : 'rV[R]_3) :
+  let a := u``_0 in let b := u``_1 in let c := u``_2%:R in
+  cayley \S(u) = (1 + (norm u) ^+ 2)^-1 *:
+  col_mx3
+  (row3 (cayley00 a b c) (cayley01 a b c) (cayley02 a b c))
+  (row3 (cayley10 a b c) (cayley11 a b c) (cayley12 a b c))
+  (row3 (cayley20 a b c) (cayley21 a b c) (cayley22 a b c)).
+Proof.
+move=> a b c; apply/matrix3P; apply/and9P; split; Simp.r => //=; apply/eqP.
+- rewrite !mxE /= /cayley00.
+  rewrite sum3E mxE spinii addr0 mxE mulr1.
+  rewrite mxE spin10 mxE add0r mxE spin20 mxE add0r.
+  rewrite -/a -/b -/c.
+Abort.
 
 End cayley_transform.

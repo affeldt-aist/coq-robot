@@ -176,7 +176,7 @@ rewrite /dh_mat /hRz /hTz homM mulr1 mul0mx add0r /hTx homM mulr1 mulmx1 row3D.
 rewrite !(add0r,addr0) /hRx homM addr0; congr hom; last first.
   rewrite /Rx mulmx_row3_col3 scale0r addr0 e2row 2!row3Z !(mulr1,mulr0).
   by rewrite row3D addr0 !(addr0,add0r).
-rewrite /Rx /Rz -mulmxE mulmx_col3; congr col_mx3.
+rewrite /Rx /Rz -col_mx3_mul; congr col_mx3.
 - by rewrite e0row mulmx_row3_col3 scale1r !scale0r !addr0.
 - rewrite e2row mulmx_row3_col3 scale0r add0r 2!row3Z !mulr0 row3D.
   by rewrite !(addr0,mulr1,add0r).
@@ -283,7 +283,7 @@ move: (H12); rewrite {1}/From1To0 -lock => ->.
 move: (H22); rewrite {1}/From1To0 -lock => -> Hrot.
 
 have H4 : From1To0 = dh_rot theta alpha.
-  rewrite /dh_rot [LHS]col_mx3_rowE row_row3 H00 H01 2!row_row3 H1 H12 H22.
+  rewrite /dh_rot -[LHS]col_mx3_row row_row3 H00 H01 2!row_row3 H1 H12 H22.
   case/boolP : (sin alpha == 0) => sa0.
     move/eqP in sqr_H21; rewrite (eqP sa0) expr0n mul0r sqrf_eq0 in sqr_H21.
     move/eqP in sqr_H20; rewrite (eqP sa0) expr0n mul0r sqrf_eq0 in sqr_H20.
