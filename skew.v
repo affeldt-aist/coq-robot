@@ -664,8 +664,7 @@ Lemma skew_det1BM n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> \det (1 - M) != 0.
 Proof.
 move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxBr mulmx1 subr_eq0.
 apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
-have /eqP := skew_dotmulmx v Mso.
-by rewrite -subr_eq0 dotmulNv opprK -mulr2n mulrn_eq0.
+by have /eqP := skew_dotmulmx v Mso; rewrite -eq_sym dotmulNv eqrNxx.
 Qed.
 
 (* TODO: move? *)
@@ -674,7 +673,7 @@ Proof.
 move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxDr mulmx1 addr_eq0.
 apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
 have /eqP := skew_dotmulmx v Mso.
-by rewrite dotmulNv dotmulvN -addr_eq0 -mulr2n mulrn_eq0 oppr_eq0.
+by rewrite -eq_sym dotmulNv eqrNxx dotmulvN eqr_oppLR oppr0.
 Qed.
 
 (* TODO: move? *)
@@ -790,31 +789,5 @@ Qed.
 Lemma uncayleyK3 M : M \is 'O[R]_3 -> -1 \notin eigenvalue M ->
   cayley (uncayley M) = M.
 Proof. by move=> ? ?; rewrite uncayleyK // skew_det1BM // uncayley_is_so. Qed.
-
-(* NB: wip *)
-Definition cayley00 (a b c : R) := 1 + a ^+ 2 - b ^+ 2 - c ^+ 2.
-Definition cayley01 (a b c : R) := (a * b - c) *+ 2.
-Definition cayley02 (a b c : R) := (a * c + b) *+ 2.
-Definition cayley10 (a b c : R) := (a * b + c) *+ 2.
-Definition cayley11 (a b c : R) := 1 - a ^+ 2 + b ^+ 2 - c ^+ 2.
-Definition cayley12 (a b c : R) := (b * c - a) ^+ 2.
-Definition cayley20 (a b c : R) := (a * c - b) *+ 2.
-Definition cayley21 (a b c : R) := (b * c + a) *+ 2.
-Definition cayley22 (a b c : R) := 1 - a ^+ 2 - b ^+ 2 + c ^+ 2.
-
-Lemma cayleyE (u : 'rV[R]_3) :
-  let a := u``_0 in let b := u``_1 in let c := u``_2%:R in
-  cayley \S(u) = (1 + (norm u) ^+ 2)^-1 *:
-  col_mx3
-  (row3 (cayley00 a b c) (cayley01 a b c) (cayley02 a b c))
-  (row3 (cayley10 a b c) (cayley11 a b c) (cayley12 a b c))
-  (row3 (cayley20 a b c) (cayley21 a b c) (cayley22 a b c)).
-Proof.
-move=> a b c; apply/matrix3P; apply/and9P; split; Simp.r => //=; apply/eqP.
-- rewrite !mxE /= /cayley00.
-  rewrite sum3E mxE spinii addr0 mxE mulr1.
-  rewrite mxE spin10 mxE add0r mxE spin20 mxE add0r.
-  rewrite -/a -/b -/c.
-Abort.
 
 End cayley_transform.

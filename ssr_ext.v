@@ -4,14 +4,16 @@ From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import perm path fingroup complex.
 
 (******************************************************************************)
-(*                                                                            *)
 (* Minor additions to MathComp libraries ssrbool, ssralg, ssrnum, and complex *)
 (*                                                                            *)
+(* u``_i            == the ith component of the row vector u                  *)
 (* 'e_0, 'e_1, 'e_2 == the canonical vectors                                  *)
 (*                                                                            *)
 (******************************************************************************)
 
 Reserved Notation "''e_' i" (format "''e_' i", at level 3).
+Reserved Notation "u '``_' i" (at level 3, i at level 2,
+  left associativity, format "u '``_' i").
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -53,6 +55,31 @@ Import GRing.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 
+Lemma lift0E m (i : 'I_m.+1) : lift ord0 i = i.+1%:R.
+Proof. by apply/val_inj; rewrite Zp_nat /= modn_small // ltnS. Qed.
+
+Module Simp.
+Ltac ord :=
+  do ?[rewrite !lift0E
+      |rewrite ord1
+      |rewrite -[ord_max]natr_Zp /=
+      |rewrite -[widen_ord _ _]natr_Zp /=
+      |rewrite -[fintype.lift _ _]natr_Zp /=
+      |rewrite -[Ordinal _]natr_Zp /=
+      |rewrite -[_ + _ : 'I__]natr_Zp /=
+      |rewrite -[_ * _ : 'I__]natr_Zp /=
+      |rewrite -[- _ : 'I__]natr_Zp /=].
+
+Ltac r := rewrite ?(Monoid.simpm,
+                    mulr0,mul0r,mul1r,mulr1,addr0,add0r,
+                    mulr1n,mulNr,mulrN,opprK,oppr0,
+                    scale0r, scaler0, scaleN1r, scale1r,
+                    eqxx).
+
+End Simp.
+
+Section extra_ssreflect.
+
 Lemma ifnot01 (i : 'I_2) : (i != 0) = (i == 1).
 Proof. by case: i => -[] // []. Qed.
 
@@ -77,13 +104,10 @@ Proof. by move: i; do !case=>//. Qed.
 Lemma ifnot2 (i : 'I_3) : (i != 2%:R) = (i == 0) || (i == 1).
 Proof. by move: i; do !case=>//. Qed.
 
-Lemma Neqxx (R : numDomainType) (x : R) : (-x == x) = (x == 0).
-Proof.
-apply/idP/idP => [|/eqP ->]; last by rewrite oppr0.
-by rewrite -subr_eq0 -opprD -mulr2n -mulNrn mulrn_eq0 /= eqr_oppLR oppr0.
-Qed.
+Lemma eqrNxx (R : numDomainType) (x : R) : (-x == x) = (x == 0).
+Proof. by rewrite -[RHS](@mulrn_eq0 _ x 2) addr_eq0 eq_sym. Qed.
 
-Lemma Neqxx_mat (R : numFieldType) n m (u : 'M[R]_(m, n)) :
+Lemma eqmxNxx (R : numFieldType) n m (u : 'M[R]_(m, n)) :
   (- u == u) = (u == 0).
 Proof.
 apply/idP/idP => [|/eqP ->]; last by rewrite oppr0.
@@ -98,29 +122,6 @@ Proof. by rewrite ler_norml => /andP[]. Qed.
 
 Lemma pnatf_unit (R : numFieldType) n : n.+1%:R \is a @GRing.unit R.
 Proof. by rewrite unitfE pnatr_eq0. Qed.
-
-Lemma lift0E m (i : 'I_m.+1) : fintype.lift ord0 i = i.+1%:R.
-Proof. by apply/val_inj; rewrite Zp_nat /= modn_small // ltnS. Qed.
-
-Module Simp.
-Ltac ord :=
-  do ?[rewrite !lift0E
-      |rewrite ord1
-      |rewrite -[ord_max]natr_Zp /=
-      |rewrite -[widen_ord _ _]natr_Zp /=
-      |rewrite -[fintype.lift _ _]natr_Zp /=
-      |rewrite -[Ordinal _]natr_Zp /=
-      |rewrite -[_ + _ : 'I__]natr_Zp /=
-      |rewrite -[_ * _ : 'I__]natr_Zp /=
-      |rewrite -[- _ : 'I__]natr_Zp /=].
-
-Ltac r := rewrite ?(Monoid.simpm,
-                    mulr0,mul0r,mul1r,mulr1,addr0,add0r,
-                    mulr1n,mulNr,mulrN,opprK,oppr0,
-                    scale0r, scaler0, scaleN1r, scale1r,
-                    eqxx).
-
-End Simp.
 
 Lemma liftE0 m (i : 'I_m.+2) : fintype.lift i ord0 = (i == 0)%:R.
 Proof. by Simp.ord; rewrite -val_eqE /=; case: (val i). Qed.
@@ -147,16 +148,7 @@ Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 Lemma sum4E (T : ringType) (f : 'I_4 -> T) : \sum_(i < 4) f i = f 0 + f 1 + f 2%:R + f 3%:R.
 Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 
-Lemma scaler_eq1 (F : fieldType) (R : lmodType F) (k : F) (a : R) :
-  a != 0 -> k *: a = a -> k = 1.
-Proof.
-move=> a0 /eqP; rewrite -{2}(scale1r a) -subr_eq0 -scalerBl.
-by rewrite scaler_eq0 (negbTE a0) subr_eq0 orbF => /eqP.
-Qed.
-
-Lemma scaler_eqN1 (F : fieldType) (R : lmodType F) (k : F) (a : R) :
-  a != 0 -> - k *: a = a -> k = - 1.
-Proof. by move=> a0 /scaler_eq1 => /(_ a0) /eqP; rewrite eqr_oppLR => /eqP. Qed.
+End extra_ssreflect.
 
 Section extra_perm3.
 
@@ -229,13 +221,102 @@ Definition odd_perm3 :=
 
 End extra_perm3.
 
-Reserved Notation "u '``_' i"
-    (at level 3, i at level 2, left associativity, format "u '``_' i").
 Notation "u '``_' i" := (u (GRing.zero (Zp_zmodType O)) i) : ring_scope.
 Notation "''e_' i" := (delta_mx 0 i) : ring_scope.
 Local Open Scope ring_scope.
 
-Section extra_linear.
+(* algebra lemmas for matrices of size <= 2,3 *)
+Section extra_algebra_23.
+
+Lemma matrix2P (T : eqType) (A B : 'M[T]_2) :
+  reflect (A = B)
+    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 1 0 == B 1 0 & A 1 1 == B 1 1].
+Proof.
+apply (iffP idP); last by move=> ->; rewrite !eqxx.
+case/and4P => /eqP ? /eqP ? /eqP ? /eqP ?; apply/matrixP => i j.
+case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
+  by case/boolP : (j == 0) => [|/ifnot01P]/eqP->.
+Qed.
+
+Lemma matrix3P (T : eqType) (A B : 'M[T]_3) :
+  reflect (A = B)
+    [&& A 0 0 == B 0 0, A 0 1 == B 0 1, A 0 2%:R == B 0 2%:R,
+        A 1 0 == B 1 0, A 1 1 == B 1 1, A 1 2%:R == B 1 2%:R,
+        A 2%:R 0 == B 2%:R 0, A 2%:R 1 == B 2%:R 1 & A 2%:R 2%:R == B 2%:R 2%:R].
+Proof.
+apply (iffP idP) => [|]; last by move=> ->; rewrite !eqxx.
+case/and9P; do 9 move/eqP => ?; apply/matrixP => i j.
+case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->;
+  by case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
+Qed.
+
+Lemma det_mx11 (T : comRingType) (A : 'M[T]_1) : \det A = A 0 0.
+Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
+
+Lemma cofactor_mx22 (T : comRingType) (A : 'M[T]_2) i j :
+  cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
+Proof.
+rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
+by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
+Qed.
+
+Lemma det_mx22 (T : comRingType) (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
+Proof.
+rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
+rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
+by rewrite !(lift0E, add0r) /= addrr_char2.
+Qed.
+
+Lemma cofactor_mx33 (T : comRingType) (A : 'M[T]_3) i j :
+  cofactor A i j = (-1) ^+ (i + j) *
+                   (A (i == 0)%:R (j == 0)%:R * A ((i <= 1).+1%:R) ((j <= 1).+1%:R) -
+                    A (i == 0)%:R ((j <= 1).+1%:R) * A ((i <= 1).+1%:R) (j == 0)%:R).
+Proof.
+rewrite /cofactor det_mx22 !mxE; congr (_ * (A _ _ * A _ _ - A _ _ * A _ _));
+  by rewrite (liftE0, liftE1).
+Qed.
+
+Lemma det_mx33 (T : comRingType) (M : 'M[T]_3) :
+  \det M = M 0 0 * (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R) +
+           M 0 1 * (M 2%:R 0 * M 1 2%:R - M 1 0 * M 2%:R 2%:R) +
+           M 0 2%:R * (M 1 0 * M 2%:R 1 - M 2%:R 0 * M 1 1).
+Proof.
+rewrite (expand_det_row M 0) sum3E -2!addrA; congr (_ * _ + (_ * _ + _ * _)).
+  by rewrite cofactor_mx33 /= expr0 mul1r [in X in _ - X]mulrC.
+by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
+by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
+Qed.
+
+Lemma sqr_mxtrace {T : comRingType} (M : 'M[T]_3) : (\tr M) ^+ 2 =
+  \sum_i (M i i ^+2) + M 0 0 * M 1 1 *+ 2 + (M 0 0 + M 1 1) * M 2%:R 2%:R *+ 2.
+Proof.
+rewrite /mxtrace sum3E 2!sqrrD sum3E -!addrA; congr (_ + _).
+do 2 rewrite addrC -!addrA; congr (_ + _).
+do 2 rewrite addrC -!addrA; congr (_ + _).
+Qed.
+
+Lemma row3P (T : eqType) (A B : 'rV[T]_3) :
+  reflect (A = B) [&& A 0 0 == B 0 0, A 0 1 == B 0 1 & A 0 2%:R == B 0 2%:R].
+Proof.
+apply (iffP idP) => [|]; last by move=> ->; rewrite !eqxx.
+case/and3P; do 3 move/eqP => ?; apply/matrixP => i.
+by rewrite (ord1 i){i} => j; case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
+Qed.
+
+End extra_algebra_23.
+
+Section extra_algebra.
+
+Lemma scaler_eq1 (F : fieldType) (R : lmodType F) (k : F) (a : R) :
+  a != 0 -> k *: a = a -> k = 1.
+Proof.
+move=> a0 /eqP; rewrite -{2}(scale1r a) -subr_eq0 -scalerBl.
+by rewrite scaler_eq0 (negbTE a0) subr_eq0 orbF => /eqP.
+Qed.
+
+Lemma scaler_eqN1 (F : fieldType) (R : lmodType F) (k : F) (a : R) :
+  a != 0 -> - k *: a = a -> k = - 1.
+Proof. by move=> a0 /scaler_eq1 => /(_ a0) /eqP; rewrite eqr_oppLR => /eqP. Qed.
 
 Lemma mxE_col_row (T : Type) n (M : 'M[T]_n) i j : M i j = (col j (row i M)) 0 0.
 Proof. by rewrite !mxE. Qed.
@@ -267,7 +348,7 @@ Proof.
 by rewrite mxE (bigD1 ord0) //= big1 ?mxE ?addr0 // => i0; rewrite (ord1 i0).
 Qed.
 
-End extra_linear.
+End extra_algebra.
 
 Section extra_complex.
 

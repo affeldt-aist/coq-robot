@@ -156,7 +156,7 @@ apply/idP/idP => [/eqP H|].
   by rewrite noframe_sgnE H dot_crossmulC dotmulvv norm_icrossj expr1n.
 case: noframek => [/eqP //|] /eqP.
 rewrite linearNl -eqr_oppLR noframe_sgnE dot_crossmulC => /eqP <-.
-by rewrite dotmulNv dotmulvv noframe_norm expr1n Neqxx oner_eq0.
+by rewrite dotmulNv dotmulvv noframe_norm expr1n eqrNxx oner_eq0.
 Qed.
 
 Lemma noframe_neg : (f~k == - f~i *v f~j) = (noframe_sgn == - 1).
@@ -167,7 +167,7 @@ apply/idP/idP => [/eqP H|].
 case: noframek => [|/eqP //] /eqP.
 rewrite noframe_sgnE => /eqP ->.
 rewrite double_crossmul dotmulvv normj expr1n scale1r (dotmulC f~j) idotj.
-by rewrite scale0r subr0 dotmulvv normi expr1n -eqr_oppLR Neqxx oner_eq0.
+by rewrite scale0r subr0 dotmulvv normi expr1n -eqr_oppLR eqrNxx oner_eq0.
 Qed.
 
 Lemma noframe_posP : f~k = f~i *v f~j -> f~j = f~k *v f~i /\ f~i = f~j *v f~k.

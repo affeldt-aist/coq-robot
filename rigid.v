@@ -447,7 +447,7 @@ rewrite ltr0_norm // => /eqP.
 rewrite eqr_oppLR => /eqP {}K.
 exfalso.
 move: H.
-rewrite K scaleN1r => /eqP; rewrite Neqxx_mat.
+rewrite K scaleN1r => /eqP; rewrite eqmxNxx.
 move: (mulmxr_crossmulr u v (ortho_of_iso_is_O f)).
 rewrite -/(iso_sgn f) K scaleN1r => /esym/eqP.
 rewrite eqr_oppLR => /eqP ->.
@@ -1117,3 +1117,4 @@ by rewrite rotation_det ?scale1r // EuclideanMotion.rotP.
 Qed.
 
 End rigid_transformation_is_homogeneous_transformation.
+

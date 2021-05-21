@@ -47,6 +47,7 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Section nthroot.
 
+(* TODO: remove? *)
 Lemma rootCD (C : numClosedFieldType) (m n : nat) (x : C) :
   (m * n).-root (x) = m.-root (n.-root x).
 Proof.

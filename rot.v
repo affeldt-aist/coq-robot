@@ -127,7 +127,7 @@ case/cos0_inv => [abpi|].
   exfalso.
   move/rotation_det : MSO.
   rewrite det_mx22 a1 a2 b1 b2 mulrC -(mulrC (cos b)) -sinB => /esym/eqP.
-  by rewrite -eqr_opp -sinN opprB abpi sin_pihalf Neqxx oner_eq0.
+  by rewrite -eqr_opp -sinN opprB abpi sin_pihalf eqrNxx oner_eq0.
 move/(@rot2d_helper M a b); apply.
 by rewrite -a1 -a2 -b1 -b2 [in LHS](col_mx2_rowE M) 2!row2_of_row.
 Qed.
@@ -559,7 +559,7 @@ case: (rot2d' PO) => phi [phiRO | phiRO']; subst P.
   rewrite !rowframeE.
   rewrite col_mx3_row => ->.
   rewrite invr1 mulr1 mul1r => /eqP.
-  by rewrite Neqxx oner_eq0.
+  by rewrite eqrNxx oner_eq0.
 Qed.
 
 End relation_with_rotation_matrices.

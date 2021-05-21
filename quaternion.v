@@ -53,9 +53,9 @@ From mathcomp.analysis Require Import forms.
 
 Reserved Notation "x %:q" (at level 2, format "x %:q").
 Reserved Notation "x %:v" (at level 2, format "x %:v").
-Reserved Notation "Q '_i'" (at level 1, format "Q '_i'").
-Reserved Notation "Q '_j'" (at level 1, format "Q '_j'").
-Reserved Notation "Q '_k'" (at level 1, format "Q '_k'").
+Reserved Notation "x '_i'" (at level 1, format "x '_i'").
+Reserved Notation "x '_j'" (at level 1, format "x '_j'").
+Reserved Notation "x '_k'" (at level 1, format "x '_k'").
 Reserved Notation "'`i'".
 Reserved Notation "'`j'".
 Reserved Notation "'`k'".
@@ -91,9 +91,9 @@ Local Notation "x %:v" := (mkQuat 0 x).
 Local Notation "'`i'" := ('e_0)%:v.
 Local Notation "'`j'" := ('e_1)%:v.
 Local Notation "'`k'" := ('e_2%:R)%:v.
-Local Notation "x '_i'" := (x.2``_0).
-Local Notation "x '_j'" := (x.2``_1).
-Local Notation "x '_k'" := (x.2``_(2%:R : 'I_3)).
+Local Notation "x '_i'" := ((x.2)``_0).
+Local Notation "x '_j'" := ((x.2)``_1).
+Local Notation "x '_k'" := ((x.2)``_(2%:R : 'I_3)).
 
 Coercion pair_of_quat x := let: mkQuat x1 x2 := x in (x1, x2).
 Let quat_of_pair (a : R * 'rV[R]_3) := let: (a1, a2) := a in mkQuat a1 a2.
@@ -184,9 +184,9 @@ Notation "u %:v" := (mkQuat 0 u) : quat_scope.
 Notation "'`i'" := ('e_0)%:v : quat_scope.
 Notation "'`j'" := ('e_1)%:v : quat_scope.
 Notation "'`k'" := ('e_2%:R)%:v : quat_scope.
-Notation "x '_i'" := (x.2``_0) : quat_scope.
-Notation "x '_j'" := (x.2``_1) : quat_scope.
-Notation "x '_k'" := (x.2``_(2%:R : 'I_3)) : quat_scope.
+Notation "x '_i'" := ((x.2)``_0) : quat_scope.
+Notation "x '_j'" := ((x.2)``_1) : quat_scope.
+Notation "x '_k'" := ((x.2)``_(2%:R : 'I_3)) : quat_scope.
 Notation "r *`i" := (mkQuat 0 (r *: 'e_0)) : quat_scope.
 Notation "r *`j" := (mkQuat 0 (r *: 'e_1)) : quat_scope.
 Notation "r *`k" := (mkQuat 0 (r *: 'e_2%:R)) : quat_scope.
@@ -891,12 +891,13 @@ Proof.
 by rewrite uquatE /quat_of_polar /sqrq /= normZ v1 mulr1 sqr_normr cos2Dsin2.
 Qed.
 
-Definition quat_rot x (v : 'rV[R]_3) : 'rV[R]_3 := (conjugation x v).2.
+Definition quat_rot x v : 'rV[R]_3 := (conjugation x v).2.
 
 Lemma conjugation_quat_of_polar_axis v a : norm v = 1 ->
   quat_rot (quat_of_polar a v) v = v.
 Proof.
-move=> v1; rewrite /quat_rot conjugationE /= normZ exprMn v1 expr1n mulr1 sqr_normr.
+move=> v1.
+rewrite /quat_rot conjugationE /= normZ exprMn v1 expr1n mulr1 sqr_normr.
 rewrite dotmulZv dotmulvv v1 expr1n mulr1 linearZl_LR liexx 2!scaler0 mul0rn.
 rewrite addr0 scalerA -expr2 mulr2n scalerBl addrA subrK -scalerDl cos2Dsin2.
 by rewrite scale1r.
@@ -911,8 +912,8 @@ Proof.
 rewrite /quat_rot conjugationE /= normZ noframe_norm mulr1 sqr_normr dotmulZv.
 have v0 : f~i != 0 by rewrite -norm_eq0 noframe_norm oner_neq0.
 rewrite (noframe_idotj f) mulr0 scale0r mul0rn addr0 linearZl_LR /=.
-rewrite (frame_icrossj f) scalerA [in RHS]mulr2n cosD sinD -!expr2; congr (_ + _).
-by rewrite (mulrC (sin a)) -mulr2n -scalerMnl.
+rewrite (frame_icrossj f) scalerA [in RHS]mulr2n cosD sinD -!expr2.
+by congr (_ + _); rewrite (mulrC (sin a)) -mulr2n -scalerMnl.
 Qed.
 
 Lemma conjugation_quat_of_polar_frame_k (f : frame R) a :
@@ -922,8 +923,8 @@ Proof.
 rewrite /quat_rot conjugationE /= normZ noframe_norm mulr1 sqr_normr dotmulZv.
 have v0 : f~i != 0 by rewrite -norm_eq0 noframe_norm oner_neq0.
 rewrite (noframe_idotk f) mulr0 scale0r mul0rn addr0 linearZl_LR /=.
-rewrite (frame_icrossk f) 2!scalerN scalerA sinD cosD -!expr2 addrC scaleNr; congr (_ + _).
-by rewrite (mulrC (sin a)) -mulr2n -scalerMnl mulNrn.
+rewrite (frame_icrossk f) 2!scalerN scalerA sinD cosD -!expr2 addrC scaleNr.
+by congr (_ + _); rewrite (mulrC (sin a)) -mulr2n -scalerMnl mulNrn.
 Qed.
 
 Definition polar_of_quat x : (angle R * 'rV_3)%type :=
@@ -952,7 +953,7 @@ case: x => a0 a1; rewrite /= qualifE /polar_of_quat /normq /sqrq /=.
 have [->|/eqP a1N u1] := a1 =P 0.
   rewrite norm0 expr0n addr0 sqrtr_sqr; have [?/eqP->|?|_] := ltrgt0P a0.
   - by rewrite eqxx quat_of_polar01.
-  - by rewrite eqr_oppLR => /eqP ->; rewrite Neqxx oner_eq0 quat_of_polarpi1.
+  - by rewrite eqr_oppLR => /eqP ->; rewrite eqrNxx oner_eq0 quat_of_polarpi1.
   - by rewrite eq_sym oner_eq0.
 move: u1; have [-> _|a0P /eqP u1 |a0N /eqP u1] := sgzP a0.
 - by rewrite quat_of_polarpihalf.
@@ -999,6 +1000,19 @@ Proof.
 move=> ux /=; set a := _.1; set u := _.2.
 by rewrite -(polar_of_quatK ux) quat_rot_isRot_polar // norm_polar_of_quat.
 Qed.
+
+Local Open Scope quat_scope.
+
+(* [bottema] p.150 (2.1) *)
+Definition cayley00 (r a b c : R) := r ^+ 2 + a ^+ 2 - b ^+ 2 - c ^+ 2.
+Definition cayley01 (r a b c : R) := (a * b - r * c) *+ 2.
+Definition cayley02 (r a b c : R) := (a * c + r * b) *+ 2.
+Definition cayley10 (r a b c : R) := (a * b + r * c) *+ 2.
+Definition cayley11 (r a b c : R) := r ^+ 2 - a ^+ 2 + b ^+ 2 - c ^+ 2.
+Definition cayley12 (r a b c : R) := (b * c - r * a) *+ 2.
+Definition cayley20 (r a b c : R) := (a * c - r * b) *+ 2.
+Definition cayley21 (r a b c : R) := (b * c + r * a) *+ 2.
+Definition cayley22 (r a b c : R) := r ^+ 2 - a ^+ 2 - b ^+ 2 + c ^+ 2.
 
 End polar_coordinates.
 

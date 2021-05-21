@@ -321,7 +321,7 @@ have H4 : From1To0 = dh_rot theta alpha.
         by rewrite /From1To0 -lock (eqP H10) H11.
       move/eqP : Hrot.
       rewrite (eqP H10) mulrN opprK -expr2 H11 mulrN -expr2 eq_sym -subr_eq -cos2sin2.
-      rewrite -subr_eq0 opprK -mulr2n mulrn_eq0 /= sqrf_eq0 => /eqP ct0.
+      rewrite -subr_eq0 opprK addr_eq0 -eqr_oppLR eqrNxx sqrf_eq0 => /eqP ct0.
       by rewrite /From1To0 -lock (eqP H10) H11 ct0 oppr0.
     rewrite ca1 !mulN1r opprK.
     move: Hrot.
