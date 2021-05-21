@@ -1,0 +1,123 @@
+fullname: Formal Foundations for Modeling Robot Manipulators
+shortname: robot
+organization: affeldt-aist
+opam_name: coq-robot
+community: false
+action: true
+coqdoc: false
+
+synopsis: >-
+  Formal Foundations for Modeling Robot Manipulators
+description: |-
+  This repository contains an experimental library for the mathematics
+  of rigid body transformations using the Coq proof-assistant and the
+  Mathematical Components library.
+authors:
+- name: Reynald Affeldt, AIST
+  initial: true
+- name: Cyril Cohen, Inria
+  initial: true
+- name: Laurent Thery, Inria
+  initial: false
+
+opam-file-maintainer: Reynald Affeldt <reynald.affeldt@aist.go.jp>
+
+#opam-file-version: dev
+
+license:
+  fullname: LGPL-2.1-or-later
+  identifier: LGPL-2.1-or-later
+  file: LICENSE
+
+supported_coq_versions:
+  text: Coq 8.13
+  opam: '{ (>= "8.13" & < "8.14~") | (= "dev") }'
+
+tested_coq_opam_versions:
+- version: '1.12.0-coq-8.13'
+  repo: 'mathcomp/mathcomp'
+
+dependencies:
+- opam:
+    name: coq-mathcomp-ssreflect
+    version: '{ (>= "1.12.0" & < "1.13~") }'
+  description: |-
+    [MathComp ssreflect 1.12](https://math-comp.github.io)
+- opam:
+    name: coq-mathcomp-fingroup
+    version: '{ (>= "1.12.0" & < "1.13~") }'
+  description: |-
+    [MathComp fingroup 1.12](https://math-comp.github.io)
+- opam:
+    name: coq-mathcomp-algebra
+    version: '{ (>= "1.12.0" & < "1.13~") }'
+  description: |-
+    [MathComp algebra 1.12](https://math-comp.github.io)
+- opam:
+    name: coq-mathcomp-solvable
+    version: '{ (>= "1.12.0" & < "1.13~") }'
+  description: |-
+    [MathComp solvable 1.12](https://math-comp.github.io)
+- opam:
+    name: coq-mathcomp-field
+    version: '{ (>= "1.12.0" & < "1.13~") }'
+  description: |-
+    [MathComp field 1.12](https://math-comp.github.io)
+- opam:
+    name: coq-mathcomp-analysis
+    version: '{ (>= "0.3.6") }'
+  description: |-
+    [MathComp analysis 0.3.6](https://github.com/math-comp/analysis)
+- opam:
+    name: coq-mathcomp-real-closed
+    version: '{ (>= "1.1.2") }'
+  description: |-
+    [MathComp real closed 1.1.2](https://github.com/math-comp/real-closed)
+
+namespace: robot
+
+keywords:
+- name: robotics
+- name: 3D geometry
+
+publications:
+- pub_url: https://staff.aist.go.jp/reynald.affeldt/documents/robot_cpp_long.pdf
+  pub_title: Formal foundations of 3D geometry to model robot manipulators
+  pub_doi: 10.1145/3018610.3018629
+
+documentation: |-
+  ## Acknowledgments
+
+  Contribution by Damien Rouhling (9b7badc25bf6492f6b84611c7f9d32594b345308)
+
+  Grant-in-Aid for Scientific Research Number 15H02687
+
+  ## Disclaimer
+ 
+  This library is still at an experimental stage.  Contents may change
+  and definitions and theorems may be renamed.  Use at your own risk.
+
+  ## Documentation
+
+  This library can be used to address the forward kinematics problem
+  of robot manipulators.  It contains theories for angles,
+  three-dimensional geometry (including three-dimensional rotations,
+  skew-symmetric matrices, quaternions), rigid body transformations
+  (isometries, homogeneous representation, Denavit-Hartenberg
+  convention, screw motions), and an application to the SCARA robot
+  manipulator.
+
+  Each file is documented more precisely in its header.
+
+  Some references used in this work:
+  - [murray] Murray, Li, Shankar Sastry: A Mathematical Introduction to Robotic Manipulation
+  - [springer] Siciliano, Khatib (Eds.): Springer Handbook of Robotics
+  - [angeles] Angeles: Fundamentals of Robotic Mechanical Systems, Springer 2014
+  - [oneill] O'Neill: Elementary Differential Geometry
+  - [spong] Spong, Hutchinson, Vidyasagar: Robot Modeling and Control
+  - [sciavicco] Sciavicco, L., Siciliano, B.: Modelling and Control of Robot Manipulators, Springer 2000
+
+  ## Original License
+
+  Before [2021-04-29], coq-robot was distributed under the terms of the
+  `LGPL-3.0` license.
