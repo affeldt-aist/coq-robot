@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
@@ -1014,8 +1015,8 @@ Definition cayley20 (r a b c : R) := (a * c - r * b) *+ 2.
 Definition cayley21 (r a b c : R) := (b * c + r * a) *+ 2.
 Definition cayley22 (r a b c : R) := r ^+ 2 - a ^+ 2 - b ^+ 2 + c ^+ 2.
 
-Lemma matrix_of_quat_rot q (u : 'rV[R]_3) :
-  q \is uquat ->
+Lemma matrix_of_quat_rot (q : quat R) (u : 'rV[R]_3) :
+(*  q \is uquat ->*)
   let: r := q.1 in let: a := q _i in let: b := q _j in let: c := q _k in
   quat_rot q u =
     u *m (col_mx3
@@ -1023,16 +1024,7 @@ Lemma matrix_of_quat_rot q (u : 'rV[R]_3) :
     (row3 (cayley10 r a b c) (cayley11 r a b c) (cayley12 r a b c))
     (row3 (cayley20 r a b c) (cayley21 r a b c) (cayley22 r a b c)))^T.
 Proof.
-move=> uq.
-rewrite [in LHS]/quat_rot.
-rewrite conjugationE.
-apply/row3P/and3P; split.
-- rewrite [X in X *m _](row3K u).
-  rewrite trmx_col_mx3_row3.
-  rewrite mulmx_row3_col3.
-  rewrite 3!row3Z 2!row3D.
-  rewrite [in X in _ == X]mxE /=.
-  rewrite /cayley00 /cayley01 /cayley02.
+apply/row3P; apply/and3P; split; apply/eqP.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
   ((q1^2 - q21^2 - q22^2 - q23^2) {u1, u2, u3} +
@@ -1040,15 +1032,11 @@ apply/row3P/and3P; split.
       2 (q1 Cross[{q21, q22, q23}, {u1, u2, u3}]))[[1]] ==
    u1 (q1^2 + q21^2 - q22^2 - q23^2) +
     u2 (2 (q21*q22 - q1*q23)) +
-    u3 (2 (q21*q23 + q1*q22))] // Resolve
-ok *)
-  admit.
-- rewrite [X in X *m _](row3K u).
-  rewrite trmx_col_mx3_row3.
-  rewrite mulmx_row3_col3.
-  rewrite 3!row3Z 2!row3D.
-  rewrite [in X in _ == X]mxE /=.
-  rewrite /cayley10 /cayley11 /cayley12.
+    u3 (2 (q21*q23 + q1*q22))] // Resolve*)
+- rewrite !(mxE, sum3E) /= !det_mx33 /= !mxE /= !det_mx33 !mxE /=.
+  rewrite !dotmulE sum3E /=.
+  rewrite /cayley00 /cayley01 /cayley02 !expr2 !mulr2n.
+  nsatz.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
   ((q1^2 - q21^2 - q22^2 - q23^2) {u1, u2, u3} +
@@ -1056,15 +1044,11 @@ ok *)
       2 (q1 Cross[{q21, q22, q23}, {u1, u2, u3}]))[[2]] ==
    u1 (2 (q21*q22 + q1*q23)) +
     u2 (q1^2 - q21^2 + q22^2 - q23^2) +
-    u3 (2 (q22*q23 - q1*q21))] // Resolve
-ok *)
-  admit.
-- rewrite [X in X *m _](row3K u).
-  rewrite trmx_col_mx3_row3.
-  rewrite mulmx_row3_col3.
-  rewrite 3!row3Z 2!row3D.
-  rewrite [in X in _ == X]mxE /=.
-  rewrite /cayley20 /cayley21 /cayley22.
+    u3 (2 (q22*q23 - q1*q21))] // Resolve *)
+- rewrite !(mxE, sum3E) /= !det_mx33 /= !mxE /= !det_mx33 !mxE /=.
+  rewrite !dotmulE sum3E /=.
+  rewrite /cayley10 /cayley11 /cayley12 !expr2 !mulr2n.
+  nsatz.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
   ((q1^2 - q21^2 - q22^2 - q23^2) {u1, u2, u3} +
@@ -1072,10 +1056,12 @@ ok *)
       2 (q1 Cross[{q21, q22, q23}, {u1, u2, u3}]))[[3]] ==
    u1 (2 (q21*q23 - q1*q22)) +
     u2 (2 (q22*q23 + q1*q21)) +
-    u3 (q1^2 - q21^2 - q22^2 + q23^2)] // Resolve
-ok *)
-  admit.
-Abort.
+    u3 (q1^2 - q21^2 - q22^2 + q23^2)] // Resolve *)
+rewrite !(mxE, sum3E) /= !det_mx33 /= !mxE /= !det_mx33 !mxE /=.
+rewrite !dotmulE sum3E /=.
+rewrite /cayley20 /cayley21 /cayley22 !expr2 !mulr2n.
+nsatz.
+Qed.
 
 End polar_coordinates.
 
