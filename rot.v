@@ -1824,63 +1824,6 @@ Qed.
 
 End euler_angles.
 
-Section Nsatz_rcfType.
-Variable T : rcfType.
-
-Lemma Tsth : Setoid_Theory T (@eq T).
-by constructor => [x //|x y //|x y z ->].
-Qed.
-
-Definition T0 := (0%:R : T).
-Definition T1 := (1%:R : T).
-Definition Tadd (x y : T) := (x + y)%R.
-Definition Tmul (x y : T) := (x * y)%R.
-Definition Tsub (x y : T) := (x - y)%R.
-Definition Topp (x  : T) := (- x)%R.
-
-#[global]
-Instance Tops: (@Ring_ops T T0 T1 Tadd Tmul Tsub Topp (@eq T)).
-Defined.
-
-#[global]
-Instance Tri : (Ring (Ro:=Tops)).
-Proof.
-constructor => //.
-- exact: Tsth.
-- by move=> x y -> x1 y1 ->.
-- by move=> x y -> x1 y1 ->.
-- by move=> x y -> x1 y1 ->.
-- by move=> x y ->.
-- exact: add0r.
-- exact: addrC.
-- exact: addrA.
-- exact: mul1r.
-- exact: mulr1.
-- exact: mulrA.
-- exact: mulrDl.
-- move=> x y z; exact: mulrDr.
-- exact: subrr.
-Defined.
-
-#[global]
-Instance Tcri: (Cring (Rr:=Tri)).
-Proof.
-exact: mulrC.
-Defined.
-
-#[global]
-Instance Rdi : (Integral_domain (Rcr:=Tcri)).
-Proof.
-constructor.
-  move=> x y.
-  rewrite -[_ _ zero]/(x * y = 0)%R => /eqP.
-  by rewrite mulf_eq0 => /orP[] /eqP->; [left | right].
-rewrite -[_ _ zero]/(1 = 0)%R; apply/eqP.
-by rewrite (eqr_nat T 1 0).
-Defined.
-
-End Nsatz_rcfType.
-
 Section euler_angles2.
 
 Variables (T : rcfType).

@@ -1,13 +1,19 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import perm path fingroup complex.
 
 (******************************************************************************)
-(* Minor additions to MathComp libraries ssrbool, ssralg, ssrnum, and complex *)
+(*                    Minor additions to MathComp libraries                   *)
 (*                                                                            *)
-(* u``_i            == the ith component of the row vector u                  *)
-(* 'e_0, 'e_1, 'e_2 == the canonical vectors                                  *)
+(* This file contains minor additions ssrbool, ssralg, ssrnum, and complex    *)
+(* and more.                                                                  *)
+(*                                                                            *)
+(*                 u``_i == the ith component of the row vector u             *)
+(*      'e_0, 'e_1, 'e_2 == the canonical vectors                             *)
+(* Section Nsatz_rcfType == type classes for the Coq nsatz tactic             *)
+(*                          (https://coq.inria.fr/refman/addendum/nsatz.html) *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -387,3 +393,61 @@ Lemma normci : `|'i| = 1 :> R[i].
 Proof. by rewrite normc_def /= expr0n add0r expr1n sqrtr1. Qed.
 
 End extra_complex.
+
+Section Nsatz_rcfType.
+Variable T : rcfType.
+
+Lemma Nsatz_rcfType_Setoid_Theory : Setoid_Theory T (@eq T).
+Proof. by constructor => [x //|x y //|x y z ->]. Qed.
+
+Definition Nsatz_rcfType0 := (0%:R : T).
+Definition Nsatz_rcfType1 := (1%:R : T).
+Definition Nsatz_rcfType_add (x y : T) := (x + y)%R.
+Definition Nsatz_rcfType_mul (x y : T) := (x * y)%R.
+Definition Nsatz_rcfType_sub (x y : T) := (x - y)%R.
+Definition Nsatz_rcfType_opp (x  : T) := (- x)%R.
+
+#[global]
+Instance Nsatz_rcfType_Ring_ops: (@Ring_ops T Nsatz_rcfType0 Nsatz_rcfType1
+  Nsatz_rcfType_add
+  Nsatz_rcfType_mul
+  Nsatz_rcfType_sub
+  Nsatz_rcfType_opp (@eq T)).
+Defined.
+
+#[global]
+Instance Nsatz_rcfType_Ring : (Ring (Ro:=Nsatz_rcfType_Ring_ops)).
+Proof.
+constructor => //.
+- exact: Nsatz_rcfType_Setoid_Theory.
+- by move=> x y -> x1 y1 ->.
+- by move=> x y -> x1 y1 ->.
+- by move=> x y -> x1 y1 ->.
+- by move=> x y ->.
+- exact: add0r.
+- exact: addrC.
+- exact: addrA.
+- exact: mul1r.
+- exact: mulr1.
+- exact: mulrA.
+- exact: mulrDl.
+- move=> x y z; exact: mulrDr.
+- exact: subrr.
+Defined.
+
+#[global]
+Instance Nsatz_rcfType_Cring: (Cring (Rr:=Nsatz_rcfType_Ring)).
+Proof. exact: mulrC. Defined.
+
+#[global]
+Instance Nsatz_rcfType_Integral_domain : (Integral_domain (Rcr:=Nsatz_rcfType_Cring)).
+Proof.
+constructor.
+  move=> x y.
+  rewrite -[_ _ zero]/(x * y = 0)%R => /eqP.
+  by rewrite mulf_eq0 => /orP[] /eqP->; [left | right].
+rewrite -[_ _ zero]/(1 = 0)%R; apply/eqP.
+by rewrite (eqr_nat T 1 0).
+Defined.
+
+End Nsatz_rcfType.
