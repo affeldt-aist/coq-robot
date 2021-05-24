@@ -600,18 +600,10 @@ Proof.
 rewrite /atan2; case: ifPn => y0; first by rewrite mulNr atanN.
 rewrite -leNgt in y0.
 rewrite lt_neqAle y0 andbT; case: ifPn => y0'.
-  rewrite oppr_ge0; case: ifPn => x0.
-    rewrite leNgt lt_neqAle negb_and negbK x0 orbF; case: ifPn => x0'.
-      by rewrite mulNr atanN opprD {1}piNpi.
-    by rewrite mulNr atanN opprD opprK.
-  rewrite -ltNge in x0.
-  by rewrite ltW // mulNr atanN opprD.
+  by rewrite oppr_ge0; case: ltrgt0P => x0;
+     rewrite mulNr atanN opprD ?opprK // {1}piNpi.
 rewrite negbK in y0'.
-rewrite oppr_gt0; case: ifPn => x0.
-  by rewrite ltNge (ltW x0) /= opprK.
-rewrite -leNgt in x0.
-rewrite oppr_lt0 lt_neqAle x0 andbT eq_sym; case: ifPn => x0' //.
-by rewrite oppr0.
+by rewrite oppr_gt0 oppr_lt0; case: ltrgt0P => x0; rewrite ?opprK ?oppr0.
 Qed.
 
 (* cancellation laws *)

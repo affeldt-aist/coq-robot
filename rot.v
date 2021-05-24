@@ -1838,7 +1838,9 @@ Definition Rxyz (a b c : angle T) :=
 
 Lemma RxyzE a b c : Rx a * Ry b * Rz c = Rxyz c b a.
 Proof.
-apply/matrix3P/and9P; split; rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
+apply/matrix3P/and9P; split;
+   rewrite !mxE /=  sum3E !mxE /=; Simp.r; rewrite !sum3E !{1}mxE /=;
+   Simp.r => //.
 by rewrite mulrC.
 by rewrite mulrC.
 by rewrite mulrAC -mulrA mulrC (mulrC (cos a)).
@@ -2131,7 +2133,6 @@ apply/matrix3P/and9P; split; apply/eqP;
                      eqxx) //;
         rewrite sqr_Mi2E // M22 expr0n subr0 sqrtr1 divr1 //.
   by nsatz.
-
 by nsatz.
 Qed.
 

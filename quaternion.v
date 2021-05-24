@@ -1024,6 +1024,11 @@ Lemma matrix_of_quat_rot (q : quat R) (u : 'rV[R]_3) :
     (row3 (cayley10 r a b c) (cayley11 r a b c) (cayley12 r a b c))
     (row3 (cayley20 r a b c) (cayley21 r a b c) (cayley22 r a b c)))^T.
 Proof.
+have F (e1 q1 u1 : 'rV[R]_3) : \det (col_mx3 e1 q1 u1) = 
+  e1``_0 * (q1``_1 * u1``_2%:R - u1``_1 * q1``_2%:R) +
+  e1``_1 * (u1``_0 * q1``_2%:R - q1``_0 * u1``_2%:R) +
+  e1``_2%:R * (q1``_0 * u1``_1 - u1``_0 * q1``_1). 
+  by rewrite det_mx33 !mxE.
 apply/row3P; apply/and3P; split; apply/eqP.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
@@ -1033,7 +1038,7 @@ apply/row3P; apply/and3P; split; apply/eqP.
    u1 (q1^2 + q21^2 - q22^2 - q23^2) +
     u2 (2 (q21*q22 - q1*q23)) +
     u3 (2 (q21*q23 + q1*q22))] // Resolve*)
-- rewrite !(mxE, sum3E) /= !det_mx33 /= !mxE /= !det_mx33 !mxE /=.
+- rewrite !(mxE, sum3E) /= !F !mxE /= !F !mxE /=.
   rewrite !dotmulE sum3E /=.
   rewrite /cayley00 /cayley01 /cayley02 !expr2 !mulr2n.
   nsatz.
@@ -1045,7 +1050,7 @@ apply/row3P; apply/and3P; split; apply/eqP.
    u1 (2 (q21*q22 + q1*q23)) +
     u2 (q1^2 - q21^2 + q22^2 - q23^2) +
     u3 (2 (q22*q23 - q1*q21))] // Resolve *)
-- rewrite !(mxE, sum3E) /= !det_mx33 /= !mxE /= !det_mx33 !mxE /=.
+- rewrite !(mxE, sum3E) /= !F /= !mxE /= !F !mxE /=.
   rewrite !dotmulE sum3E /=.
   rewrite /cayley10 /cayley11 /cayley12 !expr2 !mulr2n.
   nsatz.
@@ -1057,7 +1062,7 @@ apply/row3P; apply/and3P; split; apply/eqP.
    u1 (2 (q21*q23 - q1*q22)) +
     u2 (2 (q22*q23 + q1*q21)) +
     u3 (q1^2 - q21^2 - q22^2 + q23^2)] // Resolve *)
-rewrite !(mxE, sum3E) /= !det_mx33 /= !mxE /= !det_mx33 !mxE /=.
+rewrite !(mxE, sum3E) /= !F /= !mxE /= !F !mxE /=.
 rewrite !dotmulE sum3E /=.
 rewrite /cayley20 /cayley21 /cayley22 !expr2 !mulr2n.
 nsatz.
