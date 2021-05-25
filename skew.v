@@ -100,8 +100,11 @@ Section anti.
 
 Lemma antiE M : (M \is 'so[R]_n) = (M == - M^T). Proof. by []. Qed.
 
+Lemma antiP M : M \is 'so[R]_n -> M^T = - M.
+Proof. by rewrite antiE -eqr_oppLR => /eqP <-. Qed.
+
 Lemma antiN M : (- M \is 'so[R]_n) = (M \is 'so[R]_n).
-Proof. apply/idP/idP; by rewrite !antiE linearN /= opprK eqr_oppLR. Qed.
+Proof. by apply/idP/idP; rewrite !antiE linearN /= opprK eqr_oppLR. Qed.
 
 Lemma trmx_anti M : (M \is 'so[R]_n) = (M^T \is 'so[R]_n).
 Proof.
@@ -147,7 +150,7 @@ move/anti_diag => HM.
 by rewrite /mxtrace (eq_bigr (fun=> 0)) // sumr_const mul0rn.
 Qed.
 
-Lemma antiP A B : A \is 'so[R]_n -> B \is 'so[R]_n ->
+Lemma anti_ext A B : A \is 'so[R]_n -> B \is 'so[R]_n ->
   (forall i j : 'I_n, (i < j)%N -> A i j = - B j i) -> A = B.
 Proof.
 move=> soA soB AB; apply/matrixP => i j.
@@ -260,7 +263,7 @@ Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
 Import rv3LieAlgebra.Exports.
 
-Definition spin u : 'M[R]_3 := \matrix_i (u *v 'e_i).
+Definition spin u : 'M[R]_3 := locked (\matrix_i (u *v 'e_i)).
 
 Local Notation "'\S(' u ')'" := (spin u).
 
@@ -268,11 +271,15 @@ Lemma spinE u v : u *m \S( v ) = v *v u.
 Proof.
 rewrite lieC -linearNr [RHS]lieC -linearNr [u]row_sum_delta.
 rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
+rewrite /spin; unlock.
 by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK linearNl opprK.
 Qed.
 
 Lemma spin0 : \S( 0 ) = 0.
-Proof. by apply/matrixP => i j; rewrite /spin mxE linear0l 2!mxE. Qed.
+Proof.
+apply/matrixP => i j; rewrite /spin; unlock.
+by rewrite mxE linear0l 2!mxE.
+Qed.
 
 (* this should generalize mulmxP *)
 Lemma mulmatP M N : reflect (forall u, u *m M = u *m N) (M == N).
@@ -287,6 +294,7 @@ Proof. apply/eqP/mulmatP => w; by rewrite mulmxDr !spinE linearDl. Qed.
 Lemma spinZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
 apply/matrixP => i j.
+rewrite /spin; unlock.
 by rewrite mxE lieC /= linearZ /= -scalerN lieC opprK mxE 2![in RHS]mxE.
 Qed.
 
@@ -295,7 +303,12 @@ Proof. by rewrite -scaleN1r spinZ scaleN1r. Qed.
 
 Lemma spin_is_so u : \S( u ) \is 'so[R]_3.
 Proof.
-rewrite antiE; apply/eqP/matrixP => i j; rewrite !mxE -col_mx3_perm_02.
+rewrite antiE; apply/eqP/matrixP => i j.
+rewrite mxE.
+rewrite /spin; unlock.
+rewrite !mxE.
+rewrite /crossmul; unlock.
+rewrite !mxE -col_mx3_perm_02.
 by rewrite xrowE det_mulmx det_perm odd_tperm /= expr1 mulN1r.
 Qed.
 
@@ -307,22 +320,33 @@ Lemma mul_spin M u :
 Proof. by rewrite -3!spinE col_mx3_mul col_mx3_row. Qed.
 
 Lemma spin01 u : \S( u ) 0 1 = u``_2%:R.
-Proof. by rewrite /spin mxE crossmulE !mxE /= !(mulr0,mulr1,addr0,subr0). Qed.
+Proof.
+rewrite /spin; unlock.
+by rewrite /spin mxE crossmulE !mxE /= !(mulr0,mulr1,addr0,subr0).
+Qed.
 
 Lemma spin02 u : \S( u ) 0 2%:R = - u``_1%:R.
-Proof. by rewrite /spin mxE crossmulE !mxE /= !(mulr0,mulr1,add0r,opprK). Qed.
+Proof.
+rewrite /spin; unlock.
+by rewrite /spin mxE crossmulE !mxE /= !(mulr0,mulr1,add0r,opprK).
+Qed.
 
 Lemma spin10 u : \S( u ) 1 0 = - u``_2%:R.
-Proof. by move/eqP: (spin_is_so u) => ->; rewrite 2!mxE spin01. Qed.
+Proof.
+by move/eqP: (spin_is_so u) => ->; rewrite 2!mxE spin01.
+Qed.
 
 Lemma spin12 u : \S( u ) 1 2%:R = u``_0.
-Proof. by rewrite /spin mxE crossmulE !mxE /= !(mulr0, mulr1, subr0). Qed.
+Proof.
+rewrite /spin; unlock.
+by rewrite /spin mxE crossmulE !mxE /= !(mulr0, mulr1, subr0).
+Qed.
 
 Lemma spin20 u : \S( u ) 2%:R 0 = u``_1%:R.
-Proof. move/eqP: (spin_is_so u) => ->; by rewrite 2!mxE spin02 opprK. Qed.
+Proof. by move/eqP: (spin_is_so u) => ->; rewrite 2!mxE spin02 opprK. Qed.
 
 Lemma spin21 u : \S( u ) 2%:R 1 = - u``_0.
-Proof. move/eqP: (spin_is_so u) => ->; by rewrite 2!mxE spin12. Qed.
+Proof. by move/eqP: (spin_is_so u) => ->; rewrite 2!mxE spin12. Qed.
 
 Lemma spin_mul_tr u : \S( u ) *m u^T = 0.
 Proof.
@@ -664,7 +688,7 @@ Lemma skew_det1BM n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> \det (1 - M) != 0.
 Proof.
 move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxBr mulmx1 subr_eq0.
 apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
-by have /eqP := skew_dotmulmx v Mso; rewrite -eq_sym dotmulNv eqrNxx.
+  by have /eqP := skew_dotmulmx v Mso; rewrite -eq_sym dotmulNv eqrNxx.
 Qed.
 
 (* TODO: move? *)
@@ -674,6 +698,26 @@ move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxDr mulmx1 addr_eq0.
 apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
 have /eqP := skew_dotmulmx v Mso.
 by rewrite -eq_sym dotmulNv eqrNxx dotmulvN eqr_oppLR oppr0.
+Qed.
+
+Lemma inv1BM u : (1 - \S(u)) *
+  (1 + (1 + (norm u)^+2)^-1 *: \S(u) + (1 + (norm u)^+2)^-1 *: \S(u)^+2) = 1.
+Proof.
+rewrite mulrDr 2!mulrBl 2!mul1r.
+apply/eqP; rewrite eq_sym addrC -subr_eq; apply/eqP.
+rewrite opprD addrA opprD addrA subrr add0r opprK addrC.
+rewrite mulrDr mulr1 (addrC \S(u)) scalerAr -addrA; congr (_ + _).
+rewrite mulrA -expr2 -scalerAr -exprSr spin3 -{1}(scale1r \S(u)).
+rewrite -{1}(@divff _ (1 + norm u ^+ 2)) ?paddr_eq0 ?oner_eq0 ?sqr_ge0//.
+rewrite mulrC -scalerA -scalerBr -scalerN scaleNr opprK; congr (_ *: _).
+by rewrite scalerDl scale1r addrAC subrr add0r.
+Qed.
+
+Lemma inv1BME u : (1 - \S(u))^-1 =
+  1 + (1 + (norm u)^+2)^-1 *: \S(u) + (1 + (norm u)^+2)^-1 *: \S(u)^+2.
+Proof.
+rewrite -[LHS]mulmx1 -[X in _ *m X = _](inv1BM u) mulmxA mulVmx ?mul1mx//.
+by rewrite unitmxE unitfE skew_det1BM // spin_is_so.
 Qed.
 
 (* TODO: move? *)
@@ -789,5 +833,32 @@ Qed.
 Lemma uncayleyK3 M : M \is 'O[R]_3 -> -1 \notin eigenvalue M ->
   cayley (uncayley M) = M.
 Proof. by move=> ? ?; rewrite uncayleyK // skew_det1BM // uncayley_is_so. Qed.
+
+(* [bottema] p.148 (1.4) *)
+Definition cayley00 (a b c : R) := 1 + a ^+ 2 - b ^+ 2 - c ^+ 2.
+Definition cayley01 (a b c : R) := (a * b - c) *+ 2.
+Definition cayley02 (a b c : R) := (a * c + b) *+ 2.
+Definition cayley10 (a b c : R) := (a * b + c) *+ 2.
+Definition cayley11 (a b c : R) := 1 - a ^+ 2 + b ^+ 2 - c ^+ 2.
+Definition cayley12 (a b c : R) := (b * c - a) *+ 2.
+Definition cayley20 (a b c : R) := (a * c - b) *+ 2.
+Definition cayley21 (a b c : R) := (b * c + a) *+ 2.
+Definition cayley22 (a b c : R) := 1 - a ^+ 2 - b ^+ 2 + c ^+ 2.
+
+(* result of the Cayley transform expressed with Rodrigues' parameters *)
+Lemma cayleyE (a b c : R) : let r := norm (row3 a b c) in
+  cayley \S((row3 a b c)) = (1 + r ^+ 2)^-1 *: col_mx3
+  (row3 (cayley00 a b c) (cayley01 a b c) (cayley02 a b c))
+  (row3 (cayley10 a b c) (cayley11 a b c) (cayley12 a b c))
+  (row3 (cayley20 a b c) (cayley21 a b c) (cayley22 a b c)).
+Proof.
+move=> r; rewrite /cayley inv1BME; apply/matrix3P/and9P; split.
+- rewrite -/r.
+  rewrite !(mxE,sum3E); Simp.r.
+  rewrite !spinij; Simp.r => /=.
+  rewrite !mxE /=.
+  rewrite /cayley00.
+  (* TODO: make nsatz do this *)
+Abort.
 
 End cayley_transform.

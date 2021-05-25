@@ -1005,29 +1005,35 @@ Qed.
 Local Open Scope quat_scope.
 
 (* [bottema] p.150 (2.1) *)
-Definition cayley00 (r a b c : R) := r ^+ 2 + a ^+ 2 - b ^+ 2 - c ^+ 2.
-Definition cayley01 (r a b c : R) := (a * b - r * c) *+ 2.
-Definition cayley02 (r a b c : R) := (a * c + r * b) *+ 2.
-Definition cayley10 (r a b c : R) := (a * b + r * c) *+ 2.
-Definition cayley11 (r a b c : R) := r ^+ 2 - a ^+ 2 + b ^+ 2 - c ^+ 2.
-Definition cayley12 (r a b c : R) := (b * c - r * a) *+ 2.
-Definition cayley20 (r a b c : R) := (a * c - r * b) *+ 2.
-Definition cayley21 (r a b c : R) := (b * c + r * a) *+ 2.
-Definition cayley22 (r a b c : R) := r ^+ 2 - a ^+ 2 - b ^+ 2 + c ^+ 2.
+(* compared to cayleyij:
+the Rodrigues' parameters a, b, c are "normalized" into r a, b r, c r with r != 0
+we have the relation
+(1 + a^2 + b^2 + c^2) cayley_transform = cayley_matrix
+(r^2 + a^2 + b^2 + c^2) cayley_transform = hcayley_matrix
+*)
+Definition hcayley00 (r a b c : R) := r ^+ 2 + a ^+ 2 - b ^+ 2 - c ^+ 2.
+Definition hcayley01 (r a b c : R) := (a * b - r * c) *+ 2.
+Definition hcayley02 (r a b c : R) := (a * c + r * b) *+ 2.
+Definition hcayley10 (r a b c : R) := (a * b + r * c) *+ 2.
+Definition hcayley11 (r a b c : R) := r ^+ 2 - a ^+ 2 + b ^+ 2 - c ^+ 2.
+Definition hcayley12 (r a b c : R) := (b * c - r * a) *+ 2.
+Definition hcayley20 (r a b c : R) := (a * c - r * b) *+ 2.
+Definition hcayley21 (r a b c : R) := (b * c + r * a) *+ 2.
+Definition hcayley22 (r a b c : R) := r ^+ 2 - a ^+ 2 - b ^+ 2 + c ^+ 2.
 
 Lemma matrix_of_quat_rot (q : quat R) (u : 'rV[R]_3) :
 (*  q \is uquat ->*)
   let: r := q.1 in let: a := q _i in let: b := q _j in let: c := q _k in
   quat_rot q u =
     u *m (col_mx3
-    (row3 (cayley00 r a b c) (cayley01 r a b c) (cayley02 r a b c))
-    (row3 (cayley10 r a b c) (cayley11 r a b c) (cayley12 r a b c))
-    (row3 (cayley20 r a b c) (cayley21 r a b c) (cayley22 r a b c)))^T.
+    (row3 (hcayley00 r a b c) (hcayley01 r a b c) (hcayley02 r a b c))
+    (row3 (hcayley10 r a b c) (hcayley11 r a b c) (hcayley12 r a b c))
+    (row3 (hcayley20 r a b c) (hcayley21 r a b c) (hcayley22 r a b c)))^T.
 Proof.
-have F (e1 q1 u1 : 'rV[R]_3) : \det (col_mx3 e1 q1 u1) = 
+have F (e1 q1 u1 : 'rV[R]_3) : \det (col_mx3 e1 q1 u1) =
   e1``_0 * (q1``_1 * u1``_2%:R - u1``_1 * q1``_2%:R) +
   e1``_1 * (u1``_0 * q1``_2%:R - q1``_0 * u1``_2%:R) +
-  e1``_2%:R * (q1``_0 * u1``_1 - u1``_0 * q1``_1). 
+  e1``_2%:R * (q1``_0 * u1``_1 - u1``_0 * q1``_1).
   by rewrite det_mx33 !mxE.
 apply/row3P; apply/and3P; split; apply/eqP.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
@@ -1038,9 +1044,11 @@ apply/row3P; apply/and3P; split; apply/eqP.
    u1 (q1^2 + q21^2 - q22^2 - q23^2) +
     u2 (2 (q21*q22 - q1*q23)) +
     u3 (2 (q21*q23 + q1*q22))] // Resolve*)
-- rewrite !(mxE, sum3E) /= !F !mxE /= !F !mxE /=.
+- rewrite !(mxE, sum3E) /=.
+  rewrite /crossmul; unlock.
+  rewrite !(mxE, sum3E) /= !F !mxE /= !F !mxE /=.
   rewrite !dotmulE sum3E /=.
-  rewrite /cayley00 /cayley01 /cayley02 !expr2 !mulr2n.
+  rewrite /hcayley00 /hcayley01 /hcayley02 !expr2 !mulr2n.
   nsatz.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
@@ -1050,9 +1058,11 @@ apply/row3P; apply/and3P; split; apply/eqP.
    u1 (2 (q21*q22 + q1*q23)) +
     u2 (q1^2 - q21^2 + q22^2 - q23^2) +
     u3 (2 (q22*q23 - q1*q21))] // Resolve *)
-- rewrite !(mxE, sum3E) /= !F /= !mxE /= !F !mxE /=.
+- rewrite !(mxE, sum3E) /=.
+  rewrite /crossmul; unlock.
+  rewrite !(mxE, sum3E) /= !F /= !mxE /= !F !mxE /=.
   rewrite !dotmulE sum3E /=.
-  rewrite /cayley10 /cayley11 /cayley12 !expr2 !mulr2n.
+  rewrite /hcayley10 /hcayley11 /hcayley12 !expr2 !mulr2n.
   nsatz.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
@@ -1062,9 +1072,11 @@ apply/row3P; apply/and3P; split; apply/eqP.
    u1 (2 (q21*q23 - q1*q22)) +
     u2 (2 (q22*q23 + q1*q21)) +
     u3 (q1^2 - q21^2 - q22^2 + q23^2)] // Resolve *)
+rewrite !(mxE, sum3E) /=.
+rewrite /crossmul; unlock.
 rewrite !(mxE, sum3E) /= !F /= !mxE /= !F !mxE /=.
 rewrite !dotmulE sum3E /=.
-rewrite /cayley20 /cayley21 /cayley22 !expr2 !mulr2n.
+rewrite /hcayley20 /hcayley21 /hcayley22 !expr2 !mulr2n.
 nsatz.
 Qed.
 

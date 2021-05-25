@@ -1056,7 +1056,7 @@ Qed.
 (* \extra? *)
 
 Definition crossmul {R : ringType} (u v : 'rV[R]_3) :=
-  \row_(k < 3) \det (col_mx3 'e_k u v).
+  locked (\row_(k < 3) \det (col_mx3 'e_k u v)).
 
 Notation "*v%R" := (@crossmul _) : ring_scope.
 Notation "u *v w" := (crossmul u w) : ring_scope.
@@ -1064,6 +1064,7 @@ Notation "u *v w" := (crossmul u w) : ring_scope.
 Lemma cross3E {R : comRingType} (u v : 'rV[R]_3) :
   cross (col_mx u v) = u *v v.
 Proof.
+rewrite /crossmul; unlock.
 by apply/rowP => /= i; rewrite !mxE col_mx3E.
 Qed.
 
@@ -1076,6 +1077,7 @@ Lemma crossmulE u v : (u *v v) = row3
   (u``_2%:R * v``_0 - u``_0 * v``_2%:R)
   (u``_0 * v``_1 - u``_1 * v``_0).
 Proof.
+rewrite /crossmul; unlock.
 apply/rowP => i; rewrite !mxE (expand_det_row _ ord0).
 rewrite !(mxE, big_ord_recl, big_ord0) !(mul0r, mul1r, addr0).
 rewrite /cofactor !det_mx22 !mxE /= mul1r mulN1r opprB -signr_odd mul1r.
@@ -1102,7 +1104,9 @@ Qed.
 
 Lemma crossmul_linear u : linear (crossmul u).
 Proof.
-move=> a v w; apply/rowP => k; rewrite !mxE.
+move=> a v w.
+rewrite /crossmul; unlock.
+apply/rowP => k; rewrite !mxE.
 pose M w := col_mx3 ('e_k) u w.
 rewrite (@determinant_multilinear _ _ (M _) (M v) (M w) 2%:R a 1);
   rewrite ?row'_col_mx3 ?mul1r ?scale1r ?mxE //=.
@@ -1117,7 +1121,9 @@ Canonical RevOp_crossmulr := @RevOp _ _ _ crossmulr (@crossmul R)
 
 Lemma crossmulr_linear u : linear (crossmulr u).
 Proof.
-move=> a v w; apply/rowP => k; rewrite !mxE.
+move=> a v w.
+rewrite /crossmulr /crossmul; unlock.
+apply/rowP => k; rewrite !mxE.
 pose M w := col_mx3 ('e_k) w u.
 rewrite (@determinant_multilinear _ _ _ (M v) (M w) 1%:R a 1);
   rewrite ?row'_col_mx3 ?mul1r ?scale1r ?mxE //=.
@@ -1135,7 +1141,9 @@ Variable R : comRingType.
 
 Lemma liexx (u : 'rV[R]_3) : u *v u = 0.
 Proof.
-apply/rowP=> i; rewrite !mxE (@determinant_alternate _ _ _ 1 2%:R) //.
+apply/rowP=> i.
+rewrite /crossmul; unlock.
+rewrite !mxE (@determinant_alternate _ _ _ 1 2%:R) //.
 by move=> j; rewrite !mxE.
 Qed.
 
@@ -1179,7 +1187,9 @@ rewrite [\det Mu12](@determinant_multilinear _ _ _
   (M 1) (M 2%:R) 0 (u``_1) (u``_2%:R)) ?row'_col_mx3 //; last first.
   apply/matrixP => i j; rewrite !mxE !eqxx.
   by case: j => [[|[|[]]]] ? //=; Simp.ord; Simp.r.
-by rewrite dotmulE !big_ord_recl big_ord0 addr0 /= !mxE; Simp.ord.
+rewrite dotmulE !big_ord_recl big_ord0 addr0 /=.
+rewrite /crossmul; unlock.
+by rewrite !mxE; Simp.ord.
 Qed.
 
 Lemma nth_crossmul u v i :
@@ -1257,7 +1267,7 @@ Lemma vece2 (i j : 'I_3) (k := - (i + j) : 'I_3) :
 Proof.
 have [->|neq_ij] := altP (i =P j); rewrite (mulr0n,mulr1n).
   by rewrite scale0r liexx.
-apply/rowP => k'; case: (I3P k' neq_ij); rewrite !mxE.
+apply/rowP => k'; case: (I3P k' neq_ij); rewrite /crossmul; unlock; rewrite !mxE.
 - rewrite (@determinant_alternate _ _ _ 0 1) //=.
     by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
   by move=> k''; rewrite !mxE.
@@ -1494,37 +1504,43 @@ Variable T : comRingType.
 
 Lemma vecij : 'e_0 *v 'e_1 = 'e_2%:R :> 'rV[T]__.
 Proof.
-apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+apply/matrixP => i j; rewrite /crossmul; unlock.
+rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
 
 Lemma vecik : 'e_0 *v 'e_2%:R = - 'e_1 :> 'rV[T]__.
 Proof.
-apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+apply/matrixP => i j; rewrite /crossmul; unlock.
+rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
 
 Lemma vecji : 'e_1 *v 'e_0 = - 'e_2%:R :> 'rV[T]__.
 Proof.
-apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+apply/matrixP => i j; rewrite /crossmul; unlock.
+rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
 
 Lemma vecjk : 'e_1 *v 'e_2%:R = 'e_0%:R :> 'rV[T]__.
 Proof.
-apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+apply/matrixP => i j; rewrite /crossmul; unlock.
+rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
 
 Lemma vecki : 'e_2%:R *v 'e_0 = 'e_1 :> 'rV[T]__.
 Proof.
-apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+apply/matrixP => i j; rewrite /crossmul; unlock.
+rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
 
 Lemma veckj : 'e_2%:R *v 'e_1 = - 'e_0 :> 'rV[T]__.
 Proof.
-apply/matrixP => i j; rewrite ord1 !mxE /= det_mx33 !mxE.
+apply/matrixP => i j; rewrite /crossmul; unlock.
+rewrite ord1 !mxE /= det_mx33 !mxE.
 by case: j => [] [|[|[|//]]] /=; Simp.r.
 Qed.
 
