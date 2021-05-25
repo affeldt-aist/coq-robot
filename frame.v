@@ -765,9 +765,9 @@ Coercion Framebasis R (f : Frame.t R) : 'M[R]_3 := Frame.basis f.
 (* base vectors of A in terms of the basis vectors of B: *)
 Definition FromTo (T : comRingType) (A B : frame T) :=
   \matrix_(i, j) (row i A *d row j B).
-(* = the rotation matrix that transforms a vector expressed in coordinate frame A
-   to a vector expressed in coordinate frame B *)
-(* = orientation of frame A relative to B *)
+(* = the rotation matrix that transforms a vector expressed in coordinate frame B
+   to a vector expressed in coordinate frame A *)
+(* = orientation of frame A relative to B? *)
 
 Notation "A _R^ B" := (@FromTo _ A B) : frame_scope.
 

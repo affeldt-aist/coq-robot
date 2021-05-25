@@ -16,7 +16,7 @@ From mathcomp.analysis Require Import forms.
 (*                                                                            *)
 (*  RO a, RO' a == two dimensional rotations of angle a                       *)
 (*                                                                            *)
-(* Elementary rotations:                                                      *)
+(* Elementary rotations (row vector convention):                              *)
 (*  Rx a, Rx' a == rotations about axis x of angle a                          *)
 (*  Ry a == rotation about axis y of angle a                                  *)
 (*  Rz a == rotation about axis z of angle a                                  *)
@@ -44,15 +44,25 @@ From mathcomp.analysis Require Import forms.
 (*    a rotation matrix has Aa.angle M and normalize (Aa.vaxis M) for         *)
 (*    exponential coordinates                                                 *)
 (*                                                                            *)
-(*   Rxyz == sequence of rotations about x, about y, and about z              *)
+(* Composition of elementary rotations (row vector convention):               *)
+(*   Rzyz a b c == composition of a Rz rotation of angle c, a Ry rotation of  *)
+(*                 angle b, and a Rz rotation of angle a                      *)
+(*   Rxyz a b c == composition of a Rx rotation of angle c, a Ry rotation of  *)
+(*                 angle b, and a Rz notation of angle a                      *)
+(*                                                                            *)
+(* ZYZ angles given a rotation matrix M (ref: [sciavicco] 2.4.1):             *)
+(* with zyz_b in ]0;pi[:                                                      *)
+(*   zyz_a M == angle of the last Rz rotation                                 *)
+(*   zyz_b M == angle of the Ry rotation                                      *)
+(*   zyz_c M == angle of the first Rz rotation                                *)
 (*                                                                            *)
 (* Roll-Pitch-Yaw (ZYX) angles given a rotation matrix M                      *)
-(* with pitch in ]-pi/2;pi/2[ (ref: [sciavicco]):                             *)
+(* with pitch in ]-pi/2;pi/2[ (ref: [sciavicco] 2.4.2):                       *)
 (*   rpy_a M == angle about axis z (roll)                                     *)
 (*   rpy_b M == angle about axis y (pitch)                                    *)
 (*   rpy_c M == angle about axis x (yaw)                                      *)
 (*                                                                            *)
-(* Euler angles:                                                              *)
+(* Alternative formulation of ZYX angles:                                     *)
 (* (ref: [Gregory G. Slabaugh, Computer Euler angles from a rotation matrix]) *)
 (*   euler_a == angle about z                                                 *)
 (*   euler_b == angle about y                                                 *)
@@ -1502,7 +1512,7 @@ Qed.
 End properties_of_orthogonal_matrices.
 
 (* wip *)
-Section euler_angles.
+Section euler_angles_existence.
 Variable T : rcfType.
 Implicit Types R : 'M[T]_3.
 Local Open Scope frame_scope.
@@ -1822,11 +1832,149 @@ rewrite /normalize row3Z mulr0; congr row3.
   - by rewrite ltr0_norm ?ltNge // mulrN opprK.
 Qed.
 
-End euler_angles.
+End euler_angles_existence.
 
-Section euler_angles2.
+Section euler_angles_ZYZ.
+Variable T : rcfType.
 
-Variables (T : rcfType).
+Definition Rzyz (a b c : angle T) :=
+  let ca := cos a in let cb := cos b in let cc := cos c in
+  let sa := sin a in let sb := sin b in let sc := sin c in
+  col_mx3
+  (row3 (ca * cb * cc - sa * sc) (sa * cb * cc + ca * sc) (- sb * cc))
+  (row3 (- ca * cb * sc - sa * cc) (- sa * cb * sc + ca * cc) (sb * sc))
+  (row3 (ca * sb) (sa * sb) (cb)).
+
+Lemma RzyzE a b c : Rz c * Ry b * Rz a = Rzyz a b c.
+Proof.
+apply/matrix3P/and9P; split; rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
+by apply/eqP; nsatz.
+by apply/eqP; nsatz.
+by apply/eqP; nsatz.
+by apply/eqP; nsatz.
+by apply/eqP; nsatz.
+by apply/eqP; nsatz.
+by apply/eqP; nsatz.
+by apply/eqP; nsatz.
+Qed.
+
+Definition zyz_a (M : 'M[T]_3) : angle T :=
+  atan2 (M 2%:R 1) (M 2%:R 0).
+
+Definition zyz_b (M : 'M[T]_3) : angle T :=
+  atan2 (Num.sqrt (M 2%:R 0 ^+ 2 + M 2%:R 1 ^+ 2)) (M 2%:R 2%:R).
+
+Definition zyz_c (M : 'M[T]_3) : angle T :=
+  atan2 (M 1 2%:R) (- M 0 2%:R).
+
+Lemma Rzyz_reduced_constraints M a b c : M \is 'SO[T]_3 ->
+  sin b != 0 ->
+  M 0 2%:R = - sin b * cos c ->
+  M 1 2%:R = sin b * sin c ->
+  M 2%:R 0 = cos a * sin b ->
+  M 2%:R 1 = sin a * sin b ->
+  M 2%:R 2%:R = cos b ->
+  M = (Rz c * Ry b * Rz a).
+Proof.
+move=> MSO sbNZ M02 M12 M20 M21 M22.
+have MO : M \is 'O[T]_3 by case/andP: MSO.
+have := det_mx33 M; case/andP: MSO => _ /eqP-> => Fd.
+have /eqP/matrixP/(_ 0 0) := MO => F00.
+have /eqP/matrixP/(_ 0 1) := MO => F01;
+have /eqP/matrixP/(_ 0 2%:R) := MO => F02;
+have /eqP/matrixP/(_ 1 0) := MO => F10;
+have /eqP/matrixP/(_ 1 1) := MO => F11;
+have /eqP/matrixP/(_ 1 2%:R) := MO => F12;
+have /eqP/matrixP/(_ 2%:R 0) := MO => F20;
+have /eqP/matrixP/(_ 2%:R 1) := MO => F21;
+have /eqP/matrixP/(_ 2%:R 2%:R) := MO => F22.
+rewrite !mxE !sum3E !mxE /= in Fd F00 F01 F02 F10 F11 F12 F20 F21 F22.
+rewrite RzyzE.
+have sbN2Z : sin b ^+2 != 0 by rewrite sqrf_eq0.
+apply/matrix3P/and9P; split; apply/eqP; rewrite !mxE //=.
+- apply: (mulIf sbN2Z).
+  apply: etrans (_ : M 2%:R 0 * M 0 2%:R * (- M 2%:R 2%:R) -
+                       M 1 2%:R * M 2%:R 1 = _); last first.
+    rewrite expr2.
+    by nsatz.
+  by rewrite sin2cos2 -sqrrN -M22 expr2; nsatz.
+- apply: (mulIf sbN2Z).
+  apply: etrans (_ : M 0 2%:R * M 2%:R 1 * (- M 2%:R 2%:R) +
+                     M 1 2%:R * M 2%:R 0 = _); last by rewrite expr2; nsatz.
+  by rewrite sin2cos2 -sqrrN -M22 expr2; nsatz.
+- apply: (mulIf sbN2Z).
+  apply: etrans (_ : M 2%:R 0 * M 1 2%:R * (- M 2%:R 2%:R) +
+                     M 0 2%:R * M 2%:R 1 = _); last by rewrite expr2; nsatz.
+  by rewrite sin2cos2 -sqrrN -M22 expr2; nsatz.
+apply: (mulIf sbN2Z).
+apply: etrans (_ : M 2%:R 1 * M 1 2%:R * (- M 2%:R 2%:R) -
+                   M 2%:R 0 * M 0 2%:R = _); last first.
+  by rewrite expr2; nsatz.
+by rewrite sin2cos2 -sqrrN -M22 expr2; nsatz.
+Qed.
+
+Lemma zyz_solution M : M \is 'SO[T]_3 ->
+  0 < sin (zyz_b M) ->
+  M = Rz (zyz_c M) * Ry (zyz_b M) * Rz (zyz_a M).
+Proof.
+move=> MSO Hb.
+have MO : M \is 'O[T]_3 by apply: rotation_sub.
+have M12 : `|M 2%:R 2%:R| < 1.
+  rewrite lt_neqAle Oij_ub ?rotation_sub // andbT.
+  apply/negP => abs.
+  move: (abs) Hb; rewrite Mi2_1 // => /andP[/eqP M20 /eqP M21].
+  rewrite /zyz_b M20 M21 expr0n add0r sqrtr0.
+  by rewrite sin_atan20x ltxx.
+apply: Rzyz_reduced_constraints => //.
+- by apply/eqP=> Hc; rewrite Hc ltxx in Hb.
+- rewrite /zyz_b /zyz_c sqr_Mi2E // -/(yarc _).
+  rewrite sin_atan2_yarcx //.
+  have [/eqP M02|M02] := boolP (M 0 2%:R == 0).
+    rewrite M02 oppr0 cos_atan2_0.
+    have M120: M 1 2%:R != 0.
+      apply/negPn => /eqP M120.
+      move: (M2j_1  MO 2%:R).
+      by rewrite M02 M120 eqxx /= lt_eqF.
+    by rewrite (negbTE M120) mulr0.
+  rewrite cos_atan2 ?oppr_eq0//.
+  rewrite sqrrN sqr_M2jE // -/(yarc _).
+  by rewrite mulrC mulrN -mulrA mulVf ?mulr1 ?opprK // yarc_neq0.
+- rewrite /zyz_b /zyz_c sqr_Mi2E; last by rewrite rotation_sub.
+  rewrite -/(yarc _) sin_atan2_yarcx //.
+  have [/eqP M02|M02] := boolP (M 0 2%:R == 0).
+    rewrite M02 oppr0 sin_atan2_0.
+    rewrite /yarc -sqr_M2jE // M02 expr0n add0r sqrtr_sqr.
+    by rewrite mulrC mulr_sg_norm.
+  rewrite sin_atan2 ?oppr_eq0// sqrrN sqr_M2jE // -/(yarc _).
+  by rewrite mulrCA divff ?mulr1// yarc_neq0.
+- rewrite /zyz_a /zyz_b sqr_Mi2E // -/(yarc _) sin_atan2_yarcx //.
+  have [/eqP M20|M20] := boolP (M 2%:R 0 == 0).
+    rewrite M20 cos_atan2_0.
+    have M21 : M 2%:R 1 != 0.
+      apply/negPn => /eqP M21.
+      move: (Mi2_1 MO 2%:R).
+      by rewrite M20 M21 !eqxx /= lt_eqF.
+    by rewrite (negbTE M21) mul0r.
+  rewrite cos_atan2 // sqr_Mi2E // -/(yarc _).
+  by rewrite -mulrA mulVf ?mulr1// yarc_neq0.
+- rewrite /zyz_a /zyz_b sqr_Mi2E // -/(yarc _).
+  rewrite sin_atan2_yarcx //.
+  have [/eqP M20|M20] := boolP (M 2%:R 0 == 0).
+    rewrite M20 sin_atan2_0.
+    rewrite /yarc -sqr_Mi2E // M20 expr0n add0r sqrtr_sqr.
+    by rewrite mulr_sg_norm.
+  rewrite sin_atan2// sqr_Mi2E // -/(yarc _).
+  by rewrite -mulrA mulVf ?mulr1// yarc_neq0.
+- rewrite /zyz_b.
+  rewrite sqr_Mi2E //.
+  rewrite -/(yarc _).
+  by rewrite cos_atan2_yarcx.
+Qed.
+
+End euler_angles_ZYZ.
+
+Section euler_angles_ZYX.
+Variable T : rcfType.
 
 Definition Rxyz (a b c : angle T) :=
   let ca := cos a in let cb := cos b in let cc := cos c in
@@ -1836,29 +1984,27 @@ Definition Rxyz (a b c : angle T) :=
   (row3 (ca * sb * sc - sa * cc) (sa * sb * sc + ca * cc) (cb * sc))
   (row3 (ca * sb * cc + sa * sc) (sa * sb * cc - ca * sc) (cb * cc)).
 
-Lemma RxyzE a b c : Rx a * Ry b * Rz c = Rxyz c b a.
+Lemma RxyzE c b a : Rx c * Ry b * Rz a = Rxyz a b c.
 Proof.
 apply/matrix3P/and9P; split;
    rewrite !mxE /=  sum3E !mxE /=; Simp.r; rewrite !sum3E !{1}mxE /=;
    Simp.r => //.
 by rewrite mulrC.
 by rewrite mulrC.
-by rewrite mulrAC -mulrA mulrC (mulrC (cos a)).
-by rewrite mulrC (mulrC (sin a)) mulrA (mulrC (cos a)).
+by rewrite mulrAC -mulrA mulrC (mulrC (cos c)).
+by rewrite mulrC (mulrC (sin c)) mulrA (mulrC (cos c)).
 by rewrite mulrC.
-by rewrite mulrC (mulrC (cos a)) mulrA (mulrC (sin a)).
-by rewrite mulrC (mulrC (cos a)) mulrA (mulrC (sin a)).
+by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
+by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
 by rewrite mulrC.
 Qed.
 
-Definition rpy_a (M : 'M[T]_3) : angle T :=
-  atan2 (M 0 1) (M 0 0).
+Definition rpy_a (M : 'M[T]_3) : angle T := atan2 (M 0 1) (M 0 0).
 
 Definition rpy_b (M : 'M[T]_3) : angle T :=
   atan2 (- M 0 2%:R) (Num.sqrt (M 1 2%:R ^+ 2 + M 2%:R 2%:R ^+ 2)).
 
-Definition rpy_c (M : 'M[T]_3) : angle T :=
-  atan2 (M 1 2%:R) (M 2%:R 2%:R).
+Definition rpy_c (M : 'M[T]_3) : angle T := atan2 (M 1 2%:R) (M 2%:R 2%:R).
 
 Lemma RxyzE_M02D1 M a b c : M \is 'SO[T]_3 ->
   cos b != 0 ->
@@ -1919,7 +2065,7 @@ have M02 : `|M 0 2%:R| < 1.
 apply: RxyzE_M02D1 => //.
 - by apply/eqP=> Hc; rewrite Hc ltxx in Hb.
 - rewrite /rpy_a /rpy_b sqr_M0jE // -/(yarc _).
-  rewrite cos_atan2_yarc //.
+  rewrite cos_atan2_xyarc //.
   have [/eqP M00|M00] := boolP (M 0 0 == 0).
     rewrite M00 cos_atan2_0.
     have M01 : M 0 1 != 0.
@@ -1930,7 +2076,7 @@ apply: RxyzE_M02D1 => //.
   rewrite cos_atan2 // sqr_Mi2E // -/(yarc _) -mulrA.
   by rewrite mulVr ?mulr1 // unitfE yarc_neq0.
 - rewrite /rpy_a /rpy_b sqr_M0jE; last by rewrite rotation_sub.
-  rewrite -/(yarc _) cos_atan2_yarc //.
+  rewrite -/(yarc _) cos_atan2_xyarc //.
   have [/eqP M00|M00] := boolP (M 0 0 == 0).
     rewrite M00 sin_atan2_0.
     rewrite /yarc -sqr_Mi2E // M00 expr0n add0r sqrtr_sqr.
@@ -1938,8 +2084,8 @@ apply: RxyzE_M02D1 => //.
   rewrite sin_atan2 // sqr_Mi2E // -/(yarc _).
   by rewrite -mulrA mulVr ?mulr1 // unitfE yarc_neq0.
 - rewrite /rpy_b sqr_M0jE // -/(yarc _) -sinN atan2N opprK.
-  by rewrite sin_atan2_yarc.
-- rewrite /rpy_b /rpy_c sqr_M0jE // -/(yarc _) cos_atan2_yarc //.
+  by rewrite sin_atan2_xyarc.
+- rewrite /rpy_b /rpy_c sqr_M0jE // -/(yarc _) cos_atan2_xyarc //.
   have [/eqP M22|M22] := boolP (M 2%:R 2%:R == 0).
     rewrite M22 sin_atan2_0 /yarc -sqr_M0jE //.
     rewrite M22 expr0n addr0 sqrtr_sqr mulrC.
@@ -1947,7 +2093,7 @@ apply: RxyzE_M02D1 => //.
   rewrite sin_atan2 // addrC sqr_M0jE // -/(yarc _).
   by rewrite mulrCA mulfV ?mulr1 // yarc_neq0.
 rewrite /rpy_b /rpy_c sqr_M0jE // -/(yarc _).
-rewrite cos_atan2_yarc //.
+rewrite cos_atan2_xyarc //.
 have [/eqP M22|M22] := boolP (M 2%:R 2%:R == 0).
   rewrite M22 cos_atan2_0.
   have M12 : M 1 2%:R != 0.
@@ -1958,6 +2104,11 @@ have [/eqP M22|M22] := boolP (M 2%:R 2%:R == 0).
 rewrite cos_atan2 // addrC sqr_M0jE // -/(yarc _).
 by rewrite mulrCA mulfV ?mulr1 // yarc_neq0.
 Qed.
+
+End euler_angles_ZYX.
+
+Section euler_angles.
+Variable T : rcfType.
 
 Definition euler_b (M : 'M[T]_3) : angle T :=
   if `| M 0 2%:R | != 1 then
@@ -2136,4 +2287,4 @@ apply/matrix3P/and9P; split; apply/eqP;
 by nsatz.
 Qed.
 
-End euler_angles2.
+End euler_angles.
