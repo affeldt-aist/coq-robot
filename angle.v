@@ -592,18 +592,19 @@ Definition atan2 x y :=
       if x < 0 then - pihalf else
         0) (* undefined *).
 
+Lemma atan200 : atan2 0 0 = 0.
+Proof. by rewrite /atan2 ltxx. Qed.
+
 Lemma atan2_11 : atan2 1 1 = piquarter.
 Proof. by rewrite /atan2 ltr01 invr1 mulr1 atan1. Qed.
 
 Lemma atan2N (x y : T) : atan2 (- x) y = - atan2 x y.
 Proof.
-rewrite /atan2; case: ifPn => y0; first by rewrite mulNr atanN.
-rewrite -leNgt in y0.
-rewrite lt_neqAle y0 andbT; case: ifPn => y0'.
-  by rewrite oppr_ge0; case: ltrgt0P => x0;
-     rewrite mulNr atanN opprD ?opprK // {1}piNpi.
-rewrite negbK in y0'.
-by rewrite oppr_gt0 oppr_lt0; case: ltrgt0P => x0; rewrite ?opprK ?oppr0.
+rewrite /atan2; have [y0|y0]:= ltP 0 y; first by rewrite mulNr atanN.
+rewrite lt_neqAle y0 andbT; have [y0'|y0'] /= := boolP (y == 0).
+  by rewrite oppr_gt0 oppr_lt0; case: ltrgt0P => x0; rewrite ?opprK ?oppr0.
+by rewrite oppr_ge0; case: ltrgt0P => x0;
+   rewrite mulNr atanN opprD ?opprK // {1}piNpi.
 Qed.
 
 (* cancellation laws *)
@@ -1134,9 +1135,19 @@ by rewrite unitfE sqrtr_eq0 -ltNge ltr_paddr // ?sqr_ge0 // exprn_gt0.
 by rewrite unitfE invr_neq0 // gt_eqF.
 Qed.
 
-Lemma cos_atan2_yarc (x : T) : `| x | < 1 -> cos (atan2 (- x) (yarc x)) = yarc x.
+Lemma cos_atan2_xyarc (x : T) : `| x | < 1 -> cos (atan2 (- x) (yarc x)) = yarc x.
 Proof.
 move=> x1; by rewrite cos_atan2 ?yarc_neq0 // sqr_yarc // sqrrN subrK sqrtr1 divr1.
+Qed.
+
+Lemma cos_atan2_yarcx (x : T) : `| x | < 1 -> cos (atan2 (yarc x) x) = x.
+Proof.
+move=> x1.
+have [/eqP x0|x0] := boolP (x == 0).
+  rewrite x0 yarc0.
+  by rewrite /atan2 ltxx ltr01 cos_pihalf.
+rewrite cos_atan2 //.
+by rewrite sqr_yarc // addrCA subrr addr0 sqrtr1 divr1.
 Qed.
 
 Lemma sin_atan2 (x y : T) : y != 0 -> sin (atan2 x y) = x / Num.sqrt (y ^+ 2 + x ^+ 2).
@@ -1165,16 +1176,10 @@ rewrite invrK -(mulrA x) (mulrA _^-1) mulVr ?mul1r //.
 by rewrite unitfE gt_eqF.
 Qed.
 
-Lemma sin_atan2_yarc (x : T) : `| x | < 1 -> sin (atan2 x (yarc x)) = x.
+Lemma sin_atan20x (x : T) : sin (atan2 0 x) = 0.
 Proof.
-move=> x1; by rewrite sin_atan2 ?yarc_neq0 // sqr_yarc // subrK sqrtr1 divr1.
-Qed.
-
-Lemma cos_atan2_0 (x : T) : cos (atan2 x 0) = (x == 0)%:R.
-Proof.
-rewrite /atan2 ltxx; case: ifPn => [x0|]; first by rewrite cos_pihalf gt_eqF.
-rewrite -leNgt le_eqVlt => /orP[/eqP ->| x0]; first by rewrite ltxx cos0 eqxx.
-by rewrite x0 cosN cos_pihalf lt_eqF.
+have [/eqP ->|x0] := boolP (x == 0); first by rewrite atan200 sin0.
+by rewrite sin_atan2 // mul0r.
 Qed.
 
 Lemma sin_atan2_0 (x : T) : sin (atan2 x 0) = Num.sg x.
@@ -1182,6 +1187,28 @@ Proof.
 rewrite /atan2 ltxx; case: ifPn => [x0|]; first by rewrite sin_pihalf gtr0_sg.
 rewrite -leNgt le_eqVlt => /orP[/eqP ->| x0]; first by rewrite ltxx sin0 sgr0.
 by rewrite x0 sinN sin_pihalf ltr0_sg.
+Qed.
+
+Lemma sin_atan2_xyarc (x : T) : `| x | < 1 -> sin (atan2 x (yarc x)) = x.
+Proof.
+move=> x1; by rewrite sin_atan2 ?yarc_neq0 // sqr_yarc // subrK sqrtr1 divr1.
+Qed.
+
+Lemma sin_atan2_yarcx (x : T) : `| x | < 1 -> sin (atan2 (yarc x) x) = yarc x.
+Proof.
+move=> x1.
+have [/eqP x0|x0] := boolP (x == 0).
+  rewrite x0 yarc0.
+  by rewrite /atan2 ltxx ltr01 sin_pihalf.
+rewrite sin_atan2 //.
+by rewrite sqr_yarc // addrCA subrr addr0 sqrtr1 divr1.
+Qed.
+
+Lemma cos_atan2_0 (x : T) : cos (atan2 x 0) = (x == 0)%:R.
+Proof.
+rewrite /atan2 ltxx; case: ifPn => [x0|]; first by rewrite cos_pihalf gt_eqF.
+rewrite -leNgt le_eqVlt => /orP[/eqP ->| x0]; first by rewrite ltxx cos0 eqxx.
+by rewrite x0 cosN cos_pihalf lt_eqF.
 Qed.
 
 End properties_of_atan2.
