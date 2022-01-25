@@ -1,8 +1,8 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
-From mathcomp Require Import realalg complex fingroup perm.
-Require Import ssr_ext angle euclidean skew vec_angle.
+From mathcomp Require Import realalg complex fingroup perm reals.
+Require Import ssr_ext euclidean skew vec_angle.
 From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
@@ -96,7 +96,7 @@ Notation "f '|,' i" := (NOFrame.rowframe f i) : frame_scope.
 Local Open Scope frame_scope.
 
 Section non_oriented_frame_properties.
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Implicit Types p : 'rV[T]_3.
 Variable f : noframe T.
@@ -317,7 +317,7 @@ Coercion noframe_of_frame (T : ringType) (f : frame T) : noframe T :=
   Frame.noframe_of f.
 
 Section oriented_frame_properties.
-Variables (T : rcfType) (f : Frame.t T).
+Variables (T : realType) (f : Frame.t T).
 Import rv3LieAlgebra.Exports.
 
 (* TODO: useful? *)
@@ -420,7 +420,7 @@ Definition can_tframe := TFrame.mk 0 can_frame.
 
 End canonical_frame.
 
-Lemma basis_change (T : rcfType) (M : 'M[T]_3) (F : noframe T) (A : 'M[T]_3) :
+Lemma basis_change (T : realType) (M : 'M[T]_3) (F : noframe T) (A : 'M[T]_3) :
   let i := F~i in let j := F~j in let k := F~k in
   i *m M = A 0 0 *: i + A 0 1 *: j + A 0 2%:R *: k ->
   j *m M = A 1 0 *: i + A 1 1 *: j + A 1 2%:R *: k ->
@@ -439,7 +439,7 @@ Qed.
 
 Module Base1.
 Section base1.
-Variables (T : rcfType) (i : 'rV[T]_3).
+Variables (T : realType) (i : 'rV[T]_3).
 Hypothesis normi : norm i = 1.
 Import rv3LieAlgebra.Exports.
 
@@ -492,7 +492,7 @@ Definition frame := Frame.mk is_SO.
 End base1.
 
 Section base1_lemmas.
-Variable T : rcfType.
+Variable T : realType.
 
 (* NB: for information *)
 Lemma je0 : j 'e_0 = 'e_1 :> 'rV[T]_3.
@@ -516,7 +516,7 @@ Qed.
 End base1_lemmas.
 End Base1.
 
-Canonical base1_is_noframe (T : rcfType) (u : 'rV[T]_3) (u1 : norm u = 1) :=
+Canonical base1_is_noframe (T : realType) (u : 'rV[T]_3) (u1 : norm u = 1) :=
   NOFrameInterface.mk u1 (Base1.normj u1) (Base1.normk u1)
   (Base1.idotj u1) (Base1.jdotk u) (Base1.idotk u).
 
@@ -524,7 +524,7 @@ Canonical noframe_subtype (T : rcfType) := [subType for @NOFrame.M T].
 
 Module Base.
 Section build_base.
-Variables (T : rcfType) (u : 'rV[T]_3).
+Variables (T : realType) (u : 'rV[T]_3).
 
 Definition i := if u == 0 then 'e_0 else normalize u.
 Definition j := if u == 0 then 'e_1 else Base1.j i.
@@ -579,7 +579,7 @@ Proof. by rewrite !rowframeE col_mx3_row Frame.MSO. Qed.
 End build_base.
 
 Section build_base_lemmas.
-Variables (T : rcfType) (u : 'rV[T]_3).
+Variables (T : realType) (u : 'rV[T]_3).
 
 Lemma frame0 : frame 0 = can_frame T.
 Proof.
@@ -722,22 +722,22 @@ End build_base_lemmas.
 
 End Base.
 
-Lemma colinear_frame0a (T : rcfType) (u : 'rV[T]_3) : colinear (Base.frame u)~i u.
+Lemma colinear_frame0a (T : realType) (u : 'rV[T]_3) : colinear (Base.frame u)~i u.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite colinear0.
 by rewrite -Base.iE /Base.i (negbTE u0) scale_colinear.
 Qed.
 
-Lemma colinear_frame0b (T : rcfType) (u : 'rV[T]_3) : colinear u (Base.frame u)~i.
+Lemma colinear_frame0b (T : realType) (u : 'rV[T]_3) : colinear u (Base.frame u)~i.
 Proof. by rewrite colinear_sym colinear_frame0a. Qed.
 
 Definition colinear_frame0 := (colinear_frame0a, colinear_frame0b).
 
-Canonical base_is_noframe (T : rcfType) (u : 'rV[T]_3) :=
+Canonical base_is_noframe (T : realType) (u : 'rV[T]_3) :=
   NOFrameInterface.mk (Base.normi u) (Base.normj u) (Base.normk u)
   (Base.idotj u) (Base.jdotk u) (Base.idotk u).
 
-Canonical frame_is_frame (T : rcfType) (u : 'rV[T]_3) :=
+Canonical frame_is_frame (T : realType) (u : 'rV[T]_3) :=
   @FrameInterface.mk _ (base_is_noframe u) (Base.icrossj u).
 
 (*Module Frame.
@@ -773,7 +773,7 @@ Notation "A _R^ B" := (@FromTo _ A B) : frame_scope.
 
 Section FromTo_properties.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types A B C : frame T.
 
 Lemma FromToE A B : (A _R^ B) = A *m (matrix_of_noframe B)^-1 :> 'M[T]_3.
@@ -824,7 +824,7 @@ Qed.
 End FromTo_properties.
 
 (* TODO: move? *)
-Lemma sqr_norm_frame (T : rcfType) (a : frame T) (v : 'rV[T]_3) :
+Lemma sqr_norm_frame (T : realType) (a : frame T) (v : 'rV[T]_3) :
   norm v ^+ 2 = \sum_(i < 3) (v *d (a |, i%:R))^+2.
 Proof.
 have H : norm v = norm (v *m (can_frame T) _R^ a).
@@ -833,10 +833,10 @@ rewrite H sqr_norm [in LHS]sum3E [in RHS]sum3E; congr (_ ^+ 2 + _ ^+ 2 + _ ^+ 2)
   by rewrite FromTo_from_can mxE_dotmul_row_col -tr_row trmxK row_id NOFrame.rowframeE.
 Qed.
 
-Definition noframe_of_FromTo (T : rcfType) (A B : frame T) : noframe T :=
+Definition noframe_of_FromTo (T : realType) (A B : frame T) : noframe T :=
   NOFrame.mk (FromTo_is_O A B).
 
-Definition frame_of_FromTo (T : rcfType) (B A : frame T) : frame T :=
+Definition frame_of_FromTo (T : realType) (B A : frame T) : frame T :=
   @Frame.mk _ (noframe_of_FromTo B A) (FromTo_is_SO B A).
 
 Module FramedVect.
@@ -860,7 +860,7 @@ Proof. by move=> ->. Qed.
 
 Section change_of_coordinate_by_rotation.
 
-Variable T : rcfType.
+Variable T : realType.
 Implicit Types A B : frame T.
 
 Lemma FramedVectvK A (x : fvec A) : `[FramedVect.v x $ A] = x.
@@ -935,7 +935,7 @@ End about_frame.*)
 (* construction of a frame out of three non-colinear points *)
 Module triad.
 Section triad.
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 
 Variables a b c : point.
@@ -1010,7 +1010,7 @@ End triad.
    trois points de depart et leurs positions d'arrivee
    sample lemma: the rotation obtained behaves like a change of coordinates from left to right *)
 Section transformation_given_three_points.
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 
