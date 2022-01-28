@@ -2,7 +2,7 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm reals interval trigo.
-Require Import ssr_ext euclidean.
+Require Import ssr_ext euclidean extra_trigo.
 From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
@@ -120,21 +120,6 @@ Qed.
 
 Lemma vec_angleZNv u v k : k < 0 -> vec_angle (k *: u) v = vec_angle (- u) v.
 Proof. move=> ?; rewrite vec_angleC vec_anglevZN; by [rewrite vec_angleC|]. Qed.
-
-Lemma acos1 : acos (1 : T) = 0.
-Proof.
-have := @cosK T 0; rewrite cos0 => -> //.
-by rewrite in_itv //= lexx pi_ge0.
-Qed.
-
-Lemma acos0 : acos 0 = pi T / 2%:R.
-Proof.
-have := @cosK T (pi T / 2%:R).
-rewrite cos_pihalf => -> //.
-rewrite in_itv //= divr_ge0 ?ler0n ?pi_ge0 //=.
-rewrite ler_pdivr_mulr ?ltr0n //.
-by rewrite mulr_natr mulr2n -ler_subl_addr subrr pi_ge0.
-Qed.
 
 Lemma vec_anglevv u : u != 0 -> vec_angle u u = 0.
 Proof.
@@ -303,7 +288,7 @@ by rewrite divfK ?norm_eq0 // -expr2 addrAC -mulr2n subrr.
 Qed.
 
 Lemma vec_anglepi_inv u v : u != 0 -> v != 0 ->
-  vec_angle u v = pi T -> u = - (norm u / norm v) *: v.
+  vec_angle u v = pi -> u = - (norm u / norm v) *: v.
 Proof.
 move=> uD0 vD0 uvpi.
 apply/eqP; rewrite -subr_eq0 -norm_eq0 scaleNr opprK.
@@ -315,9 +300,9 @@ rewrite mulNrn divfK ?norm_eq0 //.
 by rewrite addrC addrA -expr2 -mulr2n subrr.
 Qed.
 
-Lemma vec_angle_bound u v : 0 <= vec_angle u v <= pi T.
+Lemma vec_angle_bound u v : 0 <= vec_angle u v <= pi.
 Proof.
-have z_bound : 0 <= (0 : T) <= pi T by rewrite lexx pi_ge0.
+have z_bound : 0 <= (0 : T) <= pi by rewrite lexx pi_ge0.
 rewrite /vec_angle; case: eqP => // /eqP uD0; case: eqP => // /eqP vD0.
 have := dotmul_div_N11 uD0 vD0; rewrite in_itv /= => uv_bound.
 by rewrite acos_ge0 // acos_lepi.
