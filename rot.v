@@ -1125,6 +1125,11 @@ rewrite [1 + _]addrC addrK -[_ *+2]mulr_natr mulfK.
 by rewrite (eqr_nat _ 2 0).
 Qed.
 
+Lemma angle_interval M : M \is 'SO[T]_3 -> 0 <= angle M <= pi.
+Proof.
+by move=> MSO; rewrite acos_ge0 ?acos_lepi // tr_interval.
+Qed.
+
 (* NB: useful? *)
 Lemma angle_Rx a :
   (   0 <= a <= pi -> angle (Rx a) = a) /\

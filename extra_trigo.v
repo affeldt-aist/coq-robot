@@ -15,7 +15,6 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
-
 Arguments pi {R}.
 
 Section Extra.
@@ -23,6 +22,105 @@ Section Extra.
 Variable R : realType.
 
 Implicit Types a : R.
+
+Lemma sin_eq0_Npipi a :
+  - pi < a <= pi -> (sin a == 0) = ((a == 0) || (a == pi)).
+Proof.
+move=> /andP[a_gtNpi a_lepi].
+have [->|/eqP aD0 /=] := a =P 0; first by rewrite sin0 eqxx.
+have [->|/eqP aDpi /=] := a =P pi; first by rewrite sinpi eqxx.
+case: ltgtP aD0 => //= aL _.
+  suff: sin a < 0 by case: ltgtP.
+  rewrite -[X in X < _]opprK -sinN oppr_cp0 sin_gt0_pi //.
+  by rewrite oppr_cp0 aL ltr_oppl a_gtNpi.
+suff: 0 < sin a by case: ltgtP.
+by rewrite sin_gt0_pi // aL lt_neqAle aDpi.
+Qed.
+
+Lemma cos_eq0_Npipi a :
+  - pi < a <= pi -> (cos a == 0) = ((a == pi / 2%:R) || (a == - (pi / 2%:R))).
+Proof.
+move=> /andP[a_gtNpi a_lepi].
+have piE : pi = pi / 2%:R + pi / 2%:R :> R.
+  by rewrite -mulrDl -mulr2n -mulr_natr mulfK // ?pnatr_eq0.
+case: (ltgtP a) => /= [aLhpi|hpiLa|->]; last by rewrite cos_pihalf eqxx.
+  case: (ltgtP a) => /=[aLNhpi|NhpiLa|->]; last by rewrite cosN cos_pihalf eqxx.
+    suff : 0 < sin (- (a + pi / 2%:R)).
+      by rewrite sinN sinDpihalf oppr_cp0; case: ltgtP.
+    rewrite sin_gt0_pi // oppr_cp0.
+    rewrite -{1}[_ / _]opprK subr_lt0 aLNhpi /=.
+    rewrite ltr_oppl (lt_le_trans a_gtNpi) //.
+    rewrite -subr_le0 opprD addrA subrr sub0r oppr_cp0.
+    by rewrite divr_ge0 ?ler0n // pi_ge0.
+  suff : 0 < cos a by case: ltgtP.
+  by rewrite cos_gt0_pihalf // NhpiLa aLhpi.
+case: (ltgtP a) => /=[aLNhpi|NhpiLa|->]; last by rewrite cosN cos_pihalf eqxx.
+  have := lt_trans hpiLa aLNhpi.
+  by rewrite -subr_lt0 opprK -piE ltNge pi_ge0.
+suff : 0 < cos (a - pi).
+  by rewrite -cosN opprD opprK cosDpi cosN oppr_cp0; case: ltgtP.
+rewrite cos_gt0_pihalf //.
+rewrite -subr_gt0 {1}piE opprD opprK !addrA subrK subr_gt0 hpiLa /=.
+apply: le_lt_trans (_ : 0 < _); first by rewrite subr_le0.
+by rewrite divr_gt0 ?ltr0n // pi_gt0.
+Qed.
+
+Lemma sin_eq1_Npipi a :
+  - pi < a <= pi -> (sin a == 1) = (a == pi / 2%:R).
+Proof.
+move=> aB; have /andP[a_gtNpi a_lepi] := (aB).
+case: (ltgtP a) => /=[aLNhpi|NhpiLa|->]; last by rewrite sin_pihalf eqxx.
+  case: eqP => // saE.
+  have : cos a == 0 by rewrite -norm_sin_eq1 saE normr1.
+  rewrite cos_eq0_Npipi //.
+  case: ltgtP aLNhpi => //= _ _ /eqP aE.
+  by move/eqP: saE; rewrite aE sinN sin_pihalf eqrNxx oner_eq0.
+case: eqP => // saE.
+have : cos a == 0 by rewrite -norm_sin_eq1 saE normr1.
+rewrite cos_eq0_Npipi //.
+case: ltgtP NhpiLa => //= _ _ /eqP aE.
+by move/eqP: saE; rewrite aE sinN sin_pihalf eqrNxx oner_eq0.
+Qed.
+
+Lemma cos_eq1_Npipi a :
+  - pi < a <= pi -> (cos a == 1) = (a == 0).
+Proof.
+move=> aB; have /andP[a_gtNpi a_lepi] := (aB).
+case: (ltgtP a) => /=[a_lt0|a_gt0|->]; last by rewrite cos0 eqxx.
+  case: eqP => // caE.
+  have : sin a == 0 by rewrite -norm_cos_eq1 caE normr1.
+  rewrite sin_eq0_Npipi //.
+  case: ltgtP a_lt0=> //= _ _ /eqP aE.
+  by move/eqP: caE; rewrite aE cospi eqrNxx oner_eq0.
+case: eqP => // caE.
+have : sin a == 0 by rewrite -norm_cos_eq1 caE normr1.
+rewrite sin_eq0_Npipi //.
+case: ltgtP a_gt0 => //= _ _ /eqP aE.
+by move/eqP: caE; rewrite aE cospi eqrNxx oner_eq0.
+Qed.
+
+Lemma sin_eqN1_Npipi a : - pi < a <= pi -> (sin a == -1) = (a == - (pi / 2%:R)).
+Proof.
+case: (a =P pi) => [->|/eqP aDpi].
+  rewrite sinpi eq_sym oppr_eq0 oner_eq0 => _.
+  rewrite -subr_eq0  opprK -{1}[pi]mulr1 -mulrDr mulf_eq0.
+  case: ltgtP (pi_gt0 R) => //= _ _.
+  have -> : 1 + 2%:R^-1 = 3%:R / 2%:R :> R.
+    by rewrite (natrD _  2 1) mulrDl divff ?mul1r // pnatr_eq0.
+  by rewrite mulf_eq0 invr_eq0 ?pnatr_eq0.
+move=> aB; rewrite -eqr_oppLR -sinN sin_eq1_Npipi ?eqr_oppLR //.
+rewrite ltr_oppr opprK ler_oppl andbC.
+by case: ltgtP aDpi aB => //= _; case: ltgtP.
+Qed.
+
+Lemma cos_eqN1_Npipi a : - pi < a <= pi -> (cos a == -1) = (a == pi).
+Proof.
+case: (a =P pi) => [->|aDpi]; first by rewrite cospi eqxx.
+case: eqP => // caE aB.
+have : sin a == 0 by rewrite -norm_cos_eq1 caE normrN normr1.
+rewrite sin_eq0_Npipi //; case: eqP => /= [aE _|_ /eqP //].
+by move/eqP: caE; rewrite aE cos0 -eqr_oppLR eqrNxx oner_eq0.
+Qed.
 
 Lemma acosN a : -1 <= a <= 1 -> acos (- a) = pi - acos a.
 Proof.
