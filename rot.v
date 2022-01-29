@@ -1584,21 +1584,25 @@ Implicit Types R : 'M[T]_3.
 Local Open Scope frame_scope.
 Import rv3LieAlgebra.Exports.
 
-(****************************STOP ******************************************)
 (* two orthogonal vectors belonging to the plan (y,z) projected on y and z *)
 Lemma exists_rotation_angle (F : frame T) (u v : 'rV[T]_3) :
   norm u = 1 -> norm v = 1 -> u *d v = 0 -> u *v v = F|,0 ->
-  { w : T | [/\ - pi < w <= pi &
-            u = cos w *: (F|,1) + sin w *: (F|,2%:R) /\
+  { w : T | [/\ - pi < w <= pi,
+            u = cos w *: (F|,1) + sin w *: (F|,2%:R) &
             v = - sin w *: (F|,1) + cos w *: (F|,2%:R)] }.
 Proof.
 move=> normu normv u_perp_v uva0.
 have u0 : u *d F|,0 = 0 by rewrite -uva0 dot_crossmulC liexx dotmul0v.
 have v0 : v *d F|,0 = 0 by rewrite -uva0 dot_crossmulCA liexx dotmulv0.
 case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
-  suff [?|?] : {u = F|,1 /\ v = F|,2%:R} + {u = - F|,1 /\ v = - F|,2%:R}.
-  - exists 0; by rewrite sin0 cos0 !(scale1r,oppr0,scale0r,addr0,add0r).
-  - exists pi; by rewrite sinpi cospi !(scaleN1r,scale0r,oppr0,add0r,addr0).
+  suff [[? ?]|[? ?]] : {u = F|,1 /\ v = F|,2%:R} + 
+                       {u = - F|,1 /\ v = - F|,2%:R}.
+  - exists 0.
+    rewrite sin0 cos0 !(scale1r,oppr0,scale0r,addr0,add0r); split=> //. 
+    by rewrite oppr_cp0 !(pi_gt0, pi_ge0).
+  - exists pi.
+    rewrite sinpi cospi !(scaleN1r,scale0r,oppr0,add0r,addr0); split => //.
+    by rewrite lexx (lt_trans _ (pi_gt0 _)) // oppr_cp0 pi_gt0.
   have v1 : v *d F|,1 = 0.
     move/eqP: (frame_icrossk F); rewrite -eqr_oppLR => /eqP <-.
     rewrite dotmulvN -uva0 lieC /= dotmulvN opprK double_crossmul.
@@ -1624,6 +1628,17 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
       rewrite linearNl linearZr_LR /= (frame_jcrossk F) -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scaleN1r; by right.
+have pi2B : - pi < (pi : T) / 2%:R <= pi.
+  rewrite lter_pdivl_mulr ?ltr0n // ler_pdivr_mulr ?ltr0n //.
+  rewrite -subr_gte0 mulNr opprK addr_gt0 ? pi_gt0 //.
+    by rewrite -subr_gte0 mulr_natr mulr2n addrK pi_ge0.
+  by rewrite mulr_natr mulr2n addr_gt0 // pi_gt0.
+have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
+  rewrite ltr_oppl opprK lter_pdivr_mulr ?ltr0n // ler_oppl.
+  rewrite ler_pdivl_mulr ?ltr0n // -subr_gte0 mulNr opprK.
+  rewrite mulr_natr mulr2n addr_ge0 ?pi_ge0 //.
+    by rewrite -subr_gte0 addrK pi_gt0.
+  by rewrite addr_ge0 ?pi_ge0.
 case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
   have {u2}[/eqP u2|/eqP u2] : {u *d F|,2%:R == 1} + {u *d F|,2%:R == -1}.
     move: normu => /(congr1 (fun x => x ^+ 2)).
@@ -1663,8 +1678,11 @@ move: (orthogonal_expansion F u).
 rewrite -{1}uva0 dot_crossmulC liexx dotmul0v scale0r add0r => Hr2.
 move: (orthogonal_expansion F v).
 rewrite -{1}uva0 lieC dotmulvN dot_crossmulC liexx dotmul0v oppr0 scale0r add0r => Hr3.
-have [w [Hw1 Hw2]] : {w : T | u *d F|,1 = cos w /\ (u *d F|,2%:R) = sin w}.
-  apply sqrD1_cossin.
+have f1D0 : F|,1 != 0 by apply: contra u1 => /eqP->; rewrite dotmulv0.
+have f2D0 : F|,2%:R != 0 by apply: contra u2 => /eqP->; rewrite dotmulv0.
+have [w [wB Hw1 Hw2]] : 
+  {w : T | [/\ - pi < w <= pi, u *d F|,1 = cos w & (u *d F|,2%:R) = sin w]}.
+  apply: sqrD1_cossin.
   move/(congr1 (fun x => norm x)) : Hr2.
   rewrite normu.
   move/(congr1 (fun x => x ^+ 2)).
@@ -1676,37 +1694,35 @@ have [w [Hw1 Hw2]] : {w : T | u *d F|,1 = cos w /\ (u *d F|,2%:R) = sin w}.
         rewrite le_eqVlt eq_sym (negbTE u1) /= => {}u1.
         rewrite vec_anglevZ; last by [].
         rewrite vec_angleZv; last by [].
-        by rewrite /cos /vec_angle noframe_jdotk frame_jcrossk noframe_norm expii.
+        rewrite /vec_angle /= noframe_jdotk mul0r acos0.
+        by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf.
       move=> {}u1.
         rewrite vec_angleZNv; last by [].
         rewrite vec_anglevZ; last by [].
-        rewrite cos_vec_angleNv; last 2 first.
-          by rewrite -norm_eq0 noframe_norm oner_neq0.
-          by rewrite -norm_eq0 noframe_norm oner_neq0.
-        by rewrite /cos /vec_angle noframe_jdotk frame_jcrossk noframe_norm expii oppr0.
+        rewrite cos_vec_angleNv //.
+        rewrite /vec_angle noframe_jdotk mul0r acos0.
+        by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf oppr0.
       move=> {}u2.
       case: (lerP 0 (u *d F|,1)).
         rewrite le_eqVlt eq_sym (negbTE u1) /= => {}u1.
         rewrite vec_angleZv; last by [].
         rewrite vec_anglevZN; last by [].
-        by rewrite /cos /vec_angle dotmulvN noframe_jdotk oppr0 linearNr /= normN frame_jcrossk noframe_norm expii.
+        rewrite cos_vec_anglevN //.
+        rewrite /vec_angle noframe_jdotk mul0r acos0.
+        by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf oppr0.
       move=> {}u1.
       rewrite vec_anglevZN; last by [].
       rewrite vec_angleZNv; last by [].
-        rewrite cos_vec_angleNv; last 2 first.
-          by rewrite -norm_eq0 noframe_norm oner_neq0.
-          by rewrite oppr_eq0 -norm_eq0 noframe_norm oner_neq0.
-        rewrite cos_vec_anglevN; last 2 first.
-          by rewrite -norm_eq0 noframe_norm oner_neq0.
-          by rewrite -norm_eq0 noframe_norm oner_neq0.
-        by rewrite opprK /cos /vec_angle noframe_jdotk frame_jcrossk noframe_norm expii.
+      rewrite cos_vec_angleNv ?oppr_eq0 // cos_vec_anglevN //.
+      rewrite opprK /vec_angle noframe_jdotk mul0r acos0.
+      by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf.
   by rewrite mulr0 mul0rn addr0 !sqr_normr.
-have uRv : u *m `e^(pihalf T, F|,0) = v.
+have uRv : u *m `e^(pi / 2%:R, F|,0) = v.
   rewrite -rodriguesP /rodrigues noframe_norm ?expr1n scale1r cos_pihalf subr0.
   rewrite scale1r mul1r sin_pihalf scale1r subrr add0r -uva0 dot_crossmulC.
   rewrite liexx dotmul0v scale0r add0r lieC /= double_crossmul dotmulvv.
   by rewrite normu expr1n scale1r opprB u_perp_v scale0r subr0.
-have RO : `e^(pihalf T, F|,0) \in 'O[T]_3 by apply eskew_is_O; rewrite noframe_norm.
+have RO : `e^(pi / 2%:R, F|,0) \in 'O[T]_3 by apply eskew_is_O; rewrite noframe_norm.
 have H' : vec_angle u F|,2%:R = vec_angle v (- F|,1).
   move/orth_preserves_vec_angle : RO => /(_ u F|,2%:R) <-.
   rewrite uRv; congr (vec_angle v _).
@@ -1719,8 +1735,7 @@ have H : vec_angle u (F |, 1) = vec_angle v (F|,2%:R).
   rewrite -rodriguesP /rodrigues noframe_norm ?expr1n scale1r cos_pihalf subr0.
   rewrite scale1r mul1r sin_pihalf scale1r subrr add0r.
   by rewrite dotmulC noframe_idotj scale0r add0r frame_icrossj.
-exists w; rewrite -{1}Hw1 -{1}Hw2.
-split; first by [].
+exists w; rewrite -{1}Hw1 -{1}Hw2; split => //.
 have <- : v *d F|,1 = - sin w.
   rewrite -Hw2 2!dotmul_cos normu 2!noframe_norm mul1r normv mulr1.
   rewrite [in LHS]mul1r [in RHS]mul1r ?opprK H'.
@@ -1762,7 +1777,7 @@ rewrite {1}Hv.
 rewrite -dotmulvv dotmulDr 2!dotmulDl !dotmulZv!dotmulvZ !dotmulvv a1_1 a2_1 !expr1n mulr1.
 rewrite a1a2 !mulr0 add0r mulr1 dotmulC a1a2 !mulr0 addr0 => v_1.
 rewrite -2!expr2 in v_1.
-case/sqrD1_cossin : v_1 => w1' [Hcos Hsin].
+case/sqrD1_cossin : v_1 => w1' [w1'B Hcos Hsin].
 rewrite opprK in Hcos.
 move: kk'.
 rewrite opprK mulNr => _.
@@ -1791,9 +1806,9 @@ have Ha1 : a1 = col 0 R.
   case: ifPn => [/eqP ->|A1].
     by rewrite !mxE /= Kw3 !mulNr opprK -mulrA mulVr ?mulr1 // unitfE gt_eqF.
   rewrite -(negbK (a == 2%:R)) ifnot2 negb_or A0 A1 /= !mxE /= /w2 asinK.
-  suff /eqP -> : a == 2%:R by [].
-  by apply/negPn; rewrite ifnot2 negb_or A0.
-  by rewrite -ler_norml Oij_ub // rotation_sub.
+    suff /eqP -> : a == 2%:R by [].
+    by apply/negPn; rewrite ifnot2 negb_or A0.
+  by rewrite in_itv/= -ler_norml Oij_ub // rotation_sub.
 have Hw2 : sin w2 = R 2%:R 0.
   move/(congr1 (fun v : 'cV_3 => v 2%:R 0)) : Ha1; by rewrite !mxE.
 rewrite -(row_mx_colE R).
@@ -1813,9 +1828,11 @@ transitivity (row_mx (col 0 R) (row_mx a2 a3) *m Rx w1).
     set a := frame_of_SO ATSO.
     have a1E : a |, 1 = a2^T by rewrite frame_of_SO_j /a2 tr_col.
     have a2E : a |, 2%:R = a3^T by rewrite frame_of_SO_k /a3 tr_col.
-    have : { w : angle T | r2^T = cos w *: (a |, 1) + sin w *: (a |, 2%:R) /\
-                           r3^T = - sin w *: (a |, 1) + cos w *: (a |, 2%:R) }.
-      apply exists_rotation_angle.
+    have : { w : T |
+             [/\ - pi < w <= pi,  
+                 r2^T = cos w *: (a |, 1) + sin w *: (a |, 2%:R) &
+                 r3^T = - sin w *: (a |, 1) + cos w *: (a |, 2%:R)] }.
+      apply: exists_rotation_angle.
       by rewrite tr_col norm_row_of_O // rotation_sub // rotationV.
       by rewrite tr_col norm_row_of_O // rotation_sub // rotationV.
       rewrite 2!tr_col.
@@ -1825,7 +1842,7 @@ transitivity (row_mx (col 0 R) (row_mx a2 a3) *m Rx w1).
       set r := frame_of_SO RSO.
       rewrite -(frame_of_SO_i RSO) -(frame_of_SO_j RSO) -(frame_of_SO_k RSO).
       by rewrite frame_jcrossk.
-    case => w [Lw1 Lw2].
+    case => w [wB Lw1 Lw2].
     exists (cos w), (sin w).
     split.
       apply trmx_inj.
@@ -1903,9 +1920,9 @@ Qed.
 End euler_angles_existence.
 
 Section euler_angles_ZYZ.
-Variable T : rcfType.
+Variable T : realType.
 
-Definition Rzyz (a b c : angle T) :=
+Definition Rzyz (a b c : T) :=
   let ca := cos a in let cb := cos b in let cc := cos c in
   let sa := sin a in let sb := sin b in let sc := sin c in
   col_mx3
@@ -1915,24 +1932,25 @@ Definition Rzyz (a b c : angle T) :=
 
 Lemma RzyzE a b c : Rz c * Ry b * Rz a = Rzyz a b c.
 Proof.
-apply/matrix3P/and9P; split; rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
-by apply/eqP; nsatz.
-by apply/eqP; nsatz.
-by apply/eqP; nsatz.
-by apply/eqP; nsatz.
-by apply/eqP; nsatz.
-by apply/eqP; nsatz.
-by apply/eqP; nsatz.
+apply/matrix3P/and9P; split; 
+  rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
+- by apply/eqP; nsatz.
+- by apply/eqP; nsatz.
+- by apply/eqP; nsatz.
+- by apply/eqP; nsatz.
+- by apply/eqP; nsatz.
+- by apply/eqP; nsatz.
+- by apply/eqP; nsatz.
 by apply/eqP; nsatz.
 Qed.
 
-Definition zyz_a (M : 'M[T]_3) : angle T :=
+Definition zyz_a (M : 'M[T]_3) : T :=
   atan2 (M 2%:R 1) (M 2%:R 0).
 
-Definition zyz_b (M : 'M[T]_3) : angle T :=
+Definition zyz_b (M : 'M[T]_3) : T :=
   atan2 (Num.sqrt (M 2%:R 0 ^+ 2 + M 2%:R 1 ^+ 2)) (M 2%:R 2%:R).
 
-Definition zyz_c (M : 'M[T]_3) : angle T :=
+Definition zyz_c (M : 'M[T]_3) : T :=
   atan2 (M 1 2%:R) (- M 0 2%:R).
 
 Lemma Rzyz_reduced_constraints M a b c : M \is 'SO[T]_3 ->
@@ -2042,9 +2060,9 @@ Qed.
 End euler_angles_ZYZ.
 
 Section euler_angles_ZYX.
-Variable T : rcfType.
+Variable T : realType.
 
-Definition Rxyz (a b c : angle T) :=
+Definition Rxyz (a b c : T) :=
   let ca := cos a in let cb := cos b in let cc := cos c in
   let sa := sin a in let sb := sin b in let sc := sin c in
   col_mx3
@@ -2067,12 +2085,12 @@ by rewrite mulrC (mulrC (cos c)) mulrA (mulrC (sin c)).
 by rewrite mulrC.
 Qed.
 
-Definition rpy_a (M : 'M[T]_3) : angle T := atan2 (M 0 1) (M 0 0).
+Definition rpy_a (M : 'M[T]_3) : T := atan2 (M 0 1) (M 0 0).
 
-Definition rpy_b (M : 'M[T]_3) : angle T :=
+Definition rpy_b (M : 'M[T]_3) : T :=
   atan2 (- M 0 2%:R) (Num.sqrt (M 1 2%:R ^+ 2 + M 2%:R 2%:R ^+ 2)).
 
-Definition rpy_c (M : 'M[T]_3) : angle T := atan2 (M 1 2%:R) (M 2%:R 2%:R).
+Definition rpy_c (M : 'M[T]_3) : T := atan2 (M 1 2%:R) (M 2%:R 2%:R).
 
 Lemma RxyzE_M02D1 M a b c : M \is 'SO[T]_3 ->
   cos b != 0 ->
@@ -2151,7 +2169,10 @@ apply: RxyzE_M02D1 => //.
     by rewrite mulr_sg_norm.
   rewrite sin_atan2 // sqr_Mi2E // -/(yarc _).
   by rewrite -mulrA mulVr ?mulr1 // unitfE yarc_neq0.
-- rewrite /rpy_b sqr_M0jE // -/(yarc _) -sinN atan2N opprK.
+- rewrite /rpy_b sqr_M0jE // -/(yarc _) -sinN.
+  have [->|/eqP mo2D0] := M 0 2%:R =P 0.
+    by rewrite yarc0 oppr0 atan2_0P // sinN sin0 oppr0.
+  rewrite atan2N // opprK.
   by rewrite sin_atan2_xyarc.
 - rewrite /rpy_b /rpy_c sqr_M0jE // -/(yarc _) cos_atan2_xyarc //.
   have [/eqP M22|M22] := boolP (M 2%:R 2%:R == 0).
@@ -2176,21 +2197,21 @@ Qed.
 End euler_angles_ZYX.
 
 Section euler_angles.
-Variable T : rcfType.
+Variable T : realType.
 
-Definition euler_b (M : 'M[T]_3) : angle T :=
+Definition euler_b (M : 'M[T]_3) : T :=
   if `| M 0 2%:R | != 1 then
     - asin (M 0 2%:R)
   else if M 0 2%:R == 1 then
-    - pihalf T
-  else (* M 0 2%:R == - 1*) pihalf T.
+    - (pi / 2%:R)
+  else (* M 0 2%:R == - 1*) pi / 2%:R.
 
-Definition euler_c (M : 'M[T]_3) : angle T :=
+Definition euler_c (M : 'M[T]_3) : T :=
   if `| M 0 2%:R | != 1 then
     atan2 (M 1 2%:R / cos (euler_b M)) (M 2%:R 2%:R / cos (euler_b M))
   else 0.
 
-Definition euler_a (M : 'M[T]_3) : angle T :=
+Definition euler_a (M : 'M[T]_3) : T :=
   if `| M 0 2%:R | != 1 then
     atan2 (M 0 1 / cos (euler_b M)) (M 0 0 / cos (euler_b M))
   else if M 0 2%:R == 1 then
@@ -2206,9 +2227,10 @@ have MO : M \is 'O[T]_3 by apply: rotation_sub.
 have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
   have NM02L1 : `|M 0 2%:R| < 1.
     by rewrite lt_neqAle NM02D1 andTb Oij_ub // rotation_sub.
+  have NM02L1N1 : -1 <= M 0 2%:R <= 1.
+    by rewrite -real_lter_norml ?ltW ?num_real.
   apply: RxyzE_M02D1 => //.
-  - rewrite /euler_b NM02D1 cosN cos_asin // -/(yarc _).
-    by rewrite yarc_neq0.
+  - by rewrite /euler_b NM02D1 cosN cos_asin // yarc_neq0.
   - rewrite /euler_a /euler_b NM02D1 cosN cos_asin //.
     have [/eqP M00|M00] := boolP (M 0 0 == 0).
       rewrite M00 mul0r cos_atan2_0.
@@ -2226,7 +2248,7 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
     rewrite mulrAC -(mulrA (M 0 0)) mulVr ?unitfE ?yarc_neq0 // mulr1.
     rewrite 2!expr_div_n -mulrDl sqr_Mi2E // sqr_yarc //.
     by rewrite divrr ?sqrtr1 ?divr1 // unitfE subr_eq0 eq_sym sqr_norm_eq1 lt_eqF.
-  - rewrite /euler_a /euler_b NM02D1 cosN cos_asin //.
+  - rewrite /euler_a /euler_b NM02D1 // cosN cos_asin //.
     have [/eqP M00|M00] := boolP (M 0 0 == 0).
       rewrite M00 mul0r sin_atan2_0 sgrM sgrV -mulrA -normrEsg.
       by rewrite -sqr_Mi2E // M00 expr0n add0r sqrtr_sqr normr_id mulr_sg_norm.
