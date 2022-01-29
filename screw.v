@@ -2,8 +2,10 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-From mathcomp.analysis Require Import reals forms.
-Require Import ssr_ext angle euclidean skew vec_angle frame rot rigid.
+From mathcomp.analysis Require Import forms.
+From mathcomp Require Import interval reals trigo.
+Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
+
 
 (******************************************************************************)
 (*                             Screw Motions                                  *)
@@ -752,46 +754,6 @@ Qed.
 
 End exponential_coordinates_rigid_using_taylor.
 
-Module Rad.
-Section radian.
-Variable T : realType.
-Axiom f : angle T -> T.
-Axiom f0 : forall a, (f a == 0) = (a == 0).
-Axiom pi_gt1 : f pi > 1.
-Definition f_codom := [pred x | 0 <= x < f pi *+ 2].
-Axiom in_codom : forall x, f x \in f_codom.
-Axiom angle_of : T -> angle T.
-Axiom fK : cancel f angle_of.
-Axiom angle_ofK : {in f_codom, cancel angle_of f}.
-End radian.
-End Rad.
-Notation rad := Rad.f.
-Notation rad_in := Rad.in_codom.
-Notation rad_eq0 := Rad.f0.
-Notation rad_pi_gt1 := Rad.pi_gt1.
-
-Section RadTheory.
-
-Variable T : realType.
-
-Lemma rad0 : rad 0 = 0 :> T.
-Proof. by apply/eqP; rewrite rad_eq0. Qed.
-
-Lemma rad_ge0 (x : angle T) : rad x >= 0.
-Proof. by have /andP [] := rad_in x. Qed.
-
-Lemma rad_lt_pi (x : angle T) : rad x < rad pi *+ 2.
-Proof. by have /andP [] := rad_in x. Qed.
-
-Lemma rad_2pi_gt1 : 1 < rad pi *+ 2 :> T.
-Proof.
-rewrite (@lt_le_trans _ _ (rad pi *+ 1)) ?rad_pi_gt1 //.
-by rewrite -subr_ge0 -mulrnBr // rad_ge0.
-Qed.
-
-End RadTheory.
-
-Global Hint Resolve rad_ge0 rad_lt_pi rad_pi_gt1 : core.
 
 Section exponential_coordinates_rigid.
 
@@ -801,11 +763,11 @@ Variable T : realType.
    the exponential *)
 (* [springer] eqn 1.27, p. 17, closed expression for the exponential of a twist *)
 Definition etwist a (t : twist T) :=
-  hom_twist t (rad a) (`e^(a, \w( t ))).
+  hom_twist t a (`e^(a, \w( t ))).
 
 Local Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'").
 
-Lemma etwistv0 (a : angle T) : `e$(a, \T(0, 0)) = hom 1 0.
+Lemma etwistv0 (a : T) : `e$(a, \T(0, 0)) = hom 1 0.
 Proof. by rewrite /etwist ang_tcoorE /hom_twist ang_tcoorE eqxx lin_tcoorE scaler0. Qed.
 
 Lemma etwist_is_SE (t : twist T) a : norm \w( t ) = 1 -> `e$(a, t) \is 'SE3[T].
@@ -814,25 +776,26 @@ move=> w1.
 by rewrite /etwist /hom_twist (negbTE (norm1_neq0 w1)) hom_is_SE // eskew_is_SO.
 Qed.
 
-Definition etwist_is_onto_SE_mat (a : angle T) w :=
-  (rad a * norm w ^+ 2)%:A
+Definition etwist_is_onto_SE_mat (a : T) w :=
+  (a * norm w ^+ 2)%:A
     + ((1 - cos a) * norm w ^+2) *: \S(w)
-      + (rad a - sin a) *: \S(w)^+2.
+      + (a - sin a) *: \S(w)^+2.
 
-Definition etwist_is_onto_SE_mat_inv (a : angle T) w :=
-  (rad a)^-1%:M
+(*******************STOP*****************************)
+Definition etwist_is_onto_SE_mat_inv (a : T) w :=
+  a^-1%:M
    - 2%:R^-1 *: \S(w)
-     + ((rad a)^-1 - 2%:R^-1 * cot (half_angle a)) *: \S(w) ^+ 2.
+     + (a^-1 - 2%:R^-1 * cot (a / 2%:R)) *: \S(w) ^+ 2.
 
-Lemma etwist_is_onto_SE_matP a w (a0 : a != 0) (w1 : norm w = 1) :
+Lemma etwist_is_onto_SE_matP a w (ca1 : cos a != 1) (w1 : norm w = 1) :
   etwist_is_onto_SE_mat_inv a w * etwist_is_onto_SE_mat a w = 1.
 Proof.
+have a0 : a != 0 by apply: contra ca1 => /eqP->; rewrite cos0.
 rewrite /etwist_is_onto_SE_mat /etwist_is_onto_SE_mat_inv.
-set ra := rad a.
 rewrite w1 expr1n !mulr1.
 rewrite !mulrDl.
 rewrite 6!mulrDr.
-rewrite {1}scalemx1 -{1}mulmxE -scalar_mxM mulVr; last by rewrite unitfE rad_eq0.
+rewrite {1}scalemx1 -{1}mulmxE -scalar_mxM mulVf //.
 rewrite -[RHS]addr0 -!addrA; congr (_ + _); rewrite !addrA.
 
 rewrite -!mulmxE.
@@ -840,43 +803,55 @@ rewrite !mul_scalar_mx scalemx1 !mul_mx_scalar.
 rewrite -!scalemxAl -!scalemxAr.
 rewrite 2!mulNmx.
 rewrite (scalerN (1 - cos a) (_ *m _)).
-rewrite (scalerN (ra - sin a) (_ *m _)).
+rewrite (scalerN (a - sin a) (_ *m _)).
 rewrite -!scalemxAl mulmxE -expr2 -exprSr -exprS -exprD.
 rewrite (exp_spin _ O) expr1 (exp_spin _ 1).
 rewrite w1 expr1n 2!scaleN1r.
 rewrite !(scalerN _ \S(w)) !(scalerN _ (\S(w) ^+ 2)).
 
-rewrite (scalerN (ra - sin a)) opprK.
-rewrite (scalerBl ra (sin a) (_ *: _)).
+rewrite (scalerN (a - sin a)) opprK.
+rewrite (scalerBl a (sin a) (_ *: _)).
 rewrite -!addrA.
-rewrite (addrCA (ra *: - _)).
+rewrite (addrCA (a *: - _)).
 rewrite !addrA.
-rewrite (scalerN ra) subrK.
+rewrite (scalerN a) subrK.
 
-rewrite (scalerBl (ra^-1) _ (- (_ *: \S(w) ^+ 2))).
-rewrite (scalerN (ra^-1)).
+rewrite (scalerBl (a^-1) _ (- (_ *: \S(w) ^+ 2))).
+rewrite (scalerN (a^-1)).
 rewrite (addrC (- (_))) !addrA addrC.
 rewrite -!addrA.
 rewrite addrCA.
 rewrite !addrA subrK.
 
-rewrite (scalerBl (ra^-1) _ (- (_ *: \S(w)))).
+rewrite (scalerBl (a^-1) _ (- (_ *: \S(w)))).
 rewrite addrAC.
-rewrite (addrC (ra^-1 *: - _)) addrA addrC.
+rewrite (addrC (a^-1 *: - _)) addrA addrC.
 rewrite scalerN !addrA.
 rewrite (addrC (- _)) subrr add0r.
 
-rewrite (scalerA ra).
-rewrite mulrBr divrr; last by rewrite unitfE rad_eq0.
+rewrite (scalerA a).
+rewrite mulrBr divff //.
 rewrite scalerBl scale1r.
 
 rewrite (scalerN (2%:R^-1 * _)) opprK.
 rewrite (scalerA (2%:R^-1 * _)).
 rewrite mulrBr scalerBl !addrA.
-rewrite mulrCA (mulrC ra) mulrA.
+rewrite mulrCA (mulrC a) mulrA.
 rewrite subrK.
 
-case/boolP : (sin a == 0) => [/eqP| sa0].
+case/boolP : (sin a == 0) => [/eqP sa0| sa0].
+  have := sin0cos1 sa0.
+  case: ltrgt0P => //; last by move=> _ /eqP; rewrite eq_sym oner_eq0.
+    by move=> _ /eqP; rewrite (negPf ca1).  
+    move=> _ ->; rewrite subrr. sa0. mulr0. !scale0r !oppr0 scaler0 oppr0.
+    rewrite !(add0r, addr0).
+
+  Search (\S(_) ^+ _).
+  rewrite /w.
+  rewrite cot_pihalf.  
+   apply/eqP. 
+  Search (0 <= _) (`| _|).
+Search (sin _ = 0).
   case/sin0_inv => [/eqP|api]; first by rewrite (negbTE a0).
   rewrite api cospi sinpi scale0r subr0 mulr0 scale0r subr0.
   rewrite half_anglepi.
