@@ -46,7 +46,7 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
-Lemma norm_le1 [T : rcfType] (u : 'rV[T]_2) : 
+Lemma norm_le1 [T : rcfType] (u : 'rV[T]_2) :
   norm u <= 1 -> (- 1 <= u``_ 0 <= 1) /\ (- 1 <= u``_1 <= 1).
 Proof.
 move=> nuL1; rewrite -!ler_norml.

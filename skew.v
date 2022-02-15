@@ -1,9 +1,10 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex finset fingroup perm.
 Require Import ssr_ext euclidean vec_angle.
-From mathcomp.analysis Require Import forms.
+From mathcomp.analysis Require Import forms reals nsatz_realtype.
 
 (******************************************************************************)
 (*                         Skew-symmetric matrices                            *)
@@ -671,7 +672,7 @@ Proof. by move=> Mso; apply/eqP; rewrite -antiE. Qed.
 (* NB: wip *)
 Section cayley_transform.
 
-Variable R : rcfType.
+Variable R : realType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 
@@ -845,20 +846,57 @@ Definition cayley20 (a b c : R) := (a * c - b) *+ 2.
 Definition cayley21 (a b c : R) := (b * c + a) *+ 2.
 Definition cayley22 (a b c : R) := 1 - a ^+ 2 - b ^+ 2 + c ^+ 2.
 
+Lemma sqr_norm_row3 (a b c : R) :
+  (norm (row3 a b c)) ^+ 2 = a ^+ 2 + b ^+ 2 + c ^+ 2.
+Proof. by rewrite -dotmulvv dotmulE sum3E !mxE/= -!expr2. Qed.
+
 (* result of the Cayley transform expressed with Rodrigues' parameters *)
-Lemma cayleyE (a b c : R) : let r := norm (row3 a b c) in
-  cayley \S((row3 a b c)) = (1 + r ^+ 2)^-1 *: col_mx3
+Lemma cayleyE (a b c : R) : let r := euclidean.norm (row3 a b c) in
+  cayley \S((row3 a b c)) = (1 + r ^+ 2)^-1 *: (col_mx3
   (row3 (cayley00 a b c) (cayley01 a b c) (cayley02 a b c))
   (row3 (cayley10 a b c) (cayley11 a b c) (cayley12 a b c))
-  (row3 (cayley20 a b c) (cayley21 a b c) (cayley22 a b c)).
+  (row3 (cayley20 a b c) (cayley21 a b c) (cayley22 a b c)))^T.
 Proof.
-move=> r; rewrite /cayley inv1BME; apply/matrix3P/and9P; split.
+move=> r.
+have r12 : 1 + r ^+ 2 != 0 by rewrite paddr_eq0//= ?sqr_ge0// ?ler01// oner_eq0.
+rewrite trmx_col_mx3_row3.
+rewrite /cayley inv1BME; apply/matrix3P/and9P; split.
 - rewrite -/r.
   rewrite !(mxE,sum3E); Simp.r.
   rewrite !spinij; Simp.r => /=.
   rewrite !mxE /=.
   rewrite /cayley00.
-  (* TODO: make nsatz do this *)
+  apply/eqP/(mulfI r12).
+  rewrite !mulrDr !mulr1 !mulrA !divff//; Simp.r => /=.
+  rewrite mulrDr !mulrA !divff//; Simp.r => /=.
+  rewrite mulrDr mulrN !mulrA !divff//; Simp.r => /=.
+  rewrite sqr_norm_row3.
+  rewrite !expr2.
+  nsatz.
+- rewrite -/r.
+  rewrite !(mxE,sum3E); Simp.r.
+  rewrite !spinij; Simp.r => /=.
+  rewrite !mxE/=.
+  rewrite /cayley10.
+  apply/eqP/(mulfI r12).
+  rewrite !mulrDr !mulrA !divff//.
+  rewrite !mulrDr mulr1 !mulrA !divff//; Simp.r => /=.
+  rewrite mulrDr mulrN !mulrA !divff//; Simp.r => /=.
+  rewrite sqr_norm_row3 !expr2.
+  nsatz.
+- rewrite -/r.
+  rewrite !(mxE,sum3E); Simp.r.
+  rewrite !spinij; Simp.r => /=.
+  rewrite !mxE/=.
+  rewrite /cayley20.
+  apply/eqP/(mulfI r12).
+  rewrite !mulrDr !mulrA !divff//.
+  rewrite 2!mulrN !mulrA !mulrDr mulr1.
+  rewrite !mulrN !mulrA !divff//; Simp.r => /=.
+  rewrite -mulrA divff//; Simp.r => /=.
+  rewrite sqr_norm_row3 !expr2.
+  nsatz.
+(* TODO: complete *)
 Abort.
 
 End cayley_transform.

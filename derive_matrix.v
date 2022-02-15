@@ -21,25 +21,22 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
-(* TODO: to analysis? *)
-Lemma derive1_cst (R : realFieldType) (V : normedModType R) (f : V) t :
-  (cst f)^`() t = 0.
+(* NB: PR to analysis in progress *)
+Lemma derive1_cst (R : numFieldType) (V : normedModType R) (k : V) t :
+  (cst k)^`() t = 0.
 Proof. by rewrite derive1E derive_val. Qed.
 
-(* TODO: to analysis? *)
-Lemma chain_rule (R : rcfType) (f g : R^o -> R^o) x :
-  derivable f x 1 -> derivable g (f x) 1 ->
-  derive1 (g \o f) x = derive1 g (f x) * derive1 f x.
+(* TODO: see coord_continuous in normedtype.v *)
+Lemma coord_continuous (R : numDomainType) (K : normedModType R) m n i j :
+  continuous (fun M : 'M[K]_(m, n) => M i j).
 Proof.
-move=> /derivable1_diffP df /derivable1_diffP dg.
-rewrite derive1E'; last exact/differentiable_comp.
-rewrite diff_comp // !derive1E' //= -{1}[X in 'd  _ _ X = _]mulr1.
-by rewrite {1}linearZ mulrC.
+move=> /= M s /= /nbhs_normP => -[e e0 es].
+by apply/nbhs_ballP; exists e => //= N MN; exact/es/MN.
 Qed.
 
 Lemma mx_lin1N (R : ringType) n (M : 'M[R]_n) :
   mx_lin1 (- M) = -1 \*: mx_lin1 M :> ( _ -> _).
-Proof. rewrite funeqE => v /=; by rewrite scaleN1r mulmxN. Qed.
+Proof. by rewrite funeqE => v /=; rewrite scaleN1r mulmxN. Qed.
 
 Lemma mxE_funeqE (R : realFieldType) (V W : normedModType R)
     n m (f : V -> 'I_n -> 'I_m -> W) i j :
@@ -354,14 +351,6 @@ End product_rules.
 
 Section cross_product_matrix.
 Import rv3LieAlgebra.Exports.
-
-(* TODO: see coord_continuous in normedtype.v *)
-Lemma coord_continuous (R : numDomainType) (K : normedModType R) m n i j :
-  continuous (fun M : 'M[K]_(m, n) => M i j).
-Proof.
-move=> /= M s /= /nbhs_normP => -[e e0 es].
-apply/nbhs_ballP; exists e => //= N MN; exact/es/MN.
-Qed.
 
 Lemma differential_cross_product (R : realFieldType) (v : 'rV[R^o]_3) y :
   'd (crossmul v) y = mx_lin1 \S( v ) :> (_ -> _).
