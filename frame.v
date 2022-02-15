@@ -356,8 +356,7 @@ Record nframe := mkNFrame {
   noframe_of_nframe :> noframe T ;
   nframeP : noframe_sgn noframe_of_nframe = -1}.
 
-(*
-TODO: restor
+(*NB: remove?
 Lemma pframe_swap01 i j k : pframe i j k -> pframe j (- i) k.
 Proof.
 case => -[] i1 j1 k1 ij jk ik Hsgn.

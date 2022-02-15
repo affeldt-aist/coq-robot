@@ -21,17 +21,17 @@ Mathematical Components library.
 - Author(s):
   - Reynald Affeldt, AIST (initial)
   - Cyril Cohen, Inria (initial)
-  - Laurent Thery, Inria
+  - Laurent Théry, Inria
 - License: [LGPL-2.1-or-later](LICENSE)
-- Compatible Coq versions: Coq 8.13
+- Compatible Coq versions: Coq 8.13, Coq 8.14, Coq 8.15
 - Additional dependencies:
-  - [MathComp ssreflect 1.12](https://math-comp.github.io)
-  - [MathComp fingroup 1.12](https://math-comp.github.io)
-  - [MathComp algebra 1.12](https://math-comp.github.io)
-  - [MathComp solvable 1.12](https://math-comp.github.io)
-  - [MathComp field 1.12](https://math-comp.github.io)
-  - [MathComp analysis 0.3.6](https://github.com/math-comp/analysis)
-  - [MathComp real closed 1.1.2](https://github.com/math-comp/real-closed)
+  - [MathComp ssreflect](https://math-comp.github.io)
+  - [MathComp fingroup](https://math-comp.github.io)
+  - [MathComp algebra](https://math-comp.github.io)
+  - [MathComp solvable](https://math-comp.github.io)
+  - [MathComp field](https://math-comp.github.io)
+  - [MathComp analysis](https://github.com/math-comp/analysis)
+  - [MathComp real closed](https://github.com/math-comp/real-closed)
 - Coq namespace: `robot`
 - Related publication(s):
   - [Formal foundations of 3D geometry to model robot manipulators](https://staff.aist.go.jp/reynald.affeldt/documents/robot_cpp_long.pdf) doi:[10.1145/3018610.3018629](https://doi.org/10.1145/3018610.3018629)
@@ -86,6 +86,7 @@ Some references used in this work:
 - [oneill] O'Neill: Elementary Differential Geometry
 - [spong] Spong, Hutchinson, Vidyasagar: Robot Modeling and Control
 - [sciavicco] Sciavicco, L., Siciliano, B.: Modelling and Control of Robot Manipulators, Springer 2000
+- [bottema] Bottema, O., Roth, B.: Theoretical Kinematics, Dover 1990
 
 ## Original License
 
