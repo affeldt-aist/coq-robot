@@ -2,7 +2,10 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-Require Import ssr_ext angle euclidean skew vec_angle rot frame rigid.
+From mathcomp Require Import interval reals trigo.
+Require Import ssr_ext euclidean skew vec_angle rot frame rigid.
+Require Import extra_trigo.
+
 From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
@@ -149,12 +152,12 @@ End plucker_of_line.
 
 Section denavit_hartenberg_homogeneous_matrix.
 
-Variable T : rcfType.
+Variable T : realType.
 
-Definition dh_mat (jangle : angle T) loffset llength (ltwist : angle T) : 'M[T]_4 :=
+Definition dh_mat (jangle : T) loffset llength (ltwist : T) : 'M[T]_4 :=
   hRx ltwist * hTx llength * hTz loffset * hRz jangle.
 
-Definition dh_rot (jangle ltwist : angle T) := col_mx3
+Definition dh_rot (jangle ltwist : T) := col_mx3
   (row3 (cos jangle) (sin jangle) 0)
   (row3 (cos ltwist * - sin jangle) (cos ltwist * cos jangle) (sin ltwist))
   (row3 (sin ltwist * sin jangle) (- sin ltwist * cos jangle) (cos ltwist)).
@@ -190,7 +193,7 @@ Local Open Scope frame_scope.
 
 Section denavit_hartenberg_convention.
 
-Variable T : rcfType.
+Variable T : realType.
 Variables F0 F1 : tframe T.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[T]_3 := (\o{F1} - \o{F0}) *m (can_tframe T) _R^ F0.
@@ -231,10 +234,10 @@ have [H2a H2b] : From1To0 0 0 ^+ 2 + From1To0 0 1 ^+ 2 = 1 /\
 have [theta [alpha [H00 [H01 [H22 H12]]]]] : exists theta alpha,
   From1To0 0 0 = cos theta /\ From1To0 0 1 = sin theta /\
   From1To0 2%:R 2%:R = cos alpha /\ From1To0 1 2%:R = sin alpha.
-  case/sqrD1_cossin : H2a => theta Htheta.
+  case/sqrD1_cossin : H2a => theta [thetaB Htheta1 Htheta2].
   rewrite addrC in H2b.
-  case/sqrD1_cossin : H2b => alpha Halpha.
-  exists theta, alpha; by intuition.
+  case/sqrD1_cossin : H2b => alpha [alphaB Halpha1 Halpha2].
+  exists theta, alpha. by intuition.
 
 move/orthogonalPcol : (FromTo_is_O F1 F0) => /(_ 1 2%:R) /=.
 rewrite dotmulE sum3E !tr_col 2![_ 0 0]mxE [_ 2%:R 0]mxE.
@@ -449,7 +452,7 @@ Let vector := 'rV[T]_3.
 Record t := mk {
   vaxis : vector ;
   norm_vaxis : norm vaxis = 1 ;
-  angle : angle T (* between to successive X axes *) }.
+  angle : T (* between to successive X axes *) }.
 End joint.
 End Joint.
 
@@ -459,7 +462,7 @@ Variable T : rcfType.
 Record t := mk {
   length : T ; (* nonnegative, distance between to successive joint axes *)
   offset : T ; (* between to successive X axes *)
-  twist : angle T (* or twist angle, between two successive Z axes *) }.
+  twist : T (* or twist angle, between two successive Z axes *) }.
 End link.
 End Link.
 (* NB: Link.offset, Joint.angle, Link.length, Link.twist are called
@@ -467,7 +470,7 @@ End Link.
 
 Section open_chain.
 
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Let frame := tframe T.
@@ -478,7 +481,7 @@ Let link := Link.t T.
 Definition directed_from_to (u : vector) (p1 p2 : point) : bool :=
   0 <= cos (vec_angle u (p2 - p1)).
 
-Axiom angle_between_lines : 'rV[T]_3 -> 'rV[T]_3 -> 'rV[T]_3 -> angle T.
+Axiom angle_between_lines : 'rV[T]_3 -> 'rV[T]_3 -> 'rV[T]_3 -> T.
 
 Variable n' : nat.
 Let n := n'.+1.

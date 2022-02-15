@@ -2,8 +2,10 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-From mathcomp.analysis Require Import reals forms.
-Require Import ssr_ext angle euclidean skew vec_angle frame rot rigid.
+From mathcomp.analysis Require Import forms.
+From mathcomp Require Import interval reals trigo.
+Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
+
 
 (******************************************************************************)
 (*                             Screw Motions                                  *)
@@ -503,6 +505,7 @@ Proof. move=> Hg k y x; by rewrite /SE3_action mulmxDl scalemxAl. Qed.
 
 Import sqLieAlgebra.Exports.
 
+(*
 (* NB: wrong? *)
 Lemma AdjointE t1 t2 :
   t1 *m Adjoint (wedge t2) = vee lie[wedge t1, wedge t2].
@@ -519,6 +522,7 @@ rewrite spinE; congr (_ + _).
 rewrite -mulmxE mulmxA spinE; congr (_ *v _).
 rewrite spinE.
 Abort.
+*)
 
 End twist_and_adjoint.
 
@@ -752,46 +756,6 @@ Qed.
 
 End exponential_coordinates_rigid_using_taylor.
 
-Module Rad.
-Section radian.
-Variable T : realType.
-Axiom f : angle T -> T.
-Axiom f0 : forall a, (f a == 0) = (a == 0).
-Axiom pi_gt1 : f pi > 1.
-Definition f_codom := [pred x | 0 <= x < f pi *+ 2].
-Axiom in_codom : forall x, f x \in f_codom.
-Axiom angle_of : T -> angle T.
-Axiom fK : cancel f angle_of.
-Axiom angle_ofK : {in f_codom, cancel angle_of f}.
-End radian.
-End Rad.
-Notation rad := Rad.f.
-Notation rad_in := Rad.in_codom.
-Notation rad_eq0 := Rad.f0.
-Notation rad_pi_gt1 := Rad.pi_gt1.
-
-Section RadTheory.
-
-Variable T : realType.
-
-Lemma rad0 : rad 0 = 0 :> T.
-Proof. by apply/eqP; rewrite rad_eq0. Qed.
-
-Lemma rad_ge0 (x : angle T) : rad x >= 0.
-Proof. by have /andP [] := rad_in x. Qed.
-
-Lemma rad_lt_pi (x : angle T) : rad x < rad pi *+ 2.
-Proof. by have /andP [] := rad_in x. Qed.
-
-Lemma rad_2pi_gt1 : 1 < rad pi *+ 2 :> T.
-Proof.
-rewrite (@lt_le_trans _ _ (rad pi *+ 1)) ?rad_pi_gt1 //.
-by rewrite -subr_ge0 -mulrnBr // rad_ge0.
-Qed.
-
-End RadTheory.
-
-Global Hint Resolve rad_ge0 rad_lt_pi rad_pi_gt1 : core.
 
 Section exponential_coordinates_rigid.
 
@@ -801,11 +765,11 @@ Variable T : realType.
    the exponential *)
 (* [springer] eqn 1.27, p. 17, closed expression for the exponential of a twist *)
 Definition etwist a (t : twist T) :=
-  hom_twist t (rad a) (`e^(a, \w( t ))).
+  hom_twist t a (`e^(a, \w( t ))).
 
 Local Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'").
 
-Lemma etwistv0 (a : angle T) : `e$(a, \T(0, 0)) = hom 1 0.
+Lemma etwistv0 (a : T) : `e$(a, \T(0, 0)) = hom 1 0.
 Proof. by rewrite /etwist ang_tcoorE /hom_twist ang_tcoorE eqxx lin_tcoorE scaler0. Qed.
 
 Lemma etwist_is_SE (t : twist T) a : norm \w( t ) = 1 -> `e$(a, t) \is 'SE3[T].
@@ -814,25 +778,26 @@ move=> w1.
 by rewrite /etwist /hom_twist (negbTE (norm1_neq0 w1)) hom_is_SE // eskew_is_SO.
 Qed.
 
-Definition etwist_is_onto_SE_mat (a : angle T) w :=
-  (rad a * norm w ^+ 2)%:A
+Definition etwist_is_onto_SE_mat (a : T) w :=
+  (a * norm w ^+ 2)%:A
     + ((1 - cos a) * norm w ^+2) *: \S(w)
-      + (rad a - sin a) *: \S(w)^+2.
+      + (a - sin a) *: \S(w)^+2.
 
-Definition etwist_is_onto_SE_mat_inv (a : angle T) w :=
-  (rad a)^-1%:M
+(*******************STOP*****************************)
+Definition etwist_is_onto_SE_mat_inv (a : T) w :=
+  a^-1%:M
    - 2%:R^-1 *: \S(w)
-     + ((rad a)^-1 - 2%:R^-1 * cot (half_angle a)) *: \S(w) ^+ 2.
+     + (a^-1 - 2%:R^-1 * cot (a / 2%:R)) *: \S(w) ^+ 2.
 
-Lemma etwist_is_onto_SE_matP a w (a0 : a != 0) (w1 : norm w = 1) :
+Lemma etwist_is_onto_SE_matP a w 
+  (aB : - pi < a <= pi) (a0 : a != 0) (w1 : norm w = 1) :
   etwist_is_onto_SE_mat_inv a w * etwist_is_onto_SE_mat a w = 1.
 Proof.
 rewrite /etwist_is_onto_SE_mat /etwist_is_onto_SE_mat_inv.
-set ra := rad a.
 rewrite w1 expr1n !mulr1.
 rewrite !mulrDl.
 rewrite 6!mulrDr.
-rewrite {1}scalemx1 -{1}mulmxE -scalar_mxM mulVr; last by rewrite unitfE rad_eq0.
+rewrite {1}scalemx1 -{1}mulmxE -scalar_mxM mulVf //.
 rewrite -[RHS]addr0 -!addrA; congr (_ + _); rewrite !addrA.
 
 rewrite -!mulmxE.
@@ -840,56 +805,52 @@ rewrite !mul_scalar_mx scalemx1 !mul_mx_scalar.
 rewrite -!scalemxAl -!scalemxAr.
 rewrite 2!mulNmx.
 rewrite (scalerN (1 - cos a) (_ *m _)).
-rewrite (scalerN (ra - sin a) (_ *m _)).
+rewrite (scalerN (a - sin a) (_ *m _)).
 rewrite -!scalemxAl mulmxE -expr2 -exprSr -exprS -exprD.
 rewrite (exp_spin _ O) expr1 (exp_spin _ 1).
 rewrite w1 expr1n 2!scaleN1r.
 rewrite !(scalerN _ \S(w)) !(scalerN _ (\S(w) ^+ 2)).
 
-rewrite (scalerN (ra - sin a)) opprK.
-rewrite (scalerBl ra (sin a) (_ *: _)).
+rewrite (scalerN (a - sin a)) opprK.
+rewrite (scalerBl a (sin a) (_ *: _)).
 rewrite -!addrA.
-rewrite (addrCA (ra *: - _)).
+rewrite (addrCA (a *: - _)).
 rewrite !addrA.
-rewrite (scalerN ra) subrK.
+rewrite (scalerN a) subrK.
 
-rewrite (scalerBl (ra^-1) _ (- (_ *: \S(w) ^+ 2))).
-rewrite (scalerN (ra^-1)).
+rewrite (scalerBl (a^-1) _ (- (_ *: \S(w) ^+ 2))).
+rewrite (scalerN (a^-1)).
 rewrite (addrC (- (_))) !addrA addrC.
 rewrite -!addrA.
 rewrite addrCA.
 rewrite !addrA subrK.
 
-rewrite (scalerBl (ra^-1) _ (- (_ *: \S(w)))).
+rewrite (scalerBl (a^-1) _ (- (_ *: \S(w)))).
 rewrite addrAC.
-rewrite (addrC (ra^-1 *: - _)) addrA addrC.
+rewrite (addrC (a^-1 *: - _)) addrA addrC.
 rewrite scalerN !addrA.
 rewrite (addrC (- _)) subrr add0r.
 
-rewrite (scalerA ra).
-rewrite mulrBr divrr; last by rewrite unitfE rad_eq0.
+rewrite (scalerA a).
+rewrite mulrBr divff //.
 rewrite scalerBl scale1r.
 
 rewrite (scalerN (2%:R^-1 * _)) opprK.
 rewrite (scalerA (2%:R^-1 * _)).
 rewrite mulrBr scalerBl !addrA.
-rewrite mulrCA (mulrC ra) mulrA.
+rewrite mulrCA (mulrC a) mulrA.
 rewrite subrK.
 
-case/boolP : (sin a == 0) => [/eqP| sa0].
-  case/sin0_inv => [/eqP|api]; first by rewrite (negbTE a0).
-  rewrite api cospi sinpi scale0r subr0 mulr0 scale0r subr0.
-  rewrite half_anglepi.
+case/boolP : (sin a == 0) => [|saD0].
+  rewrite sin_eq0_Npipi // (negPf a0) => /eqP->.
+  rewrite cospi sinpi scale0r subr0 mulr0 scale0r subr0.
   rewrite cot_pihalf mulr0 scale0r subr0 opprK (_ : 1 + 1 = 2%:R) // scalerA.
-  by rewrite divrr ?unitfE ?pnatr_eq0 // scale1r addrC subrr.
-rewrite {1}cot_half_angle' -!mulrA mulVr ?mulr1; last first.
-  by rewrite unitfE.
-rewrite cot_half_angle.
-rewrite (scalerN (2%:R^-1 * _)) opprK.
-rewrite (scalerA (2%:R^-1 * _)).
-rewrite -!mulrA mulVr ?mulr1; last first.
-  rewrite unitfE subr_eq0.
-  by apply: contra a0 => /eqP/esym/cos1_angle0 ->.
+  by rewrite divff ?pnatr_eq0 // scale1r addrC subrr.
+rewrite {1}cot_half_angle' -!mulrA mulVf // mulr1 cot_half_angle.
+rewrite (scalerN (2%:R^-1 * _)) opprK (scalerA (2%:R^-1 * _)).
+rewrite -!mulrA mulVf ?mulr1; last first.
+  rewrite subr_eq0 eq_sym; apply: contra saD0 => /eqP caE.
+  by rewrite cos1sin0 // caE normr1.
 rewrite (addrC (- _)) addrC !addrA.
 rewrite scalerA mulrC subrr add0r.
 
@@ -900,8 +861,7 @@ rewrite scalerDl scale1r opprD !addrA addrC !addrA.
 rewrite (addrC (- (cos a *: _))) subrr add0r.
 rewrite addrAC.
 rewrite -scaleNr -scalerDl.
-rewrite -opprD -mulr2n -mulr_natl divrr; last first.
-  by rewrite unitfE pnatr_eq0.
+rewrite -opprD -mulr2n -mulr_natl divff ?pnatr_eq0 //.
 by rewrite scaleN1r addrC subrr.
 Qed.
 
@@ -910,22 +870,20 @@ Lemma etwist_is_onto_SE (f : 'M[T]_4) : f \is 'SE3[T] ->
 Proof.
 set p := trans_of_hom f.
 case/boolP: (rot_of_hom f == 1) => rotf fSE.
-case/boolP : (Rad.angle_of (norm p) == 0) => p0.
-    exists \T(p, 0), (Rad.angle_of 1).
+case/boolP : ((norm p) == 0) => p0.
+    exists \T(p, 0), 1.
     rewrite /etwist /hom_twist ang_tcoorE eqxx lin_tcoorE.
-    rewrite Rad.angle_ofK; last by rewrite inE ler01 rad_2pi_gt1.
     by rewrite scale1r (SE3E fSE) (eqP rotf).
-  exists \T((rad (Rad.angle_of (norm p)))^-1 *: p, 0),
-         (Rad.angle_of (norm p)).
+  exists \T((norm p)^-1 *: p, 0), (norm p).
   rewrite /etwist /hom_twist ang_tcoorE eqxx /= lin_tcoorE.
-  rewrite scalerA divrr; last by rewrite unitfE rad_eq0.
+  rewrite scalerA divff //.
   by rewrite scale1r (SE3E fSE) (eqP rotf).
-case: (eskew_is_onto_SO (rot_of_hom_is_SO fSE)) => a fexp_skew.
+case: (eskew_is_onto_SO (rot_of_hom_is_SO fSE)) => a aB fexp_skew.
 set w := normalize (vaxis_euler _) in fexp_skew.
 have a0 : a != 0.
   apply: contra rotf => /eqP.
   rewrite fexp_skew => ->; by rewrite emx30M.
-set A : 'M_3 := \S(w) *m (1 - rot_of_hom f) + rad a *: (w^T *m w).
+set A : 'M_3 := \S(w) *m (1 - rot_of_hom f) + a *: (w^T *m w).
 suff [v Hv] : { v | p = (norm w)^-2 *: (v *m A) }.
   exists \T(v, w), a.
   rewrite (SE3E fSE) /etwist /hom_twist ang_tcoorE.
@@ -962,10 +920,10 @@ suff : { A' : 'M_3 |  A' * A = 1 }.
    [Introduction to Robotics: Mechanics, Planning, and Control,
     F.C. Park, K. Lynch, Mar. 14 2012] *)
 exists (etwist_is_onto_SE_mat_inv a w); rewrite HA.
-apply: (etwist_is_onto_SE_matP a0 _).
+apply: etwist_is_onto_SE_matP => //.
 by rewrite norm_normalize // vaxis_euler_neq0 // rot_of_hom_is_SO.
 Qed.
-
+(*
 Lemma image_skew_mx (w : 'rV[T]_3) (w0 : w != 0) : (\S(w) == w^C)%MS.
 Proof.
 have rank_w : \rank (w)%MS = 1%N by rewrite rank_rV w0.
@@ -977,6 +935,7 @@ have rank_skew : \rank \S(w) = 2%N.
   rewrite add1n => /eqP[] <-; by apply/eqP.
 move: (kernel_spin w0) => H.
 Abort.
+*)
 
 End exponential_coordinates_rigid.
 
@@ -988,7 +947,8 @@ Section example.
 Variable T : realType.
 Let vector := 'rV[T]_3.
 Variables a1 a2 : T.
-Variable a : angle T.
+Variable a : T.
+Hypothesis aB : - pi < a <= pi.
 Hypothesis a0 : a != 0.
 
 Definition P20 := row3 (a1 + a2 * cos a) (a2 * sin a) 0.
@@ -1017,26 +977,23 @@ case/boolP : (a == pi) => [/eqP ->|api].
   by rewrite mulrC.
 congr row3; last first.
   rewrite mulrN mulrBl opprB -!addrA addrC !addrA -mulrA subrK.
-  rewrite cot_half_angle' -!mulrA (mulrCA _ a2) mulVr ?mulr1; last first.
-    by rewrite unitfE sin_eq0 negb_or a0 api.
+  rewrite cot_half_angle' -!mulrA (mulrCA _ a2) mulVf ?mulr1; last first.
+    by rewrite sin_eq0_Npipi // negb_or a0 api.
   rewrite addrC -mulrBr opprD mulrDl mul1r -!addrA (addrCA _ (- a1)) (mulrC _ a2) subrr addr0.
   by rewrite -mulNr opprB mulrC.
 rewrite mulrN mulrBl opprB -!addrA addrC !addrA -mulrA subrK.
 rewrite -(mulrA _ (cot _ )) -mulrDr.
-rewrite invrM; last 2 first.
-  by rewrite unitfE pnatr_eq0.
-  rewrite unitfE subr_eq0; apply: contra a0.
-  by move/eqP/esym/cos1_angle0/eqP.
+rewrite invfM [_ / (1 - cos _)]mulrC.
 rewrite ![in RHS]mulrA [in RHS]mulrC; congr (_ * _).
 rewrite -[in RHS]mulrA -cot_half_angle.
 rewrite mulrDr addrCA [in RHS]mulrDl (mulrC _ a1); congr (_ + _).
 rewrite mulrCA -mulrDr; congr (_ * _).
 apply/eqP.
 rewrite eq_sym -subr_eq.
-rewrite -{1}(mulr1 (cot (half_angle a))) -mulrBr.
-rewrite cot_half_angle -mulrA mulVr ?mulr1 //.
-  rewrite unitfE subr_eq0; apply: contra a0.
-  by move/eqP/esym/cos1_angle0/eqP.
+rewrite -{1}(mulr1 (cot (a / 2%:R))) -mulrBr.
+rewrite cot_half_angle -mulrA mulVf ?mulr1 //.
+rewrite subr_eq0.
+by apply: contra a0; rewrite eq_sym cos_eq1_Npipi.
 Qed.
 
 End example.
@@ -1047,7 +1004,7 @@ Section screw.
 Variable T : rcfType.
 Record t := mk {
   l : Line.t T ;
-  a : angle T ;
+  a : T ;
   h : T }.
 End screw.
 End Screw.
@@ -1063,13 +1020,13 @@ Import rv3LieAlgebra.Exports.
 Definition screw_motion s (p : point) : 'rV_3 :=
   let l := Screw.l s in let a := Screw.a s in let h := Screw.h s in
   let p0 := \pt( l ) in let w := \vec( l ) in
-  p0 + (p - p0) *m `e^(a, w) + (h * rad a) *: w.
+  p0 + (p - p0) *m `e^(a, w) + (h * a) *: w.
 
 Lemma screw_motionE s (p : point) (w1 : norm \vec( Screw.l s) = 1) :
   let l := Screw.l s in let a := Screw.a s in let h := Screw.h s in
   let q := \pt( l ) in let w := \vec( l ) in
   screw_motion s p = EuclideanMotion.motion_point
-    (@EuclideanMotion.mk _ (q *m (1 - `e^(a, w)) + (h * rad a) *: w, _) (eskew_is_SO a w1))
+    (@EuclideanMotion.mk _ (q *m (1 - `e^(a, w)) + (h * a) *: w, _) (eskew_is_SO a w1))
     p.
 Proof.
 move=> l a h q w.
@@ -1084,13 +1041,13 @@ Qed.
 Definition hom_screw_motion s : 'M[T]_4 :=
   let l := Screw.l s in let a := Screw.a s in let h := Screw.h s in
   let p0 := \pt( l ) in let w := \vec( l ) in
-  hom (`e^(a, w)) (p0 *m (1 - `e^(a, w)) + (h * rad a) *: w).
+  hom (`e^(a, w)) (p0 *m (1 - `e^(a, w)) + (h * a) *: w).
 
 Lemma hom_screwa0 s : Screw.a s = 0 -> hom_screw_motion s = hom 1 0.
 Proof.
 move=> a0.
 rewrite /hom_screw_motion a0 emx30M subrr mulmx0 add0r.
-rewrite (_ : rad 0 = 0) ?mulr0 ?scale0r //; by apply/eqP; rewrite rad_eq0.
+rewrite ?mulr0 ?scale0r //; by apply/eqP; rewrite rad_eq0.
 Qed.
 
 Lemma hom_screww0 s : \vec( Screw.l s ) = 0 -> hom_screw_motion s = hom 1 0.
@@ -1134,7 +1091,7 @@ rewrite scalerDr.
 rewrite 2!scalerA.
 rewrite [in X in _ = X + _]mulrA.
 rewrite [in X in _ = X + _]mulrC.
-rewrite -(mulrA (rad a * h)) divrr ?mulr1; last by rewrite unitfE expf_eq0 /= norm_eq0.
+rewrite -(mulrA (a * h)) divrr ?mulr1; last by rewrite unitfE expf_eq0 /= norm_eq0.
 rewrite mulrC -[LHS]addr0.
 congr (_ + _).
 rewrite mulmxBr mulmx1.
@@ -1153,7 +1110,7 @@ Qed.
 End screw_motion.
 
 Section screw_coordinates_of_a_twist.
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Import rv3LieAlgebra.Exports.
@@ -1236,7 +1193,7 @@ Section screw_coordinates_of_a_twist_realType.
 Variable T : realType.
 
 Definition screw_of_twist (t : twist T) :=
-  Screw.mk (axis t) (Rad.angle_of (pitch t)) (magnitude t).
+  Screw.mk (axis t) (pitch t) (magnitude t).
 
 End screw_coordinates_of_a_twist_realType.
 
@@ -1276,8 +1233,8 @@ Let vector := 'rV[T]_3.
 
 Lemma etwistE a (v w : 'rV[T]_3) :
   `e$(a , \T(v, w)) =
-  hom (`e^(a, w)) (if w == 0 then (rad a) *: v else
-                  (rad a * pitch \T(v, w)) *:  w +
+  hom (`e^(a, w)) (if w == 0 then a *: v else
+                  (a * pitch \T(v, w)) *:  w +
                     \pt( axis \T(v, w) ) *m (1 - `e^(a, w))).
 Proof.
 rewrite /etwist /hom_twist ang_tcoorE; case: ifPn => [/eqP ->|w0].
@@ -1285,8 +1242,8 @@ rewrite /etwist /hom_twist ang_tcoorE; case: ifPn => [/eqP ->|w0].
 congr hom.
 rewrite lin_tcoorE.
 rewrite -scalemxAl mulmxA dotmulP scalemxAl scalerDr -scalemxAl.
-rewrite (scalerA _ (rad a)) (mulrC _ (rad a)).
-rewrite -(scalerA (rad a) (norm w ^+ 2)^-1).
+rewrite (scalerA _ a) (mulrC _ a).
+rewrite -(scalerA a (norm w ^+ 2)^-1).
 rewrite mul_scalar_mx (scalerA _ (v *d w) w) -(dotmulZv v _ w).
 rewrite (_ : _ *d _ = pitch \T(v, w)); last by rewrite /pitch lin_tcoorE ang_tcoorE.
 rewrite addrC.
@@ -1306,7 +1263,7 @@ End etwist_alt.
 
 Section Chasles.
 
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 
@@ -1314,6 +1271,11 @@ Variable f : 'DIso_3[T].
 Let Q : 'M[T]_3 := ortho_of_iso f.
 Let w := normalize (Aa.vaxis Q).
 Let a := Aa.angle Q.
+Let aB : 0 <= a <= pi := Aa.angle_interval (ortho_of_diso_is_SO f).
+Let aB1 : - pi < a <= pi.
+Proof. by case/andP: aB => /lt_le_trans-> //; rewrite oppr_cp0 pi_gt0.
+Qed.
+
 Hypothesis w0 : axial Q != 0.
 Hypothesis sina0 : sin a != 0.
 Let api : a != pi.
@@ -1379,27 +1341,27 @@ End Chasles.
 
 Section screw_axis_point_helper.
 
-Variables (T : rcfType) (a : angle T).
+Variables (T : realType) (a : T).
 
 Definition Ncos2 := (1 - cos a) *+ 2.
 
 Definition N2cos := 1 - cos a *+ 2.
 
-Lemma unitNcos2 (a0 : a != 0) : Ncos2 \is a GRing.unit.
+Lemma unitNcos2 (aB : -pi < a <= pi) (a0 : a != 0) : Ncos2 \is a GRing.unit.
 Proof.
 rewrite unitfE /Ncos2 mulrn_eq0 negb_or /= subr_eq0 eq_sym.
-apply/eqP => /cos1_angle0; by apply/eqP.
+by rewrite cos_eq1_Npipi.
 Qed.
 
-Lemma Ncos2V (a0 : a != 0) : (Ncos2^-1)%:M *m Ncos2%:M = 1 :> 'M_3.
+Lemma Ncos2V (aB : -pi < a <= pi) (a0 : a != 0) : (Ncos2^-1)%:M *m Ncos2%:M = 1 :> 'M_3.
 Proof. by rewrite -scalar_mxM mulVr // unitNcos2. Qed.
 
-Lemma N2cosNcos2 (a0 : a != 0) :
+Lemma N2cosNcos2 (aB : -pi < a <= pi) (a0 : a != 0) :
   N2cos - Ncos2^-1 * N2cos - N2cos / Ncos2 * N2cos = 0.
 Proof.
-rewrite (mulrC N2cos) -mulrA -{1}(mulKr (unitNcos2 a0) N2cos) -2!mulrBr.
+rewrite (mulrC N2cos) -mulrA -{1}(mulKr (unitNcos2 aB a0) N2cos) -2!mulrBr.
 apply/eqP; rewrite mulf_eq0 invr_eq0.
-move: (unitNcos2 a0); rewrite unitfE => /negPf -> /=.
+move: (unitNcos2 aB a0); rewrite unitfE => /negPf -> /=.
 rewrite -{2}(mul1r N2cos) -2!mulrBl mulf_eq0 -addrA -opprB opprK subr_eq0.
 by rewrite /Ncos2 {1}/N2cos mulrnBl addrAC eqxx.
 Qed.
@@ -1408,7 +1370,7 @@ End screw_axis_point_helper.
 
 Section screw_axis_point_def.
 
-Variable T : rcfType.
+Variable T : realType.
 Let point := 'rV[T]_3.
 Variable f : 'DIso_3[T].
 Let Q : 'M[T]_3 := ortho_of_iso f.
@@ -1420,7 +1382,7 @@ Definition screw_axis_point (p : point) : point :=
 End screw_axis_point_def.
 
 Section screw_axis_point.
-Variable T : rcfType.
+Variable T : realType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
 Import rv3LieAlgebra.Exports.
@@ -1431,6 +1393,11 @@ Hypothesis w0 : axial Q != 0.
 Let w : 'rV[T]_3 := normalize (Aa.vaxis Q).
 Let a := Aa.angle Q.
 Hypothesis sina0 : sin a != 0.
+Let aB : 0 <= a <= pi := Aa.angle_interval (ortho_of_diso_is_SO f).
+Let aB1 : - pi < a <= pi.
+Proof. by case/andP: aB => /lt_le_trans-> //; rewrite oppr_cp0 pi_gt0.
+Qed.
+
 Let a0 : a != 0.
 Proof. apply: contra sina0 => /eqP ->; by rewrite sin0. Qed.
 Let api : a != pi.
@@ -1527,7 +1494,7 @@ rewrite -3![in X in _ - X = 0]scalemxAl.
 rewrite -[in X in _ - X = 0]scalemxAr.
 rewrite [in X in _ - X = 0]scalerA.
 rewrite mulmxE -expr2 (mulmx_tr_uvect w1) // -scalerBl.
-by apply/eqP; rewrite scaler_eq0 (N2cosNcos2 a0) eqxx.
+by apply/eqP; rewrite scaler_eq0 (N2cosNcos2 aB1 a0) eqxx.
 Qed.
 
 Lemma screw_axis_point_matV :
@@ -1636,12 +1603,14 @@ have -> : w *m Q = w.
 by rewrite subrr trmx0 mulmx0 mxE.
 Qed.
 
+(*
 Lemma screw_axis_pointE2 q : let p0 := screw_axis_point f q in
   colinear (displacement f p0) w.
 Proof.
 red.
 set p0 := screw_axis_point f q.
 Abort.
+*)
 
 End screw_axis_point.
 

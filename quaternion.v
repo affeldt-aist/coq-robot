@@ -3,8 +3,10 @@ Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-Require Import ssr_ext euclidean angle vec_angle frame rot.
+From mathcomp Require Import interval reals trigo.
+Require Import ssr_ext euclidean vec_angle frame rot.
 From mathcomp.analysis Require Import forms.
+Require Import extra_trigo.
 
 (******************************************************************************)
 (*                            Quaternions                                     *)
@@ -458,7 +460,7 @@ Arguments pureq {R}.
 Arguments realq {R}.
 
 Section quaternion1.
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types x y : quat R.
 
 Definition sqrq x := x.1 ^+ 2 + norm (x.2) ^+ 2.
@@ -800,11 +802,11 @@ Lemma cos_atan_uquat x : x \is uquat -> x \isn't pureq ->
   let a := atan (norm x.2 / x.1) in cos a ^+ 2 = x.1 ^+ 2.
 Proof.
 move=> ux q00 a.
-rewrite /a cos_atan exprMn expr1n mul1r.
-have /divrr <- : x.1 ^+ 2 \in GRing.unit by rewrite unitfE sqrf_eq0.
-rewrite uquatE /sqrq in ux.
-rewrite expr_div_n -mulrDl (eqP ux) sqrtrM ?ler01 // sqrtr1 mul1r.
-by rewrite -exprVn sqrtr_sqr normrV ?unitfE // invrK sqr_normr.
+rewrite cos_atan exprMn [x.1 ^-1 ^+2]exprVn.
+have /divff <- : x.1 ^+ 2 !=0 by rewrite sqrf_eq0.
+rewrite -mulrDl.
+rewrite uquatE /sqrq in ux; rewrite (eqP ux) mul1r.
+by rewrite -exprVn sqrtr_sqr normfV invrK sqr_normr.
 Qed.
 
 Lemma sin_atan_uquat x : x \is uquat -> x \isn't pureq ->
@@ -822,7 +824,7 @@ End quaternion1.
 Arguments uquat {R}.
 
 Section conjugation.
-Variable R : rcfType.
+Variable R : realType.
 Implicit Types (x : quat R) (u : 'rV[R]_3).
 
 Definition conjugation x u : quat R := x * u%:v * x^*q.
@@ -873,8 +875,8 @@ Qed.
 End conjugation.
 
 Section polar_coordinates.
-Variable R : rcfType.
-Implicit Types (x : quat R) (v : 'rV[R]_3) (a : angle R).
+Variable R : realType.
+Implicit Types (x : quat R) (v : 'rV[R]_3) (a : R).
 
 Definition quat_of_polar a v := mkQuat (cos a) (sin a *: v).
 
@@ -884,7 +886,7 @@ Proof. by rewrite /quat_of_polar /= cos0 sin0 scale0r. Qed.
 Lemma quat_of_polarpi1 : quat_of_polar pi 'e_1 = (-1)%:q.
 Proof. by rewrite /quat_of_polar cospi sinpi scale0r. Qed.
 
-Lemma quat_of_polarpihalf v : quat_of_polar (pihalf R) v = v%:v.
+Lemma quat_of_polarpihalf v : quat_of_polar (pi / 2%:R) v = v%:v.
 Proof. by rewrite /quat_of_polar cos_pihalf sin_pihalf scale1r. Qed.
 
 Lemma uquat_of_polar a v (v1 : norm v = 1) : quat_of_polar a v \is uquat.
@@ -928,10 +930,10 @@ rewrite (frame_icrossk f) 2!scalerN scalerA sinD cosD -!expr2 addrC scaleNr.
 by congr (_ + _); rewrite (mulrC (sin a)) -mulr2n -scalerMnl mulNrn.
 Qed.
 
-Definition polar_of_quat x : (angle R * 'rV_3)%type :=
+Definition polar_of_quat x : (R * 'rV_3)%type :=
   if x.2 == 0 then
     if x.1 == 1 then (0, 'e_1) else (pi, 'e_1)
-  else if x.1 == 0 then (pihalf R, x.2) else
+  else if x.1 == 0 then (pi / 2%:R, x.2) else
   let: u := normalize x.2 in
   let: a := atan (norm x.2 / x.1) in
   if 0 < x.1 then (a, u) else (a + pi, u).
@@ -959,11 +961,11 @@ have [->|/eqP a1N u1] := a1 =P 0.
 move: u1; have [-> _|a0P /eqP u1 |a0N /eqP u1] := sgzP a0.
 - by rewrite quat_of_polarpihalf.
 - congr mkQuat.
-    by rewrite cos_atan sqrtr_1sqr2 ?gt_eqF// gtr0_norm// invrK mul1r.
+    by rewrite cos_atan sqrtr_1sqr2 ?gt_eqF// gtr0_norm// invrK.
   rewrite sin_atan sqrtr_1sqr2 ?gt_eqF// gtr0_norm// invrK -mulrA.
   by rewrite mulVf ?gt_eqF// mulr1 norm_scale_normalize.
 - congr mkQuat.
-    rewrite cosDpi cos_atan sqrtr_1sqr2 ?lt_eqF// mul1r invrK ltr0_norm//.
+    rewrite cosDpi cos_atan sqrtr_1sqr2 ?lt_eqF// invrK ltr0_norm//.
     by rewrite opprK.
   rewrite sinDpi sin_atan sqrtr_1sqr2// ?lt_eqF// ltr0_norm// 2!invrN mulrN.
   by rewrite invrK opprK -mulrA mulVf ?lt_eqF// mulr1 norm_scale_normalize.
@@ -1293,7 +1295,7 @@ Canonical dual_unitRing := UnitRingType (dual R) dual_UnitRingMixin.
 End dual_number_unit.
 
 Section dual_quaternion.
-Variable R : rcfType (*realType*).
+Variable R : realType (*realType*).
 Local Open Scope dual_scope.
 
 Definition dquat := @dual (quat_unitRing R).
@@ -1426,7 +1428,7 @@ End dual_quaternion.
 
 (* WIP: dual quaternions and rigid body transformations *)
 Section dquat_rbt.
-Variable R : rcfType (*realType*).
+Variable R : realType (*realType*).
 Local Open Scope dual_scope.
 Implicit Types u x : dquat R.
 

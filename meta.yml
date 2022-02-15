@@ -17,7 +17,7 @@ authors:
   initial: true
 - name: Cyril Cohen, Inria
   initial: true
-- name: Laurent Thery, Inria
+- name: Laurent Théry, Inria
   initial: false
 
 opam-file-maintainer: Reynald Affeldt <reynald.affeldt@aist.go.jp>

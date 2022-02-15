@@ -2,8 +2,10 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-Require Import ssr_ext angle euclidean skew vec_angle rot frame rigid screw.
+From mathcomp Require Import interval reals trigo.
+Require Import ssr_ext euclidean skew vec_angle rot frame rigid screw.
 From mathcomp.analysis Require Import reals forms.
+Require Import extra_trigo.
 
 (******************************************************************************)
 (*                        SCARA Robot Manipulator                             *)
@@ -34,12 +36,12 @@ Section scara.
 Variable R : realType.
 Let vector := 'rV[R]_3.
 
-Variable theta1 : angle R.
+Variable theta1 : R.
 Variable a1 : R.
-Variable theta2 : angle R.
+Variable theta2 : R.
 Variable a2 : R.
 Variable d3 : R.
-Variable theta4 : angle R.
+Variable theta4 : R.
 Variable d4 : R.
 
 Definition scara_rot := Rz (theta1 + theta2 + theta4).
@@ -107,7 +109,7 @@ Definition t3 := pjoint_twist v3.
 Definition t4 := rjoint_twist w4 q4.
 
 Definition g := g0 * `e$(theta4, t4) *
-  `e$(Rad.angle_of d3, t3) * `e$(theta2, t2) * `e$(theta1, t1).
+  `e$(d3, t3) * `e$(theta2, t2) * `e$(theta1, t1).
 
 Lemma S1 : `e$(theta1, t1) = hRz theta1.
 Proof.
@@ -142,13 +144,10 @@ Lemma S2 : `e$(theta2, t2) =
   hom (Rz theta2) (row3 (a1 * (1 - cos theta2)) (- a1 * sin theta2) 0).
 Proof. by rewrite /t2 S2_helper. Qed.
 
-Hypothesis Hd3 : d3 \in Rad.f_codom R.
-
-Lemma S3 : `e$(Rad.angle_of d3, t3) = hTz d3.
+Lemma S3 : `e$(d3, t3) = hTz d3.
 Proof.
-rewrite etwistE eqxx eskew_v0 Rad.angle_ofK.
-  rewrite /hTz /v3 e2row row3Z. by Simp.r.
-exact Hd3.
+rewrite etwistE eqxx eskew_v0.
+rewrite /hTz /v3 e2row row3Z. by Simp.r.
 Qed.
 
 Lemma S4 : `e$(theta4, t4) = hom (Rz theta4)

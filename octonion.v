@@ -3,7 +3,9 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp.analysis Require Import forms.
-Require Import ssr_ext euclidean angle vec_angle frame rot quaternion.
+From mathcomp Require Import interval reals.
+
+Require Import ssr_ext euclidean vec_angle frame rot quaternion.
 
 (******************************************************************************)
 (*                            Octonions                                       *)
@@ -793,7 +795,7 @@ Notation "x '^*o'" := (conjo x) : oct_scope.
 Notation "a *o b" := (mulo a b) : oct_scope.
 
 Section octonion1.
-Variable R : rcfType.
+Variable R : realType.
 
 Definition sqro (a : oct R) := sqrq a.1 + sqrq a.2.
 
