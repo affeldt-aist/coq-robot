@@ -238,6 +238,150 @@ case: (cos (a / 2%:R) =P 0) => [->|/eqP saD0]; first by rewrite invr0 mulr0 !mul
 by rewrite expr2 -mulf_div divff // mul1r.
 Qed.
 
+End Extra.
+
+Section Rmod.
+Local Open Scope real_scope.
+Variable R : realType.
+Implicit Types x y : R.
+
+Definition Rmod x y := x - y * Rfloor (x / y).
+
+Local Notation "m %% d" := (Rmod m d).
+Local Notation "m = n %[mod d ]" := (m %% d = n %% d).
+
+Lemma Rmodx0 x : x %% 0 = x.
+Proof. by rewrite /Rmod mul0r subr0. Qed.
+
+End Rmod.
+Notation "m %% d" := (Rmod m d) : real_scope.
+Notation "m = n %[mod d ]" := (m %% d = n %% d) : real_scope.
+
+Module Angle.
+Section angle.
+Record t (R : realType) := mk {
+  a : R ;
+  _ : - pi < a <= pi }.
+End angle.
+Module Exports.
+Section exports.
+Variable R : realType.
+Local Notation angle := (@t R).
+Canonical angle_subType := [subType for @a R].
+Coercion a : angle >-> Real.sort.
+End exports.
+End Exports.
+End Angle.
+Export Angle.Exports.
+
+Notation angle := Angle.t.
+
+Section angle_canonicals.
+Local Open Scope real_scope.
+Variable R : realType.
+
+Lemma angle0_subproof : - pi < (0 : R) <= pi.
+Proof. by rewrite pi_ge0 andbT oppr_lt0 pi_gt0. Qed.
+
+Definition angle0 := Angle.mk angle0_subproof.
+
+Lemma angleNpi (a : angle R) : - pi < (a : R).
+Proof. by case: a => ? /= /andP[]. Qed.
+
+Lemma angle_pi (a : angle R) : (a : R) <= pi.
+Proof. by case: a => ? /= /andP[]. Qed.
+
+Let add (a b : angle R) : R :=
+  let c := (a : R) + (b : R) in
+  if pi < c then c - 2%:R * pi else
+  if c <= - pi then c + 2%:R * pi else c.
+
+Let two_mone (x : R) : 2%:R * x - x = x.
+Proof.
+rewrite -{2}(mul1r x) -mulrBl.
+by rewrite {2}(_ : 1 = 1%:R)// -natrB// mul1r.
+Qed.
+
+Let add_pi (a b : angle R) : - pi < add a b <= pi.
+Proof.
+apply/andP; split; rewrite /add.
+  case: ifPn => [piab|].
+    by rewrite ltr_subr_addl two_mone.
+  rewrite -leNgt => abpi; case: ifPn => [abNpi|]; last by rewrite -ltNge.
+  rewrite -ltr_subl_addr (@lt_trans _ _ (- pi - pi))//.
+    by rewrite ler_lt_sub// ltr_pmull// ?ltr1n// pi_gt0.
+  by rewrite ltr_add// ?(angleNpi _).
+case: ifPn => [piab|].
+  rewrite ler_subl_addl (@le_trans _ _ (pi + pi))// ler_add// ?(angle_pi _)//.
+  by rewrite ler_pmull ?pi_gt0// ler1n.
+rewrite -leNgt => abpi; case: ifPn => [abNpi|//].
+rewrite -ler_subr_addr (le_trans abNpi)// ler_subr_addl.
+by rewrite two_mone.
+Qed.
+
+Definition add_angle (a b : angle R) : angle R := Angle.mk (add_pi a b).
+
+Let opp (a : angle R) : R := if a == pi :> R then pi else - (a : R).
+
+Let opp_pi (a : angle R) : - pi < opp a <= pi.
+Proof.
+apply/andP; split; rewrite /opp.
+  case: ifPn => [_|api].
+    by rewrite (@lt_trans _ _ 0) ?pi_gt0// ltr_oppl oppr0 pi_gt0.
+  by rewrite ltr_oppl opprK lt_neqAle api (angle_pi a).
+case: ifPn => // api.
+by rewrite ler_oppl (le_trans (ltW (angleNpi a))).
+Qed.
+
+Definition opp_angle (a : angle R) : angle R := Angle.mk (opp_pi a).
+
+Lemma add_angleC : commutative add_angle.
+Proof.
+by move=> a b; apply/val_inj => /=; rewrite /add addrC.
+Qed.
+
+Lemma add_0angle x : add_angle angle0 x = x.
+Proof.
+apply/val_inj => /=; rewrite /add/= add0r.
+case: ifPn => [pix|_].
+  by have := angle_pi x; rewrite leNgt pix.
+case: ifPn => // xpi.
+by have := angleNpi x; rewrite ltNge xpi.
+Qed.
+
+Lemma add_Nangle x : add_angle (opp_angle x) x = angle0.
+Proof.
+apply/val_inj => /=; rewrite /add/= /opp/=.
+have [->|xpi] := eqVneq (x : R) pi.
+  by rewrite ltr_addl pi_gt0 -mulr2n mulr_natl subrr.
+by rewrite addrC subrr ltNge pi_ge0/= ler_oppr oppr0 leNgt pi_gt0//.
+Qed.
+
+Lemma add_angleA : associative add_angle.
+Proof.
+move=> a b c; apply/val_inj => /=; rewrite /add/= /add/=.
+Admitted.
+
+Definition angle_eqMixin := [eqMixin of angle R by <:].
+Canonical angle_eqType := EqType (angle R) angle_eqMixin.
+Definition angle_choiceMixin := [choiceMixin of angle R by <:].
+Canonical angle_choiceType := ChoiceType (angle R) angle_choiceMixin.
+Definition angle_ZmodMixin := ZmodMixin add_angleA add_angleC add_0angle
+ add_Nangle.
+Canonical angle_ZmodType := ZmodType (angle R) angle_ZmodMixin.
+
+End angle_canonicals.
+
+Variable R : realType.
+Variable a b : angle R.
+Check (a == b).
+
+Section Extra2.
+
+Variable R : realType.
+
+Implicit Types a : R.
+
 Definition norm_angle a :=
   if sin a < 0 then - acos (cos a) else acos (cos a).
 
@@ -614,4 +758,4 @@ Definition sec a := (cos a)^-1.
 Lemma secpi : sec pi = -1.
 Proof. by rewrite /sec cospi invrN invr1. Qed.
 
-End Extra.
+End Extra2.
