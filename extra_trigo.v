@@ -240,6 +240,81 @@ Qed.
 
 End Extra.
 
+From mathcomp Require Import ssrint complex sequences exp.
+Local Open Scope complex_scope.
+
+Section backport_complex.
+Variable R : realType.
+
+Lemma eq0c (x : R) : (x%:C == 0) = (x == 0).
+Proof. by rewrite eq_complex eqxx/= andbT. Qed.
+
+Lemma real_complexN (r : R) : (- r)%:C = - r%:C.
+Proof. by apply/eqP; rewrite eq_complex/= oppr0 !eqxx. Qed.
+
+Lemma real_complexM (r s : R) : (r * s)%:C = r%:C * s%:C.
+Proof. by apply/eqP; rewrite eq_complex/= 2!mulr0 mul0r subr0 addr0 !eqxx. Qed.
+
+End backport_complex.
+
+Section backport_trigo.
+Variable R : realType.
+
+Lemma sin_nat_pi (n : nat) : sin (n%:R * pi) = 0 :> R.
+Proof.
+elim: n => [|n ih]; first by rewrite mul0r sin0.
+by rewrite -addn1 natrD mulrDl mul1r sinD ih sinpi mul0r mulr0 add0r.
+Qed.
+
+Lemma sin_int_pi (k : int) : sin (k%:~R * pi) = 0 :> R.
+Proof.
+wlog k0 : k / 0 <= k.
+  move=> h; have [k0|k0] := leP 0 k; first by rewrite h.
+  by rewrite -(opprK (_ * _)) sinN -mulNr -mulrNz h ?oppr0// ler_oppr oppr0 ltW.
+by rewrite -[in LHS](gez0_abs k0) sin_nat_pi.
+Qed.
+
+End backport_trigo.
+
+Section exp.
+Variable R : realType.
+
+Definition exp (z : R[i]) := (expR (Re z))%:C * (cos (Im z) +i* sin (Im z)).
+
+Lemma exp_neq0 (z : R[i]) : exp z != 0.
+Proof.
+apply: mulf_neq0; first by rewrite eq0c gt_eqF// expR_gt0.
+rewrite eq_complex/= -norm_sin_eq1; apply/negP => /andP[]/[swap]/eqP ->.
+by rewrite normr0 eq_sym oner_eq0.
+Qed.
+
+Lemma exp_pi : exp (pi *i) = - 1.
+Proof.
+by rewrite /exp/= expR0 sinpi cospi/= mul1r complexr0 real_complexN.
+Qed.
+
+Lemma exp0 : exp 0 = 1.
+Proof. by rewrite /exp/= cos0 sin0 expR0 mul1r. Qed.
+
+Lemma exp_pihalf : exp ((pi / 2%:R) *i) = 'i.
+Proof. by rewrite /exp/= sin_pihalf cos_pihalf expR0 mul1r. Qed.
+
+Lemma expD (z w : R[i]) : exp (z + w) = exp z * exp w.
+Proof.
+move: z w => [x1 y1] [x2 y2]; rewrite /exp /=.
+rewrite mulrCA !mulrA -real_complexM -expRD (addrC x2) -mulrA; congr (_ * _).
+by rewrite cosD sinD/=; apply/eqP; rewrite eq_complex/= eqxx/= addrC.
+Qed.
+
+Lemma norm_exp (z : R[i]) : `| exp z | = (expR (Re z))%:C.
+Proof.
+move: z => [x y]/=; rewrite normc_def/= 2!mul0r subr0 addr0.
+do 2 (rewrite exprMn_comm//; last exact: mulrC).
+by rewrite -mulrDr cos2Dsin2 mulr1 sqrtr_sqr gtr0_norm// expR_gt0.
+Qed.
+
+End exp.
+
 Section Rmod.
 Local Open Scope real_scope.
 Variable R : realType.
@@ -371,10 +446,6 @@ Definition angle_ZmodMixin := ZmodMixin add_angleA add_angleC add_0angle
 Canonical angle_ZmodType := ZmodType (angle R) angle_ZmodMixin.
 
 End angle_canonicals.
-
-Variable R : realType.
-Variable a b : angle R.
-Check (a == b).
 
 Section Extra2.
 
