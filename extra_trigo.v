@@ -243,6 +243,23 @@ End Extra.
 From mathcomp Require Import ssrint complex sequences exp.
 Local Open Scope complex_scope.
 
+Section Rmod.
+Local Open Scope real_scope.
+Variable R : realType.
+Implicit Types x y : R.
+
+Definition Rmod x y := x - y * Rfloor (x / y).
+
+Local Notation "m %% d" := (Rmod m d).
+Local Notation "m = n %[mod d ]" := (m %% d = n %% d).
+
+Lemma Rmodx0 x : x %% 0 = x.
+Proof. by rewrite /Rmod mul0r subr0. Qed.
+
+End Rmod.
+Notation "m %% d" := (Rmod m d) : real_scope.
+Notation "m = n %[mod d ]" := (m %% d = n %% d) : real_scope.
+
 Section backport_complex.
 Variable R : realType.
 
@@ -254,6 +271,9 @@ Proof. by apply/eqP; rewrite eq_complex/= oppr0 !eqxx. Qed.
 
 Lemma real_complexM (r s : R) : (r * s)%:C = r%:C * s%:C.
 Proof. by apply/eqP; rewrite eq_complex/= 2!mulr0 mul0r subr0 addr0 !eqxx. Qed.
+
+Lemma scalec r s : (r * s)*i = r%:C * s*i :> R[i].
+Proof. by apply/eqP; rewrite eq_complex/= mulr0 !mul0r subr0 addr0 !eqxx. Qed.
 
 End backport_complex.
 
@@ -272,6 +292,51 @@ wlog k0 : k / 0 <= k.
   move=> h; have [k0|k0] := leP 0 k; first by rewrite h.
   by rewrite -(opprK (_ * _)) sinN -mulNr -mulrNz h ?oppr0// ler_oppr oppr0 ltW.
 by rewrite -[in LHS](gez0_abs k0) sin_nat_pi.
+Qed.
+
+Lemma sin_eq0 (r : R) : sin r = 0 <-> exists k, r = k%:~R * pi.
+Proof.
+split; last by move=> [k ->]; rewrite sin_int_pi.
+wlog rpi : r / - pi < r <= pi.
+  move=> h1 sr0; wlog r0 : r sr0 / 0 <= r.
+    move=> h2; have [|r0] := leP 0 r; first exact: h2.
+    have := h2 (- r); rewrite sinN sr0 oppr0 => /(_ erefl); rewrite ler_oppr.
+    rewrite oppr0 => /(_ (ltW r0))[k rkpi]; exists (- k); rewrite mulrNz mulNr.
+    by rewrite -rkpi opprK.
+  have [rpi|pir] := leP r pi.
+    by apply: h1 => //; rewrite rpi (lt_le_trans _ r0)// ltr_oppl oppr0 pi_gt0.
+  have /h1 : - pi < r - (floor (r / pi))%:~R * pi <= pi.
+    apply/andP; split.
+      rewrite ltr_subr_addr addrC -[X in _ - X]mul1r -mulrBl.
+      rewrite -ltr_pdivl_mulr ?pi_gt0// ltr_subl_addr -RfloorE.
+      by rewrite (le_lt_trans (Rfloor_le _))// ltr_addl ltr01.
+    rewrite ler_subl_addr -[X in X + _]mul1r -mulrDl.
+    by rewrite -ler_pdivr_mulr ?pi_gt0// addrC -RfloorE ltW // lt_succ_Rfloor.
+  rewrite sinB sin_int_pi mulr0 subr0 sr0 mul0r => /(_ erefl)[k /eqP].
+  by rewrite subr_eq -mulrDl -intrD => /eqP rkpi; eexists; exact: rkpi.
+by move=> /eqP; rewrite sin_eq0_Npipi// => /orP[|] /eqP ->;
+  [exists 0; rewrite mul0r|exists 1; rewrite mul1r].
+Qed.
+
+Lemma cos_pi_mulrn n : cos (pi *+ n) = (- 1) ^+ odd n :> R.
+Proof.
+elim: n => [|n ih]; first by rewrite mulr0n/= cos0 expr0.
+by rewrite mulrS cosD cospi sinpi mul0r subr0 {}ih/= signrN mulN1r.
+Qed.
+
+Lemma cos_pi_mulrz (k : int)  : cos (pi *~ k) = (- 1) ^+ odd `|k|%N :> R.
+Proof.
+have [|k0] := leP 0 k.
+  by case: k => // k _; rewrite -pmulrn cos_pi_mulrn.
+by rewrite -cosN -mulrNz -ltz0_abs // -pmulrn cos_pi_mulrn.
+Qed.
+
+Lemma expR_eq0 (x : R) : expR x = 1 -> x = 0.
+Proof.
+move/eqP; rewrite eq_le => /andP[eone onee]; apply/eqP; rewrite eq_le.
+apply/andP; split.
+  by move: eone; rewrite -ler_ln ?posrE ?ltr01 ?expR_gt0// ln1 expK.
+by move: onee; rewrite -ler_ln ?posrE ?ltr01 ?expR_gt0// ln1 expK.
 Qed.
 
 End backport_trigo.
@@ -313,24 +378,32 @@ do 2 (rewrite exprMn_comm//; last exact: mulrC).
 by rewrite -mulrDr cos2Dsin2 mulr1 sqrtr_sqr gtr0_norm// expR_gt0.
 Qed.
 
+Lemma exp_eq1 (z : R[i]) : exp z = 1 <-> exists k, z = 2%:R * k%:~R * pi *i.
+Proof.
+split.
+  move: z => [x y] /eqP; rewrite eq_complex/= 2!mul0r addr0 subr0 => /andP[].
+  move=> /[swap]; rewrite mulf_eq0 gt_eqF/= ?expR_gt0// => /eqP/sin_eq0[k yk] h.
+  have cs0 : 0 < cos y.
+    by move: (@ltr01 R); rewrite -(eqP h); rewrite pmulr_rgt0 // expR_gt0.
+  have ok : ~~ odd `|k|%N.
+    apply/negP => ok; move: cs0.
+    by rewrite yk mulrzl cos_pi_mulrz ok/= expr1 ltr0N1.
+  move: h; rewrite yk mulrzl cos_pi_mulrz (negbTE ok) expr0 mulr1 => /eqP.
+  move/expR_eq0 => ->{x}.
+  rewrite (intEsg k); exists (sgz k * `|k|./2%N).
+  rewrite (_ : _ * _%:~R = k%:~R); last first.
+    rewrite intrM mulrCA -natrM mul2n.
+    move: (odd_double_half `|k|); rewrite (negbTE ok) add0n => ->.
+    by rewrite [in RHS](intEsg k) intrM.
+  rewrite -mulrzl -intEsg.
+  (* NB: should be easy *)
+  admit.
+move=> [k ->].
+rewrite /exp/=.
+(* NB: should be easy *)
+Admitted.
+
 End exp.
-
-Section Rmod.
-Local Open Scope real_scope.
-Variable R : realType.
-Implicit Types x y : R.
-
-Definition Rmod x y := x - y * Rfloor (x / y).
-
-Local Notation "m %% d" := (Rmod m d).
-Local Notation "m = n %[mod d ]" := (m %% d = n %% d).
-
-Lemma Rmodx0 x : x %% 0 = x.
-Proof. by rewrite /Rmod mul0r subr0. Qed.
-
-End Rmod.
-Notation "m %% d" := (Rmod m d) : real_scope.
-Notation "m = n %[mod d ]" := (m %% d = n %% d) : real_scope.
 
 Module Angle.
 Section angle.
