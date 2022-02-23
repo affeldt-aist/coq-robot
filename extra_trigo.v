@@ -277,58 +277,60 @@ Proof. by apply/eqP; rewrite eq_complex/= mulr0 !mul0r subr0 addr0 !eqxx. Qed.
 
 End backport_complex.
 
+Section backport_trigo_alternating.
+Variables (U : zmodType) (V : ringType).
+Implicit Type f : U -> V.
+
+Lemma alternatingN f (T : U) : alternating f T -> alternating f (- T).
+Proof. by move=> fT u; rewrite -[LHS]opprK -fT subrK. Qed.
+
+Lemma alternatingz f (T : U) : alternating f T ->
+  forall k a, f (a + T *~ k) = (- 1) ^+ `|k|%N * f a.
+Proof.
+move=> fT k; have [k0 a|k0 a] := leP 0 k.
+  by rewrite -(gez0_abs k0) -pmulrn alternatingn.
+rewrite -(alternatingn (alternatingN fT)) -[in LHS](opprK k) -(ltz0_abs k0).
+by rewrite  mulrNz mulNrn.
+Qed.
+
+End backport_trigo_alternating.
+
 Section backport_trigo.
 Variable R : realType.
 
-Lemma sin_nat_pi (n : nat) : sin (n%:R * pi) = 0 :> R.
-Proof.
-elim: n => [|n ih]; first by rewrite mul0r sin0.
-by rewrite -addn1 natrD mulrDl mul1r sinD ih sinpi mul0r mulr0 add0r.
-Qed.
+Lemma sin_nat_pi n : sin (pi *+ n) = 0 :> R.
+Proof. by rewrite -[_ *+ _]add0r (alternatingn (@sinDpi _)) sin0 mulr0. Qed.
 
-Lemma sin_int_pi (k : int) : sin (k%:~R * pi) = 0 :> R.
-Proof.
-wlog k0 : k / 0 <= k.
-  move=> h; have [k0|k0] := leP 0 k; first by rewrite h.
-  by rewrite -(opprK (_ * _)) sinN -mulNr -mulrNz h ?oppr0// ler_oppr oppr0 ltW.
-by rewrite -[in LHS](gez0_abs k0) sin_nat_pi.
-Qed.
+Lemma sin_int_pi k : sin (pi *~ k) = 0 :> R.
+Proof. by rewrite -[_ *~ _]add0r (alternatingz (@sinDpi _)) sin0 mulr0. Qed.
 
-Lemma sin_eq0 (r : R) : sin r = 0 <-> exists k, r = k%:~R * pi.
+Lemma cos_nat_pi n : cos (pi *+ n) = (- 1) ^+ n :> R.
+Proof. by rewrite -[_ *+ _]add0r (alternatingn (@cosDpi _)) cos0 mulr1. Qed.
+
+Lemma cos_int_pi k  : cos (pi *~ k) = (- 1) ^+ `|k|%N :> R.
+Proof. by rewrite -[_ *~ _]add0r (alternatingz (@cosDpi _)) cos0 mulr1. Qed.
+
+Lemma sin_eq0 (r : R) : sin r = 0 <-> exists k, r = pi *~ k.
 Proof.
 split; last by move=> [k ->]; rewrite sin_int_pi.
 wlog rpi : r / - pi < r <= pi.
   move=> h1 sr0; wlog r0 : r sr0 / 0 <= r.
     move=> h2; have [|r0] := leP 0 r; first exact: h2.
     have := h2 (- r); rewrite sinN sr0 oppr0 => /(_ erefl); rewrite ler_oppr.
-    rewrite oppr0 => /(_ (ltW r0))[k rkpi]; exists (- k); rewrite mulrNz mulNr.
-    by rewrite -rkpi opprK.
+    by rewrite oppr0 => /(_ (ltW r0))[k rkpi]; exists (- k); rewrite mulrNz -rkpi opprK.
   have [rpi|pir] := leP r pi.
     by apply: h1 => //; rewrite rpi (lt_le_trans _ r0)// ltr_oppl oppr0 pi_gt0.
-  have /h1 : - pi < r - (floor (r / pi))%:~R * pi <= pi.
+  have /h1 : - pi < r - pi *~ floor (r / pi) <= pi.
     apply/andP; split.
-      rewrite ltr_subr_addr addrC -[X in _ - X]mul1r -mulrBl.
+      rewrite -mulrzl ltr_subr_addr addrC -[X in _ - X]mul1r -mulrBl.
       rewrite -ltr_pdivl_mulr ?pi_gt0// ltr_subl_addr -RfloorE.
       by rewrite (le_lt_trans (Rfloor_le _))// ltr_addl ltr01.
-    rewrite ler_subl_addr -[X in X + _]mul1r -mulrDl.
+    rewrite -mulrzl ler_subl_addr -[X in X + _]mul1r -mulrDl.
     by rewrite -ler_pdivr_mulr ?pi_gt0// addrC -RfloorE ltW // lt_succ_Rfloor.
   rewrite sinB sin_int_pi mulr0 subr0 sr0 mul0r => /(_ erefl)[k /eqP].
-  by rewrite subr_eq -mulrDl -intrD => /eqP rkpi; eexists; exact: rkpi.
+  rewrite subr_eq -mulrzDl => /eqP rkpi; eexists; exact: rkpi.
 by move=> /eqP; rewrite sin_eq0_Npipi// => /orP[|] /eqP ->;
-  [exists 0; rewrite mul0r|exists 1; rewrite mul1r].
-Qed.
-
-Lemma cos_pi_mulrn n : cos (pi *+ n) = (- 1) ^+ odd n :> R.
-Proof.
-elim: n => [|n ih]; first by rewrite mulr0n/= cos0 expr0.
-by rewrite mulrS cosD cospi sinpi mul0r subr0 {}ih/= signrN mulN1r.
-Qed.
-
-Lemma cos_pi_mulrz (k : int)  : cos (pi *~ k) = (- 1) ^+ odd `|k|%N :> R.
-Proof.
-have [|k0] := leP 0 k.
-  by case: k => // k _; rewrite -pmulrn cos_pi_mulrn.
-by rewrite -cosN -mulrNz -ltz0_abs // -pmulrn cos_pi_mulrn.
+  [exists 0; rewrite mulr0z|exists 1; rewrite mulr1z].
 Qed.
 
 Lemma expR_eq0 (x : R) : expR x = 1 -> x = 0.
@@ -387,8 +389,8 @@ split.
     by move: (@ltr01 R); rewrite -(eqP h); rewrite pmulr_rgt0 // expR_gt0.
   have ok : ~~ odd `|k|%N.
     apply/negP => ok; move: cs0.
-    by rewrite yk mulrzl cos_pi_mulrz ok/= expr1 ltr0N1.
-  move: h; rewrite yk mulrzl cos_pi_mulrz (negbTE ok) expr0 mulr1 => /eqP.
+    by rewrite yk cos_int_pi -signr_odd ok/= expr1 ltr0N1.
+  move: h; rewrite yk cos_int_pi -signr_odd (negbTE ok) expr0 mulr1 => /eqP.
   move/expR_eq0 => ->{x}.
   rewrite (intEsg k); exists (sgz k * `|k|./2%N).
   rewrite (_ : _ * _%:~R = k%:~R); last first.
@@ -446,25 +448,20 @@ Let add (a b : angle R) : R :=
 
 Let two_mone (x : R) : 2%:R * x - x = x.
 Proof.
-rewrite -{2}(mul1r x) -mulrBl.
-by rewrite {2}(_ : 1 = 1%:R)// -natrB// mul1r.
+by rewrite mulr2n mulrDl mul1r addrK.
 Qed.
 
 Let add_pi (a b : angle R) : - pi < add a b <= pi.
 Proof.
-apply/andP; split; rewrite /add.
-  case: ifPn => [piab|].
-    by rewrite ltr_subr_addl two_mone.
-  rewrite -leNgt => abpi; case: ifPn => [abNpi|]; last by rewrite -ltNge.
-  rewrite -ltr_subl_addr (@lt_trans _ _ (- pi - pi))//.
-    by rewrite ler_lt_sub// ltr_pmull// ?ltr1n// pi_gt0.
-  by rewrite ltr_add// ?(angleNpi _).
-case: ifPn => [piab|].
-  rewrite ler_subl_addl (@le_trans _ _ (pi + pi))// ler_add// ?(angle_pi _)//.
-  by rewrite ler_pmull ?pi_gt0// ler1n.
-rewrite -leNgt => abpi; case: ifPn => [abNpi|//].
-rewrite -ler_subr_addr (le_trans abNpi)// ler_subr_addl.
-by rewrite two_mone.
+rewrite /add; have [ab_gtpi|ab_lepi] := ltrP pi.
+  rewrite ltr_subr_addl ler_subl_addl two_mone ab_gtpi /=.
+  rewrite ler_add ?angle_pi // (le_trans (angle_pi _)) //.
+  by rewrite mulr2n mulrDl mul1r ler_addr ?pi_ge0.
+have [ab_leNpi|ab_gtNpi]:= (lerP ((a : R) + (b : R))); last by rewrite ab_gtNpi.
+rewrite -ltr_subl_addr -ler_subr_addr ltr_add ?angleNpi //.
+  by rewrite -opprB two_mone ab_leNpi.
+rewrite mulrDl mul1r opprD (le_lt_trans _ (angleNpi _)) //.
+by rewrite ler_subl_addl subrr oppr_cp0 pi_ge0.
 Qed.
 
 Definition add_angle (a b : angle R) : angle R := Angle.mk (add_pi a b).
