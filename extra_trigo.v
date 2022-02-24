@@ -243,10 +243,44 @@ End Extra.
 From mathcomp Require Import ssrint complex sequences exp.
 Local Open Scope complex_scope.
 
-Section Rmod.
+Section Rfloor.
+
 Local Open Scope real_scope.
 Variable R : realType.
 Implicit Types x y : R.
+
+Lemma intrN z : (-z)%:~R = - (z%:~R) :> R.
+Proof. by rewrite -[in LHS]mulN1r intrM (intr_sign _ 1) mulN1r. Qed.
+
+Lemma intrB (z1 z2 : int) : (z1 - z2)%:~R = z1%:~R - z2%:~R :> R.
+Proof. by rewrite intrD intrN. Qed.
+
+Lemma RfloorDz x z : Rfloor (x + z%:~R) = Rfloor x + z%:~R.
+Proof.
+have /andP[rxLx xLrx1] := mem_rg1_Rfloor x.
+rewrite [in RHS]RfloorE -intrD.
+apply/range1zP.
+rewrite intrD -RfloorE /range1 /= ler_add2r rxLx /=.
+by rewrite addrAC ltr_add2r.
+Qed.
+
+Lemma RfloorDn x n : Rfloor (x + n%:R) = Rfloor x + n%:R.
+Proof. by apply: RfloorDz x n. Qed.
+
+Lemma Rfloor_eq0 (x : R) : (Rfloor x == 0) = (0 <= x < 1).
+Proof.
+apply/eqP/idP => [/(range1zP 0)|xB]; first by rewrite /range1 /= add0r.
+by apply/(range1zP 0); rewrite /range1 add0r.
+Qed.
+
+End Rfloor.
+
+Section Rmod.
+
+Local Open Scope real_scope.
+Variable R : realType.
+Implicit Types x y : R.
+
 
 Definition Rmod x y := x - y * Rfloor (x / y).
 
@@ -255,6 +289,98 @@ Local Notation "m = n %[mod d ]" := (m %% d = n %% d).
 
 Lemma Rmodx0 x : x %% 0 = x.
 Proof. by rewrite /Rmod mul0r subr0. Qed.
+
+Lemma RmodMzl z x : (z%:~R * x) %% x = 0.
+Proof.
+have [->| /eqP x_neq0] := (x =P 0); first by rewrite !Rmodx0 mulr0.
+by rewrite /Rmod mulfK // Rfloor_natz mulrC subrr.
+Qed.
+
+Lemma RmodMzr z x : (x * z%:~R) %% x = 0.
+Proof.
+have [->| /eqP x_neq0] := (x =P 0); first by rewrite !Rmodx0 mul0r.
+by rewrite /Rmod mulrAC divff // mul1r Rfloor_natz subrr.
+Qed.
+
+Lemma Rmodxx x : x %% x = 0.
+Proof.
+have [->| /eqP x_neq0] := (x =P 0); first by rewrite !Rmodx0.
+by rewrite /Rmod divff // Rfloor1 mulr1 subrr.
+Qed.
+
+Lemma Rmod_mod x y : x %% y = x %[mod y].
+Proof.
+have [->| /eqP y_neq0] := (y =P 0); first by rewrite !Rmodx0.
+rewrite /Rmod !(mulrBl, mulrDl) mulrAC divff // mul1r.
+by rewrite RfloorE -intrN RfloorDz intrN -RfloorE subrr mulr0 subr0.
+Qed.
+
+Lemma RmodD x y z :  x + y = x %% z + y %% z %[mod z].
+Proof.
+have [->| /eqP z_neq0] := (z =P 0); first by rewrite !Rmodx0.
+rewrite /Rmod !(mulrBl, mulrDl) mulrAC divff // mulrAC divff // !mul1r.
+rewrite !addrA  [Rfloor (y / z)]RfloorE -!intrN RfloorDz intrN -RfloorE.
+rewrite [_ + _ + y /z]addrAC.
+rewrite [Rfloor (x / z)]RfloorE -!intrN RfloorDz intrN -RfloorE.
+rewrite !(mulrBr, mulrDr, opprB, opprD) !addrA subrK.
+by rewrite [_ + _ + y]addrAC subrK.
+Qed.
+
+Lemma RmodDl (x y : R) : y + x = x %[mod y].
+Proof. by rewrite RmodD Rmodxx add0r Rmod_mod. Qed.
+
+Lemma RmodDr (x y : R) : x + y = x %[mod y].
+Proof. by rewrite RmodD Rmodxx addr0 Rmod_mod. Qed.
+
+Lemma RmodDml (x y z : R) : x %% z + y = x + y %[mod z].
+Proof. by rewrite RmodD Rmod_mod -RmodD. Qed.
+
+Lemma RmodDmr (x y z : R) : x + y %% z = x + y %[mod z].
+Proof. by rewrite RmodD Rmod_mod -RmodD. Qed.
+
+Lemma Rmodpbound (x y : R) : 0 < y -> 0 <= x %% y < y.
+Proof.
+move=> y_gt0.
+have y_neq0 : y != 0 by case: ltgtP y_gt0.
+have y_ge0 := ltW y_gt0.
+rewrite /Rmod.
+have /andP[rxLx xLrx1] := mem_rg1_Rfloor (x / y).
+rewrite -[X in X - _](divfK y_neq0) mulrC -mulrBr pmulr_rge0 //.
+rewrite subr_cp0 rxLx /= -[X in _ < X]mulr1 -subr_gte0 -mulrBr pmulr_rgt0 //.
+by rewrite subr_cp0 ltr_sub_addr addrC.
+Qed.
+
+Lemma Rmodnbound (x y : R) : y < 0 -> y < x %% y <= 0.
+Proof.
+move=> y_lt0.
+have y_neq0 : y != 0 by case: ltgtP y_lt0.
+have y_le0 := ltW y_lt0.
+rewrite /Rmod.
+have /andP[rxLx xLrx1] := mem_rg1_Rfloor (x / y).
+rewrite -[X in X - _](divfK y_neq0) mulrC -mulrBr nmulr_rle0 //.
+rewrite subr_ge0 rxLx andbT.
+rewrite -[X in X < _]mulr1 -subr_gte0 -mulrBr nmulr_rgt0 //.
+by rewrite subr_lt0 ltr_sub_addr addrC.
+Qed.
+
+Lemma Rmod_psmall (x y : R) : 0 <= x < y -> x %% y = x.
+Proof.
+move=> /andP[x_ge0 x_gty].
+suff : 0 <= x / y < 1.
+  by rewrite -Rfloor_eq0 /Rmod => /eqP->; rewrite mulr0 subr0.
+rewrite divr_ge0  ?(le_trans x_ge0 (ltW x_gty)) //=.
+by rewrite lter_pdivr_mulr ?mul1r // (le_lt_trans x_ge0).
+Qed.
+
+Lemma Rmod_nsmall (x y : R) : y < x <= 0 -> x %% y = x.
+Proof.
+move=> /andP[y_ltx x_le0].
+suff : 0 <= (- x) / (- y) < 1.
+  rewrite invrN mulNr mulrN opprK.
+  by rewrite -Rfloor_eq0 /Rmod => /eqP->; rewrite mulr0 subr0.
+rewrite divr_ge0 ?oppr_cp0 // ?(le_trans (ltW y_ltx) x_le0) //=.
+by rewrite lter_pdivr_mulr ?mul1r ?lter_oppE // (lt_le_trans y_ltx).
+Qed.
 
 End Rmod.
 Notation "m %% d" := (Rmod m d) : real_scope.
