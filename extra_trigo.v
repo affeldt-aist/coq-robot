@@ -243,17 +243,17 @@ End Extra.
 From mathcomp Require Import ssrint complex sequences exp.
 Local Open Scope complex_scope.
 
+Lemma intrN (R : ringType) z : (-z)%:~R = - (z%:~R) :> R.
+Proof. by rewrite -[in LHS]mulN1r intrM (intr_sign _ 1) mulN1r. Qed.
+
+Lemma intrB (R : ringType) (z1 z2 : int) : (z1 - z2)%:~R = z1%:~R - z2%:~R :> R.
+Proof. by rewrite intrD intrN. Qed.
+
 Section Rfloor.
 
 Local Open Scope real_scope.
 Variable R : realType.
 Implicit Types x y : R.
-
-Lemma intrN z : (-z)%:~R = - (z%:~R) :> R.
-Proof. by rewrite -[in LHS]mulN1r intrM (intr_sign _ 1) mulN1r. Qed.
-
-Lemma intrB (z1 z2 : int) : (z1 - z2)%:~R = z1%:~R - z2%:~R :> R.
-Proof. by rewrite intrD intrN. Qed.
 
 Lemma RfloorDz x z : Rfloor (x + z%:~R) = Rfloor x + z%:~R.
 Proof.
@@ -275,6 +275,7 @@ Qed.
 
 End Rfloor.
 
+
 Section Rmod.
 
 Local Open Scope real_scope.
@@ -289,6 +290,9 @@ Local Notation "m = n %[mod d ]" := (m %% d = n %% d).
 
 Lemma Rmodx0 x : x %% 0 = x.
 Proof. by rewrite /Rmod mul0r subr0. Qed.
+
+Lemma Rmod0x (x : R) : 0 %% x = 0.
+Proof. by rewrite /Rmod mul0r Rfloor0 mulr0 subr0. Qed.
 
 Lemma RmodMzl z x : (z%:~R * x) %% x = 0.
 Proof.
@@ -338,6 +342,9 @@ Proof. by rewrite RmodD Rmod_mod -RmodD. Qed.
 Lemma RmodDmr (x y z : R) : x + y %% z = x + y %[mod z].
 Proof. by rewrite RmodD Rmod_mod -RmodD. Qed.
 
+Lemma RmodBr (x y : R) : x - y = x %[mod y].
+Proof. by rewrite RmodD -mulN1r (RmodMzl (-1)) addr0 Rmod_mod. Qed.
+
 Lemma Rmodpbound (x y : R) : 0 < y -> 0 <= x %% y < y.
 Proof.
 move=> y_gt0.
@@ -386,6 +393,110 @@ End Rmod.
 Notation "m %% d" := (Rmod m d) : real_scope.
 Notation "m = n %[mod d ]" := (m %% d = n %% d) : real_scope.
 
+
+Section Rcmod.
+
+Local Open Scope real_scope.
+Variable R : realType.
+Implicit Types x y : R.
+
+Definition Rcmod x y :=
+  let r := x %% (2%:R * y) in 
+  if 0 <= r <= y then r else r - (2%:R * y).
+
+Local Notation "m '%c%' d" := (Rcmod m d)  (at level 40, no associativity).
+Local Notation "m = n %[cmod d ]" := 
+  (m %c% d = n %c% d) (at level 70, n at next level).
+
+Lemma Rcmodx0 x : x %c% 0 = x.
+Proof. by rewrite /Rcmod mulr0 Rmodx0 subr0 if_same. Qed.
+
+Lemma Rcmodxx x : 0 <= x -> x %c% x = x.
+Proof.
+move=> x_ge0; rewrite /Rcmod.
+have [->| /eqP x_neq0] := (x =P 0).
+  by rewrite mulr0 !Rmodx0 subr0 if_same.
+have x_gt0 : 0 < x by case: ltgtP x_neq0 x_ge0.
+have x_gtx2 : x < 2%:R * x by rewrite mulr2n mulrDl mul1r -subr_gte0 addrK.
+by rewrite ifT ?Rmod_psmall ?x_ge0 /=.
+Qed.
+
+Lemma Rcmod_mod x y : 0 <= y -> x %c% y = x %[cmod y].
+Proof.
+move=> y_ge0.
+have [->| /eqP y_neq0] := (y =P 0); first by rewrite !Rcmodx0.
+rewrite /Rcmod.
+case: (boolP (0 <= x %% (2%:R * y) <= y)) => [|/negPf Hle].
+  by rewrite Rmod_mod => ->.
+by rewrite RmodBr Rmod_mod Hle.
+Qed.
+
+Lemma RcmodD x y z :  0 <= z -> x + y = x %c% z + y %c% z %[cmod z].
+Proof.
+move=> z_ge0.
+have [->| /eqP z_neq0] := (z =P 0); first by rewrite !Rcmodx0.
+rewrite /Rcmod.
+case: (boolP (0 <= x %% (2%:R * z) <= z)) => [|/negPf Hxle];
+case: (boolP (0 <= y %% (2%:R * z) <= z)) => [|/negPf Hyle].
+- by rewrite -RmodD.
+- by rewrite addrA RmodBr -RmodD.
+- by rewrite [(_ - _ + _) %% _]RmodD RmodBr -!RmodD.
+by rewrite [(_ - _ + _) %% _]RmodD !RmodBr -!RmodD.
+Qed.
+
+Lemma RcmodDml (x y z : R) : 0 <= z -> x %c% z + y = x + y %[cmod z].
+Proof. by move=> z_ge0; rewrite RcmodD // Rcmod_mod // -RcmodD. Qed.
+
+Lemma RcmodDmr (x y z : R) : 0 <= z -> x + y %c% z = x + y %[cmod z].
+Proof. by move=> z_ge0; rewrite RcmodD // Rcmod_mod // -RcmodD. Qed.
+
+Lemma Rcmodbound (x y : R) : 0 < y -> - y < x %c% y <= y.
+Proof.
+move=> y_gt0.
+have y_ge0 := ltW y_gt0.
+have y2_gt0 : 0 < 2%:R * y by rewrite mulr_gt0 // ltr0n.
+have /andP[m_ge0 m_gty]:= Rmodpbound x y2_gt0.
+rewrite /Rcmod m_ge0 /=.
+case: (leP _ y) => [->|y_ltm].
+  by rewrite (lt_le_trans _ m_ge0) // oppr_cp0.
+rewrite ltr_subr_addr addrC {1}[_ * y]mulrDl mul1r addrK y_ltm //=.
+by rewrite -lter_sub_addr opprK (le_trans (ltW m_gty)) // ler_addr.
+Qed.
+
+Lemma Rcmod_small (x y : R) : -y < x <= y -> x %c% y = x.
+Proof.
+move=> /andP[x_gtNy x_lty].
+have y_gt0 : 0 < y.
+  case: ltP; rewrite // -oppr_ge0  => H.
+  have : - - y <= -y by rewrite ge0_cp.
+  by rewrite leNgt opprK (lt_le_trans x_gtNy).
+have y2_gt0 : 0 < 2%:R * y by rewrite mulr_gt0 // ltr0n.
+case: (leP 0 x) => [x_ge0 | x_lt0].
+  rewrite /Rcmod Rmod_psmall; first by rewrite x_ge0 x_lty.
+  by rewrite x_ge0 (le_lt_trans x_lty) // -subr_gte0 mulrDl mul1r addrK.
+rewrite /Rcmod -RmodDl Rmod_psmall //.
+  rewrite ifN; first by rewrite [_ + x]addrC addrK.
+  rewrite negb_and -!ltNge -ltr_subl_addl -[X in X - _]mul1r -mulrBl.
+  by rewrite -(intrB _ 1 2) mulN1r x_gtNy orbT.
+rewrite (le_trans (_ : 0 <= y + x)).
+- by rewrite -ltr_subr_addl subrr x_lt0.
+- by rewrite -ler_subl_addl sub0r ltW.
+by rewrite ler_add2r mulrDl mul1r ler_addr ltW.
+Qed.
+
+Lemma Rcmod0x (x : R) : 0 <= x -> 0 %c% x = 0.
+Proof. by move=> x_ge0; rewrite /Rcmod Rmod0x x_ge0 lexx. Qed.
+
+
+Lemma Rcmodx2 (x : R) : 0 <= x -> (2%:R * x) %c% x = 0.
+Proof.  by move=> x_ge0; rewrite /Rcmod Rmodxx x_ge0 lexx. Qed.
+
+
+End Rcmod.
+
+Local Notation "m '%c%' d" := (Rcmod m d)  (at level 40, no associativity).
+Local Notation "m = n %[cmod d ]" := 
+  (m %c% d = n %c% d) (at level 70, n at next level).
 Section backport_complex.
 Variable R : realType.
 
@@ -506,6 +617,22 @@ do 2 (rewrite exprMn_comm//; last exact: mulrC).
 by rewrite -mulrDr cos2Dsin2 mulr1 sqrtr_sqr gtr0_norm// expR_gt0.
 Qed.
 
+Lemma real_complexD x y : (x + y)%:C = x%:C + y%:C :> R[i].
+Proof. by apply/eqP; rewrite eq_complex /= addr0 !eqxx. Qed.
+
+Lemma natrC n : n%:R %:C = n%:R :> R[i].
+Proof.
+elim: n => //= n IH.
+rewrite -addn1 !natrD -IH real_complexD.
+by apply/eqP; rewrite eq_complex !eqxx.
+Qed.
+
+Lemma intrC z : z%:~R %:C = z%:~R :> R[i].
+Proof.
+case: z => //= n; first by by rewrite natrC.
+by rewrite NegzE !intrN real_complexN natrC.
+Qed.
+
 Lemma exp_eq1 (z : R[i]) : exp z = 1 <-> exists k, z = 2%:R * k%:~R * pi *i.
 Proof.
 split.
@@ -523,13 +650,12 @@ split.
     rewrite intrM mulrCA -natrM mul2n.
     move: (odd_double_half `|k|); rewrite (negbTE ok) add0n => ->.
     by rewrite [in RHS](intEsg k) intrM.
-  rewrite -mulrzl -intEsg.
-  (* NB: should be easy *)
-  admit.
+  by rewrite -[in LHS]mulrzr mulrC scalec -intEsg intrC.
 move=> [k ->].
 rewrite /exp/=.
-(* NB: should be easy *)
-Admitted.
+rewrite -(intrM _ 2) -intrC ReZ mulr0 expR0 mul1r.
+by rewrite ImZ /= mulrzl cos_int_pi sin_int_pi abszM /= exprM sqrrN !expr1n.
+Qed.
 
 End exp.
 
@@ -567,28 +693,9 @@ Proof. by case: a => ? /= /andP[]. Qed.
 Lemma angle_pi (a : angle R) : (a : R) <= pi.
 Proof. by case: a => ? /= /andP[]. Qed.
 
-Let add (a b : angle R) : R :=
-  let c := (a : R) + (b : R) in
-  if pi < c then c - 2%:R * pi else
-  if c <= - pi then c + 2%:R * pi else c.
-
-Let two_mone (x : R) : 2%:R * x - x = x.
-Proof.
-by rewrite mulr2n mulrDl mul1r addrK.
-Qed.
-
+Let add (a b : angle R) : R := ((a : R) + (b : R)) %c% pi.
 Let add_pi (a b : angle R) : - pi < add a b <= pi.
-Proof.
-rewrite /add; have [ab_gtpi|ab_lepi] := ltrP pi.
-  rewrite ltr_subr_addl ler_subl_addl two_mone ab_gtpi /=.
-  rewrite ler_add ?angle_pi // (le_trans (angle_pi _)) //.
-  by rewrite mulr2n mulrDl mul1r ler_addr ?pi_ge0.
-have [ab_leNpi|ab_gtNpi]:= (lerP ((a : R) + (b : R))); last by rewrite ab_gtNpi.
-rewrite -ltr_subl_addr -ler_subr_addr ltr_add ?angleNpi //.
-  by rewrite -opprB two_mone ab_leNpi.
-rewrite mulrDl mul1r opprD (le_lt_trans _ (angleNpi _)) //.
-by rewrite ler_subl_addl subrr oppr_cp0 pi_ge0.
-Qed.
+Proof. by apply/Rcmodbound/pi_gt0. Qed.
 
 Definition add_angle (a b : angle R) : angle R := Angle.mk (add_pi a b).
 
@@ -611,27 +718,25 @@ Proof.
 by move=> a b; apply/val_inj => /=; rewrite /add addrC.
 Qed.
 
+Lemma add_angleA : associative add_angle.
+Proof.
+move=> a b c ; apply/val_inj; rewrite /add_angle /add /=.
+have pi_ge0 := pi_ge0.
+by rewrite [LHS]RcmodD // [RHS]RcmodD // !Rcmod_mod // -!RcmodD // addrA.
+Qed.
+
 Lemma add_0angle x : add_angle angle0 x = x.
 Proof.
-apply/val_inj => /=; rewrite /add/= add0r.
-case: ifPn => [pix|_].
-  by have := angle_pi x; rewrite leNgt pix.
-case: ifPn => // xpi.
-by have := angleNpi x; rewrite ltNge xpi.
+by apply/val_inj => /=; rewrite /add/= add0r Rcmod_small // angleNpi angle_pi.
 Qed.
 
 Lemma add_Nangle x : add_angle (opp_angle x) x = angle0.
 Proof.
 apply/val_inj => /=; rewrite /add/= /opp/=.
-have [->|xpi] := eqVneq (x : R) pi.
-  by rewrite ltr_addl pi_gt0 -mulr2n mulr_natl subrr.
-by rewrite addrC subrr ltNge pi_ge0/= ler_oppr oppr0 leNgt pi_gt0//.
+case: eqP => [->|_].
+  by rewrite -mulr2n -mulr_natl Rcmodx2 // pi_ge0.
+by rewrite addrC subrr Rcmod0x // pi_ge0.
 Qed.
-
-Lemma add_angleA : associative add_angle.
-Proof.
-move=> a b c; apply/val_inj => /=; rewrite /add/= /add/=.
-Admitted.
 
 Definition angle_eqMixin := [eqMixin of angle R by <:].
 Canonical angle_eqType := EqType (angle R) angle_eqMixin.
