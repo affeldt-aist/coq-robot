@@ -657,6 +657,34 @@ rewrite -(intrM _ 2) -intrC ReZ mulr0 expR0 mul1r.
 by rewrite ImZ /= mulrzl cos_int_pi sin_int_pi abszM /= exprM sqrrN !expr1n.
 Qed.
 
+Lemma eqc_r (x y : R) : (x%:C == y%:C) = (x == y).
+Proof. by rewrite -subr_eq0 -rmorphB /= eq0c subr_eq0. Qed.
+
+Lemma exp_norm_eq1 (z : R[i]) : (`|exp z| == 1) = (Re z == 0).
+Proof.
+rewrite norm_exp eqc_r; apply/eqP/eqP => [He|->]; last by rewrite expR0.
+by case: (ltrgt0P (Re z)) (expR_lt1 (Re z)) (expR_gt1 (Re z));
+   rewrite He ?ltxx.
+Qed.
+
+Lemma coscE x : (cos x)%:C = (exp x*i + exp (- x *i)) / 2%:R.
+Proof.
+apply/eqP/andP/andP => /=.
+rewrite /exp /= expRN !(expR0, invr1, oppr0, mul0r, mulr0, subr0, add0r,
+                        addr0, mul1r, cosN, sinN, subrr, expr0n).
+rewrite eqxx !andbT exprS expr1  invfM // !mulrA mulfK; last by rewrite (eqr_nat _ 2 0).
+by rewrite -mulr2n -mulr_natr mulfK // (eqr_nat _ 2 0).
+Qed.
+
+Lemma sincE x : (sin x)%:C = (exp x*i - exp (- x *i)) / (2%:R *i).
+Proof.
+apply/eqP/andP/andP => /=.
+rewrite /exp /= expRN !(expR0, invr1, oppr0, mul0r, mulr0, subr0, add0r,
+                        addr0, mul1r, cosN, sinN, subrr, expr0n).
+rewrite eqxx !andbT exprS expr1 opprK invfM // !mulrA divff; last by rewrite (eqr_nat _ 2 0).
+by rewrite mul1r mulrN opprK -mulr2n -mulr_natr mulfK // (eqr_nat _ 2 0).
+Qed.
+
 End exp.
 
 Module Angle.
