@@ -491,6 +491,30 @@ Proof. by move=> x_ge0; rewrite /Rcmod Rmod0x x_ge0 lexx. Qed.
 Lemma Rcmodx2 (x : R) : 0 <= x -> (2%:R * x) %c% x = 0.
 Proof.  by move=> x_ge0; rewrite /Rcmod Rmodxx x_ge0 lexx. Qed.
 
+Lemma periodicz (U V : zmodType) (f : U -> V) (T : U) z a :
+  periodic f T -> f (a + T *~ z) = f a.
+Proof.
+case: z => /= n fP; first by rewrite periodicn.
+rewrite NegzE /= mulrNz -[in RHS](addrK (- T *~ n.+1) a).
+by rewrite !mulNrz opprK periodicn.
+Qed.
+
+
+
+Lemma periodic_Rcmod a d (f : R -> R) : periodic f (d *+2) -> f (a %c% d) = f a.
+Proof.
+move=> fP.
+rewrite /Rcmod /Rmod ; case: (boolP (_ <= _ <= _)) => _.
+ rewrite mulr_natl RfloorE mulrzr -mulrNz periodicz //.
+rewrite -[X in _ - X]mulr1 -addrA -opprD -mulrDr RfloorE -(intrD _  _ 1).
+by rewrite mulr_natl mulrzr -mulrNz periodicz.
+Qed.
+
+Lemma cos_Rcmod a : cos(a %c% pi) = cos a.
+Proof. by apply/periodic_Rcmod/cosD2pi. Qed.
+
+Lemma sin_Rcmod a : sin(a %c% pi) = sin a.
+Proof. by apply/periodic_Rcmod/sinD2pi. Qed.
 
 End Rcmod.
 
@@ -727,17 +751,10 @@ Proof. by apply/Rcmodbound/pi_gt0. Qed.
 
 Definition add_angle (a b : angle R) : angle R := Angle.mk (add_pi a b).
 
-Let opp (a : angle R) : R := if a == pi :> R then pi else - (a : R).
+Let opp (a : angle R) : R := (- (a : R)) %c% pi.
 
 Let opp_pi (a : angle R) : - pi < opp a <= pi.
-Proof.
-apply/andP; split; rewrite /opp.
-  case: ifPn => [_|api].
-    by rewrite (@lt_trans _ _ 0) ?pi_gt0// ltr_oppl oppr0 pi_gt0.
-  by rewrite ltr_oppl opprK lt_neqAle api (angle_pi a).
-case: ifPn => // api.
-by rewrite ler_oppl (le_trans (ltW (angleNpi a))).
-Qed.
+Proof. by apply/Rcmodbound/pi_gt0. Qed.
 
 Definition opp_angle (a : angle R) : angle R := Angle.mk (opp_pi a).
 
@@ -761,9 +778,8 @@ Qed.
 Lemma add_Nangle x : add_angle (opp_angle x) x = angle0.
 Proof.
 apply/val_inj => /=; rewrite /add/= /opp/=.
-case: eqP => [->|_].
-  by rewrite -mulr2n -mulr_natl Rcmodx2 // pi_ge0.
-by rewrite addrC subrr Rcmod0x // pi_ge0.
+have pi_ge0 := pi_ge0.
+by rewrite RcmodD // Rcmod_mod // -RcmodD // addrC subrr Rcmod0x.
 Qed.
 
 Definition angle_eqMixin := [eqMixin of angle R by <:].
