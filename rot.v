@@ -779,7 +779,7 @@ move=> u1.
 by rewrite orthogonalE tr_emx3 tr_spin inv_emx3 // exp_spin u1 expr1n scaleN1r.
 Qed.
 
-Lemma rank_eskew a w : norm w = 1 -> \rank `e^(a, w) = 3.
+Lemma rank_eskew a w : norm w = 1 -> \rank `e^(a, w) = 3%N.
 Proof.
 move=> w1; by rewrite mxrank_unit // orthogonal_unit // eskew_is_O.
 Qed.
