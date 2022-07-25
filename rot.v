@@ -790,7 +790,7 @@ move=> w1.
 move/orthogonal_det/eqP : (eskew_is_O (a / 2%:R) w1).
 rewrite -(@eqr_expn2 _ 2) // expr1n sqr_normr expr2 -det_mulmx.
 rewrite mulmxE emx3M; last by rewrite spin3 w1 expr1n scaleN1r.
-by move/eqP; rewrite -posnum.splitr.
+by move/eqP; rewrite -splitr.
 Qed.
 
 Lemma eskew_is_SO a w : norm w = 1 -> `e^(a, w) \is 'SO[T]_3.
