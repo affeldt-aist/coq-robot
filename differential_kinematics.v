@@ -2,8 +2,9 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-From mathcomp.analysis Require Import boolp reals Rstruct classical_sets posnum.
+From mathcomp.analysis Require Import boolp reals Rstruct classical_sets signed.
 From mathcomp.analysis Require Import topology normedtype landau forms derive.
+From mathcomp Require Import functions.
 Require Import ssr_ext derive_matrix euclidean frame rot skew rigid.
 
 (******************************************************************************)
