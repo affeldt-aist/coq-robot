@@ -2,9 +2,9 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-From mathcomp.analysis Require Import boolp reals Rstruct classical_sets signed.
-From mathcomp.analysis Require Import topology normedtype landau forms derive.
-From mathcomp.analysis Require Import functions.
+From mathcomp Require Import boolp reals Rstruct classical_sets signed.
+From mathcomp Require Import topology normedtype landau forms derive.
+From mathcomp Require Import functions.
 Require Import ssr_ext euclidean rigid skew.
 
 (******************************************************************************)
@@ -21,19 +21,6 @@ Unset Printing Implicit Defensive.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
-
-(* NB: PR to analysis in progress *)
-Lemma derive1_cst (R : numFieldType) (V : normedModType R) (k : V) t :
-  (cst k)^`() t = 0.
-Proof. by rewrite derive1E derive_val. Qed.
-
-(* TODO: see coord_continuous in normedtype.v *)
-Lemma coord_continuous (R : numDomainType) (K : normedModType R) m n i j :
-  continuous (fun M : 'M[K]_(m, n) => M i j).
-Proof.
-move=> /= M s /= /nbhs_normP => -[e e0 es].
-by apply/nbhs_ballP; exists e => //= N MN; exact/es/MN.
-Qed.
 
 Lemma mx_lin1N (R : ringType) n (M : 'M[R]_n) :
   mx_lin1 (- M) = -1 \*: mx_lin1 M :> ( _ -> _).
