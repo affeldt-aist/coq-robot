@@ -607,7 +607,7 @@ move=> u0 /= k.
 rewrite inE eigenvalue_root_char -map_char_poly char_poly_spin.
 apply/rootP.
 case: ifPn => [|Hk].
-- rewrite inE => /orP [/eqP ->|]; first by rewrite /= horner_map !hornerE.
+- rewrite inE => /orP [/eqP ->|]; first by rewrite /= horner_map/= !hornerE/= expr0n.
   rewrite inE => /orP [/eqP ->|].
     eigenvalue_spin_eval_poly.
     simpc.

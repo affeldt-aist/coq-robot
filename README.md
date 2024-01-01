@@ -23,7 +23,7 @@ Mathematical Components library.
   - Cyril Cohen, Inria (initial)
   - Laurent Théry, Inria
 - License: [LGPL-2.1-or-later](LICENSE)
-- Compatible Coq versions: Coq 8.14 to Coq 8.15
+- Compatible Coq versions: Coq 8.14 to Coq 8.18
 - Additional dependencies:
   - [MathComp ssreflect](https://math-comp.github.io)
   - [MathComp fingroup](https://math-comp.github.io)

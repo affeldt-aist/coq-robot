@@ -1625,16 +1625,16 @@ rewrite !coefD.
 rewrite [X in X + _ + _](_ : _ = M 0 0 * (M 2%:R 2%:R + M 1 1) +
    (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R)); last first.
   rewrite coefM sum2E coefD coefX add0r coefN coefC [- _]/=.
-  rewrite subn0 coefD.
+  rewrite subn0 coefD coefB.
   rewrite coefM sum2E subn0 coefD coefX add0r coefN (_ : _`_0 = M 1 1); last by rewrite coefC.
   rewrite coefD coefX coefN coefC subr0 mulr1.
   rewrite coefD coefN coefX coefN coefC subr0 mul1r.
   rewrite subnn coefD coefX add0r coefN coefC [in X in - M 1 1 - X]/=.
   rewrite coefM sum2E coefC coefC mulr0 add0r coefC mul0r subr0.
-  rewrite coefD coefX coefN coefC subr0 mul1r.
-  rewrite coefD coefM sum1E coefD coefX add0r coefN coefC [in X in - X * _`_ _]/=.
+  rewrite coefD coefN coefC subr0 mul1r.
+  rewrite coefM sum1E coefD coefX add0r coefN coefC [in X in - X * _`_ _]/=.
   rewrite coefD coefX add0r coefN coefC mulrN !mulNr opprK.
-  rewrite coefN coefM sum1E coefC coefC [in X in M 1 1 * _ - X]/=.
+  rewrite coefM sum1E coefC coefC [in X in M 1 1 * _ - X]/=.
   by rewrite -opprB mulrN 2!opprK.
 rewrite [X in _ + X + _](_ : _ = - M 0 1 * M 1 0); last first.
   rewrite coefN coefM sum2E coefC [in X in X * _]/= subnn.
