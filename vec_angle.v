@@ -44,6 +44,9 @@ Unset Printing Implicit Defensive.
 
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
+(* TODO: overrides forms.v *)
+Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
+
 Local Open Scope ring_scope.
 
 Lemma norm_le1 [T : rcfType] (u : 'rV[T]_2) :
@@ -75,14 +78,12 @@ rewrite -(expr1n T 2) -nvE sqr_norm sum2E [_ + _^+2] addrC addrK.
 by rewrite sqrtr_sqr ltr0_norm ?opprK.
 Qed.
 
-Import rv3LieAlgebra.Exports.
-
 Section vec_angle.
 Variable T : realType.
 Implicit Types u v : 'rV[T]_3.
 
-Definition vec_angle v w : T := 
-  if v == 0 then 0 else 
+Definition vec_angle v w : T :=
+  if v == 0 then 0 else
   if w == 0 then 0 else acos (v *d w / (norm v * norm w)).
 
 Lemma vec_anglev0 v : vec_angle v 0 = 0.
@@ -94,7 +95,7 @@ Proof. by rewrite /vec_angle eqxx. Qed.
 Definition vec_angle0 := (vec_anglev0, vec_angle0v).
 
 Lemma vec_angleC v w : vec_angle v w = vec_angle w v.
-Proof. 
+Proof.
 by rewrite /vec_angle  dotmulC [norm _ * _]mulrC; do 2 case: eqP.
 Qed.
 
@@ -128,7 +129,7 @@ rewrite /vec_angle /= (negPf u0) dotmulvv -expr2 divff ?acos1 //.
 by rewrite expf_eq0 //= norm_eq0.
 Qed.
 
-Lemma dotmul_div_N11 v w : 
+Lemma dotmul_div_N11 v w :
   v != 0 -> w != 0 -> v *d w / (norm v * norm w) \in `[(-1), 1].
 Proof.
 move=> u0 v0.
@@ -151,7 +152,7 @@ Lemma cos_vec_anglevN v w : v != 0 -> w != 0 ->
   cos (vec_angle v (- w)) = - cos (vec_angle v w).
 Proof.
 by move=> u0 v0; rewrite ![_ v _]vec_angleC; apply: cos_vec_angleNv.
-Qed. 
+Qed.
 
 Lemma sin_vec_angle_ge0 u v (u0 : u != 0) (v0 : v != 0) :
   0 <= sin (vec_angle u v).
@@ -224,7 +225,7 @@ rewrite normB normN.
 case/boolP: (u == 0) => [/eqP ->|u0].
   by rewrite !(norm0,expr0n,add0r,vec_angle0,mul0r,mul0rn,oppr0).
 case/boolP: (v == 0) => [/eqP ->|v0].
-  by rewrite !(norm0,expr0n,add0r,vec_angle0,mulr0,mul0r,mul0rn,oppr0).
+  by rewrite norm0 mulr0 oppr0 vec_angle0 cos0 mul0r mul0rn subr0 addr0.
 by rewrite [in LHS]cos_vec_anglevN // mulrN mulNrn opprK.
 Qed.
 
@@ -246,9 +247,12 @@ Lemma cosine_law a b c : norm (c - a) != 0 -> norm (b - a) != 0 ->
 Proof.
 move=> H0 H1.
 rewrite (cosine_law' a b c) -2!addrA addrCA -opprD subrr addr0.
-rewrite -mulNrn -mulr_natr mulNr -mulrA -(mulrC 2%:R) mulrA.
-rewrite -mulNrn -[in X in _ = - _ / X]mulr_natr 2!mulNr invrN mulrN opprK.
-rewrite mulrC mulrA mulVr ?mul1r // unitfE mulf_eq0 negb_or pnatr_eq0 andbT.
+rewrite -[in X in _ / X]mulNrn -mulr_natr.
+rewrite mulNr mulNrn -(mulr_natr (_ * _) 2) divrN opprK.
+rewrite (mulrC _ 2) 2!mulrA.
+rewrite (mulrC _ 2) mulrA.
+rewrite mulrAC divff ?mul1r//.
+rewrite -mulrA mulf_eq0 pnatr_eq0/=.
 by rewrite mulf_eq0 negb_or H0 H1.
 Qed.
 
@@ -358,18 +362,16 @@ Implicit Types u v : 'rV[R]_3.
 Definition colinear u v := u *v v == 0.
 
 Lemma colinearvv u : colinear u u.
-Proof. by rewrite /colinear liexx. Qed.
+Proof. by rewrite /colinear (@liexx _ 'rV[R]_3). Qed.
 
 Lemma scale_colinear k v : colinear (k *: v) v.
-Proof. by rewrite /colinear lieC linearZ /= liexx scaler0 oppr0. Qed.
+Proof. by rewrite /colinear (@lieC _ 'rV[R]_3)/= linearZ/= (@liexx _ 'rV[R]_3) scaler0 oppr0. Qed.
 
 Lemma colinear_refl : reflexive colinear.
-Proof. move=> ?; by rewrite /colinear liexx. Qed.
+Proof. by move=> ?; rewrite /colinear (@liexx _ 'rV[R]_3). Qed.
 
-(* NB: remove "ssrbool." as soon as clash is resolved,
-   PR in progress to forms.v in mathcomp-analysis *)
-Lemma colinear_sym : ssrbool.symmetric colinear.
-Proof. by move=> u v; rewrite /colinear lieC -eqr_opp opprK oppr0. Qed.
+Lemma colinear_sym : symmetric colinear.
+Proof. by move=> u v; rewrite /colinear (@lieC _ 'rV[R]_3) -eqr_opp opprK oppr0. Qed.
 
 Lemma colinear0v u : colinear 0 u.
 Proof. by rewrite /colinear linear0l. Qed.
@@ -447,7 +449,7 @@ Proof.
 apply: (iffP idP); last first.
   case=> [/eqP ->|]; first by rewrite colinear0.
   case=> v0 [k ukv].
-  by rewrite /colinear ukv lieC linearZ /= liexx scaler0 oppr0.
+  by rewrite ukv scale_colinear.
 rewrite /colinear => uv.
 case/boolP : (v == 0) => v0; [by left | right; split; first by done].
 move: v0 => /eqP/rowP/eqfunP; rewrite negb_forall => /existsP [j].
@@ -555,7 +557,7 @@ Proof. by rewrite /colinear crossmul_axialcomp. Qed.
 Lemma axialcomp_crossmul v e : axialcomp (e *v v) e == 0.
 Proof.
 rewrite /axialcomp -dotmul_crossmul2 /normalize !linearZl_LR /= linearZr_LR /=.
-by rewrite liexx linear0l 2!scaler0.
+by rewrite (@liexx _ 'rV[T]_3) linear0l 2!scaler0.
 Qed.
 
 Lemma norm_axialcomp v e : e *d v < 0 ->
@@ -616,9 +618,9 @@ Proof. by rewrite /normalcomp axialcompZ subrr. Qed.
 Lemma normalcompB v1 v2 : normalcomp (v1 - v2) v2 = normalcomp v1 v2.
 Proof.
 apply/esym/eqP.
-rewrite /normalcomp subr_eq -addrA -scaleNr -scalerDl -dotmulvN -dotmulDr.
-rewrite opprB -(addrA v1) (addrCA v1) subrK dotmulC dotmul_normalize_norm.
-by rewrite norm_scale_normalize addrC addrK.
+rewrite /normalcomp subr_eq /axialcomp -scaleNr -!addrA -scalerDl -dotmulvN.
+rewrite -dotmulDr opprB subrK dotmulC dotmul_normalize_norm.
+by rewrite norm_scale_normalize addrA subrK.
 Qed.
 
 Lemma normalcomp_colinear_helper v e : normalcomp v e = 0 -> colinear v e.
@@ -705,13 +707,13 @@ Definition tricolinear a b c := colinear (b - a) (c - a).
 Lemma tricolinear_rot a b c : tricolinear a b c = tricolinear b c a.
 Proof.
 rewrite /tricolinear /colinear !linearD /= !linearDl /= !(linearNl,linearNr) /=.
-by rewrite !opprK !liexx !addr0 -addrA addrC (lieC a c) opprK (lieC b c).
+by rewrite !opprK !(@liexx _ 'rV[T]_3) !addr0 -addrA addrC (@lieC _ 'rV[T]_3 a c) opprK (@lieC _ 'rV[T]_3 b c).
 Qed.
 
 Lemma tricolinear_perm a b c : tricolinear a b c = tricolinear b a c.
 Proof.
 rewrite /tricolinear /colinear !linearD /= !linearDl /= !(linearNl,linearNr) /=.
-rewrite !(opprK,liexx,addr0) -{1}oppr0 -eqr_oppLR 2!opprB addrC (lieC a b).
+rewrite !(opprK,(@liexx _ 'rV[T]_3),addr0) -{1}oppr0 -eqr_oppLR 2!opprB addrC (@lieC _ 'rV[T]_3 a b).
 by rewrite opprK.
 Qed.
 
@@ -755,9 +757,10 @@ rewrite cos_vec_anglevN // ?normalize_eq0 //.
 rewrite norm_axialcomp // !(mulrN,mulNr,opprK,sqrrN).
 rewrite vec_anglevZ // ?invr_gt0 ?norm_gt0 //.
 rewrite dotmul_cos norm_normalize // mul1r vec_angleZv ?invr_gt0 ?norm_gt0 //.
-rewrite (vec_angleC v2) mulrA -expr2 exprMn addrAC -addrA -mulrA -mulrnAr.
-rewrite -mulrBr -{2}(mulr1 (norm v1 ^+ 2)) -mulrDr; congr (_ * _).
-by rewrite sin2cos2 -expr2 mulr2n opprD !addrA addrK.
+rewrite (vec_angleC v2) -!mulrA -expr2 exprMn addrAC -addrA -mulrA -mulrnAr.
+rewrite -mulrBr mulr2n opprD addrA subrr sub0r.
+rewrite mulrA -expr2 mulrN mulrA -expr2.
+by rewrite sin2cos2 mulrBr mulr1.
 Qed.
 
 Lemma triangle_sin_vector v1 v2 : ~~ colinear v1 v2 ->
@@ -967,7 +970,7 @@ rewrite skewE negbK /coplanar -2!Line.vectorE.
 case/lineP : (H1) => k1 /eqP; rewrite -subr_eq => /eqP <-.
 case/lineP : (H2) => k2 /eqP; rewrite -subr_eq => /eqP <-.
 rewrite opprB -addrA addrC addrA subrK dotmulDl !(dotmulNv,dotmulZv).
-rewrite dot_crossmulC 2!dotmul_crossmul_shift 2!liexx.
+rewrite dot_crossmulC 2!dotmul_crossmul_shift 2!(@liexx _ 'rV[T]_3).
 by rewrite !(dotmul0v,dotmulv0,mulr0,oppr0,addr0).
 Qed.
 
@@ -985,7 +988,7 @@ have H (a b va vb : 'rV[T]_3) (k l : T) :
   move=> /(congr1 (fun x => x - a)).
   rewrite addrAC subrr add0r addrAC => /(congr1 (fun x => x *v vb)).
   rewrite (linearZl_LR _ vb) /= linearDl /=.
-  by rewrite (linearZl_LR _ _ l) /= liexx scaler0 addr0.
+  by rewrite (linearZl_LR _ _ l) /= (@liexx _ 'rV[T]_3) scaler0 addr0.
 have Ht' : t' = interpoint_t l1 l2.
   have : t' *: (v1 *v v2) = (\pt( l2 ) - \pt( l1 )) *v v2.
     by rewrite (H \pt( l1 ) \pt( l2 ) _ _ _ s') // -Hs -Ht.

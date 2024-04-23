@@ -21,6 +21,9 @@ Reserved Notation "''e_' i" (format "''e_' i", at level 3).
 Reserved Notation "u '``_' i" (at level 3, i at level 2,
   left associativity, format "u '``_' i").
 
+(* TODO: overrides forms.v *)
+Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -227,7 +230,6 @@ Definition odd_perm3 :=
 
 End extra_perm3.
 
-Notation "u '``_' i" := (u (GRing.zero (Zp_zmodType O)) i) : ring_scope.
 Notation "''e_' i" := (delta_mx 0 i) : ring_scope.
 Local Open Scope ring_scope.
 
@@ -338,15 +340,12 @@ by rewrite -block_mxEv block_mxEh col_mx0.
 Qed.
 
 Definition mx_lin1 n (M : 'M[R]_n) : {linear 'rV[R]_n -> 'rV[R]_n} :=
-  mulmxr_linear 1 M.
+  @mulmxr R 1 n n M.
 
-Definition lin1_mx' n (f : 'rV[R]_n -> 'rV[R]_n) : linear f ->
+Definition lin1_mx' n (f : {linear 'rV[R]_n -> 'rV[R]_n}) :
   {M : {linear 'rV[R]_n -> 'rV[R]_n} & forall x, f x = M x}.
 Proof.
-move=> H.
-have @g : {linear 'rV[R]_n -> 'rV[R]_n}.
-  exists f; exact: (GRing.Linear.class_of_axiom H).
-by exists g.
+by exists f.
 Defined.
 
 Lemma mulmx_trE n (v : 'rV[R]_n) i j : (v^T *m v) i j = v 0 i * v 0 j.
