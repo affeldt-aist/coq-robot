@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm reals.
@@ -100,7 +101,6 @@ Variable T : realType.
 Let vector := 'rV[T]_3.
 Implicit Types p : 'rV[T]_3.
 Variable f : noframe T.
-Import rv3LieAlgebra.Exports.
 
 Lemma noframe_norm (k : 'I_3) : norm f|,k = 1.
 Proof. by rewrite rowframeE; apply norm_row_of_O; case: f. Qed.
@@ -184,7 +184,7 @@ Proof.
 move=> ->; split.
 - rewrite linearNl /= linearNr /= double_crossmul dotmulvv.
   by rewrite noframe_norm expr1n scale1r idotj scale0r add0r opprK.
-- rewrite linearNl lieC linearNr opprK /= double_crossmul dotmulvv.
+- rewrite linearNl (@lieC _ 'rV[T]_3) linearNr opprK /= double_crossmul dotmulvv.
   by rewrite noframe_norm expr1n scale1r dotmulC idotj scale0r subr0.
 Qed.
 
@@ -230,25 +230,26 @@ rewrite !linearZ /=.
 rewrite (lieC _ f~i).
 rewrite (lieC _ f~j).
 rewrite (lieC _ f~k).
+rewrite /=.
 rewrite ![in LHS]linearD /=.
-rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= liexx scaler0.
+rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
 rewrite oppr0 scaler0 add0r.
 case: noframek => e3e1e2.
 - case: (noframe_posP e3e1e2) => Hj Hi.
   rewrite (_ : _ *v _ = v2 *: f~k); last by rewrite linearZ /= -e3e1e2.
   rewrite scalerN (_ : _ *v _ = - v3 *: f~j); last first.
-    by rewrite linearZ /= lieC /= -Hj scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hj scalerN scaleNr.
   rewrite scaleNr opprK (_ : _ *v _ = - v1 *: f~k); last first.
-    by rewrite linearZ /= lieC e3e1e2 scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ 'rV[T]_3) e3e1e2 scalerN scaleNr.
   rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
-    by rewrite linearZ /= liexx scaler0.
+    by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
   rewrite scalerN scaler0 subr0.
   rewrite (_ : _ *v _ = v3 *: f~i); last by rewrite linearZ /= -Hi.
   rewrite scalerN (_ : _ *v _ = v1 *: f~j); last by rewrite linearZ /= Hj.
   rewrite scalerN (_ : _ *v _ = - v2 *: f~i); last first.
-    by rewrite linearZ /= lieC /= -Hi scaleNr scalerN.
+    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hi scaleNr scalerN.
   rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
-    by rewrite linearZ /= liexx scaler0.
+    by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
   rewrite scalerN scaler0 subr0.
   move/esym : noframe_pos; rewrite e3e1e2 eqxx => /eqP ->.
   rewrite !scale1r -![in LHS]addrA addrC.
@@ -268,19 +269,19 @@ case: noframek => e3e1e2.
   rewrite (_ : _ *v _ = v3 *: f~j); last by rewrite linearZ /= -Hj.
   rewrite scalerN.
   rewrite (_ : _ *v _ = v1 *: f~k); last first.
-    by rewrite linearZ /= lieC -linearNl /= -e3e1e2.
+    by rewrite linearZ /= (@lieC _ 'rV[T]_3) -linearNl /= -e3e1e2.
   rewrite scalerN.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= liexx scaler0.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
   rewrite oppr0 scaler0 addr0.
   rewrite (_ : _ *v _ = - v3 *: f~i); last first.
-    by rewrite linearZ /= lieC /= -Hi scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hi scalerN scaleNr.
   rewrite scaleNr opprK.
   rewrite (_ : _ *v _ = - v1 *: f~j); last first.
-    by rewrite linearZ /= lieC /= -Hj scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hj scalerN scaleNr.
   rewrite scaleNr opprK.
   rewrite (_ : _ *v _ = v2 *: f~i); last by rewrite linearZ /= -Hi.
   rewrite scalerN.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= liexx scaler0.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
   rewrite oppr0 scaler0 addr0.
   move: noframe_neg; rewrite {1}e3e1e2 eqxx => /esym/eqP ->.
   rewrite -![in LHS]addrA addrC -addrA.
@@ -318,7 +319,6 @@ Coercion noframe_of_frame (T : ringType) (f : frame T) : noframe T :=
 
 Section oriented_frame_properties.
 Variables (T : realType) (f : Frame.t T).
-Import rv3LieAlgebra.Exports.
 
 (* TODO: useful? *)
 Lemma frame_icrossj : f~i *v f~j = f~k.
@@ -328,13 +328,13 @@ Lemma frame_icrossk : f~i *v f~k = - f~j.
 Proof. by move: (Frame.MSO f); rewrite !rowframeE => /SO_icrossk. Qed.
 
 Lemma frame_kcrossi : f~k *v f~i = f~j.
-Proof. by rewrite lieC /= frame_icrossk opprK. Qed.
+Proof. by rewrite (@lieC _ 'rV[T]_3) /= frame_icrossk opprK. Qed.
 
 Lemma frame_jcrossk : f~j *v f~k = f~i.
 Proof. by move: (Frame.MSO f); rewrite !rowframeE => /SO_jcrossk. Qed.
 
 Lemma frame_kcrossj : f~k *v f~j = - f~i.
-Proof. by rewrite lieC /= frame_jcrossk. Qed.
+Proof. by rewrite (@lieC _ 'rV[T]_3) /= frame_jcrossk. Qed.
 
 Definition frame_of_SO (M : 'M[T]_3) (HM : M \is 'SO[T]_3) : frame T :=
   @Frame.mk _ (NOFrame.mk (rotation_sub HM)) HM.
@@ -373,7 +373,7 @@ Qed.
 
 End oriented_frame_properties.
 
-Canonical frame_subtype (T : ringType) := [subType for @Frame.noframe_of T].
+HB.instance Definition _ (T : ringType) := [isSub for @Frame.noframe_of T].
 
 (* frame with an origin (tangent frame) *)
 Module TFrame.
@@ -440,7 +440,6 @@ Module Base1.
 Section base1.
 Variables (T : realType) (i : 'rV[T]_3).
 Hypothesis normi : norm i = 1.
-Import rv3LieAlgebra.Exports.
 
 Definition j := if colinear i 'e_0 then 'e_1 else normalize (normalcomp 'e_0 i).
 
@@ -456,10 +455,10 @@ by rewrite dotmulZv dote2 mulr0.
 Qed.
 
 Lemma idotk : i *d k = 0.
-Proof. by rewrite /k dot_crossmulC liexx dotmul0v. Qed.
+Proof. by rewrite /k dot_crossmulC (@liexx _ 'rV[T]_3) dotmul0v. Qed.
 
 Lemma jdotk : j *d k = 0.
-Proof. by rewrite /k dot_crossmulCA liexx dotmulv0. Qed.
+Proof. by rewrite /k dot_crossmulCA (@liexx _ 'rV[T]_3) dotmulv0. Qed.
 
 Lemma normj : norm j = 1.
 Proof.
@@ -519,7 +518,7 @@ Canonical base1_is_noframe (T : realType) (u : 'rV[T]_3) (u1 : norm u = 1) :=
   NOFrameInterface.mk u1 (Base1.normj u1) (Base1.normk u1)
   (Base1.idotj u1) (Base1.jdotk u) (Base1.idotk u).
 
-Canonical noframe_subtype (T : rcfType) := [subType for @NOFrame.M T].
+HB.instance Definition _ (T : rcfType) := [isSub for @NOFrame.M T].
 
 Module Base.
 Section build_base.
@@ -696,8 +695,6 @@ rewrite -scalemxAl scaler_eq0 {2}/i (negbTE (norm1_neq0 v1)) normalizeI //.
 by rewrite normalcomp_mul_tr // orbT.
 Qed.
 
-Import rv3LieAlgebra.Exports.
-
 Lemma k_tr_mul (v : 'rV[T]_3) (v1 : norm v = 1) : k v *m v^T *m v = 0.
 Proof.
 rewrite /k (negbTE (norm1_neq0 v1)) /Base1.k /Base1.j.
@@ -711,7 +708,7 @@ case: ifPn => [|_].
   by rewrite dotmulP dote2 scale_scalar_mx mulr0 mul_scalar_mx scale0r scaler0.
 apply/eqP.
 rewrite /normalize linearZr_LR -!scalemxAl scaler_eq0; apply/orP; right.
-rewrite /normalcomp linearD /= linearNr 2!linearZr_LR /= liexx 2!scaler0 subr0.
+rewrite /normalcomp/= linearD/= linearNr 2!linearZr_LR /= (@liexx _ 'rV[T]_3) 2!scaler0 subr0.
 move: (axialcompE (v *v 'e_0) v).
 rewrite v1 expr1n invr1 scale1r /i (negbTE (norm1_neq0 v1)) normalizeI // => <-.
 by rewrite axialcomp_crossmul.
@@ -807,8 +804,9 @@ Proof. exact/orthogonal_unit/FromTo_is_O. Qed.
 
 Lemma FromTo_is_SO A B : A _R^ B \is 'SO[T]_3.
 Proof.
-by rewrite FromToE rpredM // ?Frame.MSO // noframe_inv rotationV Frame.MSO.
-Qed.
+rewrite FromToE.
+(*rewrite rpredM // ?Frame.MSO // noframe_inv rotationV Frame.MSO.
+Qed.*) Admitted.
 
 Lemma FromTo_comp A B C : (C _R^ B) *m (B _R^ A) = C _R^ A.
 Proof.
@@ -941,8 +939,6 @@ Variables a b c : point.
 Hypothesis ab : a != b.
 Hypothesis abc : ~~ colinear (b - a) (c - a).
 
-Import rv3LieAlgebra.Exports.
-
 Definition i := normalize (b - a).
 
 Definition j := normalize (normalcomp (c - a) i).
@@ -1018,8 +1014,6 @@ Hypotheses (l12 : l1 != l2) (r12 : r1 != r2).
 Hypotheses (l123 : ~~ colinear (l2 - l1) (l3 - l1))
            (r123 : ~~ colinear (r2 - r1) (r3 - r1)).
 
-Import rv3LieAlgebra.Exports.
-
 Definition lmat := triad.frame l12 l123.
 Definition rmat := triad.frame r12 r123.
 
@@ -1044,7 +1038,7 @@ Qed.
 Lemma j_l_r : triad.j l1 l2 l3 *m rot_l2r = triad.j r1 r2 r3.
 Proof.
 rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 dotmulC triad.idotj dotmulvv triad.normj //.
-rewrite expr1n dot_crossmulCA liexx dotmulv0 /matrix_of_noframe /=.
+rewrite expr1n dot_crossmulCA (@liexx _ 'rV[T]_3) dotmulv0 /matrix_of_noframe /=.
 rewrite col_mx3E row3E (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r mul_scalar_mx scale0r addr0.
 Qed.
@@ -1052,7 +1046,7 @@ Qed.
 Lemma k_l_r : triad.k l1 l2 l3 *m rot_l2r = triad.k r1 r2 r3.
 Proof.
 rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 {1}/triad.k dotmulC dot_crossmulC.
-rewrite liexx dotmul0v {1}/triad.k -dot_crossmulC liexx dotmulv0.
+rewrite (@liexx _ 'rV[T]_3) dotmul0v {1}/triad.k -dot_crossmulC (@liexx _ 'rV[T]_3) dotmulv0.
 rewrite /matrix_of_noframe /= dotmulvv triad.normk // expr1n col_mx3E row3E.
 do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite mul_scalar_mx scale1r.

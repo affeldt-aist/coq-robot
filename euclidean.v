@@ -419,19 +419,21 @@ Section orthogonal_rotation_def.
 
 Variables (n : nat) (T : ringType).
 
-Definition orthogonal := [qualify M : 'M[T]_n | M *m M^T == 1%:M].
+Definition orthogonal_pred := fun M : 'M[T]_n => M *m M^T == 1%:M.
+Definition orthogonal := [qualify M : 'M[T]_n | orthogonal_pred M].
 Fact orthogonal_key : pred_key orthogonal. Proof. by []. Qed.
 Canonical orthogonal_keyed := KeyedQualifier orthogonal_key.
 
-Definition rotation := [qualify M : 'M[T]_n | (M \is orthogonal) && (\det M == 1)].
+Definition rotation_pred := fun M : 'M[T]_n => (M \is orthogonal) && (\det M == 1).
+Definition rotation := [qualify M : 'M[T]_n | rotation_pred M].
 Fact rotation_key : pred_key rotation. Proof. by []. Qed.
 Canonical rotation_keyed := KeyedQualifier rotation_key.
 
 End orthogonal_rotation_def.
 
-Notation "''O[' T ]_ n" := (orthogonal n T) : ring_scope.
+Notation "''O[' T ]_ n" := (@orthogonal n T) : ring_scope.
 
-Notation "''SO[' T ]_ n" := (rotation n T) : ring_scope.
+Notation "''SO[' T ]_ n" := (@rotation n T) : ring_scope.
 
 Section orthogonal_rotation_properties0.
 
@@ -469,7 +471,7 @@ Qed.
 Lemma OSn_On m (P : 'M[T]_n) :
   (block_mx (1%:M : 'M_m) 0 0 P \is 'O[T]_(m + n)) = (P \is 'O[T]_n).
 Proof.
-rewrite !qualifE tr_block_mx trmx1 !trmx0 mulmx_block.
+rewrite !qualifE /orthogonal_pred tr_block_mx trmx1 !trmx0 mulmx_block.
 rewrite !(mulmx0, mul0mx, mulmx1, mul1mx, addr0, add0r) scalar_mx_block.
 by apply/eqP/eqP => [/eq_block_mx[] |->//].
 Qed.
@@ -478,7 +480,7 @@ End orthogonal_rotation_properties0.
 
 Lemma SOSn_SOn (T : comRingType) n m (P : 'M[T]_n.+1) :
   (block_mx (1%:M : 'M_m) 0 0 P \is 'SO[T]_(m + n.+1)) = (P \is 'SO[T]_n.+1).
-Proof. by rewrite qualifE OSn_On det_lblock det1 mul1r. Qed.
+Proof. by rewrite qualifE /rotation_pred OSn_On det_lblock det1 mul1r. Qed.
 
 Section orthogonal_rotation_properties.
 
@@ -509,14 +511,20 @@ Proof. by rewrite -orthogonalV orthogonalE trmxK. Qed.
 Lemma orthogonal_tr_mul M : (M \is 'O[T]_n) -> M^T *m M = 1.
 Proof. by rewrite orthogonalEC => /eqP. Qed.
 
-Lemma orthogonal_divr_closed : divr_closed 'O[T]_n.
+Lemma orthogonal_divr_closed : divr_closed (orthogonal n T).
 Proof.
 split => [| P Q HP HQ]; first exact: orthogonal1.
 rewrite orthogonalE orthogonal_inv // trmx_mul trmxK -mulrA.
 by rewrite -orthogonal_inv // mulKr // orthogonal_unit.
 Qed.
 
-HB.instance Definition _ := GRing.isDivClosed.Build _ _ orthogonal_divr_closed.
+HB.instance Definition _ := GRing.isDivClosed.Build _ (@orthogonal_pred n T) orthogonal_divr_closed.
+
+Lemma orthogonal_mulr_2closed : GRing.mulr_2closed 'O[T]_n.
+Proof.
+by move=> /= M N MO NO; rewrite rpredM.
+Qed.
+(* TODO: useless? *)
 
 (*
 Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
@@ -549,7 +557,18 @@ rewrite rotationE rpred_div ?rotation_sub //=.
 by rewrite det_mulmx det_inv !rotation_det // divr1.
 Qed.
 
-HB.instance Definition _ := GRing.isDivClosed.Build _ _ rotation_divr_closed.
+HB.instance Definition _ := GRing.isDivClosed.Build _ (@rotation_pred n T) rotation_divr_closed.
+
+Lemma rotation_mulr_2closed : GRing.mulr_2closed 'SO[T]_n.
+Proof.
+move=> M N MSO NSO.
+rewrite rotationE rpredM//=; last 2 first.
+  exact: rotation_sub.
+  exact: rotation_sub.
+by rewrite detM rotation_det// rotation_det// mulr1.
+Qed.
+
+HB.instance Definition _ := GRing.isMul2Closed.Build _ 'SO[T]_n rotation_mulr_2closed.
 
 (*Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
 Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.*)
