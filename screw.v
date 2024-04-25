@@ -1,11 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp.analysis Require Import forms.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
-
 
 (******************************************************************************)
 (*                             Screw Motions                                  *)
@@ -152,13 +152,12 @@ Qed.
 
 End taylor_exponential.
 
-Module sqLieAlgebra.
 Section sqliealgebra.
 Variables (R : comRingType) (n : nat).
 
 Definition sq (t1 t2 : 'M[R]_n.+1) := t1 * t2 - t2 * t1.
 
-Lemma sq_is_linear w : GRing.linear (sq w : 'M[R]_n.+1 -> 'M[R]_n.+1).
+Lemma sq_is_linear w : linear (sq w : 'M[R]_n.+1 -> 'M[R]_n.+1).
 Proof.
 move=> k v u; rewrite /sq.
 rewrite mulrDr -addrA addrCA [in RHS]addrCA; congr (_ + _).
@@ -166,12 +165,14 @@ rewrite scalerDr scalerAr -addrA; congr (_ + _).
 rewrite mulrDl opprD; congr (_ - _).
 by rewrite scalerN scalerAl.
 Qed.
-Canonical sq_linear x := Linear (sq_is_linear x).
+
+HB.instance Definition _ x := GRing.isLinear.Build _ _ _ _ _ (sq_is_linear x).
 
 Definition sq_rev t1 t2 := sq t2 t1.
-Canonical rev_seq := @RevOp _ _ _ sq_rev sq (fun _ _ => erefl).
 
-Lemma sq_rev_is_linear w : GRing.linear (sq_rev w : 'M[R]_n.+1 -> 'M[R]_n.+1).
+(*Canonical rev_seq := @RevOp _ _ _ sq_rev sq (fun _ _ => erefl).*)
+
+Lemma sq_rev_is_linear w : linear (sq_rev w : 'M[R]_n.+1 -> 'M[R]_n.+1).
 Proof.
 move=> k u v; rewrite /sq_rev /sq /=.
 rewrite mulrDl scalerBr scalerAl -2!addrA; congr (_ + _).
@@ -180,9 +181,32 @@ rewrite -opprD; congr (- _).
 rewrite mulrDr; congr (_ + _).
 by rewrite scalerAr.
 Qed.
-Canonical sq_rev_linear v := Linear (sq_rev_is_linear v).
 
-Canonical sq_bilinear := [bilinear of sq].
+HB.instance Definition _ x := GRing.isLinear.Build _ _ _ _ _ (sq_rev_is_linear x).
+
+Lemma sq_is_bilinear : bilinear_for
+  (GRing.Scale.Law.clone _ _ *:%R _) (GRing.Scale.Law.clone _ _ *:%R _)
+    (sq : _ -> _ -> _).
+Proof.
+split => [u'|u] a x y /=.
+- rewrite /sq.
+  rewrite !scalerBr mulrDl mulrDr opprD.
+  rewrite scalerAl -!addrA; congr (_ + _).
+  rewrite [RHS]addrCA; congr (_ + _).
+  by rewrite scalerAr.
+- rewrite /sq.
+  rewrite !scalerBr mulrDl mulrDr opprD.
+  rewrite scalerAl -!addrA.
+  rewrite -scalerAr -scalerAl; congr (_ + _).
+  rewrite [RHS]addrCA; congr (_ + _).
+  by rewrite scalerAl.
+Qed.
+
+HB.instance Definition _ :=
+  bilinear_isBilinear.Build R
+    [the lmodType R of 'M[R]_n.+1] [the lmodType R of 'M[R]_n.+1]
+    _ _ _ sq sq_is_bilinear.
+
 
 Lemma sqxx x : sq x x = 0.
 Proof. apply/eqP; by rewrite subr_eq0. Qed.
@@ -197,13 +221,11 @@ rewrite (mulrBr y) !addrA (addrC _ (- (y * (x * z)))) addrC !addrA mulrA subrr.
 by rewrite add0r mulrBl opprB mulrA subrK mulrBr addrA mulrA subrK mulrA subrr.
 Qed.
 
-Definition sq_mixin := LieAlgebra.Mixin sqxx sq_jacobi.
-Definition sq_type := LieAlgebra.Pack (Phant _) (LieAlgebra.Class sq_mixin).
+HB.instance Definition _ :=
+  @isLieAlgebra.Build R 'M[R]_n.+1 (sq : {bilinear 'M[R]_n.+1 -> 'M[R]_n.+1 -> 'M[R]_n.+1})
+    sqxx sq_jacobi.
+
 End sqliealgebra.
-Module Exports.
-Canonical sq_type.
-End Exports.
-End sqLieAlgebra.
 
 Module Twist.
 Section twist_coordinates.
@@ -308,7 +330,8 @@ Qed.
 
 Lemma linear_lin_of_twist : linear lin_of_twist.
 Proof. move=> k u v; by rewrite lin_of_twistD lin_of_twistZ. Qed.
-Canonical linear_lin_of_twist' := Linear linear_lin_of_twist.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_lin_of_twist.
 
 Let ang_of_twistD E1 E2 :
   ang_of_twist (E1 + E2) = ang_of_twist E1 + ang_of_twist E2 :> 'rV[T]__.
@@ -326,7 +349,8 @@ Qed.
 
 Lemma linear_ang_of_twist : linear ang_of_twist.
 Proof. move=> k u v; by rewrite ang_of_twistD ang_of_twistZ. Qed.
-Canonical linear_ang_of_twist' := Linear linear_ang_of_twist.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_ang_of_twist.
 
 End se3_qualifier.
 
@@ -370,7 +394,8 @@ rewrite /wedge (scale_block_mx k \S(\w(x))) !scaler0.
 rewrite (add_block_mx _ _ _ _ \S(\w(y))) !addr0.
 by rewrite -spinZ -spinD -ang_tcoorZ ang_tcoorD -lin_tcoorZ lin_tcoorD.
 Qed.
-Canonical linear_wedge' := Linear linear_wedge.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_wedge.
 
 (*
 TODO?
@@ -405,11 +430,12 @@ Qed.
 Lemma linear_vee : linear vee.
 Proof.
 move=> k x y.
-rewrite {1}/vee 2!linearD 2!linearZ; apply injective_wedge.
+rewrite {1}/vee 2!linearD 2!linearZ; apply: injective_wedge.
 rewrite /vee linear_wedge tcoorZ -[X in _ = X + _]scale1r -linear_wedge.
 by rewrite scale1r -twistD.
 Qed.
-Canonical linear_vee' := Linear linear_vee.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_vee.
 
 Lemma veeK E : E \is 'se3[T] -> wedge (vee E) = E.
 Proof.
@@ -424,8 +450,6 @@ Proof.
 rewrite /vee /wedge /lin_of_twist /ang_of_twist block_mxKdl block_mxKul spinK.
 by rewrite twist_mkE.
 Qed.
-
-Import sqLieAlgebra.Exports.
 
 Lemma lie_wedgeE t1 t2 :
   let v1 := \v( t1 ) in let v2 := \v( t2 ) in

@@ -170,8 +170,8 @@ Qed.
 
 Lemma derive1mx_SE : (forall t, M t \in 'SE3[R]) ->
   forall t, derive1mx M t = block_mx
-    (derive1mx (@rot_of_hom [rcfType of R^o] \o M) t) 0
-    (derive1mx (@trans_of_hom [rcfType of R^o] \o M) t) 0.
+    (derive1mx (@rot_of_hom R^o \o M) t) 0
+    (derive1mx (@trans_of_hom R^o \o M) t) 0.
 Proof.
 move=> MSE t.
 rewrite block_mxEh.
@@ -313,7 +313,7 @@ rewrite (_ : (fun x => _) =
 rewrite (derive1mx_dotmul (derivable_mx_row HM) (derivable_mx_col HN)).
 by rewrite [in RHS]mxE; congr (_  + _); rewrite [in RHS]mxE dotmulE;
    apply/eq_bigr => /= k _; rewrite !mxE; apply: f_equal2;
-   try by congr (@derive1 _ [normedModType R of R^o] _ t);
+   try by congr (@derive1 _ R^o _ t);
           rewrite funeqE => z; rewrite !mxE.
 Qed.
 
@@ -338,14 +338,13 @@ Qed.
 End product_rules.
 
 Section cross_product_matrix.
-Import rv3LieAlgebra.Exports.
 
 Lemma differential_cross_product (R : realFieldType) (v : 'rV[R^o]_3) y :
   'd (crossmul v) y = mx_lin1 \S( v ) :> (_ -> _).
 Proof.
 rewrite (_ : crossmul v = (fun x => x *m \S( v ))); last first.
   by rewrite funeqE => ?; rewrite -spinE.
-rewrite (_ : mulmx^~ \S(v) = mulmxr_linear 1 \S(v)); last by rewrite funeqE.
+rewrite (_ : mulmx^~ \S(v) = @mulmxr _ 1 _ _ \S(v)); last by rewrite funeqE.
 rewrite diff_lin //= => x.
 suff : differentiable (mulmxr \S(v)) (x : 'rV[R^o]_3).
   by move/differentiable_continuous.
@@ -363,7 +362,7 @@ Proof.
 transitivity ('d (crossmul (- v)) y); last first.
   by rewrite differential_cross_product spinN mx_lin1N.
 congr diff.
-by rewrite funeqE => /= u; rewrite lieC linearNl.
+by rewrite funeqE => /= u; rewrite (@lieC _ 'rV[R]_3) linearNl.
 Qed.
 
 End cross_product_matrix.

@@ -52,7 +52,6 @@ Coercion plucker_array_mx (T : ringType) (p : Plucker.array T) :=
 Section plucker_of_line.
 Variable T : rcfType.
 Implicit Types l : Line.t T.
-Import rv3LieAlgebra.Exports.
 
 Definition normalized_plucker_direction l :=
   let p1 := \pt( l ) in let p2 := \pt2( l ) in
@@ -75,8 +74,8 @@ Lemma normalized_plucker_positionP l :
   normalized_plucker_position l *d normalized_plucker_direction l == 0.
 Proof.
 rewrite /normalized_plucker_position /normalized_plucker_direction -Line.vectorE.
-rewrite (linearZr_LR (crossmul_bilinear _)) /=.
-by rewrite dotmulvZ dotmulZv -dot_crossmulC liexx dotmulv0 2!mulr0.
+rewrite (linearZr_LR crossmul) /=.
+by rewrite dotmulvZ dotmulZv -dot_crossmulC (@liexx _ 'rV[T]_3) dotmulv0 2!mulr0.
 Qed.
 
 Definition normalized_plucker l : 'rV[T]_6 :=
@@ -94,7 +93,7 @@ Lemma normalized_pluckerP l :
 Proof.
 move=> p1 p2 l0.
 rewrite /normalized_plucker /normalized_plucker_direction /normalized_plucker_position.
-rewrite -/p1 -/p2 (linearZr_LR (crossmul_bilinear _)) -scale_row_mx scalerA.
+rewrite -/p1 -/p2 (linearZr_LR crossmul) -scale_row_mx scalerA.
 by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 -Line.vectorE.
 Qed.
 
@@ -104,7 +103,7 @@ Lemma plucker_of_lineE l (l0 : \vec( l ) != 0) :
 Proof.
 rewrite /plucker_of_line /plucker_array_mx /=.
 rewrite /normalized_plucker_direction /normalized_plucker_position.
-rewrite (linearZr_LR (crossmul_bilinear _)) -scale_row_mx.
+rewrite (linearZr_LR crossmul) -scale_row_mx.
 by rewrite scalerA divrr ?scale1r // unitfE norm_eq0 -Line.vectorE.
 Qed.
 
@@ -120,14 +119,14 @@ Qed.
 
 Lemma plucker_eqn_self l : plucker_eqn \pt( l ) l = 0.
 Proof.
-rewrite /plucker_eqn -spinN -spinD spinE lieC addrC.
+rewrite /plucker_eqn -spinN -spinD spinE (@lieC _ 'rV[T]_3) addrC.
 by rewrite -linearBl /= subrr linear0l.
 Qed.
 
 Lemma in_plucker p l : p \in (l : pred _) -> plucker_eqn p l = 0.
 Proof.
 rewrite inE => /orP[/eqP ->|/andP[l0 H]]; first by rewrite plucker_eqn_self.
-rewrite /plucker_eqn -spinN -spinD spinE lieC addrC -linearBl.
+rewrite /plucker_eqn -spinN -spinD spinE (@lieC _ 'rV[T]_3) addrC -linearBl.
 apply/eqP.
 rewrite -/(colinear _ _) -colinearNv opprB colinear_sym.
 apply: (colinear_trans l0 _ H).
@@ -265,7 +264,8 @@ rewrite [_ 0 1]mxE [_ 1 1]mxE [_ 0 2%:R]mxE [_ 1 2%:R]mxE.
 move/eqP. rewrite -addrA eq_sym addrC -subr_eq -cos2sin2. move/eqP.
 move/(congr1 (fun x => (sin alpha)^+2 * x)).
 rewrite mulrDr -(@exprMn _ _ (sin alpha) (_ 1 1)) (mulrC _ (_ 1 1)) H11_H21.
-rewrite sqrrN exprMn (mulrC _ (_ ^+ 2)) -mulrDl cos2Dsin2 mul1r => /esym sqr_H21.
+rewrite sqrrN exprMn [in X in _ = X -> _](mulrC (sin alpha ^+ 2)).
+rewrite -mulrDr cos2Dsin2 mulr1 => /esym sqr_H21.
 
 move: (norm_col_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
 rewrite sqr_norm sum3E 2![_ 0 0]mxE.

@@ -812,7 +812,7 @@ Lemma expi0 : expi (0) = 1 :> T[i].
 Proof. by rewrite /expi cos0 sin0. Qed.
 
 Definition eskew_eigenvalues a : seq T[i] := [:: 1; expi a; expi (- a)].
-
+From mathcomp Require Import ssrAC.
 Lemma eigenvalue_ekew a w : norm w = 1 ->
   eigenvalue (map_mx (fun x => x%:C%C) `e^(a, w)) =1
     [pred k | k \in eskew_eigenvalues a].
@@ -823,10 +823,15 @@ rewrite /= !inE.
 rewrite  char_poly3 /= trace_eskew // det_eskew //.
 rewrite [`e(_,_) ^+ _]expr2 eskewM // trace_eskew //.
 rewrite (_ : _ - _ = (1 + cos a *+ 2) *+ 2); last first.
-  rewrite !mulr_natl cosD -!expr2 sin2cos2 [1 + _]addrC sqrrD1.
-(*  rewrite exprMn_n -mulrnA opprB addrA -mulr2n mulrnBl 2!opprD opprK -mulrnA.
-  rewrite addrA addrK addrAC addrA subrr add0r.
-  by rewrite [RHS]mulrnDl addrC mulrnA.*) admit.
+  rewrite opprD addrA cosD -2!expr2 sin2cos2 opprB addrA -mulr2n mulrDr mulrN1.
+  rewrite opprB addrA -(addrA _ (-1)) (_ : -1 + 2 = 1)//; last first.
+    by rewrite addrC; apply/eqP; rewrite subr_eq.
+  rewrite -addrA mulr_natl; apply/eqP.
+  rewrite eq_sym [eqbRHS]addrC -subr_eq.
+  rewrite expr2 mulr2n -[in X in X - _ == _](mulr1 (1 + cos a *+ 2)).
+  rewrite -mulrDr -mulrBr opprD [in X in _ * X == _]addrA addrK.
+  rewrite mulrC -subr_sqr expr1n; apply/eqP; congr (1 - _).
+  by rewrite mulr_natl -mulrnA exprMn_n.
 rewrite -[(_ + _) *+ _]mulr_natl mulrA divfK ?(eqr_nat _ 2 0) // mul1r.
 rewrite linearB /= map_polyC /= !(linearB, linearD, linearZ) /=.
 rewrite !map_polyXn map_polyX.
@@ -840,16 +845,16 @@ rewrite -expr2 -exprSr !addrA !scalerN.
 rewrite ['X * _ * 'X]mulrAC -expr2 !['X * _]mulrC !['X^2 * _]mulrC.
 rewrite [_* 'X * _]mulrAC -rmorphM /= -expiD subrr expi0 mul1r.
 rewrite -!addrA; congr (_ + _); rewrite !(addrA, opprB, opprD).
-(*rewrite -[_ - _ * 'X^2]addrA -opprD -mulrDl -rmorphD /= expiDexpiN.
-rewrite -[1 + _ + _]addrA ![_%:C%C]rmorphD /= scalerDl !(opprB, opprD).
-rewrite -!addrA scale1r; congr (_ + _); rewrite !addrA opprK.
-rewrite [RHS]addrC !addrA -mulrDl.
-rewrite -[_%:P + _]rmorphD /= [expi (- _) + _]addrC expiDexpiN.
-rewrite -![RHS]addrA [RHS]addrC -!addrA; congr (- _ + _).
-  by rewrite -rmorphD /= mul_polyC.
-rewrite scalerDl scale1r -!addrA; congr (_ + _).
-by rewrite addrC mul_polyC.
-Qed.*) Admitted.
+rewrite [in RHS](ACl (1 * 3 * 7 * 2 * 4 * 5 * 6))/=.
+rewrite -(addrA (- 'X^2)) -opprD -mulrDl -rmorphD/= expiDexpiN.
+rewrite -addrA -3![in RHS]addrA; congr (_ + _).
+  by rewrite !rmorphD/= !scalerDl/= scale1r !opprD mulrDl opprD/= addrA mul_polyC.
+rewrite !addrA [in RHS](ACl (1 * 2 * 4 * 3))/=.
+congr (_ - _).
+rewrite [RHS]addrAC -mulrDl -rmorphD/= expiDexpiN.
+rewrite -(addrA 1) rmorphD/= scalerDl scale1r addrC; congr (_ + _).
+by rewrite mul_polyC.
+Qed.
 
 Lemma Rz_eskew a : Rz a = `e^(a, 'e_2%:R).
 Proof.
@@ -1820,7 +1825,7 @@ have Hw2 : sin w2 = R 2%:R 0.
 rewrite -(row_mx_colE R).
 transitivity (row_mx (col 0 R) (row_mx a2 a3) *m Rx w1).
   rewrite Rx_RO.
-(*  rewrite (mul_row_block _ _ 1) mulmx0 add0r mulmx1 mulmx0 addr0.
+  rewrite (mul_row_block _ _ 1) mulmx0 addr0 mulmx1 mulmx0 add0r.
   congr (row_mx (col 0 R)).
   rewrite (_ : col 1 R = (row 1 R^T)^T); last by rewrite ?tr_row ?trmxK.
   rewrite (_ : col 2%:R R = (row 2%:R R^T)^T); last by rewrite ?tr_row ?trmxK.
@@ -1869,9 +1874,9 @@ transitivity (row_mx (col 0 R) (row_mx a2 a3) *m Rx w1).
   rewrite -rotationV => /rotation_sub/orthogonal3P/and6P[_ _ _ _ _ /eqP].
   by rewrite !tr_col.
   move: Hw1; by rewrite 2!tr_col.
-  move: Kw1; by rewrite 2!tr_col.*) admit.
+  move: Kw1; by rewrite 2!tr_col.
 by rewrite -Ha1 row_mx_colE.
-(*Qed.*) Admitted.
+Qed.
 
 Lemma Rz_rotation_exists (u : 'rV[T]_3) : norm u = 1 ->
   u != 'e_2%:R -> u != - 'e_2%:R ->
@@ -1939,7 +1944,15 @@ Definition Rzyz (a b c : T) :=
 Lemma RzyzE a b c : Rz c * Ry b * Rz a = Rzyz a b c.
 Proof.
 apply/matrix3P/and9P; split;
-  rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //.
+  rewrite /Rz /Ry /Rz /Rzyz;
+  move: (cos a) => ca;
+  move: (sin a) => sa;
+  move: (cos b) => cb;
+  move: (sin b) => sb;
+  move: (cos c) => cc;
+  move: (sin c) => sc;
+  rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //=.
+
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
@@ -1947,6 +1960,7 @@ apply/matrix3P/and9P; split;
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
+by apply/eqP; nsatz.
 by apply/eqP; nsatz.
 Qed.
 

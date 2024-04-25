@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
@@ -55,10 +56,9 @@ Let oct_of_pair (x : quat R * quat R) :=
 Lemma oct_of_pairK : cancel pair_of_oct oct_of_pair.
 Proof. by case. Qed.
 
-Definition oct_eqMixin := CanEqMixin oct_of_pairK.
-Canonical Structure oct_eqType := EqType oct oct_eqMixin.
-Definition oct_choiceMixin := CanChoiceMixin oct_of_pairK.
-Canonical Structure oct_choiceType := ChoiceType oct oct_choiceMixin.
+HB.instance Definition _ := Equality.copy oct (can_type oct_of_pairK).
+
+HB.instance Definition _ := Choice.copy oct (can_type oct_of_pairK).
 
 Lemma eq_oct (a b : oct) : (a == b) = (a.1 == b.1) && (a.2 == b.2).
 Proof.
@@ -82,8 +82,7 @@ Definition oppo (a : oct) := nosimpl (mkOct (- a.1) (- a.2)).
 Lemma addNo : left_inverse 0%:ol oppo addo.
 Proof. move=> *; congr mkOct; by rewrite addNr. Qed.
 
-Definition oct_ZmodMixin := ZmodMixin addoA addoC add0o addNo.
-Canonical oct_ZmodType := ZmodType oct oct_ZmodMixin.
+HB.instance Definition _ := @GRing.isZmodule.Build oct _ _ _ addoA addoC add0o addNo.
 
 Lemma addoE (a b : oct) : a + b = addo a b. Proof. done. Qed.
 
@@ -142,7 +141,10 @@ Qed.
 Lemma mulor1 : right_id 1%:ol mulo.
 Proof.
 case=> a a'; rewrite /mulo /=; congr mkOct.
-  by rewrite linear0 mul0r subr0 mulr1.
+  rewrite (_ : (_^*q)%quat = conjq 0)//.
+  have := linear0 (@conjq R).
+  move=> ->.
+  by rewrite mul0r subr0 mulr1.
 by rewrite quat_realC mulr1 mul0r add0r.
 Qed.
 
@@ -163,8 +165,14 @@ Qed.
 Lemma mulor0 : right_zero 0%:ol mulo.
 Proof.
 case=> a a'; rewrite /mulo /=; congr mkOct.
-  by rewrite linear0 mul0r mulr0 subrr.
-by rewrite linear0 mul0r mulr0 addr0.
+  rewrite (_ : (_^*q)%quat = conjq 0)//.
+  have := linear0 (@conjq R).
+  move=> ->.
+  by rewrite mul0r mulr0 subrr.
+rewrite (_ : (_^*q)%quat = conjq 0)//.
+have := linear0 (@conjq R).
+move=> ->.
+by rewrite mul0r mulr0 addr0.
 Qed.
 
 Lemma muloDl : left_distributive mulo +%R.
