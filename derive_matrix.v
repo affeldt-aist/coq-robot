@@ -362,7 +362,7 @@ Proof.
 transitivity ('d (crossmul (- v)) y); last first.
   by rewrite differential_cross_product spinN mx_lin1N.
 congr diff.
-by rewrite funeqE => /= u; rewrite (@lieC _ 'rV[R]_3) linearNl.
+by rewrite funeqE => /= u; rewrite (@lieC _ (vec3 R)) linearNl.
 Qed.
 
 End cross_product_matrix.

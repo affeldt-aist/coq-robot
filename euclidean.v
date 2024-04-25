@@ -1145,10 +1145,14 @@ Canonical crossmul_bilinear := [bilinear of (@crossmul R)].*)
 
 End crossmullie.
 
+Definition vec3 (R : comRingType) := 'rV[R]_3.
+
+HB.instance Definition _ R := GRing.Lmodule.on (vec3 R).
+
 Section rv3liealgebra.
 Variable R : comRingType.
 
-Let liexx (u : 'rV[R]_3) : u *v u = 0.
+Let liexx (u : vec3 R) : u *v u = 0.
 Proof.
 apply/rowP=> i.
 rewrite /crossmul; unlock.
@@ -1165,7 +1169,7 @@ by rewrite addrC dotmulC subrr.
 Qed.
 
 HB.instance Definition _ :=
-  @isLieAlgebra.Build R 'rV[R]_3 (@crossmul R : {bilinear 'rV_3 -> _ -> _}) liexx jacobi.
+  @isLieAlgebra.Build R (vec3 R) (@crossmul R : {bilinear (vec3 R) -> (vec3 R) -> (vec3 R)}) liexx jacobi.
 
 End rv3liealgebra.
 
@@ -1177,7 +1181,7 @@ Lemma mulmxl_crossmulr M u v : M *m (u *v v) = u *v (M *m v).
 Proof. by rewrite -(mul_rV_lin1 [linear of crossmul u]) mulmxA mul_rV_lin1. Qed.
 
 Lemma mulmxl_crossmull M u v : M *m (u *v v) = ((M *m u) *v v).
-Proof. by rewrite (@lieC _ 'rV[R]_3) mulmxN mulmxl_crossmulr -lieC. Qed.
+Proof. by rewrite (@lieC _ (vec3 R)) mulmxN mulmxl_crossmulr -(@lieC _ (vec3 R)). Qed.
 
 Lemma crossmul_triple u v w : u *d (v *v w) = \det (col_mx3 u v w).
 Proof.
@@ -1226,7 +1230,7 @@ Lemma dot_crossmulC u v x : u *d (v *v x) = (u *v v) *d x.
 Proof. by rewrite dotmul_crossmul_shift dotmulC. Qed.
 
 Lemma dot_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
-Proof. by do 2 rewrite dot_crossmulC; rewrite linearNl (@lieC _ 'rV[R]_3)/=. Qed.
+Proof. by do 2 rewrite dot_crossmulC; rewrite linearNl (@lieC _ (vec3 R))/=. Qed.
 
 Lemma det_crossmul_dotmul M u v w :
   (\det M *: (u *v v)) *d w = (((u *m M) *v (v *m M)) *m M^T) *d w.
@@ -1242,7 +1246,7 @@ Proof. by apply/rowP=> i; rewrite -!dotmul_delta_mx det_crossmul_dotmul. Qed.
 
 Lemma dotmul_crossmul2 u v w : (u *v v) *v (u *v w) = (u *d (v *v w)) *: u.
 Proof.
-rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC (@liexx _ 'rV[R]_3).
+rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC (@liexx _ (vec3 R)).
 by rewrite dotmul0v scale0r subr0.
 Qed.
 
@@ -1270,7 +1274,7 @@ Lemma vece2 (i j : 'I_3) (k := - (i + j) : 'I_3) :
   'e_i *v 'e_j = (-1)^(perm3 i j)%N *+ (i != j) *: 'e_k :> 'rV[T]__.
 Proof.
 have [->|neq_ij] := altP (i =P j); rewrite (mulr0n,mulr1n).
-  by rewrite scale0r (@liexx _ 'rV[T]_3).
+  by rewrite scale0r (@liexx _ (vec3 T)).
 apply/rowP => k'; case: (I3P k' neq_ij); rewrite /crossmul; unlock; rewrite !mxE.
 - rewrite (@determinant_alternate _ _ _ 0 1) //=.
     by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
@@ -1310,7 +1314,7 @@ Qed.
 Lemma common_normal_crossmul u v : (u *v v) _|_ u + v.
 Proof.
 rewrite normalmD ![(_ *v _) _|_ _]normal_sym crossmul_normal.
-by rewrite (@lieC _ 'rV[T]_3) normalmN crossmul_normal.
+by rewrite (@lieC _ (vec3 T)) normalmN crossmul_normal.
 Qed.
 
 End field_crossmul.
@@ -1579,7 +1583,7 @@ apply (iffP idP).
   rewrite rotationE; apply/andP; split.
     apply/orthogonal3P.
     rewrite ni nj /= zxy0 norm_crossmul_normal // xy0 !eqxx /= dot_crossmulC.
-    by rewrite liexx dotmul0v dot_crossmulCA liexx dotmulv0 !eqxx.
+    by rewrite (@liexx _ (vec3 T)) dotmul0v dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0 !eqxx.
   rewrite -(col_mx3_row M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
   by rewrite scale1r (dotmulC (row 1 M)) xy0 scale0r subr0 dotmulvv ni expr1n.
 - move=> MSO; move: (MSO).

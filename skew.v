@@ -275,7 +275,7 @@ Local Notation "'\S(' u ')'" := (spin u).
 
 Lemma spinE u v : u *m \S( v ) = v *v u.
 Proof.
-rewrite (@lieC _ 'rV[R]_3) -linearNr [RHS]lieC/= -linearNr [u]row_sum_delta/=.
+rewrite (@lieC _ (vec3 R)) -linearNr [RHS]lieC/= -linearNr [u]row_sum_delta/=.
 rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
 rewrite /spin; unlock.
 by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK linearNl opprK.
@@ -301,7 +301,7 @@ Lemma spinZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
 apply/matrixP => i j.
 rewrite /spin; unlock.
-by rewrite mxE (@lieC _ 'rV[R]_3) /= linearZ /= -scalerN (@lieC _ 'rV[R]_3) opprK mxE 2![in RHS]mxE.
+by rewrite mxE (@lieC _ (vec3 R)) /= linearZ /= -scalerN (@lieC _ (vec3 R)) opprK mxE 2![in RHS]mxE.
 Qed.
 
 Lemma spinN u : \S( - u ) = - \S( u ).
@@ -357,7 +357,7 @@ Proof. by move/eqP: (spin_is_so u) => ->; rewrite 2!mxE spin12. Qed.
 Lemma spin_mul_tr u : \S( u ) *m u^T = 0.
 Proof.
 rewrite -(trmxK (spin u)) -trmx_mul tr_spin.
-by rewrite mulmxN spinE (@liexx _ 'rV[R]_3) oppr0 trmx0.
+by rewrite mulmxN spinE (@liexx _ (vec3 R)) oppr0 trmx0.
 Qed.
 
 End spin_matrix.
@@ -399,7 +399,7 @@ Lemma det_spin (R : idomainType) (u : 'rV[R]_3) : \det \S( u ) = 0.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite spin0 det0.
 apply/eqP/det0P; exists u => //.
-by rewrite spinE (@liexx _ 'rV[R]_3).
+by rewrite spinE (@liexx _ (vec3 R)).
 Qed.
 
 Section spin_matrix_axial_vector_rfType.
@@ -421,9 +421,9 @@ Lemma spin_crossmul u v : \S(v *v u) = \S(u) *m \S(v) - \S(v) *m \S(u).
 Proof.
 apply/eqP/mulmxP => w.
 rewrite [in LHS]spinE mulmxBr !mulmxA ![in RHS]spinE.
-rewrite (lieC v w) linearNr opprK.
-move/eqP: (jacobi v u w); rewrite eq_sym -subr_eq eq_sym => /eqP -> /=.
-by rewrite add0r (lieC w) opprK.
+rewrite (@lieC _ (vec3 R) v w) linearNr opprK.
+move/eqP: (@jacobi _ (vec3 R) v u w); rewrite eq_sym -subr_eq eq_sym => /eqP -> /=.
+by rewrite add0r (@lieC _ (vec3 R) w) opprK.
 Qed.
 
 Lemma spinii u i : \S( u ) i i = 0.
@@ -510,7 +510,7 @@ Qed.
 (* [murray] second half of exercise 9(a), p. 75 *)
 Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
 Proof.
-apply/andP; split; last by apply/sub_kermxP; rewrite spinE (@liexx _ 'rV[R]_3).
+apply/andP; split; last by apply/sub_kermxP; rewrite spinE (@liexx _ (vec3 R)).
 apply/rV_subP => v /sub_kermxP.
 rewrite spinE => /eqP/vec_angle.colinearP[|[_[k Hk]]].
   move/eqP => ->.
@@ -649,7 +649,7 @@ have skewrrT : \S( - axial r ) = Q.
   rewrite axialE // -scaleN1r spinZ scaleN1r unspinK ?opprB //.
   by rewrite antiE linearD /= linearN /= trmxK opprB.
 move/eqP: nrrT.
-by rewrite -skewrrT spinE (lieC (- (axial r))) /= linearNr opprK.
+by rewrite -skewrrT spinE (@lieC _ (vec3 R) (- (axial r))) /= linearNr opprK.
 Qed.
 
 Lemma axial_vec_eigenspace M : M \is 'SO[R]_3 ->

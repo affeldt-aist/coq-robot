@@ -740,8 +740,6 @@ Hypothesis o4E : forall t, \o{Fmax t} = \o{Fim1 3%:R t} + d4 *: 'e_2.
 Lemma scale_realType (K : realType) (k1 : K) (k2 : K^o) : k1 *: k2 = k1 * k2.
 Proof. by []. Qed.
 
-Import rv3LieAlgebra.Exports.
-
 Lemma scara_geometric_jacobian t :
   derivable (theta1 : R^o -> R^o) t 1 ->
   derivable (theta2 : R^o -> R^o) t 1 ->
@@ -772,7 +770,7 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
   rewrite {1}o4E.
   rewrite linearDr /=.
   rewrite (linearZr_LR _ _ _ 'e_2)
-   /= {2}Hzvec (linearZl_LR _ _ _ 'e_2) /= liexx 2!{1}scaler0 addr0.
+   /= {2}Hzvec (linearZl_LR _ _ _ 'e_2) /= (@liexx _ (vec3 R)) 2!{1}scaler0 addr0.
   rewrite (_ : \o{Fmax t} - \o{Fim1 1 t} =
     (a2 * cos (theta1 t + theta2 t) *: 'e_0 +
     (a1 * sin (theta1 t) + a2 * sin (theta1 t + theta2 t) - a1 * sin (theta1 t)) *: 'e_1 +
@@ -784,16 +782,16 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     rewrite addrC -[in RHS]addrA; congr (_ + _).
     by rewrite -addrA -scalerDl.
   rewrite linearDr /=.
-  rewrite (linearZr_LR _ _ _ 'e_2) /= (linearZl_LR (crossmul_bilinear _) 'e_2)
-          {2}(Hzvec t 1) /= liexx 2!{1}scaler0 addr0.
+  rewrite (linearZr_LR _ _ _ 'e_2) /= (linearZl_LR crossmul 'e_2)
+          {2}(Hzvec t 1) /= (@liexx _ (vec3 R)) 2!{1}scaler0 addr0.
   rewrite (addrC (a1 * sin _)) addrK.
   rewrite (_ : \o{Fmax t} - \o{Fim1 3%:R t} = d4 *: 'e_2%:R); last first.
     by rewrite o4E -addrA addrC subrK.
-  rewrite (linearZr_LR _ _ _ 'e_2) /= (linearZl_LR (crossmul_bilinear _) 'e_2)
-          {1}(Hzvec t 3%:R) /= liexx 2!scaler0 addr0.
+  rewrite (linearZr_LR _ _ _ 'e_2) /= (linearZl_LR crossmul 'e_2)
+          {1}(Hzvec t 3%:R) /= (@liexx _ (vec3 R)) 2!scaler0 addr0.
   rewrite o3E.
   rewrite linearDr /= (linearZr_LR _ _ _ 'e_2) (linearZl_LR _ 'e_2)
-          {2}(Hzvec t 0) /= liexx 2!scaler0 addr0.
+          {2}(Hzvec t 0) /= (@liexx _ (vec3 R)) 2!scaler0 addr0.
   rewrite {1}o2E {1}o1E.
   rewrite (_ : (fun _ => _) =
                 (a2 \*: (cos \o (theta2 + theta1) : R^o -> R^o)) +
@@ -806,8 +804,8 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
       exact: ex_derive.
       exact: H3.
     by rewrite deriveE // diff_cst add0r derive1E.
-  - rewrite !linearDr /= !(linearZr_LR (crossmul_bilinear _))
-            !(linearZl_LR (crossmul_bilinear _)) /= !Hzvec veckj vecki
+  - rewrite !linearDr /= !(linearZr_LR crossmul)
+            !(linearZl_LR crossmul) /= !Hzvec veckj vecki
             !{1}scalerN.
     rewrite -!addrA addrCA addrC -!addrA (addrCA (- _)) !addrA.
     rewrite -2!addrA [in RHS]addrC; congr (_ + _).

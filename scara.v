@@ -67,7 +67,7 @@ rewrite /A21.
 rewrite homM RzM mulmx_row3_col3 !scale0r !add0r e2row !row3Z row3D. Simp.r.
 rewrite homM RzM addrC (addrC _ theta2) addrA; congr hom.
 rewrite mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
-by rewrite -!mulrA -mulrBr -cosD -mulrDr (addrC (_ * sin theta1)) -sinD.
+by rewrite -!mulrA -mulrBr -cosD -mulrDr (addrC (_ * sin theta1)) -sinD/= add0r.
 Qed.
 
 End hom_scara.
@@ -165,7 +165,7 @@ rewrite (addrC _ (a1 * (1 - cos theta2))) mulrBr mulr1 mulrDl !addrA subrK.
 rewrite mulrDl addrAC subrr add0r.
 rewrite homM RzM mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
 rewrite addrC (addrC theta4) addrA; congr hom.
-rewrite /scara_trans; congr row3.
+rewrite /scara_trans/= !add0r; congr row3.
 - by rewrite mulrDl -addrA -!mulrA -mulrBr -cosD addrC.
 - by rewrite mulrDl -addrA -!mulrA -mulrDr (addrC (cos theta2 * _)) -sinD addrC.
 Qed.

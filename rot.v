@@ -880,8 +880,8 @@ Proof.
 rewrite /rodrigues.
 rewrite addrAC !mulmxDr mulmx1 -!scalemxAr mulmxA !spinE -!addrA; congr (_ + _).
 rewrite !addrA.
-rewrite [in X in _ = _ + X](@lieC _ 'rV[T]_3) scalerN.
-rewrite [in X in _ = _ - X](@lieC _ 'rV[T]_3) /=.
+rewrite [in X in _ = _ + X](@lieC _ (vec3 T)) scalerN.
+rewrite [in X in _ = _ - X](@lieC _ (vec3 T)) /=.
 rewrite double_crossmul dotmulvv.
 rewrite scalerN opprK.
 rewrite scalerBr [in RHS]addrA [in RHS]addrC -!addrA; congr (_ + (_ + _)).
@@ -907,7 +907,7 @@ pose f := Base.frame w.
 apply/isRotP; split => /=.
 - rewrite -rodriguesP // /rodrigues (norm_normalize w0) expr1n scale1r.
   rewrite dotmul_normalize_norm scalerA -mulrA divrr ?mulr1 ?unitfE ?norm_eq0 //.
-  by rewrite subrK linearZl_LR /= (@liexx _ 'rV[T]_3) 2!scaler0 addr0.
+  by rewrite subrK linearZl_LR /= (@liexx _ (vec3 T)) 2!scaler0 addr0.
 - rewrite -rodriguesP // /rodrigues dotmulC norm_normalize // expr1n scale1r.
   rewrite (_ : normalize w = Base.i w) (*NB: lemma?*); last by rewrite /Base.i (negbTE w0).
   rewrite -Base.jE -Base.kE.
@@ -966,11 +966,11 @@ Lemma normalcomp_double_crossmul p (e : 'rV[T]_3) : norm e = 1 ->
   normalcomp p e *v ((Base.frame e)|,2%:R *v (Base.frame e)|,1) = e *v p.
 Proof.
 move=> u1.
-rewrite 2!rowframeE (@lieC _ 'rV[T]_3 (row _ _)) /= SO_jcrossk; last first.
+rewrite 2!rowframeE (@lieC _ (vec3 T) (row _ _)) /= SO_jcrossk; last first.
   by rewrite -(col_mx3_row (NOFrame.M (Base.frame e))) -!rowframeE Base.is_SO.
 rewrite -rowframeE Base.frame0E ?norm1_neq0 //.
 rewrite normalizeI // {2}(axialnormalcomp p e) linearD /=.
-by rewrite crossmul_axialcomp add0r (@lieC _ 'rV[T]_3) /= linearNl opprK.
+by rewrite crossmul_axialcomp add0r (@lieC _ (vec3 T)) /= linearNl opprK.
 Qed.
 
 Lemma normalcomp_mulO' a Q u p : norm u = 1 -> isRot a u (mx_lin1 Q) ->
@@ -1603,8 +1603,8 @@ Lemma exists_rotation_angle (F : frame T) (u v : 'rV[T]_3) :
             v = - sin w *: (F|,1) + cos w *: (F|,2%:R)] }.
 Proof.
 move=> normu normv u_perp_v uva0.
-have u0 : u *d F|,0 = 0 by rewrite -uva0 dot_crossmulC (@liexx _ 'rV[T]_3) dotmul0v.
-have v0 : v *d F|,0 = 0 by rewrite -uva0 dot_crossmulCA (@liexx _ 'rV[T]_3) dotmulv0.
+have u0 : u *d F|,0 = 0 by rewrite -uva0 dot_crossmulC (@liexx _ (vec3 T)) dotmul0v.
+have v0 : v *d F|,0 = 0 by rewrite -uva0 dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0.
 case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
   suff [[? ?]|[? ?]] : {u = F|,1 /\ v = F|,2%:R} +
                        {u = - F|,1 /\ v = - F|,2%:R}.
@@ -1616,7 +1616,7 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
     by rewrite lexx (lt_trans _ (pi_gt0 _)) // oppr_cp0 pi_gt0.
   have v1 : v *d F|,1 = 0.
     move/eqP: (frame_icrossk F); rewrite -eqr_oppLR => /eqP <-.
-    rewrite dotmulvN -uva0 (@lieC _ 'rV[T]_3) /= dotmulvN opprK double_crossmul.
+    rewrite dotmulvN -uva0 (@lieC _ (vec3 T)) /= dotmulvN opprK double_crossmul.
     rewrite dotmulDr dotmulvN (dotmulC _ u) u2 scale0r dotmulv0 subr0.
     by rewrite dotmulvZ (dotmulC v) u_perp_v mulr0.
   rewrite (orthogonal_expansion F u) (orthogonal_expansion F v).
@@ -1640,13 +1640,13 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scaleN1r; by right.
 have pi2B : - pi < (pi : T) / 2%:R <= pi.
-  rewrite lter_pdivl_mulr ?ltr0n // ler_pdivr_mulr ?ltr0n //.
+  rewrite lter_pdivl_mulr ?ltr0n // ler_pdivrMr ?ltr0n //.
   rewrite -subr_gte0 mulNr opprK addr_gt0 ? pi_gt0 //.
     by rewrite -subr_gte0 mulr_natr mulr2n addrK pi_ge0.
   by rewrite mulr_natr mulr2n addr_gt0 // pi_gt0.
 have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
-  rewrite ltr_oppl opprK lter_pdivr_mulr ?ltr0n // ler_oppl.
-  rewrite ler_pdivl_mulr ?ltr0n // -subr_gte0 mulNr opprK.
+  rewrite ltr_oppl opprK lter_pdivr_mulr ?ltr0n // lerNl.
+  rewrite ler_pdivlMr ?ltr0n // -subr_gte0 mulNr opprK.
   rewrite mulr_natr mulr2n addr_ge0 ?pi_ge0 //.
     by rewrite -subr_gte0 addrK pi_gt0.
   by rewrite addr_ge0 ?pi_ge0.
@@ -1659,8 +1659,8 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scale1r,addr0).
-      rewrite linearDr /= linearZr_LR /= (@lieC _ 'rV[T]_3) /= (frame_jcrossk F).
-      rewrite linearZr_LR /= (@liexx _ 'rV[T]_3) scaler0 addr0 scalerN -scaleNr => /scaler_eqN1; apply.
+      rewrite linearDr /= linearZr_LR /= (@lieC _ (vec3 T)) /= (frame_jcrossk F).
+      rewrite linearZr_LR /= (@liexx _ (vec3 T)) scaler0 addr0 scalerN -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     have v2 : v *d F|,2%:R = 0.
       move: normv => /(congr1 (fun x => x ^+ 2)).
@@ -1674,8 +1674,8 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scaleN1r).
-      rewrite linearDr 2!linearNl 2!linearZr_LR /= (@liexx _ 'rV[T]_3) scaler0 subr0.
-      rewrite -scalerN (@lieC _ 'rV[T]_3) /= opprK (frame_jcrossk F) => /scaler_eq1; apply.
+      rewrite linearDr 2!linearNl 2!linearZr_LR /= (@liexx _ (vec3 T)) scaler0 subr0.
+      rewrite -scalerN (@lieC _ (vec3 T)) /= opprK (frame_jcrossk F) => /scaler_eq1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     have v2 : v *d F|,2%:R = 0.
       move: normv => /(congr1 (fun x => x ^+ 2)).
@@ -1686,9 +1686,9 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
     rewrite (orthogonal_expansion F u) (orthogonal_expansion F v).
     by rewrite u1 u0 u2 v1 v0 v2 !(scale0r,addr0,add0r,scale1r,scaleN1r).
 move: (orthogonal_expansion F u).
-rewrite -{1}uva0 dot_crossmulC (@liexx _ 'rV[T]_3) dotmul0v scale0r add0r => Hr2.
+rewrite -{1}uva0 dot_crossmulC (@liexx _ (vec3 T)) dotmul0v scale0r add0r => Hr2.
 move: (orthogonal_expansion F v).
-rewrite -{1}uva0 (@lieC _ 'rV[T]_3) dotmulvN dot_crossmulC (@liexx _ 'rV[T]_3) dotmul0v oppr0 scale0r add0r => Hr3.
+rewrite -{1}uva0 (@lieC _ (vec3 T)) dotmulvN dot_crossmulC (@liexx _ (vec3 T)) dotmul0v oppr0 scale0r add0r => Hr3.
 have f1D0 : F|,1 != 0 by apply: contra u1 => /eqP->; rewrite dotmulv0.
 have f2D0 : F|,2%:R != 0 by apply: contra u2 => /eqP->; rewrite dotmulv0.
 have [w [wB Hw1 Hw2]] :
@@ -1731,7 +1731,7 @@ have [w [wB Hw1 Hw2]] :
 have uRv : u *m `e^(pi / 2%:R, F|,0) = v.
   rewrite -rodriguesP /rodrigues noframe_norm ?expr1n scale1r cos_pihalf subr0.
   rewrite scale1r mul1r sin_pihalf scale1r subrr add0r -uva0 dot_crossmulC.
-  rewrite (@liexx _ 'rV[T]_3) dotmul0v scale0r add0r (@lieC _ 'rV[T]_3) /= double_crossmul dotmulvv.
+  rewrite (@liexx _ (vec3 T)) dotmul0v scale0r add0r (@lieC _ (vec3 T)) /= double_crossmul dotmulvv.
   by rewrite normu expr1n scale1r opprB u_perp_v scale0r subr0.
 have RO : `e^(pi / 2%:R, F|,0) \in 'O[T]_3 by apply eskew_is_O; rewrite noframe_norm.
 have H' : vec_angle u F|,2%:R = vec_angle v (- F|,1).

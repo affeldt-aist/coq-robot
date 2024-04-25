@@ -173,7 +173,7 @@ Qed.
 Lemma noframe_posP : f~k = f~i *v f~j -> f~j = f~k *v f~i /\ f~i = f~j *v f~k.
 Proof.
 move=> ->; split.
-- rewrite (lieC _ f~i) /= double_crossmul idotj scale0r add0r opprK.
+- rewrite (@lieC _ (vec3 T) _ f~i) /= double_crossmul idotj scale0r add0r opprK.
   by rewrite dotmulvv noframe_norm expr1n scale1r.
 - rewrite double_crossmul dotmulvv noframe_norm expr1n scale1r dotmulC.
   by rewrite idotj scale0r subr0.
@@ -184,7 +184,7 @@ Proof.
 move=> ->; split.
 - rewrite linearNl /= linearNr /= double_crossmul dotmulvv.
   by rewrite noframe_norm expr1n scale1r idotj scale0r add0r opprK.
-- rewrite linearNl (@lieC _ 'rV[T]_3) linearNr opprK /= double_crossmul dotmulvv.
+- rewrite linearNl (@lieC _ (vec3 T)) linearNr opprK /= double_crossmul dotmulvv.
   by rewrite noframe_norm expr1n scale1r dotmulC idotj scale0r subr0.
 Qed.
 
@@ -227,29 +227,29 @@ Proof.
 move=> -> ->.
 rewrite !linearD /=.
 rewrite !linearZ /=.
-rewrite (lieC _ f~i).
-rewrite (lieC _ f~j).
-rewrite (lieC _ f~k).
+rewrite (@lieC _ (vec3 T) _ f~i).
+rewrite (@lieC _ (vec3 T) _ f~j).
+rewrite (@lieC _ (vec3 T) _ f~k).
 rewrite /=.
 rewrite ![in LHS]linearD /=.
-rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
+rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
 rewrite oppr0 scaler0 add0r.
 case: noframek => e3e1e2.
 - case: (noframe_posP e3e1e2) => Hj Hi.
   rewrite (_ : _ *v _ = v2 *: f~k); last by rewrite linearZ /= -e3e1e2.
   rewrite scalerN (_ : _ *v _ = - v3 *: f~j); last first.
-    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hj scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hj scalerN scaleNr.
   rewrite scaleNr opprK (_ : _ *v _ = - v1 *: f~k); last first.
-    by rewrite linearZ /= (@lieC _ 'rV[T]_3) e3e1e2 scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) e3e1e2 scalerN scaleNr.
   rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
-    by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
+    by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite scalerN scaler0 subr0.
   rewrite (_ : _ *v _ = v3 *: f~i); last by rewrite linearZ /= -Hi.
   rewrite scalerN (_ : _ *v _ = v1 *: f~j); last by rewrite linearZ /= Hj.
   rewrite scalerN (_ : _ *v _ = - v2 *: f~i); last first.
-    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hi scaleNr scalerN.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hi scaleNr scalerN.
   rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
-    by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
+    by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite scalerN scaler0 subr0.
   move/esym : noframe_pos; rewrite e3e1e2 eqxx => /eqP ->.
   rewrite !scale1r -![in LHS]addrA addrC.
@@ -269,19 +269,19 @@ case: noframek => e3e1e2.
   rewrite (_ : _ *v _ = v3 *: f~j); last by rewrite linearZ /= -Hj.
   rewrite scalerN.
   rewrite (_ : _ *v _ = v1 *: f~k); last first.
-    by rewrite linearZ /= (@lieC _ 'rV[T]_3) -linearNl /= -e3e1e2.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) -linearNl /= -e3e1e2.
   rewrite scalerN.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite oppr0 scaler0 addr0.
   rewrite (_ : _ *v _ = - v3 *: f~i); last first.
-    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hi scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hi scalerN scaleNr.
   rewrite scaleNr opprK.
   rewrite (_ : _ *v _ = - v1 *: f~j); last first.
-    by rewrite linearZ /= (@lieC _ 'rV[T]_3) /= -Hj scalerN scaleNr.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hj scalerN scaleNr.
   rewrite scaleNr opprK.
   rewrite (_ : _ *v _ = v2 *: f~i); last by rewrite linearZ /= -Hi.
   rewrite scalerN.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ 'rV[T]_3) scaler0.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite oppr0 scaler0 addr0.
   move: noframe_neg; rewrite {1}e3e1e2 eqxx => /esym/eqP ->.
   rewrite -![in LHS]addrA addrC -addrA.
@@ -328,13 +328,13 @@ Lemma frame_icrossk : f~i *v f~k = - f~j.
 Proof. by move: (Frame.MSO f); rewrite !rowframeE => /SO_icrossk. Qed.
 
 Lemma frame_kcrossi : f~k *v f~i = f~j.
-Proof. by rewrite (@lieC _ 'rV[T]_3) /= frame_icrossk opprK. Qed.
+Proof. by rewrite (@lieC _ (vec3 T)) /= frame_icrossk opprK. Qed.
 
 Lemma frame_jcrossk : f~j *v f~k = f~i.
 Proof. by move: (Frame.MSO f); rewrite !rowframeE => /SO_jcrossk. Qed.
 
 Lemma frame_kcrossj : f~k *v f~j = - f~i.
-Proof. by rewrite (@lieC _ 'rV[T]_3) /= frame_jcrossk. Qed.
+Proof. by rewrite (@lieC _ (vec3 T)) /= frame_jcrossk. Qed.
 
 Definition frame_of_SO (M : 'M[T]_3) (HM : M \is 'SO[T]_3) : frame T :=
   @Frame.mk _ (NOFrame.mk (rotation_sub HM)) HM.
@@ -455,10 +455,10 @@ by rewrite dotmulZv dote2 mulr0.
 Qed.
 
 Lemma idotk : i *d k = 0.
-Proof. by rewrite /k dot_crossmulC (@liexx _ 'rV[T]_3) dotmul0v. Qed.
+Proof. by rewrite /k dot_crossmulC (@liexx _ (vec3 T)) dotmul0v. Qed.
 
 Lemma jdotk : j *d k = 0.
-Proof. by rewrite /k dot_crossmulCA (@liexx _ 'rV[T]_3) dotmulv0. Qed.
+Proof. by rewrite /k dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0. Qed.
 
 Lemma normj : norm j = 1.
 Proof.
@@ -708,7 +708,7 @@ case: ifPn => [|_].
   by rewrite dotmulP dote2 scale_scalar_mx mulr0 mul_scalar_mx scale0r scaler0.
 apply/eqP.
 rewrite /normalize linearZr_LR -!scalemxAl scaler_eq0; apply/orP; right.
-rewrite /normalcomp/= linearD/= linearNr 2!linearZr_LR /= (@liexx _ 'rV[T]_3) 2!scaler0 subr0.
+rewrite /normalcomp/= linearD/= linearNr 2!linearZr_LR /= (@liexx _ (vec3 T)) 2!scaler0 subr0.
 move: (axialcompE (v *v 'e_0) v).
 rewrite v1 expr1n invr1 scale1r /i (negbTE (norm1_neq0 v1)) normalizeI // => <-.
 by rewrite axialcomp_crossmul.
@@ -971,10 +971,10 @@ Lemma idotj : i *d j = 0.
 Proof. by rewrite /= /i /j dotmulZv dotmulvZ dotmul_orthogonalize 2!mulr0. Qed.
 
 Lemma jdotk : j *d k = 0.
-Proof. by rewrite /k dot_crossmulCA liexx dotmulv0. Qed.
+Proof. by rewrite /k dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0. Qed.
 
 Lemma idotk : i *d k = 0.
-Proof. by rewrite /k dot_crossmulC liexx dotmul0v. Qed.
+Proof. by rewrite /k dot_crossmulC (@liexx _ (vec3 T)) dotmul0v. Qed.
 
 Lemma normk : norm k = 1.
 Proof. by rewrite norm_crossmul_normal // ?normi // ?normj // idotj. Qed.
@@ -1038,7 +1038,7 @@ Qed.
 Lemma j_l_r : triad.j l1 l2 l3 *m rot_l2r = triad.j r1 r2 r3.
 Proof.
 rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 dotmulC triad.idotj dotmulvv triad.normj //.
-rewrite expr1n dot_crossmulCA (@liexx _ 'rV[T]_3) dotmulv0 /matrix_of_noframe /=.
+rewrite expr1n dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0 /matrix_of_noframe /=.
 rewrite col_mx3E row3E (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite (mul_row_col 1%:M) mul_scalar_mx scale1r mul_scalar_mx scale0r addr0.
 Qed.
@@ -1046,7 +1046,7 @@ Qed.
 Lemma k_l_r : triad.k l1 l2 l3 *m rot_l2r = triad.k r1 r2 r3.
 Proof.
 rewrite /rot_l2r /= mulmxA mul_tr_col_mx3 {1}/triad.k dotmulC dot_crossmulC.
-rewrite (@liexx _ 'rV[T]_3) dotmul0v {1}/triad.k -dot_crossmulC (@liexx _ 'rV[T]_3) dotmulv0.
+rewrite (@liexx _ (vec3 T)) dotmul0v {1}/triad.k -dot_crossmulC (@liexx _ (vec3 T)) dotmulv0.
 rewrite /matrix_of_noframe /= dotmulvv triad.normk // expr1n col_mx3E row3E.
 do 2 rewrite (mul_row_col 0%:M) mul_scalar_mx scale0r add0r.
 by rewrite mul_scalar_mx scale1r.
