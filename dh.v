@@ -52,7 +52,6 @@ Coercion plucker_array_mx (T : ringType) (p : Plucker.array T) :=
 Section plucker_of_line.
 Variable T : rcfType.
 Implicit Types l : Line.t T.
-Import rv3LieAlgebra.Exports.
 
 Definition normalized_plucker_direction l :=
   let p1 := \pt( l ) in let p2 := \pt2( l ) in
@@ -75,8 +74,8 @@ Lemma normalized_plucker_positionP l :
   normalized_plucker_position l *d normalized_plucker_direction l == 0.
 Proof.
 rewrite /normalized_plucker_position /normalized_plucker_direction -Line.vectorE.
-rewrite (linearZr_LR (crossmul_bilinear _)) /=.
-by rewrite dotmulvZ dotmulZv -dot_crossmulC liexx dotmulv0 2!mulr0.
+rewrite (linearZr_LR crossmul) /=.
+by rewrite dotmulvZ dotmulZv -dot_crossmulC (@liexx _ (vec3 T)) dotmulv0 2!mulr0.
 Qed.
 
 Definition normalized_plucker l : 'rV[T]_6 :=
@@ -94,7 +93,7 @@ Lemma normalized_pluckerP l :
 Proof.
 move=> p1 p2 l0.
 rewrite /normalized_plucker /normalized_plucker_direction /normalized_plucker_position.
-rewrite -/p1 -/p2 (linearZr_LR (crossmul_bilinear _)) -scale_row_mx scalerA.
+rewrite -/p1 -/p2 (linearZr_LR crossmul) -scale_row_mx scalerA.
 by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 -Line.vectorE.
 Qed.
 
@@ -104,7 +103,7 @@ Lemma plucker_of_lineE l (l0 : \vec( l ) != 0) :
 Proof.
 rewrite /plucker_of_line /plucker_array_mx /=.
 rewrite /normalized_plucker_direction /normalized_plucker_position.
-rewrite (linearZr_LR (crossmul_bilinear _)) -scale_row_mx.
+rewrite (linearZr_LR crossmul) -scale_row_mx.
 by rewrite scalerA divrr ?scale1r // unitfE norm_eq0 -Line.vectorE.
 Qed.
 
@@ -120,14 +119,14 @@ Qed.
 
 Lemma plucker_eqn_self l : plucker_eqn \pt( l ) l = 0.
 Proof.
-rewrite /plucker_eqn -spinN -spinD spinE lieC addrC.
+rewrite /plucker_eqn -spinN -spinD spinE (@lieC _ (vec3 T)) addrC.
 by rewrite -linearBl /= subrr linear0l.
 Qed.
 
 Lemma in_plucker p l : p \in (l : pred _) -> plucker_eqn p l = 0.
 Proof.
 rewrite inE => /orP[/eqP ->|/andP[l0 H]]; first by rewrite plucker_eqn_self.
-rewrite /plucker_eqn -spinN -spinD spinE lieC addrC -linearBl.
+rewrite /plucker_eqn -spinN -spinD spinE (@lieC _ (vec3 T)) addrC -linearBl.
 apply/eqP.
 rewrite -/(colinear _ _) -colinearNv opprB colinear_sym.
 apply: (colinear_trans l0 _ H).
@@ -265,7 +264,8 @@ rewrite [_ 0 1]mxE [_ 1 1]mxE [_ 0 2%:R]mxE [_ 1 2%:R]mxE.
 move/eqP. rewrite -addrA eq_sym addrC -subr_eq -cos2sin2. move/eqP.
 move/(congr1 (fun x => (sin alpha)^+2 * x)).
 rewrite mulrDr -(@exprMn _ _ (sin alpha) (_ 1 1)) (mulrC _ (_ 1 1)) H11_H21.
-rewrite sqrrN exprMn (mulrC _ (_ ^+ 2)) -mulrDl cos2Dsin2 mul1r => /esym sqr_H21.
+rewrite sqrrN exprMn [in X in _ = X -> _](mulrC (sin alpha ^+ 2)).
+rewrite -mulrDr cos2Dsin2 mulr1 => /esym sqr_H21.
 
 move: (norm_col_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
 rewrite sqr_norm sum3E 2![_ 0 0]mxE.
@@ -380,8 +380,14 @@ have H4 : From1To0 = dh_rot theta alpha.
     move: Hrot.
     rewrite H11 (eqP H21) H10 !mulNr opprK H20 -(mulrA (cos theta)) -expr2 mulrAC.
     rewrite -expr2 -opprD (mulrC (cos theta) (_ ^+ 2)) -mulrDl cos2Dsin2 mul1r.
-    rewrite mulrN -expr2 -mulrA mulrCA -expr2 -mulrA mulrCA -expr2 -mulrDr (addrC (_ ^+ 2)).
-    rewrite cos2Dsin2 mulr1 -expr2 sin2cos2 addrCA -opprD -mulr2n => /eqP.
+    rewrite [in LHS]mulrN -expr2.
+    rewrite mulrAC -expr2.
+    rewrite (mulrAC (cos alpha)) -expr2.
+    rewrite -mulrDl.
+    rewrite (addrC (_ ^+ 2)).
+    rewrite cos2Dsin2 mul1r.
+    rewrite -expr2.
+    rewrite (sin2cos2 theta) addrCA -opprD -mulr2n => /eqP.
     rewrite subr_eq addrC -subr_eq subrr eq_sym mulrn_eq0 /= sqrf_eq0 => ct0.
     rewrite {1}/From1To0 -lock H11 {1}/From1To0 -lock (eqP H21).
     by rewrite (eqP ct0) !(mulr0,mul0r) oppr0.
@@ -401,8 +407,9 @@ have H4 : From1To0 = dh_rot theta alpha.
     move: Hrot.
     rewrite H11 H21 H10 !mulNr opprK (eqP H20) -(mulrA (cos theta)) -expr2 mulrAC.
     rewrite -expr2 (mulrC (cos theta) (_ ^+ 2)) -mulrDl cos2Dsin2 mul1r.
-    rewrite mulNr mulrAC -!expr2 (mulrAC (cos alpha)) -expr2 -opprD -mulrDl.
-    rewrite (addrC _ (cos _ ^+ 2)) cos2Dsin2 mul1r mulrN -expr2 cos2sin2 -addrA -opprD.
+    rewrite mulNr mulrAC -2!expr2.
+    rewrite (mulrAC (cos alpha)) -expr2 -opprD -mulrDl.
+    rewrite (addrC (sin alpha ^+ 2)) cos2Dsin2 mul1r mulrN -expr2 cos2sin2 -addrA -opprD.
     rewrite -mulr2n => /eqP; rewrite subr_eq addrC -subr_eq subrr eq_sym mulrn_eq0 /=.
     rewrite sqrf_eq0 => /eqP st0.
     by rewrite st0 !(mulr0,oppr0) (mulrC (cos theta)).

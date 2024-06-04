@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex finset fingroup perm.
@@ -169,12 +170,16 @@ set c := @CIso.mk _ _ (Iso.mk Tm1f_is_iso) Tm1f0.
 have /= linearTm1f := central_isometry_is_linear c.
 have /= orthogonalTm1f := central_isometry_preserves_dotmul c.
 exists m.
-case: (lin1_mx' linearTm1f) => g Hg.
-exists (lin1_mx g); split; last first.
+pose tmp := GRing.isLinear.Build _ _ _ _ Tm1f linearTm1f.
+pose Tmp : {linear _ -> _} := HB.pack Tm1f tmp.
+exists (lin1_mx Tmp); split; last first.
   split; last by [].
   apply/orth_preserves_dotmul => u v /=.
-  by rewrite 2!mul_rV_lin1 -[in RHS]orthogonalTm1f 2!Hg.
-move=> u; by rewrite mul_rV_lin1 -Hg subrK.
+  rewrite /=.
+  rewrite (mul_rV_lin1 Tmp u)/=.
+  rewrite (mul_rV_lin1 Tmp v)/=.
+  by rewrite -[in RHS]orthogonalTm1f.
+by move=> u; rewrite mul_rV_lin1 subrK.
 Qed.
 
 Definition ortho_of_iso f : 'M[T]_3 := projT1 (projT2 (trans_ortho_of_iso f)).
@@ -226,9 +231,12 @@ Definition relative_displacement f (p a : point) :=
 Lemma displacement_iso f p a :
   displacement f p = displacement f a + relative_displacement f p a.
 Proof.
-rewrite /relative_displacement mulmxBr mulmx1 opprB addrA -(addrC a) 2!addrA.
-rewrite subrK; congr (_ - _).
-apply/eqP; by rewrite addrC -subr_eq img_vec_iso.
+rewrite /relative_displacement mulmxBr mulmx1 opprB.
+rewrite -img_vec_iso.
+rewrite /displacement.
+rewrite addrACA.
+rewrite (addrCA (f a)) subrr addr0.
+by rewrite (addrCA _ a) addrA subrr sub0r.
 Qed.
 
 End isometry_3_properties.
@@ -261,7 +269,6 @@ Section derivative_map.
 Variable T : realType.
 Let vector := 'rV[T]_3.
 Implicit Types f : 'Iso[T]_3.
-Import rv3LieAlgebra.Exports.
 
 (* [oneill] theorem 2.1, p. 104 *)
 Definition dmap f (v : vector) : vector :=
@@ -373,11 +380,11 @@ have : (f`* u) *v (f`* v) = noframe_sgn f' *: (f`* (u *v v)) :> vector.
   rewrite [in RHS]linearZ [in RHS]/=.
   rewrite [in RHS]linearZ [in RHS]/=.
   rewrite [in RHS]linearZ [in RHS]/=.
-  rewrite (lieC _ 'e_0) /= scalerN.
+  rewrite (@lieC _ (vec3 T) _ 'e_0) /= scalerN.
   rewrite linearD [in RHS]/=.
   rewrite [in X in _ = - (_ *: X) *m _ + _ + _]linearD.
   rewrite [in RHS]/=.
-  rewrite (_ : 'e_0 *v (u1 *: _) = 0); last by rewrite linearZ /= liexx scaler0.
+  rewrite (_ : 'e_0 *v (u1 *: _) = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite (_ : 'e_0 *v (u2 *: _) = u2 *: 'e_2%:R); last first.
     rewrite linearZ /=.
     by rewrite vecij.
@@ -390,27 +397,27 @@ have : (f`* u) *v (f`* v) = noframe_sgn f' *: (f`* (u *v v)) :> vector.
   rewrite -![in RHS]scalemxAl.
   rewrite [in RHS]scalerDr.
   rewrite opprD.
-  rewrite (lieC _ 'e_1) /= [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
+  rewrite (@lieC _ (vec3 T) _ 'e_1) /= [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
   rewrite opprD.
   rewrite [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
   rewrite scaleNr scalerN opprK.
   rewrite (_ : _ *v _ = - u1 *: 'e_2%:R); last first.
-    by rewrite linearZ /= lieC /= vecij scalerN scaleNr.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= liexx scaler0.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) /= vecij scalerN scaleNr.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite addr0.
   rewrite (_ : _ *v _ = u3 *: 'e_0); last by rewrite linearZ /= vecjk.
   rewrite scaleNr opprK mulmxBl.
   rewrite -![in RHS]scalemxAl.
   rewrite scalerDr scalerN.
-  rewrite (lieC _ 'e_2%:R) /= [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
+  rewrite (@lieC _ (vec3 T) _ 'e_2%:R) /= [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
   rewrite opprD.
   rewrite [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
   rewrite opprD.
   rewrite (_ : _ *v _ = u1 *: 'e_1); last first.
-    by rewrite linearZ /= lieC /= vecik opprK.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) /= vecik opprK.
   rewrite (_ : _ *v _ = - u2 *: 'e_0); last first.
-    by rewrite linearZ /= lieC /= vecjk scalerN scaleNr.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= liexx scaler0.
+    by rewrite linearZ /= (@lieC _ (vec3 T)) /= vecjk scalerN scaleNr.
+  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite subr0 scaleNr opprK mulmxDl mulNmx.
   rewrite -![in RHS]scalemxAl.
   rewrite -![in RHS]addrA [in RHS]addrC -[in RHS]addrA [in RHS]addrCA -[in RHS]addrA [in RHS]addrC.
@@ -650,10 +657,11 @@ End homogeneous_transformations.
 Section SE3_qualifier.
 Variable T : ringType.
 Implicit Types M : 'M[T]_4.
-Definition SE3 := [qualify M |
+Definition SE3_pred := fun M =>
   [&& rot_of_hom M \is 'SO[T]_3,
       @ursubmx _ 3 1 3 1 M == 0 &
-      @drsubmx _ 3 1 3 1 M == 1%:M] ].
+      @drsubmx _ 3 1 3 1 M == 1%:M].
+Definition SE3 := [qualify M | SE3_pred M].
 Fact SE3_key : pred_key SE3. Proof. by []. Qed.
 Canonical SE3_keyed := KeyedQualifier SE3_key.
 End SE3_qualifier.
@@ -755,8 +763,8 @@ apply/and3P; split.
 - by rewrite /hom block_mxKdr.
 Qed.
 
-Canonical SE3_is_mulr_closed (T : comUnitRingType) :=
-  MulrPred (SE3_mulr_closed T).
+HB.instance Definition _ (T : comUnitRingType) :=
+  GRing.isMulClosed.Build _ (@SE3_pred T) (SE3_mulr_closed T).
 
 Lemma SE3_divr_closed (T : fieldType) : divr_closed 'SE3[T].
 Proof.
@@ -765,7 +773,8 @@ move=> A B HA HB.
 by rewrite rpredM // SE3_invr_closed.
 Qed.
 
-Canonical SE3_is_divr_closed (T : fieldType) := DivrPred (SE3_divr_closed T).
+HB.instance Definition _ (T : fieldType) :=
+  GRing.isDivClosed.Build _ (@SE3_pred T) (SE3_divr_closed T).
 
 End SE3_hom.
 
@@ -870,7 +879,7 @@ Implicit Types m : t.
 
 Let homogeneous := 'M[T]_4.
 
-Canonical t_subType := [subType for trans_rot].
+HB.instance Definition t_subType := [isSub for trans_rot].
 
 Definition trans m := (trans_rot m).1.
 Definition rot m := (trans_rot m).2.
@@ -1118,4 +1127,3 @@ by rewrite rotation_det ?scale1r // EuclideanMotion.rotP.
 Qed.
 
 End rigid_transformation_is_homogeneous_transformation.
-

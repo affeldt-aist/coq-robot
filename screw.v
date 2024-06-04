@@ -1,11 +1,11 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp.analysis Require Import forms.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
-
 
 (******************************************************************************)
 (*                             Screw Motions                                  *)
@@ -152,13 +152,12 @@ Qed.
 
 End taylor_exponential.
 
-Module sqLieAlgebra.
 Section sqliealgebra.
 Variables (R : comRingType) (n : nat).
 
 Definition sq (t1 t2 : 'M[R]_n.+1) := t1 * t2 - t2 * t1.
 
-Lemma sq_is_linear w : GRing.linear (sq w : 'M[R]_n.+1 -> 'M[R]_n.+1).
+Lemma sq_is_linear w : linear (sq w : 'M[R]_n.+1 -> 'M[R]_n.+1).
 Proof.
 move=> k v u; rewrite /sq.
 rewrite mulrDr -addrA addrCA [in RHS]addrCA; congr (_ + _).
@@ -166,12 +165,14 @@ rewrite scalerDr scalerAr -addrA; congr (_ + _).
 rewrite mulrDl opprD; congr (_ - _).
 by rewrite scalerN scalerAl.
 Qed.
-Canonical sq_linear x := Linear (sq_is_linear x).
+
+HB.instance Definition _ x := GRing.isLinear.Build _ _ _ _ _ (sq_is_linear x).
 
 Definition sq_rev t1 t2 := sq t2 t1.
-Canonical rev_seq := @RevOp _ _ _ sq_rev sq (fun _ _ => erefl).
 
-Lemma sq_rev_is_linear w : GRing.linear (sq_rev w : 'M[R]_n.+1 -> 'M[R]_n.+1).
+(*Canonical rev_seq := @RevOp _ _ _ sq_rev sq (fun _ _ => erefl).*)
+
+Lemma sq_rev_is_linear w : linear (sq_rev w : 'M[R]_n.+1 -> 'M[R]_n.+1).
 Proof.
 move=> k u v; rewrite /sq_rev /sq /=.
 rewrite mulrDl scalerBr scalerAl -2!addrA; congr (_ + _).
@@ -180,9 +181,32 @@ rewrite -opprD; congr (- _).
 rewrite mulrDr; congr (_ + _).
 by rewrite scalerAr.
 Qed.
-Canonical sq_rev_linear v := Linear (sq_rev_is_linear v).
 
-Canonical sq_bilinear := [bilinear of sq].
+HB.instance Definition _ x := GRing.isLinear.Build _ _ _ _ _ (sq_rev_is_linear x).
+
+Lemma sq_is_bilinear : bilinear_for
+  (GRing.Scale.Law.clone _ _ *:%R _) (GRing.Scale.Law.clone _ _ *:%R _)
+    (sq : _ -> _ -> _).
+Proof.
+split => [u'|u] a x y /=.
+- rewrite /sq.
+  rewrite !scalerBr mulrDl mulrDr opprD.
+  rewrite scalerAl -!addrA; congr (_ + _).
+  rewrite [RHS]addrCA; congr (_ + _).
+  by rewrite scalerAr.
+- rewrite /sq.
+  rewrite !scalerBr mulrDl mulrDr opprD.
+  rewrite scalerAl -!addrA.
+  rewrite -scalerAr -scalerAl; congr (_ + _).
+  rewrite [RHS]addrCA; congr (_ + _).
+  by rewrite scalerAl.
+Qed.
+
+HB.instance Definition _ :=
+  bilinear_isBilinear.Build R
+    [the lmodType R of 'M[R]_n.+1] [the lmodType R of 'M[R]_n.+1]
+    _ _ _ sq sq_is_bilinear.
+
 
 Lemma sqxx x : sq x x = 0.
 Proof. apply/eqP; by rewrite subr_eq0. Qed.
@@ -197,13 +221,11 @@ rewrite (mulrBr y) !addrA (addrC _ (- (y * (x * z)))) addrC !addrA mulrA subrr.
 by rewrite add0r mulrBl opprB mulrA subrK mulrBr addrA mulrA subrK mulrA subrr.
 Qed.
 
-Definition sq_mixin := LieAlgebra.Mixin sqxx sq_jacobi.
-Definition sq_type := LieAlgebra.Pack (Phant _) (LieAlgebra.Class sq_mixin).
+HB.instance Definition _ :=
+  @isLieAlgebra.Build R 'M[R]_n.+1 (sq : {bilinear 'M[R]_n.+1 -> 'M[R]_n.+1 -> 'M[R]_n.+1})
+    sqxx sq_jacobi.
+
 End sqliealgebra.
-Module Exports.
-Canonical sq_type.
-End Exports.
-End sqLieAlgebra.
 
 Module Twist.
 Section twist_coordinates.
@@ -308,7 +330,8 @@ Qed.
 
 Lemma linear_lin_of_twist : linear lin_of_twist.
 Proof. move=> k u v; by rewrite lin_of_twistD lin_of_twistZ. Qed.
-Canonical linear_lin_of_twist' := Linear linear_lin_of_twist.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_lin_of_twist.
 
 Let ang_of_twistD E1 E2 :
   ang_of_twist (E1 + E2) = ang_of_twist E1 + ang_of_twist E2 :> 'rV[T]__.
@@ -326,7 +349,8 @@ Qed.
 
 Lemma linear_ang_of_twist : linear ang_of_twist.
 Proof. move=> k u v; by rewrite ang_of_twistD ang_of_twistZ. Qed.
-Canonical linear_ang_of_twist' := Linear linear_ang_of_twist.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_ang_of_twist.
 
 End se3_qualifier.
 
@@ -370,7 +394,8 @@ rewrite /wedge (scale_block_mx k \S(\w(x))) !scaler0.
 rewrite (add_block_mx _ _ _ _ \S(\w(y))) !addr0.
 by rewrite -spinZ -spinD -ang_tcoorZ ang_tcoorD -lin_tcoorZ lin_tcoorD.
 Qed.
-Canonical linear_wedge' := Linear linear_wedge.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_wedge.
 
 (*
 TODO?
@@ -405,11 +430,12 @@ Qed.
 Lemma linear_vee : linear vee.
 Proof.
 move=> k x y.
-rewrite {1}/vee 2!linearD 2!linearZ; apply injective_wedge.
+rewrite {1}/vee 2!linearD 2!linearZ; apply: injective_wedge.
 rewrite /vee linear_wedge tcoorZ -[X in _ = X + _]scale1r -linear_wedge.
 by rewrite scale1r -twistD.
 Qed.
-Canonical linear_vee' := Linear linear_vee.
+
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ linear_vee.
 
 Lemma veeK E : E \is 'se3[T] -> wedge (vee E) = E.
 Proof.
@@ -424,8 +450,6 @@ Proof.
 rewrite /vee /wedge /lin_of_twist /ang_of_twist block_mxKdl block_mxKul spinK.
 by rewrite twist_mkE.
 Qed.
-
-Import sqLieAlgebra.Exports.
 
 Lemma lie_wedgeE t1 t2 :
   let v1 := \v( t1 ) in let v2 := \v( t2 ) in
@@ -442,7 +466,7 @@ rewrite (mulmx_block \S(w2) 0 v2 0 \S(w1)).
 rewrite !(mul0mx,addr0,mulmx0).
 rewrite (opp_block_mx (\S(w2) *m \S(w1))) !oppr0.
 rewrite (add_block_mx (\S(w1) *m \S(w2))) !addr0.
-by rewrite 2!spinE spin_crossmul (@lieC _ (rv3LieAlgebra.rv3liealgebra_type _) w1 v2) opprK.
+by rewrite 2!spinE spin_crossmul (@lieC _ (vec3 T) w1 v2) opprK.
 Qed.
 
 Lemma lie_wedgeE' t1 t2 :
@@ -488,7 +512,7 @@ rewrite /vee /lin_of_twist block_mxKdl /ang_of_twist block_mxKul /Twist.mk.
 f_equal.
 - rewrite {}/a' {}/b [in RHS]addrC; congr (_ + _).
   rewrite -mulmxE -mulmxA mulmxE mulNmx mulrA spin_similarity ?rot_of_hom_is_SO //.
-  by rewrite -!mulmxE mulmxA spinE (@lieC _ (rv3LieAlgebra.rv3liealgebra_type _)) /= -spinE.
+  by rewrite -!mulmxE mulmxA spinE (@lieC _ (vec3 T)) /= -spinE.
 - by rewrite {}/a {}/b' mulmxA !mulmxE spin_similarity // ?rot_of_hom_is_SO // spinK.
 Qed.
 
@@ -502,8 +526,6 @@ Proof. by move=> ? ?; rewrite /SE3_action -mulmxA AdjointM. Qed.
 
 Lemma linear_action_Adjoint g : g \is 'SE3[T] -> linear (SE3_action g).
 Proof. move=> Hg k y x; by rewrite /SE3_action mulmxDl scalemxAl. Qed.
-
-Import sqLieAlgebra.Exports.
 
 (*
 (* NB: wrong? *)
@@ -578,7 +600,6 @@ Section exponential_coordinates_rigid_using_taylor.
 Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Implicit Types w v : vector.
-Import rv3LieAlgebra.Exports.
 
 Lemma exp_twist0v v n : (wedge \T(v, 0)) ^+ n.+2 = 0.
 Proof.
@@ -637,10 +658,10 @@ rewrite /wedge Twist.ang_of Twist.lin_of.
 elim: k => [|k ih].
   rewrite (@expr2 _ (block_mx \S( w ) _ _ _)) -mulmxE.
   rewrite (mulmx_block \S( w ) _ _ _ \S( w )).
-  by rewrite !(mulmx0,addr0,mul0mx) mulmxE -expr2 spinE linearZr_LR liexx scaler0.
+  by rewrite !(mulmx0,addr0,mul0mx) mulmxE -expr2 spinE linearZr_LR (@liexx _ (vec3 T))/= scaler0.
 rewrite exprS ih -mulmxE (mulmx_block \S( w ) _ _ _ (\S( w ) ^+ k.+2)).
 rewrite !(mulmx0,addr0,mul0mx) mulmxE -exprS; congr (block_mx (\S( w ) ^+ k.+3) 0 _ 0).
-by rewrite exprS mulmxA spinE linearZr_LR liexx scaler0 mul0mx.
+by rewrite exprS mulmxA spinE linearZr_LR/= (@liexx _ (vec3 T)) scaler0 mul0mx.
 Qed.
 
 Lemma emx2_twist w v a : norm w = 1 ->
@@ -723,16 +744,16 @@ rewrite ang_tcoorE (negbTE w0) [in RHS]spinZ; congr hom.
 rewrite linearZl_LR /= linearZr_LR /= scalerA.
 rewrite dotmulZv dotmulvZ !mulrA -[in X in _ + X + _]scalerA.
 rewrite /normalize.
-rewrite (linearZr_LR (crossmul_bilinear _) _ _ w) /=.
+rewrite (linearZr_LR crossmul _ _ w) /=.
 rewrite linearNl /=.
-rewrite (linearZl_LR (crossmul_bilinear _)) /=.
+rewrite (linearZl_LR crossmul) /=.
 rewrite [in X in _ + _ + X = _]scalerN.
 rewrite [in X in _ + _ + X]scalerA.
 rewrite -[in LHS]scalemxAl -scalerDr -scalerBr; congr (_ *: _).
   by rewrite -invrM ?unitfE ?norm_eq0.
 rewrite -/w' /= [in X in _ = X + _]mulmxBr mulmx1.
 rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
-- rewrite lin_tcoorE lieC mulNmx.
+- rewrite lin_tcoorE (@lieC _ (vec3 T)) mulNmx.
   by rewrite scalerA divrr ?scale1r // ?unitfE ?norm_eq0.
 - rewrite lin_tcoorE.
   rewrite (scalerA (norm w)) divrr ?scale1r ?unitfE ?norm_eq0 //.
@@ -740,7 +761,7 @@ rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
   rewrite mulmxA.
   rewrite dotmulP mul_scalar_mx dotmulC.
   by rewrite scalerA mulrC -scalerA.
-- rewrite lieC opprK; congr (_ *v _).
+- rewrite (@lieC _ (vec3 T)) opprK; congr (_ *v _).
   by rewrite lin_tcoorE scalerA divrr ?scale1r ?lin_of_twistE // unitfE norm_eq0.
 Qed.
 
@@ -833,11 +854,12 @@ rewrite (addrC (- _)) subrr add0r.
 
 rewrite (scalerA a).
 rewrite mulrBr divff //.
-rewrite scalerBl scale1r.
+rewrite [X in _ + X - _ + _]scalerBl scale1r.
 
 rewrite (scalerN (2%:R^-1 * _)) opprK.
 rewrite (scalerA (2%:R^-1 * _)).
-rewrite mulrBr scalerBl !addrA.
+rewrite mulrBr.
+rewrite [X in _ + _ + X - _]scalerBl !addrA.
 rewrite mulrCA (mulrC a) mulrA.
 rewrite subrK.
 
@@ -861,8 +883,8 @@ rewrite scalerDl scale1r opprD !addrA addrC !addrA.
 rewrite (addrC (- (cos a *: _))) subrr add0r.
 rewrite addrAC.
 rewrite -scaleNr -scalerDl.
-rewrite -opprD -mulr2n -mulr_natl divff ?pnatr_eq0 //.
-by rewrite scaleN1r addrC subrr.
+rewrite -opprD -div1r -splitr scaleN1r.
+by rewrite addrC subrr.
 Qed.
 
 Lemma etwist_is_onto_SE (f : 'M[T]_4) : f \is 'SE3[T] ->
@@ -905,8 +927,9 @@ have HA : A = etwist_is_onto_SE_mat a w.
   rewrite sqr_spin.
   rewrite scalerBr.
   rewrite -![in RHS]addrA [in RHS]addrC ![in RHS]addrA.
-  rewrite !scalemx1 scalar_mxM.
-  rewrite mul_scalar_mx subrK.
+  rewrite !scalemx1.
+  rewrite -[X in _ - _ + X]scale_scalar_mx.
+  rewrite subrK.
   by rewrite scaleNr scalerN opprK scalerA.
 suff : { A' : 'M_3 |  A' * A = 1 }.
   case => A' AA'.
@@ -1014,7 +1037,6 @@ Section screw_motion.
 Variable T : realType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
-Import rv3LieAlgebra.Exports.
 
 (* rotation by an amount a about the axis w follows by a translation ha parallel to w *)
 Definition screw_motion s (p : point) : 'rV_3 :=
@@ -1072,7 +1094,7 @@ congr hom.
 rewrite {1}/v.
 rewrite lin_tcoorE.
 rewrite [w *v _]linearD /=.
-rewrite linearZr_LR /= liexx scaler0 addr0.
+rewrite linearZr_LR /= (@liexx _ (vec3 T)) scaler0 addr0.
 rewrite linearNl linearNr /=.
 rewrite double_crossmul dotmulvv.
 rewrite [in X in _ = _ *: (X + _)]mulNmx.
@@ -1096,13 +1118,13 @@ rewrite mulrC -[LHS]addr0.
 congr (_ + _).
 rewrite mulmxBr mulmx1.
 rewrite -rodriguesP /rodrigues.
-rewrite linearZr_LR /= liexx 2!scaler0 addr0.
+rewrite linearZr_LR /= (@liexx _ (vec3 T)) 2!scaler0 addr0.
 rewrite dotmulZv dotmulvv.
 rewrite !scalerA mulrAC -mulrA opprB subrK.
 apply/esym/eqP; rewrite scaler_eq0; apply/orP; right.
 rewrite subrr add0r.
-rewrite lieC /= opprK.
-rewrite lieC /=.
+rewrite (@lieC _ (vec3 T)) /= opprK.
+rewrite (@lieC _ (vec3 T)) /=.
 rewrite -spinE mulNmx scalerN.
 by rewrite -mulmxA (mulmxA \S( w )) spin_mul_tr mul0mx mulmx0 scaler0 oppr0.
 Qed.
@@ -1113,7 +1135,6 @@ Section screw_coordinates_of_a_twist.
 Variable T : realType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
-Import rv3LieAlgebra.Exports.
 
 (* [murray] 2.43, p.47 *)
 Definition axis (t : twist T) : Line.t T :=
@@ -1144,7 +1165,7 @@ Definition pjoint_twist (v : vector) := \T(v, 0).
 Lemma pitch_perp (w u : 'rV[T]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
 Proof.
 move=> w1; rewrite /pitch ang_tcoorE lin_tcoorE w1 expr1n invr1 scale1r.
-by rewrite {1}lieC linearNr opprK -dot_crossmulC liexx dotmulv0.
+by rewrite (@lieC _ (vec3 T)) linearNr opprK -dot_crossmulC (@liexx _ (vec3 T)) dotmulv0.
 Qed.
 
 (* [murray] 2.44, p.48 *)
@@ -1385,7 +1406,6 @@ Section screw_axis_point.
 Variable T : realType.
 Let vector := 'rV[T]_3.
 Let point := 'rV[T]_3.
-Import rv3LieAlgebra.Exports.
 
 Variable f : 'DIso_3[T].
 Let Q : 'M[T]_3 := ortho_of_iso f.
@@ -1423,7 +1443,7 @@ rewrite addrC addrA (addrC (- _)) subrr add0r.
 rewrite linearD /= [w]lock 2!linearZ /= tr_spin scalerN -lock.
 rewrite mulrDr -scalerAr linearD /= trmx1 linearN /= trmx_mul trmxK mulrBr.
 rewrite mulr1 -expr2 (mulmx_tr_uvect w1) // subrr scaler0 add0r.
-by rewrite mulrN -scalerAr -mulmxE -mulmxA spinE liexx mulmx0 scaler0 oppr0.
+by rewrite mulrN -scalerAr -mulmxE -mulmxA spinE (@liexx _ (vec3 T)) mulmx0 scaler0 oppr0.
 Qed.
 
 Lemma QN1wTw : (Q - 1)^T *m (w^T *m w) = 0.
@@ -1458,7 +1478,10 @@ rewrite mulmxBr mulmx1 opprB mulmxBl mul1mx.
 move: (ortho_of_iso_is_O f); rewrite -/Q orthogonalE mulmxE => /eqP ->.
 rewrite addrA (addrC (1 - _)) addrA.
 rewrite (_ : 1 + 1 = 2%:R) //.
-rewrite /Ncos2 mulrnBl scalerBl -2!addrA -[in RHS]addrA; congr (_ + _).
+rewrite /Ncos2.
+rewrite mulrnBl.
+rewrite scalerBl.
+rewrite -2![LHS]addrA -[in RHS]addrA; congr (_ + _).
   rewrite scalemx1.
   by apply/matrix3P/and9P; split; apply/eqP; rewrite !mxE ?eqxx /= ?mulr1n // ?mulr0n // addr0.
 rewrite addrA.
@@ -1474,7 +1497,8 @@ rewrite -/Q -/a => ->.
 rewrite opprD !addrA addrC !addrA tr_spin.
 rewrite (scalerN (sin a) \S( w )) opprK.
 rewrite (addrC (- (sin a *: _))) subrK.
-rewrite linearN /= trmx_mul trmxK opprD addrA addrAC -scaleNr -scalerDl.
+rewrite linearN /= trmx_mul trmxK.
+rewrite opprD addrA addrAC -[in LHS]scaleNr -scalerDl.
 rewrite -mulr2n scalerBr scalemx1 scalemx1 -addrA; congr (_ + _).
   apply/matrix3P/and9P; split; apply/eqP; by rewrite !mxE ?eqxx ?mulr1n ?mulr0n // ?oppr0 // mulNrn.
 rewrite -scalemxAl /N2cos [in RHS]scalerBl scale1r opprB; congr (_ + _).
@@ -1562,7 +1586,8 @@ have step2 : displacement f q + relative_displacement f p0 q = displacement f q 
   by rewrite dotmulP mulmxA dotmulP 2!(displacement_proj w0).
 have {}step2 : p0 *m (Q - 1) = q *m (Q - 1) - displacement f q *m (1 - w^T *m w).
   rewrite [in X in _ = _ - X]mulmxBr mulmx1 -{}step2.
-  rewrite (opprD (displacement f q)) opprK addrCA addrA subrr add0r.
+  rewrite (opprD (displacement f q)) opprK.
+  rewrite 2!addrA subrK.
   by rewrite /relative_displacement -/Q mulmxBl addrCA subrr addr0.
 set A := row_mx (Q - 1) w^T.
 set b : 'rV[T]_4 := row_mx (q *m (Q - 1) - displacement f q *m (1 - w^T *m w)) 0.
@@ -1623,7 +1648,6 @@ Let l := Screw.l s.
 Let q_a := \pt( l ).
 Let w_a := \vec( l ).
 Let twist_a := \T(- w_a *v q_a + h *: w_a, w_a).
-Import rv3LieAlgebra.Exports.
 
 Variable g_ab : EuclideanMotion.t T.
 Let map_v := coortrans_vector g_ab.
@@ -1658,7 +1682,7 @@ congr (@block_mx _ 1 0 3 3).
   rewrite /map_p coortrans_pointE from_hD to_hpointK.
   rewrite linearDr /=; congr (_ + _).
     rewrite /map_v coortrans_vectorE EuclideanMotion.rot_inv.
-    rewrite !(linearNl (crossmul_bilinear _)) /= mulNmx; congr (- _).
+    rewrite !(linearNl crossmul) /= mulNmx; congr (- _).
     rewrite mul_mx_row mulmx0 to_hvectorK -mulmxr_crossmulr_SO //.
     by rewrite rotationV EuclideanMotion.rotP.
   rewrite /map_v coortrans_vectorE EuclideanMotion.rot_inv.
@@ -1668,7 +1692,7 @@ congr (@block_mx _ 1 0 3 3).
     by rewrite rotation_sub // EuclideanMotion.rotP.
   rewrite mulNmx mulmxN mulmxA spinE -mulmxr_crossmulr_SO; last first.
     by rewrite rotationV EuclideanMotion.rotP.
-  by rewrite lieC /= linearNl.
+  by rewrite (@lieC _ (vec3 T)) /= linearNl.
 - by rewrite /map_v coortrans_vectorE EuclideanMotion.rot_inv.
 Qed.
 

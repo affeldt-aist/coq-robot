@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -35,6 +36,9 @@ Reserved Notation "'\S(' w ')'" (at level 3, format "'\S(' w ')'").
 Reserved Notation "''so[' R ]_ n" (at level 8, n at level 2, format "''so[' R ]_ n").
 
 Local Open Scope ring_scope.
+
+(* TODO: overrides forms.v *)
+Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
 
 Section keyed_qualifiers_anti_sym.
 
@@ -88,12 +92,14 @@ move=> /= A B; rewrite 2!symE => /eqP sA /eqP sB.
 by rewrite symE linearD /= -sA -sB.
 Qed.
 
-Canonical SymOpprPred := OpprPred sym_oppr_closed.
-Canonical SymAddrPred := AddrPred sym_addr_closed.
+HB.instance Definition _ := GRing.isAddClosed.Build _ _ sym_addr_closed.
+HB.instance Definition _ := GRing.isOppClosed.Build _ _ sym_oppr_closed.
 
 Lemma sym_scaler_closed : GRing.scaler_closed (sym n R).
 Proof. move=> ? ?; rewrite 2!symE => /eqP H; by rewrite linearZ /= -H. Qed.
 (* TODO: Canonical? *)
+
+HB.instance Definition _ := GRing.isScaleClosed.Build _ _ _ sym_scaler_closed.
 
 End sym.
 
@@ -262,7 +268,6 @@ Variable R : comRingType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
-Import rv3LieAlgebra.Exports.
 
 Definition spin u : 'M[R]_3 := locked (\matrix_i (u *v 'e_i)).
 
@@ -270,7 +275,7 @@ Local Notation "'\S(' u ')'" := (spin u).
 
 Lemma spinE u v : u *m \S( v ) = v *v u.
 Proof.
-rewrite lieC -linearNr [RHS]lieC -linearNr [u]row_sum_delta.
+rewrite (@lieC _ (vec3 R)) -linearNr [RHS]lieC/= -linearNr [u]row_sum_delta/=.
 rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
 rewrite /spin; unlock.
 by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK linearNl opprK.
@@ -296,7 +301,7 @@ Lemma spinZ k u : \S( k *: u ) = k *: \S( u ).
 Proof.
 apply/matrixP => i j.
 rewrite /spin; unlock.
-by rewrite mxE lieC /= linearZ /= -scalerN lieC opprK mxE 2![in RHS]mxE.
+by rewrite mxE (@lieC _ (vec3 R)) /= linearZ /= -scalerN (@lieC _ (vec3 R)) opprK mxE 2![in RHS]mxE.
 Qed.
 
 Lemma spinN u : \S( - u ) = - \S( u ).
@@ -352,7 +357,7 @@ Proof. by move/eqP: (spin_is_so u) => ->; rewrite 2!mxE spin12. Qed.
 Lemma spin_mul_tr u : \S( u ) *m u^T = 0.
 Proof.
 rewrite -(trmxK (spin u)) -trmx_mul tr_spin.
-by rewrite mulmxN spinE liexx oppr0 trmx0.
+by rewrite mulmxN spinE (@liexx _ (vec3 R)) oppr0 trmx0.
 Qed.
 
 End spin_matrix.
@@ -394,7 +399,7 @@ Lemma det_spin (R : idomainType) (u : 'rV[R]_3) : \det \S( u ) = 0.
 Proof.
 case/boolP : (u == 0) => [/eqP ->|u0]; first by rewrite spin0 det0.
 apply/eqP/det0P; exists u => //.
-by rewrite spinE (@liexx _ (rv3LieAlgebra.rv3liealgebra_type _)).
+by rewrite spinE (@liexx _ (vec3 R)).
 Qed.
 
 Section spin_matrix_axial_vector_rfType.
@@ -402,7 +407,6 @@ Variable R : realFieldType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
-Import rv3LieAlgebra.Exports.
 
 (* [sciavicco] eqn 3.9 *)
 Lemma spin_similarity (M : 'M[R]_3) (w : 'rV[R]_3) :
@@ -417,9 +421,9 @@ Lemma spin_crossmul u v : \S(v *v u) = \S(u) *m \S(v) - \S(v) *m \S(u).
 Proof.
 apply/eqP/mulmxP => w.
 rewrite [in LHS]spinE mulmxBr !mulmxA ![in RHS]spinE.
-rewrite (lieC v w) linearNr opprK.
-move/eqP: (jacobi v u w); rewrite eq_sym -subr_eq eq_sym => /eqP -> /=.
-by rewrite add0r (lieC w) opprK.
+rewrite (@lieC _ (vec3 R) v w) linearNr opprK.
+move/eqP: (@jacobi _ (vec3 R) v u w); rewrite eq_sym -subr_eq eq_sym => /eqP -> /=.
+by rewrite add0r (@lieC _ (vec3 R) w) opprK.
 Qed.
 
 Lemma spinii u i : \S( u ) i i = 0.
@@ -506,7 +510,7 @@ Qed.
 (* [murray] second half of exercise 9(a), p. 75 *)
 Lemma kernel_spin (w : 'rV[R]_3) (w0 : w != 0) : (kermx \S( w ) == w)%MS.
 Proof.
-apply/andP; split; last by apply/sub_kermxP; rewrite spinE liexx.
+apply/andP; split; last by apply/sub_kermxP; rewrite spinE (@liexx _ (vec3 R)).
 apply/rV_subP => v /sub_kermxP.
 rewrite spinE => /eqP/vec_angle.colinearP[|[_[k Hk]]].
   move/eqP => ->.
@@ -528,8 +532,8 @@ Implicit Types M : 'M[R]_3.
 Lemma sqr_spin u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
 Proof.
 apply (symP (sqr_spin_is_sym u)); last move=> i j.
-  rewrite rpredD //; last by rewrite rpredN sym_scaler_closed // sym_cst.
-  by rewrite mul_tr_vec_sym.
+  rewrite rpredD//= ?mul_tr_vec_sym//.
+  by rewrite sym_oppr_closed (*TODO: why can't we use rpredN*)// sym_scaler_closed// sym_cst.
 rewrite [in X in _ -> _ = X]mxE mulmx_trE.
 case/boolP : (i == 0) => [/eqP-> _|/ifnot0P/orP[]/eqP->].
 - case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
@@ -571,7 +575,6 @@ Section spectral_properties.
 Variable R : rcfType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
-Import rv3LieAlgebra.Exports.
 
 (* TODO: useful? *)
 Lemma row'0_triple_prod_mat tmp (XM : 'M[{poly R}]_3) :
@@ -646,7 +649,7 @@ have skewrrT : \S( - axial r ) = Q.
   rewrite axialE // -scaleN1r spinZ scaleN1r unspinK ?opprB //.
   by rewrite antiE linearD /= linearN /= trmxK opprB.
 move/eqP: nrrT.
-by rewrite -skewrrT spinE (lieC (- (axial r))) /= linearNr opprK.
+by rewrite -skewrrT spinE (@lieC _ (vec3 R) (- (axial r))) /= linearNr opprK.
 Qed.
 
 Lemma axial_vec_eigenspace M : M \is 'SO[R]_3 ->
@@ -754,10 +757,11 @@ Definition cayley n (M : 'M[R]_n.+1) := (1 - M)^-1 * (1 + M).
 
 Lemma cayley_is_O n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> cayley M \is 'O[R]_n.+1.
 Proof.
-move=> Mso; rewrite qualifE /cayley trmx_mul linearD /= trmx1.
+move=> Mso; rewrite orthogonalE /cayley trmx_mul linearD /= trmx1.
 rewrite {3}(skew_anti Mso) linearN /= trmxK.
 rewrite trmxV linearD /= trmx1 linearN /=.
 rewrite {4}(skew_anti Mso) !linearN /= trmxK opprK.
+rewrite -!mulmxE.
 rewrite mulmxA -(mulmxA _^-1) -mul1B1D_comm mulmxA mulVmx ?mul1mx; last first.
   by rewrite unitmxE unitfE skew_det1BM.
 by rewrite mulmxV // unitmxE unitfE skew_det1DM.
@@ -814,7 +818,7 @@ Qed.
 (* [murray] exercise 5.(a), p.73 *)
 Lemma cayley_is_SO3 Q : Q \is 'so[R]_3 -> cayley Q \is 'SO[R]_3.
 Proof.
-move=> Qso; rewrite qualifE cayley_is_O //= /cayley.
+move=> Qso; rewrite rotationE cayley_is_O //= /cayley.
 rewrite det_mulmx det_inv det_sub1spin3E// det_add1spin3E //.
 by rewrite mulVr // unitfE paddr_eq0 ?sqr_ge0 // oner_eq0.
 Qed.

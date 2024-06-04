@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
@@ -67,73 +68,20 @@ Definition jacobi_identity (T : zmodType) (op : T -> T -> T) := forall x y z,
 
 Reserved Notation "lie[ t1 , t2 ]" (format "lie[ t1 ,  t2 ]").
 
-Module LieAlgebra.
-Record mixin_of (R : ringType) (L : lmodType R) := Mixin {
+HB.mixin Record isLieAlgebra (R : ringType) L of GRing.Lmodule R L := {
   bracket : {bilinear L -> L -> L} ;
-  _ : forall x, bracket x x = 0 ;
-  _ : jacobi_identity bracket }.
+  liexx : forall x, bracket x x = 0 ;
+  jacobi : jacobi_identity bracket
+}.
 
-Section ClassDef.
-Variable R : ringType.
+#[short(type="lieAlgebraType")]
+HB.structure Definition LieAlgebra (R : ringType) :=
+  {L of isLieAlgebra R L & }.
 
-Record class_of L := Class {
-  base : GRing.Lmodule.class_of R L ;
-  mixin : mixin_of (GRing.Lmodule.Pack _ base) }.
-Local Coercion base : class_of >-> GRing.Lmodule.class_of.
-
-Structure type (phR : phant R) := Pack { sort; _ : class_of sort }.
-Local Coercion sort : type >-> Sortclass.
-Variable (phR : phant R) (T : Type) (cT : type phR).
-Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack phR T c.
-
-Definition pack b0 (m0 : @mixin_of R (@GRing.Lmodule.Pack R _ T b0)) :=
-  fun bT b & phant_id (@GRing.Lmodule.class R phR bT) b =>
-  fun m & phant_id m0 m => Pack phR (@Class T b m).
-
-Definition eqType := @Equality.Pack cT class.
-Definition choiceType := @Choice.Pack cT class.
-Definition zmodType := @GRing.Zmodule.Pack cT class.
-Definition lmodType := @GRing.Lmodule.Pack R phR cT class.
-
-End ClassDef.
-
-Module Exports.
-Coercion base : class_of >-> GRing.Lmodule.class_of.
-Coercion mixin : class_of >-> mixin_of.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
-Canonical eqType.
-Coercion choiceType : type >-> Choice.type.
-Canonical choiceType.
-Coercion zmodType : type >-> GRing.Zmodule.type.
-Canonical zmodType.
-Coercion lmodType : type >-> GRing.Lmodule.type.
-Canonical lmodType.
-Notation lieAlgebraType R := (type (Phant R)).
-Notation LieAlgebraType R T m := (@pack _ (Phant R) T _ m _ _ id _ id).
-Notation LieAlgebraMixin := Mixin.
-Notation "[ 'lieAlgebraType' R 'of' T 'for' cT ]" :=
-  (@clone _ (Phant R) T cT _ idfun)
-  (at level 0, format "[ 'lieAlgebraType' R 'of' T 'for' cT ]") : form_scope.
-Notation "[ 'lieAlgebraType' R 'of' T ]" := (@clone _ (Phant R) T _ _ id)
-  (at level 0, format "[ 'lieAlgebraType' R 'of' T ]") : form_scope.
-End Exports.
-End LieAlgebra.
-Import LieAlgebra.Exports.
-
-Definition liebracket (R : ringType) (G : lieAlgebraType R) :
-  {bilinear G -> G -> G} := LieAlgebra.bracket (LieAlgebra.class G).
-Notation "lie[ t1 , t2 ]" := (@liebracket _ _ t1 t2).
+Notation "lie[ t1 , t2 ]" := (@bracket _ _ t1 t2).
 
 Section liealgebra.
 Variables (R : ringType) (G : lieAlgebraType R).
-
-Lemma liexx (x : G) : lie[x, x] = 0.
-Proof. by case: G x => ? [? []]. Qed.
-
-Lemma jacobi : jacobi_identity (@liebracket _ G).
-Proof. by case: G => ? [? []]. Qed.
 
 (* Lie brackets are anticommutative *)
 Lemma lieC (x y : G) : lie[x, y] = - lie[y, x].
@@ -151,7 +99,7 @@ Variables (R : ringType) (n : nat).
 
 Implicit Types u v w : 'rV[R]_n.
 
-Definition dotmul u v : R := (u *m v^T)``_0.
+Definition dotmul u v : R := (u *m v^T) ``_ 0.
 Local Notation "*d%R" := (@dotmul _).
 Local Notation "u *d w" := (dotmul u w).
 
@@ -250,15 +198,31 @@ Definition dotmul_rev (v u : 'rV[R]_n) := u *d v.
 Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
   (fun _ _ => erefl).
 
-Lemma dotmul_is_linear u : GRing.linear (dotmul u : 'rV[R]_n -> R^o).
+Lemma dotmul_is_linear u : linear (dotmul u : 'rV[R]_n -> R^o).
 Proof. move=> /= k v w; by rewrite dotmulDr dotmulvZ. Qed.
-Canonical dotmul_linear x := Linear (dotmul_is_linear x).
 
-Lemma dotmul_rev_is_linear v : GRing.linear (dotmul_rev v : 'rV[R]_n -> R^o).
+HB.instance Definition _ x :=
+  GRing.isLinear.Build _ _ _ _ (@dotmul R n x) (dotmul_is_linear x).
+
+Lemma dotmul_rev_is_linear v : linear (dotmul_rev v : 'rV[R]_n -> R^o).
 Proof. move=> /= k u w; by rewrite /dotmul_rev dotmulDl dotmulZv. Qed.
-Canonical dotmul_rev_linear v := Linear (dotmul_rev_is_linear v).
 
-Canonical dotmul_bilinear := [bilinear of (@dotmul R n)].
+HB.instance Definition _ v :=
+  GRing.isLinear.Build _ _ _ _ (@dotmul_rev v) (dotmul_rev_is_linear v).
+
+Lemma dotmul_is_bilinear : bilinear_for
+  (GRing.Scale.Law.clone _ _ *:%R _) (GRing.Scale.Law.clone _ _ *:%R _)
+    (@dotmul R n : _ -> _ -> R^o).
+Proof.
+split => [u'|u] a x y /=.
+- by rewrite dotmulDl dotmulZv.
+- by rewrite dotmulDr dotmulvZ.
+Qed.
+
+HB.instance Definition _ :=
+  bilinear_isBilinear.Build R
+    [the lmodType R of 'rV[R]_n] [the lmodType R of 'rV[R]_n]
+    R^o _ _ (@dotmul R n) dotmul_is_bilinear.
 
 End dotmul_bilinear.
 
@@ -455,19 +419,21 @@ Section orthogonal_rotation_def.
 
 Variables (n : nat) (T : ringType).
 
-Definition orthogonal := [qualify M : 'M[T]_n | M *m M^T == 1%:M].
+Definition orthogonal_pred := fun M : 'M[T]_n => M *m M^T == 1%:M.
+Definition orthogonal := [qualify M : 'M[T]_n | orthogonal_pred M].
 Fact orthogonal_key : pred_key orthogonal. Proof. by []. Qed.
 Canonical orthogonal_keyed := KeyedQualifier orthogonal_key.
 
-Definition rotation := [qualify M : 'M[T]_n | (M \is orthogonal) && (\det M == 1)].
+Definition rotation_pred := fun M : 'M[T]_n => (M \is orthogonal) && (\det M == 1).
+Definition rotation := [qualify M : 'M[T]_n | rotation_pred M].
 Fact rotation_key : pred_key rotation. Proof. by []. Qed.
 Canonical rotation_keyed := KeyedQualifier rotation_key.
 
 End orthogonal_rotation_def.
 
-Notation "''O[' T ]_ n" := (orthogonal n T) : ring_scope.
+Notation "''O[' T ]_ n" := (@orthogonal n T) : ring_scope.
 
-Notation "''SO[' T ]_ n" := (rotation n T) : ring_scope.
+Notation "''SO[' T ]_ n" := (@rotation n T) : ring_scope.
 
 Section orthogonal_rotation_properties0.
 
@@ -484,7 +450,8 @@ Proof. by move/eqP. Qed.
 
 Lemma orthogonal_oppr_closed : oppr_closed 'O[T]_n.
 Proof. by move=> x; rewrite !orthogonalE linearN /= mulNr mulrN opprK. Qed.
-Canonical orthogonal_is_oppr_closed := OpprPred orthogonal_oppr_closed.
+
+HB.instance Definition _ := GRing.isOppClosed.Build _ _ orthogonal_oppr_closed.
 
 Lemma rotation_sub : {subset 'SO[T]_n <= 'O[T]_n}.
 Proof. by move=> M /andP []. Qed.
@@ -504,7 +471,7 @@ Qed.
 Lemma OSn_On m (P : 'M[T]_n) :
   (block_mx (1%:M : 'M_m) 0 0 P \is 'O[T]_(m + n)) = (P \is 'O[T]_n).
 Proof.
-rewrite !qualifE tr_block_mx trmx1 !trmx0 mulmx_block.
+rewrite !qualifE /orthogonal_pred tr_block_mx trmx1 !trmx0 mulmx_block.
 rewrite !(mulmx0, mul0mx, mulmx1, mul1mx, addr0, add0r) scalar_mx_block.
 by apply/eqP/eqP => [/eq_block_mx[] |->//].
 Qed.
@@ -513,7 +480,7 @@ End orthogonal_rotation_properties0.
 
 Lemma SOSn_SOn (T : comRingType) n m (P : 'M[T]_n.+1) :
   (block_mx (1%:M : 'M_m) 0 0 P \is 'SO[T]_(m + n.+1)) = (P \is 'SO[T]_n.+1).
-Proof. by rewrite qualifE OSn_On det_lblock det1 mul1r. Qed.
+Proof. by rewrite qualifE /rotation_pred OSn_On det_lblock det1 mul1r. Qed.
 
 Section orthogonal_rotation_properties.
 
@@ -544,16 +511,27 @@ Proof. by rewrite -orthogonalV orthogonalE trmxK. Qed.
 Lemma orthogonal_tr_mul M : (M \is 'O[T]_n) -> M^T *m M = 1.
 Proof. by rewrite orthogonalEC => /eqP. Qed.
 
-Lemma orthogonal_divr_closed : divr_closed 'O[T]_n.
+Lemma orthogonal_divr_closed : divr_closed (orthogonal n T).
 Proof.
 split => [| P Q HP HQ]; first exact: orthogonal1.
 rewrite orthogonalE orthogonal_inv // trmx_mul trmxK -mulrA.
 by rewrite -orthogonal_inv // mulKr // orthogonal_unit.
 Qed.
+
+HB.instance Definition _ := GRing.isDivClosed.Build _ (@orthogonal_pred n T) orthogonal_divr_closed.
+
+Lemma orthogonal_mulr_2closed : GRing.mulr_2closed 'O[T]_n.
+Proof.
+by move=> /= M N MO NO; rewrite rpredM.
+Qed.
+(* TODO: useless? *)
+
+(*
 Canonical orthogonal_is_mulr_closed := MulrPred orthogonal_divr_closed.
 Canonical orthogonal_is_divr_closed := DivrPred orthogonal_divr_closed.
 Canonical orthogonal_is_smulr_closed := SmulrPred orthogonal_divr_closed.
 Canonical orthogonal_is_sdivr_closed := SdivrPred orthogonal_divr_closed.
+*)
 
 Lemma rotationE M : (M \is 'SO[T]_n) = (M \is 'O[T]_n) && (\det M == 1). Proof. by []. Qed.
 
@@ -579,8 +557,21 @@ rewrite rotationE rpred_div ?rotation_sub //=.
 by rewrite det_mulmx det_inv !rotation_det // divr1.
 Qed.
 
-Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
-Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.
+HB.instance Definition _ := GRing.isDivClosed.Build _ (@rotation_pred n T) rotation_divr_closed.
+
+Lemma rotation_mulr_2closed : GRing.mulr_2closed 'SO[T]_n.
+Proof.
+move=> M N MSO NSO.
+rewrite rotationE rpredM//=; last 2 first.
+  exact: rotation_sub.
+  exact: rotation_sub.
+by rewrite detM rotation_det// rotation_det// mulr1.
+Qed.
+
+HB.instance Definition _ := GRing.isMul2Closed.Build _ 'SO[T]_n rotation_mulr_2closed.
+
+(*Canonical rotation_is_mulr_closed := MulrPred rotation_divr_closed.
+Canonical rotation_is_divr_closed := DivrPred rotation_divr_closed.*)
 
 Lemma orthogonalPcol M :
   reflect (forall i j, (col i M)^T *d (col j M)^T = (i == j)%:R) (M \is 'O[T]_n).
@@ -1112,12 +1103,13 @@ rewrite (@determinant_multilinear _ _ (M _) (M v) (M w) 2%:R a 1);
   rewrite ?row'_col_mx3 ?mul1r ?scale1r ?mxE //=.
 by apply/rowP => j; rewrite !mxE.
 Qed.
-Canonical crossmul_is_additive u := Additive (crossmul_linear u).
-Canonical crossmul_is_linear u := AddLinear (crossmul_linear u).
+
+HB.instance Definition _ u := GRing.isLinear.Build _ _ _ _ (crossmul u) (crossmul_linear u).
+
+(*Canonical crossmul_is_additive u := Additive (crossmul_linear u).
+Canonical crossmul_is_linear u := AddLinear (crossmul_linear u).*)
 
 Definition crossmulr u := crossmul^~ u.
-Canonical RevOp_crossmulr := @RevOp _ _ _ crossmulr (@crossmul R)
-  (fun _ _ => erefl).
 
 Lemma crossmulr_linear u : linear (crossmulr u).
 Proof.
@@ -1129,17 +1121,38 @@ rewrite (@determinant_multilinear _ _ _ (M v) (M w) 1%:R a 1);
   rewrite ?row'_col_mx3 ?mul1r ?scale1r ?mxE //=.
 by apply/rowP => j; rewrite !mxE.
 Qed.
-Canonical crossmulr_is_additive u := Additive (crossmulr_linear u).
+
+HB.instance Definition _ u := GRing.isLinear.Build _ _ _ _ (crossmulr u) (crossmulr_linear u).
+
+Lemma crossmul_is_bilinear : bilinear_for
+  (GRing.Scale.Law.clone _ _ *:%R _) (GRing.Scale.Law.clone _ _ *:%R _)
+    (crossmul : _ -> _ -> 'rV[R]_3).
+Proof.
+split => [u'|u] a x y /=.
+- rewrite -[LHS]/(crossmulr u' (a *: x + y)).
+  by rewrite linearD/= linearZ/=.
+- by rewrite linearD/= linearZ/=.
+Qed.
+
+HB.instance Definition _ :=
+  bilinear_isBilinear.Build R
+    [the lmodType R of 'rV[R]_3] [the lmodType R of 'rV[R]_3]
+    [the lmodType R of 'rV[R]_3] _ _ (@crossmul R) crossmul_is_bilinear.
+
+(*Canonical crossmulr_is_additive u := Additive (crossmulr_linear u).
 Canonical crossmulr_is_linear u := AddLinear (crossmulr_linear u).
-Canonical crossmul_bilinear := [bilinear of (@crossmul R)].
+Canonical crossmul_bilinear := [bilinear of (@crossmul R)].*)
 
 End crossmullie.
 
-Module rv3LieAlgebra.
+Definition vec3 (R : comRingType) := 'rV[R]_3.
+
+HB.instance Definition _ R := GRing.Lmodule.on (vec3 R).
+
 Section rv3liealgebra.
 Variable R : comRingType.
 
-Lemma liexx (u : 'rV[R]_3) : u *v u = 0.
+Let liexx (u : vec3 R) : u *v u = 0.
 Proof.
 apply/rowP=> i.
 rewrite /crossmul; unlock.
@@ -1147,7 +1160,7 @@ rewrite !mxE (@determinant_alternate _ _ _ 1 2%:R) //.
 by move=> j; rewrite !mxE.
 Qed.
 
-Lemma jacobi : jacobi_identity (@crossmul R).
+Let jacobi : jacobi_identity (@crossmul R).
 Proof.
 move=> u v w; rewrite 3!double_crossmul.
 rewrite !addrA -(addrA (_ *: v)) (dotmulC u v) -(addrC (_ *: w)) subrr addr0.
@@ -1155,15 +1168,10 @@ rewrite -!addrA addrC -!addrA (dotmulC w u) -(addrC (_ *: v)) subrr addr0.
 by rewrite addrC dotmulC subrr.
 Qed.
 
-Definition rv3liealgebra_mixin := LieAlgebra.Mixin liexx jacobi.
-Definition rv3liealgebra_type :=
-  LieAlgebra.Pack (Phant _) (LieAlgebra.Class rv3liealgebra_mixin).
+HB.instance Definition _ :=
+  @isLieAlgebra.Build R (vec3 R) (@crossmul R : {bilinear (vec3 R) -> (vec3 R) -> (vec3 R)}) liexx jacobi.
+
 End rv3liealgebra.
-Module Exports.
-Canonical rv3liealgebra_type.
-End Exports.
-End rv3LieAlgebra.
-Import rv3LieAlgebra.Exports.
 
 Section crossmul_lemmas.
 Variable R : comRingType.
@@ -1173,7 +1181,7 @@ Lemma mulmxl_crossmulr M u v : M *m (u *v v) = u *v (M *m v).
 Proof. by rewrite -(mul_rV_lin1 [linear of crossmul u]) mulmxA mul_rV_lin1. Qed.
 
 Lemma mulmxl_crossmull M u v : M *m (u *v v) = ((M *m u) *v v).
-Proof. by rewrite lieC mulmxN mulmxl_crossmulr -lieC. Qed.
+Proof. by rewrite (@lieC _ (vec3 R)) mulmxN mulmxl_crossmulr -(@lieC _ (vec3 R)). Qed.
 
 Lemma crossmul_triple u v w : u *d (v *v w) = \det (col_mx3 u v w).
 Proof.
@@ -1182,7 +1190,7 @@ pose Mu12 := col_mx3 (u``_1 *: 'e_1 + u``_2%:R *: 'e_2%:R) v w.
 rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u``_0) 1) ?mul1r
         ?row'_col_mx3 //; last first.
   apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
-  by case: j => [[|[|[]]]] ? //=; Simp.ord; Simp.r.
+  by case: j => [[|[|[]]]] ? //=; Simp.ord; repeat Simp.r => /=.
 rewrite [\det Mu12](@determinant_multilinear _ _ _
   (M 1) (M 2%:R) 0 (u``_1) (u``_2%:R)) ?row'_col_mx3 //; last first.
   apply/matrixP => i j; rewrite !mxE !eqxx.
@@ -1222,7 +1230,7 @@ Lemma dot_crossmulC u v x : u *d (v *v x) = (u *v v) *d x.
 Proof. by rewrite dotmul_crossmul_shift dotmulC. Qed.
 
 Lemma dot_crossmulCA u v w : u *d (v *v w) = - v *d (u *v w).
-Proof. by do 2 rewrite dot_crossmulC; rewrite linearNl lieC. Qed.
+Proof. by do 2 rewrite dot_crossmulC; rewrite linearNl (@lieC _ (vec3 R))/=. Qed.
 
 Lemma det_crossmul_dotmul M u v w :
   (\det M *: (u *v v)) *d w = (((u *m M) *v (v *m M)) *m M^T) *d w.
@@ -1238,7 +1246,7 @@ Proof. by apply/rowP=> i; rewrite -!dotmul_delta_mx det_crossmul_dotmul. Qed.
 
 Lemma dotmul_crossmul2 u v w : (u *v v) *v (u *v w) = (u *d (v *v w)) *: u.
 Proof.
-rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC liexx.
+rewrite double_crossmul dot_crossmulC (dotmulC _ u) dot_crossmulC (@liexx _ (vec3 R)).
 by rewrite dotmul0v scale0r subr0.
 Qed.
 
@@ -1266,7 +1274,7 @@ Lemma vece2 (i j : 'I_3) (k := - (i + j) : 'I_3) :
   'e_i *v 'e_j = (-1)^(perm3 i j)%N *+ (i != j) *: 'e_k :> 'rV[T]__.
 Proof.
 have [->|neq_ij] := altP (i =P j); rewrite (mulr0n,mulr1n).
-  by rewrite scale0r liexx.
+  by rewrite scale0r (@liexx _ (vec3 T)).
 apply/rowP => k'; case: (I3P k' neq_ij); rewrite /crossmul; unlock; rewrite !mxE.
 - rewrite (@determinant_alternate _ _ _ 0 1) //=.
     by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
@@ -1306,7 +1314,7 @@ Qed.
 Lemma common_normal_crossmul u v : (u *v v) _|_ u + v.
 Proof.
 rewrite normalmD ![(_ *v _) _|_ _]normal_sym crossmul_normal.
-by rewrite lieC normalmN crossmul_normal.
+by rewrite (@lieC _ (vec3 T)) normalmN crossmul_normal.
 Qed.
 
 End field_crossmul.
@@ -1432,11 +1440,11 @@ transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
   rewrite [in RHS](addrAC (U0 * V0)) [in RHS](addrA (U0 * V0)) subrr add0r.
   (* U1 * V1 *)
   rewrite -(addrC (- (U1 * V1))) -(addrC (U1 * V1)) (addrCA (U1 * V0 + _)).
-  rewrite -3!(addrA (- (U1 * V1))) -![in X in _ = _ + X](addrA (U1 * V1)) addrCA.
-  rewrite [in RHS](addrA (- (U1 * V1))) [in RHS](addrC (- (U1 * V1))) subrr add0r.
+  rewrite -3!(addrA (- (U1 * V1))) -![X in _ = _ + (_ + (X + _))](addrA (U1 * V1)) addrCA.
+  rewrite 2![in RHS](addrA (- (U1 * V1))) [in RHS](addrC (- (U1 * V1))) subrr add0r.
   (* U2 * V2 *)
   rewrite -(addrC (- (U2 * V2))) -(addrC (U2 * V2)) -(addrC (U2 * V2 + _)).
-  rewrite [in RHS]addrAC 2!(addrA (- (U2 * V2))) -(addrC (U2 * V2)) subrr add0r.
+  rewrite [in RHS](addrAC (- (U2 * V2))) 2!(addrA (- (U2 * V2))) -(addrC (U2 * V2)) subrr add0r.
   (* C * C' ^+ 2 *)
   rewrite (addrC (C ^+ 2 - _)) ![in LHS]addrA.
   rewrite (addrC (C * C' *- 2)) ![in RHS]addrA; congr (_ - _).
@@ -1575,7 +1583,7 @@ apply (iffP idP).
   rewrite rotationE; apply/andP; split.
     apply/orthogonal3P.
     rewrite ni nj /= zxy0 norm_crossmul_normal // xy0 !eqxx /= dot_crossmulC.
-    by rewrite liexx dotmul0v dot_crossmulCA liexx dotmulv0 !eqxx.
+    by rewrite (@liexx _ (vec3 T)) dotmul0v dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0 !eqxx.
   rewrite -(col_mx3_row M) -crossmul_triple zxy0 double_crossmul dotmulvv nj expr1n.
   by rewrite scale1r (dotmulC (row 1 M)) xy0 scale0r subr0 dotmulvv ni expr1n.
 - move=> MSO; move: (MSO).
@@ -1656,13 +1664,14 @@ rewrite mulrA div1r divrr ?pnatf_unit // mul1r.
 rewrite sqr_mxtrace.
 rewrite mxtrace_sqr.
 rewrite -4![in RHS]addrA [in RHS]addrCA [in RHS]opprD [in RHS](addrA (\sum__ M _ _ ^+ 2)) subrr add0r.
-rewrite -3!mulrnDl -mulrnBl -[in RHS](mulr_natr _ 2) [in RHS](mulrC _ 2%:R); congr (_ * _).
+rewrite -3!mulrnDl -mulrnBl -[in RHS](mulr_natr _ 2) [in RHS](mulrC _ 2%:R).
+rewrite -[RHS]mulr_natl; congr (_ * _).
 rewrite mulrDr.
 rewrite (addrC _ (M 0 0 * _)); rewrite -!addrA; congr (_ + _).
 rewrite !addrA -mulrDl -!addrA; congr (_ + _).
 rewrite addrCA opprD mulNr; congr (_ + _).
 rewrite opprD addrC mulNr; congr (_ + _).
-by rewrite mulrC.
+by rewrite mulr1 mulrC.
 Qed.
 
 Lemma char_poly3 (M : 'M[T]_3) :

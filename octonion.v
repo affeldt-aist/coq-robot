@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
@@ -55,10 +56,9 @@ Let oct_of_pair (x : quat R * quat R) :=
 Lemma oct_of_pairK : cancel pair_of_oct oct_of_pair.
 Proof. by case. Qed.
 
-Definition oct_eqMixin := CanEqMixin oct_of_pairK.
-Canonical Structure oct_eqType := EqType oct oct_eqMixin.
-Definition oct_choiceMixin := CanChoiceMixin oct_of_pairK.
-Canonical Structure oct_choiceType := ChoiceType oct oct_choiceMixin.
+HB.instance Definition _ := Equality.copy oct (can_type oct_of_pairK).
+
+HB.instance Definition _ := Choice.copy oct (can_type oct_of_pairK).
 
 Lemma eq_oct (a b : oct) : (a == b) = (a.1 == b.1) && (a.2 == b.2).
 Proof.
@@ -82,8 +82,7 @@ Definition oppo (a : oct) := nosimpl (mkOct (- a.1) (- a.2)).
 Lemma addNo : left_inverse 0%:ol oppo addo.
 Proof. move=> *; congr mkOct; by rewrite addNr. Qed.
 
-Definition oct_ZmodMixin := ZmodMixin addoA addoC add0o addNo.
-Canonical oct_ZmodType := ZmodType oct oct_ZmodMixin.
+HB.instance Definition _ := @GRing.isZmodule.Build oct _ _ _ addoA addoC add0o addNo.
 
 Lemma addoE (a b : oct) : a + b = addo a b. Proof. done. Qed.
 
@@ -142,7 +141,7 @@ Qed.
 Lemma mulor1 : right_id 1%:ol mulo.
 Proof.
 case=> a a'; rewrite /mulo /=; congr mkOct.
-  by rewrite linear0 mul0r subr0 mulr1.
+  by rewrite linear0// mul0r subr0 mulr1.
 by rewrite quat_realC mulr1 mul0r add0r.
 Qed.
 
@@ -218,10 +217,15 @@ case: a => [a0 a1]; case: b => [b0 b1]; apply: (f_equal2 (@mkOct _)) => /=.
   rewrite !{1}(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /=
               !{1}conjqM ?{1}conjqI {1}[RHS]addrA {1}[LHS]addrA.
   rewrite -!{1}addrA; apply: f_equal2; first by []. (* congr take time *)
-  rewrite addrC !addrA; apply: f_equal2; last first. 
-    by rewrite realq_comm ?mulrA // conjq_comm realq_conjM.
-  by rewrite -opprD -mulrDr -realq_comm ?realq_conjD // mulrDl opprD !mulrA.
-rewrite !{1}(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /= 
+  rewrite addrC !addrA; apply: f_equal2; last first.
+    congr (- _).
+    rewrite conjq_comm [LHS]realq_comm ?realq_conjM//.
+    rewrite -mulrA; congr (_ * _).
+    by rewrite conjq_comm.
+  rewrite -opprD -mulrDr -opprD; congr (- _).
+  rewrite -[LHS](@realq_comm _ ((a0 + (a0^*q)%quat))) ?realq_conjD//.
+  by rewrite mulrDl !mulrA.
+rewrite !{1}(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /=
               !{1}conjqM ?{1}conjqI !{1}addrA.
 rewrite -!addrA linearN /= !conjqM !conjqI !mulrN !mulrA; congr (_ + _).
 rewrite -mulrA conjq_comm -[b1 * _]realq_comm ?realq_conjM //.
@@ -237,7 +241,9 @@ case: a => [a0 a1]; case: b => [b0 b1]; apply: (f_equal2 (@mkOct _)) => /=.
   rewrite [RHS]addrC !{1}addrA; apply: f_equal2; last first.
     by rewrite conjq_comm (realq_comm _ (realq_conjM _)) -conjq_comm mulrA.
   rewrite [X in _ = X - _]addrC -!{1}addrA; apply: f_equal2; first by [].
-  rewrite -!opprD -mulrDl realq_comm ?mulrDr ?mulrA //.
+  rewrite -!opprD -mulrDl.
+  congr (- _).
+  rewrite [LHS]realq_comm ?mulrDr ?mulrA //.
   by rewrite -{2}[b1]conjqI -conjqM realq_conjD.
 rewrite !{1}(mulrBr, mulrDr, mulrBl, mulrDl, mulrA, linearD) /=
         !conjqM ?conjqI !{1}addrA.
@@ -525,8 +531,7 @@ Proof. move=> a b c; by rewrite /scaleoct /= !scalerDr. Qed.
 Lemma scaleoctDl w : {morph (scaleoct^~ w : R -> oct R) : a b / a + b}.
 Proof. by move=> m n; rewrite /scaleoct !scalerDl; congr mkOct. Qed.
 
-Definition oct_lmodMixin := LmodMixin scaleoctA scaleoct1 scaleoctDr scaleoctDl.
-Canonical oct_lmodType := Eval hnf in LmodType R (oct R) oct_lmodMixin.
+HB.instance Definition _ := @GRing.Zmodule_isLmodule.Build _ (oct R) _ scaleoctA scaleoct1 scaleoctDr scaleoctDl.
 
 Lemma scaleoctE (k : R) (a : oct R) :
   k *: a = k *: (a .1) %:ol + k *: (a .2) %:or.
@@ -569,8 +574,7 @@ rewrite addrC -!addrA; congr (_ + _).
 by rewrite addrCA !addrA subrK [_ + b0 + _]addrC addrA addrK addrC.
 Qed.
 
-Canonical conjo_is_additive := Additive conjo_linear.
-Canonical conjo_is_linear := AddLinear conjo_linear.
+HB.instance Definition _ := @GRing.isLinear.Build _ _ _ _ _ conjo_linear.
 
 Lemma conjoI a : (a^*o)^*o = a.
 Proof.
@@ -647,14 +651,14 @@ Qed.
 Lemma associatorDm x1 x2 y z :
   `a[y, x1 + x2, z] = `a[y, x1, z] + `a[y, x2, z].
 Proof.
-rewrite /associator !(muloDl, muloDr) !opprD {1}addrA.
+rewrite /associator !(muloDl, muloDr) !opprD [LHS]addrA.
 by rewrite [X in X + _ = _]addrAC {1}[RHS]addrA.
 Qed.
 
 Lemma associatorDr x1 x2 y z :
   `a[y, z, x1 + x2] = `a[y, z, x1] + `a[y, z, x2].
 Proof.
-rewrite /associator !(muloDl, muloDr) !opprD {1}addrA.
+rewrite /associator !(muloDl, muloDr) !opprD [LHS]addrA.
 by rewrite [X in X + _ = _]addrAC {1}[RHS]addrA.
 Qed.
 
@@ -705,8 +709,10 @@ rewrite [X in - X - _ + _ + _ = _]muloAlt1 [X in _ - X + _ + _ = _]muloAlt1.
 rewrite -{1}addrA addrC {1}addrA.
 rewrite -[X in _ + X + _ = _]muloNr -[X in _ + X = _]muloNr.
 rewrite -3!{1}muloDr.
-rewrite [X in _ *o (X - _)]addrAC -{1}addrA -/(associator _ _ _)
-         -/(associator _ _ _) associator_rot associator_swap addrC subrr.
+rewrite [X in _ *o (X - _)]addrAC.
+rewrite -(addrA (x *o a *o y - _)).
+rewrite -/(associator _ _ _) -/(associator _ _ _).
+rewrite associator_rot associator_swap addrC subrr.
 by rewrite mulor0.
 Qed.
 
@@ -784,7 +790,7 @@ rewrite !qualifE; case: a => a0 a1; apply/andP => /=; split;
   by rewrite [a0 + _]addrC addrK conjqI addrC subrr.
 rewrite [- _ *: a1.2 + _]addrC !scaleNr !subrr addrK !sub0r !scalerN  add0r.
 rewrite [- _ + _]addrC subrr add0r linearN /=.
-by rewrite !rv3LieAlgebra.liexx subr0 oppr0.
+by rewrite !(@liexx _ (vec3 R)) subr0 oppr0.
 Qed.
 
 End octonion.
@@ -917,7 +923,12 @@ rewrite {1}(realoMAr _ _ (realo_realq _)) -/x.
 rewrite -{1 3}[b^*o](addrK b) [b ^*o + _]addrC (realoE (realo_conjD _)).
 set y := _%:ol.
 rewrite !{1}muloBr {1}muloAlt3.
-by rewrite {1}(realoMAr _ _ (realo_realq _)).
+set u : oct R := (a *o b *o y - a *o (b *o b)).
+set v : oct R := (a *o (b *o y) - a *o (b *o b)).
+have ->// : u = v.
+rewrite {}/u {}/v.
+rewrite (@realoMAr _ a b y)//.
+exact: realo_realq.
 Qed.
 
 Lemma sqroM a b : sqro (a *o b) = sqro a * sqro b.

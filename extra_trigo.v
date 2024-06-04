@@ -41,8 +41,7 @@ Lemma cos_eq0_Npipi a :
   - pi < a <= pi -> (cos a == 0) = ((a == pi / 2%:R) || (a == - (pi / 2%:R))).
 Proof.
 move=> /andP[a_gtNpi a_lepi].
-have piE : pi = pi / 2%:R + pi / 2%:R :> R.
-  by rewrite -mulrDl -mulr2n -mulr_natr mulfK // ?pnatr_eq0.
+have piE : pi = pi / 2%:R + pi / 2%:R :> R by rewrite -splitr.
 case: (ltgtP a) => /= [aLhpi|hpiLa|->]; last by rewrite cos_pihalf eqxx.
   case: (ltgtP a) => /=[aLNhpi|NhpiLa|->]; last by rewrite cosN cos_pihalf eqxx.
     suff : 0 < sin (- (a + pi / 2%:R)).
@@ -197,27 +196,26 @@ Qed.
 Lemma sin_half_angle a : `| sin (a / 2%:R) | = Num.sqrt ((1 - cos a) / 2%:R).
 Proof.
 move: (cosD (a / 2%:R) (a / 2%:R)).
-rewrite -mulrDl -mulr2n -mulr_natr mulfK ?pnatr_eq0 //.
+rewrite -splitr.
 rewrite -2!expr2 cos2sin2 -addrA -opprD -mulr2n => /eqP.
 rewrite eq_sym subr_eq addrC -subr_eq eq_sym => /eqP/(congr1 (fun x => x / 2%:R)).
-rewrite -mulr_natl mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
+rewrite -(mulr_natl (_ ^+ _)) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
 by move/(congr1 Num.sqrt); rewrite sqrtr_sqr.
 Qed.
 
 Lemma cos_half_angle a : `| cos (a / 2%:R) | = Num.sqrt ((1 + cos a) / 2%:R).
 Proof.
 move: (cosD (a / 2%:R) (a / 2%:R)).
-rewrite -mulrDl -mulr2n -mulr_natr mulfK ?pnatr_eq0 //.
+rewrite -splitr.
 rewrite -2!expr2 sin2cos2 opprB addrA -mulr2n => /eqP.
 rewrite eq_sym subr_eq addrC => /eqP/(congr1 (fun x => x / 2%:R)).
-rewrite -mulr_natl mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
+rewrite -(mulr_natl (_ ^+ _)) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
 by move/(congr1 Num.sqrt); rewrite sqrtr_sqr.
 Qed.
 
 Lemma tan_half_angle a : tan (a / 2%:R) = (1 - cos a) / sin a.
 Proof.
-have aE : a = a / 2%:R + a / 2%:R.
-  by rewrite -mulrDl -mulr2n -mulr_natr mulfK ?pnatr_eq0.
+have aE : a = a / 2%:R + a / 2%:R by rewrite -splitr.
 rewrite [in RHS]aE cosD sinD -!expr2 [sin _ * _]mulrC -mulr2n.
 rewrite opprD opprK addrA -sin2cos2 -mulr2n.
 rewrite -[X in _ = X / _]mulr_natr -[X in _ = _ / X]mulr_natr.
@@ -228,8 +226,7 @@ Qed.
 
 Lemma tan_half_angle' a : tan (a / 2%:R) = sin a / (1 + cos a).
 Proof.
-have aE : a = a / 2%:R + a / 2%:R.
-  by rewrite -mulrDl -mulr2n -mulr_natr mulfK ?pnatr_eq0.
+have aE : a = a / 2%:R + a / 2%:R by rewrite -splitr.
 rewrite [in RHS]aE cosD sinD -!expr2 [sin _ * _]mulrC -mulr2n.
 rewrite -opprB opprD opprK addrA -cos2sin2 -mulr2n.
 rewrite -[X in _ = X / _]mulr_natr -[X in _ = _ / X]mulr_natr.
@@ -417,14 +414,16 @@ Proof.
 rewrite /atan2; have [y0|y0]:= ltP 0 y; first by rewrite mulNr atanN.
 rewrite lt_neqAle y0 andbT; have [y0'|y0'] /= := boolP (y == 0).
   by rewrite oppr_gt0 oppr_lt0; case: ltrgt0P => x0; rewrite ?opprK ?oppr0.
-by rewrite oppr_ge0; case: ltrgt0P => x0 // _; rewrite mulNr atanN opprD ?opprK.
+rewrite oppr_ge0; case: ltrgt0P => x0 // _; rewrite mulNr atanN.
+  by rewrite [RHS]opprD/=.
+by rewrite [RHS]opprB/= addrC.
 Qed.
 
 Lemma atan2_N1N1 : atan2 (- 1) (- 1) = - (pi / 4%:R) *+ 3.
 Proof.
 rewrite /atan2 ltr0N1 ltrN10 ler0N1 divrr; last first.
   by rewrite unitfE eqr_oppLR oppr0 oner_neq0.
-rewrite atan1 -[in RHS]mulr_natr.
+rewrite atan1 -[RHS]mulr_natr.
 have -> : 3%:R = 4%:R - 1%:R :> R by rewrite -natrB.
 by rewrite mulNr -mulrN opprB mulrBr mulr1 divfK // pnatr_eq0.
 Qed.

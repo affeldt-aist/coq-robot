@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint.
 From mathcomp Require Import ssrnum rat poly closed_field polyrcf matrix.
 From mathcomp Require Import mxalgebra tuple mxpoly zmodp binomial realalg.
@@ -59,7 +60,7 @@ have [->|m_gt0] := posnP m; first by rewrite mul0n !root0C.
 have [->|n_gt0] := posnP n; first by rewrite muln0 root0C rootC0.
 have mn_gt0: (m * n > 0)%N by rewrite ?muln_gt0 ?m_gt0.
 wlog x_gt0 : x / x >= 0 => [hwlog_x_ge0|]; last first.
-  apply: (@pexpIrn _ (m * n)); rewrite // ?qualifE ?rootC_ge0 //.
+  apply: (@pexpIrn _ (m * n)) => //; rewrite ?nnegrE//= ?rootC_ge0 //.
   by rewrite rootCK // exprM !rootCK.
 wlog nx_eq1 : x / `|x| = 1 => [hwlog_nx_eq1|].
   have [->|x_neq0] := eqVneq x 0; first by rewrite !rootC0.
@@ -94,7 +95,7 @@ Section angle_def.
 Variable T : rcfType.
 
 Record angle := Angle {
-  expi : T[i];
+  expi :> T[i];
   _ : `| expi | == 1 }.
 
 Fact angle0_subproof : `| 1 / `| 1 | | == 1 :> T[i].
@@ -102,7 +103,7 @@ Proof. by rewrite normr1 divr1 normr1. Qed.
 
 Definition angle0 := Angle angle0_subproof.
 
-Canonical angle_subType := [subType for expi].
+HB.instance Definition _ := [isSub for expi].
 
 Lemma normr_expi a : `|expi a| = 1.
 Proof. by case: a => x /= /eqP. Qed.
@@ -191,12 +192,10 @@ rewrite /add_angle /opp_angle argK; first by rewrite mulVr // expi_is_unit.
 by rewrite normrV ?expi_is_unit // normr_expi invr1.
 Qed.
 
-Definition angle_eqMixin := [eqMixin of angle by <:].
-Canonical angle_eqType := EqType angle angle_eqMixin.
-Definition angle_choiceMixin := [choiceMixin of angle by <:].
-Canonical angle_choiceType := ChoiceType angle angle_choiceMixin.
-Definition angle_ZmodMixin := ZmodMixin add_angleA add_angleC add_0angle add_Nangle.
-Canonical angle_ZmodType := ZmodType angle angle_ZmodMixin.
+HB.instance Definition _ := [Equality of angle by <:].
+HB.instance Definition _ := [Choice of angle by <:].
+HB.instance Definition _ :=
+  @GRing.isZmodule.Build angle _ opp_angle add_angle add_angleA add_angleC add_0angle add_Nangle.
 
 Lemma arg1 : arg 1 = 0.
 Proof. apply val_inj => /=; by rewrite argK // normr1. Qed.
@@ -917,24 +916,24 @@ rewrite /sin /= add_angleE /add_angle /half_angle /= argK; last first.
   by rewrite normrM (eqP (norm_half_anglec (normr_expi _))) mulr1.
 rewrite /half_anglec. simpc. rewrite /=.
 case: ifPn => a0 /=.
-  rewrite mulrC -mulr2n -mulr_natl sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
-  rewrite mulrAC sqrtrM; last by rewrite Re_half_anglec // normr_expi.
-  rewrite -!mulrA -sqrtrM; last by rewrite invr_ge0 ler0n.
-  rewrite -expr2 sqrtr_sqr !mulrA mulrC normrV ?unitfE ?pnatr_eq0 //.
-  rewrite normr_nat !mulrA mulVr ?mul1r ?unitfE ?pnatr_eq0 //.
-  rewrite -sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
+  rewrite mulrC -mulr2n.
+  rewrite (@sqrtrM _ (1 - complex.Re a)); last by rewrite subr_ge0 Im_half_anglec // normr_expi.
+  rewrite (@sqrtrM _ (1 + complex.Re a)); last by rewrite Re_half_anglec // normr_expi.
+  rewrite mulrCA -mulrA -(sqrtrM 2^-1) ?invr_ge0//.
+  rewrite -expr2 sqrtr_sqr normfV ger0_norm// -mulr_natr -2!mulrA mulVf ?pnatr_eq0// mulr1.
+  rewrite mulrC -sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
   rewrite -subr_sqr expr1n.
-  rewrite -(@eqr_expn2 _ 2%N) //; last by rewrite sqrtr_ge0.
+  rewrite -(@eqrXn2 _ 2%N) //; last by rewrite sqrtr_ge0.
   by rewrite -sin2cos2 sqr_sqrtr // sqr_ge0.
-rewrite mulrN mulNr -opprB opprK eqr_oppLR.
-rewrite mulrC -mulr2n -mulr_natl sqrtrM; last by rewrite Re_half_anglec // normr_expi.
-rewrite mulrAC sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
-rewrite -!mulrA -sqrtrM; last by rewrite invr_ge0 ler0n.
-rewrite -expr2 sqrtr_sqr !mulrA mulrC normrV ?unitfE ?pnatr_eq0 //.
-rewrite normr_nat !mulrA mulVr ?mul1r ?unitfE ?pnatr_eq0 //.
-rewrite -sqrtrM; last by rewrite Re_half_anglec // normr_expi.
-rewrite mulrC -subr_sqr expr1n.
-rewrite -(@eqr_expn2 _ 2%N) //; last 2 first.
+rewrite mulrN mulNr -opprD eqr_oppLR.
+rewrite mulrC -mulr2n.
+rewrite (@sqrtrM _ (1 - complex.Re a)); last by rewrite subr_ge0 Im_half_anglec // normr_expi.
+rewrite (@sqrtrM _ (1 + complex.Re a)); last by rewrite Re_half_anglec // normr_expi.
+rewrite mulrAC -2!mulrA -sqrtrM ?invr_ge0//.
+rewrite -expr2 sqrtr_sqr normfV ger0_norm// mulrA -[eqbLHS]mulr_natr -!mulrA mulVf ?pnatr_eq0// mulr1.
+rewrite -sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
+rewrite -subr_sqr expr1n.
+rewrite -(@eqrXn2 _ 2%N) //; last 2 first.
   by rewrite sqrtr_ge0.
   by rewrite ltW // oppr_gt0 ltNge.
 by rewrite -sin2cos2 sqrrN sqr_sqrtr // sqr_ge0.
@@ -967,7 +966,7 @@ Proof.
 move: (cosD (half_angle a) (half_angle a)).
 rewrite halfP -2!expr2 cos2sin2 -addrA -opprD -mulr2n => /eqP.
 rewrite eq_sym subr_eq addrC -subr_eq eq_sym => /eqP/(congr1 (fun x => x / 2%:R)).
-rewrite -mulr_natl mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
+rewrite -(mulr_natl (sin _ ^+ _)) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
 by move/(congr1 Num.sqrt); rewrite sqrtr_sqr.
 Qed.
 
