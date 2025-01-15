@@ -3,7 +3,7 @@ From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm reals.
-Require Import ssr_ext euclidean skew vec_angle.
+Require Import robot.ssr_ext robot.euclidean robot.skew robot.vec_angle.
 From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
