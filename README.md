@@ -25,6 +25,7 @@ Mathematical Components library.
 - License: [LGPL-2.1-or-later](LICENSE)
 - Compatible Coq versions: Coq 8.20
 - Additional dependencies:
+  - [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
   - [MathComp ssreflect](https://math-comp.github.io)
   - [MathComp fingroup](https://math-comp.github.io)
   - [MathComp algebra](https://math-comp.github.io)

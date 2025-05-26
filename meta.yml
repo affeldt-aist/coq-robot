@@ -41,6 +41,11 @@ tested_coq_opam_versions:
 
 dependencies:
 - opam:
+    name: coq-hierarchy-builder
+    version: '{ (>= "1.5.0") & (< "1.9")}'
+  description: |-
+    [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
+- opam:
     name: coq-mathcomp-ssreflect
     version: '{ (>= "2.3.0") }'
   description: |-
