@@ -16,17 +16,19 @@ This repository contains an experimental library for the mathematics
 of rigid body transformations using the Coq proof-assistant and the
 Mathematical Components library."""
 
-build: [make "-j%{jobs}%"]
+build: [make "-j%{jobs}%" ]
 install: [make "install"]
 depends: [
-  "coq" { (>= "8.16" & < "8.20~") | (= "dev") }
-  "coq-mathcomp-ssreflect" { (>= "2.2.0") }
-  "coq-mathcomp-fingroup" { (>= "2.2.0") }
-  "coq-mathcomp-algebra" { (>= "2.2.0") }
-  "coq-mathcomp-solvable" { (>= "2.2.0") }
-  "coq-mathcomp-field" { (>= "2.2.0") }
-  "coq-mathcomp-analysis" { (>= "1.0.0") }
+  "coq" { (>= "8.20" & < "9~") | (= "dev") }
+  "coq-hierarchy-builder" { (>= "1.5.0") & (< "1.9")}
+  "coq-mathcomp-ssreflect" { (>= "2.3.0") }
+  "coq-mathcomp-fingroup" { (>= "2.3.0") }
+  "coq-mathcomp-algebra" { (>= "2.3.0") }
+  "coq-mathcomp-solvable" { (>= "2.3.0") }
+  "coq-mathcomp-field" { (>= "2.3.0") }
+  "coq-mathcomp-analysis" { (>= "1.11.0") }
   "coq-mathcomp-real-closed" { (>= "2.0.0") }
+  "coq-mathcomp-algebra-tactics" { (>= "1.2.4") }
 ]
 
 tags: [

@@ -17,7 +17,7 @@ From mathcomp Require Import perm path fingroup complex.
 (*                                                                            *)
 (******************************************************************************)
 
-Reserved Notation "''e_' i" (format "''e_' i", at level 3).
+Reserved Notation "''e_' i" (format "''e_' i", at level 8, i at level 2).
 Reserved Notation "u '``_' i" (at level 3, i at level 2,
   left associativity, format "u '``_' i").
 
@@ -393,7 +393,7 @@ Proof. by rewrite normc_def /= expr0n add0r expr1n sqrtr1. Qed.
 
 End extra_complex.
 
-(*Section Nsatz_rcfType.
+Section Nsatz_rcfType.
 Variable T : rcfType.
 
 Lemma Nsatz_rcfType_Setoid_Theory : Setoid_Theory T (@eq T).
@@ -450,4 +450,3 @@ by rewrite (eqr_nat T 1 0).
 Defined.
 
 End Nsatz_rcfType.
-*)

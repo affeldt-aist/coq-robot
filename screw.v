@@ -1345,7 +1345,7 @@ Lemma MozziChasles_helper p : norm (displacement f p) = d0 -> normdisp p = 0.
 Proof.
 move=> Hp.
 have := lexx (norm (d0 *: w) ^+ 2).
-rewrite {1}normZ w1 mulr1 sqr_normr -{1}Hp decomp_displacement -ler_sub_addl.
+rewrite {1}normZ w1 mulr1 sqr_normr -{1}Hp decomp_displacement -lerBDl.
 rewrite w1 expr1n invr1 scale1r.
 by rewrite subrr le_eqVlt ltNge sqr_ge0 orbF sqrf_eq0 norm_eq0 => /eqP.
 Qed.

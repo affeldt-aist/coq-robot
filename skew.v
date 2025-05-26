@@ -1,11 +1,10 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
-From mathcomp Require Import realalg complex finset fingroup perm.
+From mathcomp Require Import realalg complex finset fingroup perm ring.
 Require Import ssr_ext euclidean vec_angle.
-From mathcomp.analysis Require Import forms reals nsatz_realtype.
+From mathcomp Require Import forms reals.
 
 (******************************************************************************)
 (*                         Skew-symmetric matrices                            *)
@@ -876,7 +875,7 @@ rewrite /cayley inv1BME; apply/matrix3P/and9P; split.
   rewrite mulrDr mulrN !mulrA !divff//; Simp.r => /=.
   rewrite sqr_norm_row3.
   rewrite !expr2.
-  nsatz.
+  by field.
 - rewrite -/r.
   rewrite !(mxE,sum3E); Simp.r.
   rewrite !spinij; Simp.r => /=.
@@ -887,7 +886,7 @@ rewrite /cayley inv1BME; apply/matrix3P/and9P; split.
   rewrite !mulrDr mulr1 !mulrA !divff//; Simp.r => /=.
   rewrite mulrDr mulrN !mulrA !divff//; Simp.r => /=.
   rewrite sqr_norm_row3 !expr2.
-  nsatz.
+  by field.
 - rewrite -/r.
   rewrite !(mxE,sum3E); Simp.r.
   rewrite !spinij; Simp.r => /=.
@@ -899,7 +898,7 @@ rewrite /cayley inv1BME; apply/matrix3P/and9P; split.
   rewrite !mulrN !mulrA !divff//; Simp.r => /=.
   rewrite -mulrA divff//; Simp.r => /=.
   rewrite sqr_norm_row3 !expr2.
-  nsatz.
+  by field.
 (* TODO: complete *)
 Abort.
 
