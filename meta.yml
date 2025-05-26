@@ -30,46 +30,44 @@ license:
   file: LICENSE
 
 supported_coq_versions:
-  text: Coq 8.18 to Coq 8.19
-  opam: '{ (>= "8.16" & < "8.20~") | (= "dev") }'
+  text: Coq 8.20
+  opam: '{ (>= "8.20" & < "9~") | (= "dev") }'
 
 tested_coq_opam_versions:
-- version: '2.2.0-coq-8.17'
+- version: '2.3.0-coq-8.20'
   repo: 'mathcomp/mathcomp'
-- version: '2.2.0-coq-8.18'
-  repo: 'mathcomp/mathcomp'
-- version: '2.2.0-coq-8.19'
+- version: '2.4.0-coq-8.20'
   repo: 'mathcomp/mathcomp'
 
 dependencies:
 - opam:
     name: coq-mathcomp-ssreflect
-    version: '{ (>= "2.2.0") }'
+    version: '{ (>= "2.3.0") }'
   description: |-
     [MathComp ssreflect](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-fingroup
-    version: '{ (>= "2.2.0") }'
+    version: '{ (>= "2.3.0") }'
   description: |-
     [MathComp fingroup](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-algebra
-    version: '{ (>= "2.2.0") }'
+    version: '{ (>= "2.3.0") }'
   description: |-
     [MathComp algebra](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-solvable
-    version: '{ (>= "2.2.0") }'
+    version: '{ (>= "2.3.0") }'
   description: |-
     [MathComp solvable](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-field
-    version: '{ (>= "2.2.0") }'
+    version: '{ (>= "2.3.0") }'
   description: |-
     [MathComp field](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-analysis
-    version: '{ (>= "1.0.0") }'
+    version: '{ (>= "1.11.0") }'
   description: |-
     [MathComp analysis](https://github.com/math-comp/analysis)
 - opam:
