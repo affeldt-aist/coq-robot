@@ -83,7 +83,7 @@ End about_bound_vectors.
 Notation "a \+b b" := (BoundFramed_add a b).
 Notation "a \-b b" := (BoundVect_sub a b).
 
-Lemma derive1mx_BoundFramed_add (R : realFieldType) (F : tframe [ringType of R^o])
+Lemma derive1mx_BoundFramed_add (R : realFieldType) (F : tframe R^o)
   (Q : R -> bvec F) (Z : R -> fvec F) t :
   derivable_mx (fun x => BoundVect.endp (Q x)) t 1 ->
   derivable_mx (fun x => FramedVect.v (Z x)) t 1 ->
@@ -131,7 +131,7 @@ Proof. by []. Qed.
 
 Section derivable_FromTo.
 
-Lemma derivable_mx_FromTo' (R : realFieldType) (F : R -> tframe [ringType of R^o])
+Lemma derivable_mx_FromTo' (R : realFieldType) (F : R -> tframe R^o)
   (G' : forall t, rframe (F t)) (G : forall t, rframe (F t)) t :
   derivable_mx F t 1 -> derivable_mx G t 1 -> derivable_mx G' t 1 ->
   derivable_mx (fun x => (G x) _R^ (G' x)) t 1.
@@ -148,7 +148,7 @@ apply: derivable_sum => i.
 apply: derivableM; [exact: HG | exact: HG'].
 Qed.
 
-Lemma derivable_mx_FromTo (R : realFieldType) (F : R -> tframe [ringType of R^o])
+Lemma derivable_mx_FromTo (R : realFieldType) (F : R -> tframe R^o)
   (G : forall t, rframe (F t)) t :
   derivable_mx F t 1 -> derivable_mx G t 1 ->
   derivable_mx (fun x => (G x) _R^ (F x)) t 1.
@@ -165,14 +165,14 @@ exact: HF.
 Qed.
 
 Lemma derivable_mx_FromTo_fixed (R : realFieldType)
-  (F : tframe [ringType of R^o]) (G : R -> rframe F) t :
+  (F : tframe R^o) (G : R -> rframe F) t :
   derivable_mx G t 1 -> derivable_mx (fun x => (G x) _R^ F) t 1.
 Proof.
 move=> H; apply derivable_mx_FromTo; [move=> a b; exact: ex_derive | exact H].
 Qed.
 
 Lemma derivable_mx_FromTo_tr (R : realFieldType)
-  (F : tframe [ringType of R^o]) (G : R -> rframe F) t :
+  (F : tframe R^o) (G : R -> rframe F) t :
   derivable_mx (fun x => F _R^ (G x)) t 1 = derivable_mx (fun x => F _R^ (G x)) t 1.
 Proof. by rewrite trmx_derivable. Qed.
 
@@ -180,21 +180,21 @@ End derivable_FromTo.
 
 (* the coordinate transformation of a point P1 from frame F1 to frame F
   (eqn 2.33, 3.10) *)
-Definition coortrans (R : realType) (F : tframe [ringType of R^o]) (F1 : rframe F)
+Definition coortrans (R : realType) (F : tframe R^o) (F1 : rframe F)
     (P1 : bvec F1) : bvec F :=
   RFrame.o F1 \+b rmap F (FramedVect_of_Bound P1).
 
 (* motion of P1 w.r.t. the fixed frame F (eqn B.2) *)
-Definition motion (R : realType) (F : tframe [ringType of R^o]) (F1 : R -> rframe F)
+Definition motion (R : realType) (F : tframe R^o) (F1 : R -> rframe F)
   (P1 : forall t, bvec (F1 t)) t : bvec F := coortrans (P1 t).
 
 (* [sciavicco] p.351-352  *)
 Section kinematics.
 
-Variables (R : realType) (F : tframe [ringType of R^o]). (* fixed frame *)
+Variables (R : realType) (F : tframe R^o). (* fixed frame *)
 Variable F1 : R -> rframe F. (* time-varying frame (origin and basis in F) *)
 Hypothesis derivable_F1 : forall t, derivable_mx F1 t 1.
-Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o [ringType of R^o] \o F1) t 1.
+Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o R^o \o F1) t 1.
 
 Variable P1 : forall t, bvec (F1 t). (* point with coordinates in F1 *)
 (* NB: compared with [sciavicco] p.351, P1 not necessarily fixed in F1 *)
@@ -296,12 +296,12 @@ End kinematics.
 (* [sciavicco] p.81-82 *)
 Section derivative_of_a_rotation_matrix_contd.
 
-Variables (R : realType) (F : tframe [ringType of R^o]).
+Variables (R : realType) (F : tframe R^o).
 Variable F1 : R -> rframe F.
 Hypothesis derivable_F1 : forall t, derivable_mx F1 t 1.
 Variable p1 : forall t, bvec (F1 t).
 Hypothesis derivable_mx_p1 : forall t, derivable_mx (fun x => BoundVect.endp (p1 x)) t 1.
-Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o [ringType of R^o] \o F1) t 1.
+Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o R^o \o F1) t 1.
 
 Definition p0 := motion p1.
 
@@ -355,7 +355,7 @@ rewrite !(mul0mx,add0r,mul1mx,mulmx0,trmx0,addr0,mulmx1).
 by rewrite mulmxE -/(ang_vel_mx r t).
 Qed.
 
-Lemma spatial_velocity_in_se3 x : spatial_velocity x \in 'se3[[rcfType of R^o]].
+Lemma spatial_velocity_in_se3 x : spatial_velocity x \in 'se3[R^o].
 Proof.
 rewrite spatial_velocityE. set r := @rot_of_hom _.
 rewrite qualifE block_mxKul block_mxKur block_mxKdr 2!eqxx 2!andbT.
@@ -394,11 +394,11 @@ Definition body_lin_vel :=
 Lemma body_ang_vel_is_so t : body_ang_vel_mx (@rot_of_hom _ \o M) t \is 'so[R]_3.
 Proof.
 rewrite /body_ang_vel_mx.
-have : forall t, (@rot_of_hom [rcfType of R^o] \o M) t \is 'O[[ringType of R]]_3.
+have : forall t, (@rot_of_hom R^o \o M) t \is 'O[R]_3.
   move=> t0; by rewrite rotation_sub // rot_of_hom_is_SO.
 move/ang_vel_mx_is_so => /(_ (derivable_rot_of_hom derivableM))/(_ t).
 rewrite /ang_vel_mx.
-move/(conj_so (((rot_of_hom (T:=[rcfType of R^o]) \o M) t)^T)).
+move/(conj_so (((rot_of_hom (T:=R) \o M) t)^T)).
 rewrite !mulmxA !trmxK orthogonal_mul_tr ?rotation_sub // ?rot_of_hom_is_SO //.
 by rewrite mul1mx.
 Qed.
@@ -451,7 +451,7 @@ End rigid_body_velocity.
 (* [sciavicco] p.83 *)
 Section link_velocity.
 
-Variables (R : realType) (F : tframe [ringType of R^o]).
+Variables (R : realType) (F : tframe R^o).
 Variable F1 : R -> rframe F.
 Variable F2 : R -> rframe F.
 Let o1 t : bvec F := RFrame.o (F1 t).
@@ -462,7 +462,7 @@ Let r12 : forall t : R, bvec (F1 t) := fun t =>
     (FramedVect.v (rmap (F1 t) `[ \o{F2 t} - \o{F1 t} $ F ])).
 
 Hypothesis derivable_F1 : forall t, derivable_mx F1 t 1.
-Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o [ringType of R^o] \o F1) t 1.
+Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o R^o \o F1) t 1.
 Hypothesis derivable_r12 : forall t, derivable_mx (fun x => BoundVect.endp (r12 x)) t 1.
 Hypothesis derivable_F2 : forall t, derivable_mx F2 t 1.
 
@@ -650,7 +650,7 @@ Section chain.
 Inductive joint (R : rcfType) :=
   Revolute of (R^o -> (*angle*) R) | Prismatic of (R^o -> R).
 
-Definition joint_variable (R : realType) (j : joint [rcfType of R]) : R^o -> R :=
+Definition joint_variable (R : realType) (j : joint R) : R^o -> R :=
   fun t => match j with Revolute a => a t | Prismatic a => a t end.
 
 Record chain (R : rcfType) n (* number of joints *) := mkChain {
@@ -661,7 +661,7 @@ End chain.
 
 Section geometric_jacobian_computation.
 
-Variables (n : nat) (R : realType) (c : chain [rcfType of R^o] n).
+Variables (n : nat) (R : realType) (c : chain R n).
 
 Definition prev_frame (i : 'I_n) : 'I_n.+1 := widen_ord (leqnSn n) i.
 Definition next_frame (i : 'I_n) : 'I_n.+1 := fintype.lift ord0 i.
@@ -670,7 +670,7 @@ Definition last_frame : 'I_n.+1 := ord_max.
 
 Section geo_jac_row.
 Variable i : 'I_n.
-Let j : joint [rcfType of R^o] := joint_of_chain c i.
+Let j : joint R^o := joint_of_chain c i.
 Let q : R^o -> R^o := joint_variable j.
 Let Fim1 := frame_of_chain c (prev_frame i).
 (*Let Fi := frame_of_chain c (next_frame i).*)
@@ -706,9 +706,9 @@ Let trans t := scara_trans (theta1 t) a1 (theta2 t) a2 (d3 t) d4.
 Definition scara_end_effector t : 'M[R]_4 := hom (rot t) (trans t).
 
 Let scara_lin_vel : R -> 'rV[R]_3 :=
-  derive1mx (@trans_of_hom [ringType of R^o] \o scara_end_effector).
+  derive1mx (@trans_of_hom R^o \o scara_end_effector).
 Let scara_ang_vel : R -> 'rV[R]_3 :=
-  ang_vel (@rot_of_hom [ringType of R^o] \o scara_end_effector).
+  ang_vel (@rot_of_hom R^o \o scara_end_effector).
 
 Definition scara_joints : 'I_4 -> joint R :=
   [eta (fun=> Prismatic 0) with
@@ -751,7 +751,7 @@ Proof.
 move=> H1 H2 H3 H4.
 rewrite /geo_jac; set a := (X in _ *m @row_mx _ _ 3 3 X _).
 rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
-- rewrite /scara_lin_vel (_ : @trans_of_hom [rcfType of R] \o _ = trans); last first.
+- rewrite /scara_lin_vel (_ : @trans_of_hom R \o _ = trans); last first.
     rewrite funeqE => x /=; exact: trans_of_hom_hom.
   rewrite /trans /scara_trans derive1mxE [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
   transitivity (
@@ -853,9 +853,9 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
         exact: H2.
         exact: H1.
       rewrite -mulrDr -!derive1E.
-      rewrite addrC (addrC (_^`() _)).
+      rewrite addrC (addrC (_^`() _)%classic).
       by rewrite !scalerAl.
-- rewrite /scara_ang_vel (_ : @rot_of_hom [ringType of R^o] \o _ = rot); last first.
+- rewrite /scara_ang_vel (_ : @rot_of_hom R \o _ = rot); last first.
     rewrite funeqE => x /=; exact: rot_of_hom_hom.
   rewrite /rot /ang_vel /scara_rot.
   rewrite (_ : (fun _ => _) = (@Rz _ \o (theta1 + theta2 + theta4))); last first.

@@ -20,6 +20,8 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
+Import numFieldNormedType.Exports.
+
 Local Open Scope ring_scope.
 
 Lemma mx_lin1N (R : ringType) n (M : 'M[R]_n) :
@@ -31,6 +33,19 @@ Lemma mxE_funeqE (R : realFieldType) (V W : normedModType R)
   (fun x => (\matrix_(i < n, j < m) (f x i j)) i j) =
   (fun x => f x i j).
 Proof. by rewrite funeqE => ?; rewrite mxE. Qed.
+
+Section Derive_lemmasVW.
+Variables (R : numFieldType) (V W : normedModType R).
+Implicit Types f g : V -> W.
+
+(* TODO: Fixme in MCA *)
+Lemma derive_cst (k : W) (x v : V) : 'D_v (cst k) x = 0.
+Proof. by rewrite derive_val. Qed.
+
+End Derive_lemmasVW.
+
+Lemma derive1_cst {R : numFieldType} (V : normedModType R) (k : V) t : ((cst k)^`() t)%classic = 0.
+Proof. by rewrite derive1E derive_cst. Qed.
 
 Section derive_mx.
 
@@ -99,10 +114,11 @@ Qed.
 Lemma derivable_mx_cst (P : 'M[W]_(m, n)) t : derivable_mx (cst P) t 1.
 Proof. move=> a b; by rewrite (_ : (fun x : R => _) = cst (P a b)). Qed.
 
+
 Lemma derive1mx_cst (P : 'M[W]_(m, n)) : derive1mx (cst P) = cst 0.
 Proof.
 rewrite /derive1mx funeqE => t; apply/matrixP => i j; rewrite !mxE.
-by rewrite (_ : (fun x : R => _) = (cst (P i j))) // derive1_cst.
+by rewrite (_ : (fun x : R => _) = cst (P i j)) // derive1_cst.
 Qed.
 
 Lemma derive1mx_tr M t : derive1mx (trmx \o M) t = (derive1mx M t)^T.
@@ -379,10 +395,10 @@ Definition body_ang_vel_mx t : 'M_3 := derive1mx M t *m (M t)^T.
 (* angular velocity (a free vector) *)
 Definition ang_vel t := unspin (ang_vel_mx t).
 
-Hypothesis MO : forall t, M t \is 'O[ [ringType of R] ]_3.
+Hypothesis MO : forall t, M t \is 'O[ R ]_3.
 Hypothesis derivable_M : forall t, derivable_mx M t 1.
 
-Lemma ang_vel_mx_is_so t : ang_vel_mx t \is 'so[ [ringType of R] ]_3.
+Lemma ang_vel_mx_is_so t : ang_vel_mx t \is 'so[ R ]_3.
 Proof.
 have : (fun t => (M t)^T * M t) = cst 1.
   rewrite funeqE => x; by rewrite -orthogonal_inv // mulVr // orthogonal_unit.

@@ -150,7 +150,7 @@ case: (ler0P (sin (a - b))) => sE; last first.
   move/rotation_det : MSO.
   rewrite det_mx22 a1 a2 b1 b2 mulrC -(mulrC (cos b)) -sinB => /esym/eqP.
   rewrite -eqr_opp -sinN opprB => /eqP sE1.
-  by move: sE; rewrite -sE1 ltr_oppr oppr0 (ltr_nat _ 1 0).
+  by move: sE; rewrite -sE1 ltrNr oppr0 (ltr_nat _ 1 0).
 rewrite -sinN opprB => /(@rot2d_helper M a b); apply.
 by rewrite -a1 -a2 -b1 -b2 [in LHS](col_mx2_rowE M) 2!row2_of_row.
 Qed.
@@ -200,7 +200,7 @@ Lemma tr_SO2 M : M \is 'SO[T]_2 -> `|\tr M| <= 2%:R.
 Proof.
 case/rot2d => a aB PRO; move: (cos_max a) => ca.
 rewrite PRO tr_RO -(mulr_natr (cos a)) normrM normr_nat.
-by rewrite -[in X in _ <= X]mulr_natr ler_pmul.
+by rewrite -[in X in _ <= X]mulr_natr ler_pM.
 Qed.
 
 End two_dimensional_rotation.
@@ -280,9 +280,9 @@ Definition Ry a := col_mx3
 Lemma Ry_is_SO a : Ry a \is 'SO[T]_3.
 Proof.
 apply/rotation3P/and4P; split.
-- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+- rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n.
   by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 -2!expr2 sqrrN cos2Dsin2.
-- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+- rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n.
    by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 add0r mulr1.
 - by rewrite 2!rowK /= dotmulE sum3E !mxE /= !mulr0 mul0r !add0r.
 - rewrite 3!rowK /= crossmulE !mxE /=. by Simp.r.
@@ -318,9 +318,9 @@ Qed.
 Lemma Rz_is_SO a : Rz a \is 'SO[T]_3.
 Proof.
 apply/rotation3P/and4P; split.
-- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+- rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n.
   by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 -2!expr2 cos2Dsin2.
-- rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n.
+- rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n.
 - by rewrite -dotmulvv dotmulE sum3E !mxE /= mulr0 addr0 mulrN mulNr opprK addrC cos2Dsin2.
 - by rewrite 2!rowK /= dotmulE sum3E !mxE /= mulrN mulr0 addr0 addrC mulrC subrr.
 - rewrite 3!rowK /= crossmulE !mxE /=. Simp.r. by rewrite -!expr2 cos2Dsin2 e2row.
@@ -555,7 +555,7 @@ have cd : k *m M = c *: j + d *: k.
     scale0r add0r.
 have H1 : a ^+ 2 + b ^+ 2 = 1.
   move/eqP: (norm_row_of_O (NOFrame.MO (Base.frame e)) 1).
-  rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv.
+  rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv.
   rewrite -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO)).
   rewrite -rowframeE ab dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv.
   by rewrite normj // normk // !(expr1n,mulr1) -!expr2 dotmulC jdotk // !(mulr0,add0r,addr0) => /eqP.
@@ -566,7 +566,7 @@ have H2 : a * c + b * d = 0.
   by rewrite expr1n !mulr1 dotmulC jdotk // 4!mulr0 add0r addr0 mulrC (mulrC d) => /eqP.
 have H3 : c ^+ 2 + d ^+ 2 = 1.
   move/eqP: (norm_row_of_O (NOFrame.MO (Base.frame e)) 2%:R).
-  rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv.
+  rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv.
   rewrite -(proj2 (orth_preserves_dotmul M) (rotation_sub MSO)) -!rowframeE -/k cd.
   rewrite dotmulDr 2!dotmulDl 4!dotmulvZ 4!dotmulZv 2!dotmulvv normj // normk //.
   by rewrite expr1n 2!mulr1 -2!expr2 dotmulC jdotk // !(mulr0,addr0,add0r) => /eqP.
@@ -792,7 +792,7 @@ Lemma det_eskew a w : norm w = 1 -> \det `e^(a, w) = 1.
 Proof.
 move=> w1.
 move/orthogonal_det/eqP : (eskew_is_O (a / 2%:R) w1).
-rewrite -(@eqr_expn2 _ 2) // expr1n sqr_normr expr2 -det_mulmx.
+rewrite -(@eqrXn2 _ 2) // expr1n sqr_normr expr2 -det_mulmx.
 rewrite mulmxE emx3M; last by rewrite spin3 w1 expr1n scaleN1r.
 by move/eqP; rewrite -splitr.
 Qed.
@@ -1405,14 +1405,14 @@ move: (Aa.isRot_angleN w0 aB1 Rota) => a_angle_of_rot.
   move/(Aa.isRot_axis w0 _) => w'axial.
   have sina0 : sin a != 0.
     suff : 0 < sin (- a) by rewrite sinN oppr_cp0; case: ltgtP.
-    by apply: sin_gt0_pi; rewrite oppr_cp0 andbC Ha ltr_oppl a_gtNpi.
+    by apply: sin_gt0_pi; rewrite oppr_cp0 andbC Ha ltrNl a_gtNpi.
 rewrite /Aa.naxial in w'axial.
 set k := (_ ^-1 ) in w'axial.
 have sa_gt0 : 0 < sin (Aa.angle M).
   rewrite -oppr_cp0 -sinN -a_angle_of_rot.
-  by rewrite -oppr_gt0 -sinN sin_gt0_pi // oppr_cp0 Ha ltr_oppl.
+  by rewrite -oppr_gt0 -sinN sin_gt0_pi // oppr_cp0 Ha ltrNl.
 have se_neq0 : sin (Aa.angle M) != 0 by case: ltgtP sa_gt0.
-have k0 : 0 < k by rewrite /k invr_gt0 pmulrn_lgt0. 
+have k0 : 0 < k by rewrite /k invr_gt0 pmulrn_lgt0.
 apply: (@same_isRot _ _ _ _ (- norm (Aa.vaxis M) *: w) ((sin (Aa.angle M) *+ 2) * k) w0 _ (- Aa.angle M)).
 - by rewrite pmulr_rgt0 // pmulrn_lgt0.
 - rewrite -(norm_scale_normalize (normalize (vaxis_euler M))) //.
@@ -1640,12 +1640,12 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scaleN1r; by right.
 have pi2B : - pi < (pi : T) / 2%:R <= pi.
-  rewrite lter_pdivl_mulr ?ltr0n // ler_pdivrMr ?ltr0n //.
+  rewrite lter_pdivlMr ?ltr0n // ler_pdivrMr ?ltr0n //.
   rewrite -subr_gte0 mulNr opprK addr_gt0 ? pi_gt0 //.
     by rewrite -subr_gte0 mulr_natr mulr2n addrK pi_ge0.
   by rewrite mulr_natr mulr2n addr_gt0 // pi_gt0.
 have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
-  rewrite ltr_oppl opprK lter_pdivr_mulr ?ltr0n // lerNl.
+  rewrite ltrNl opprK lter_pdivrMr ?ltr0n // lerNl.
   rewrite ler_pdivlMr ?ltr0n // -subr_gte0 mulNr opprK.
   rewrite mulr_natr mulr2n addr_ge0 ?pi_ge0 //.
     by rewrite -subr_gte0 addrK pi_gt0.

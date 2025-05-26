@@ -312,7 +312,7 @@ have H4 : From1To0 = dh_rot theta alpha.
         move: H10_H11; rewrite (eqP H10) => /eqP; rewrite eq_sym -addrC -subr_eq -cos2sin2 eq_sym.
         rewrite eqf_sqr => /orP[] /eqP H11.
           rewrite {2}/From1To0 -lock H11 {1}/From1To0 -lock (eqP H10).
-          rewrite -expr2 sin2cos2 opprB addrA subr_eq -!mulr2n eqr_muln2r /=.
+          rewrite -expr2 sin2cos2 opprB addrA subr_eq -!mulr2n eqrMn2r /=.
           rewrite -sqr_normr sqrp_eq1 ?normr_ge0 //.
           move/eqP/cos1sin0 => ->.
           by rewrite oppr0.
@@ -339,7 +339,7 @@ have H4 : From1To0 = dh_rot theta alpha.
       rewrite eqf_sqr => /orP[] /eqP H11.
         move: Hrot.
         rewrite H10 H11 -!expr2 => /eqP; rewrite cos2sin2 opprB addrA -mulr2n.
-        rewrite subr_eq eqr_muln2r /= -sqr_normr.
+        rewrite subr_eq eqrMn2r /= -sqr_normr.
         rewrite sqrp_eq1 ?normr_ge0 // => /eqP/sin1cos0 => ct0.
         by rewrite {1 2}/From1To0 -lock H10 H11 ct0 oppr0.
       by rewrite /From1To0 -lock H10 H11.

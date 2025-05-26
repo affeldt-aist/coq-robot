@@ -395,10 +395,10 @@ Proof. by rewrite sinD cosN sinN mulrN. Qed.
 
 Lemma abs_sin a : `| sin a | = Num.sqrt (1 - cos a ^+ 2).
 Proof.
-apply/eqP; rewrite -(@eqr_expn2 _ 2) //; last by rewrite sqrtr_ge0.
+apply/eqP; rewrite -(@eqrXn2 _ 2) //; last by rewrite sqrtr_ge0.
 rewrite -normrX ger0_norm; last by rewrite sqr_ge0.
 rewrite sqr_sqrtr; last first.
-  by rewrite lter_sub_addr add0r -sqr_normr exprn_ilte1 // cos_max.
+  by rewrite lterBDr add0r -sqr_normr exprn_ilte1 // cos_max.
 by rewrite -subr_eq opprK addrC cos2Dsin2.
 Qed.
 
@@ -688,7 +688,7 @@ rewrite eq_complex /asin /sin argK /= ?eqxx ?andbT; last first.
   move: x1; rewrite normc_def eq_complex eqxx andbT /=.
   move/eqP/(congr1 (fun x => x^+2)); rewrite expr1n.
   rewrite sqr_sqrtr ?addr_ge0 // ?sqr_ge0 // => <-.
-  by rewrite ler_addr // sqr_ge0.
+  by rewrite lerDr // sqr_ge0.
 rewrite /cos /= in cosx1.
 move : x1; rewrite normc_def /= eq_complex /= eqxx andbT.
 move/eqP/(congr1 (fun x => x^+2)); rewrite expr1n.
@@ -714,7 +714,7 @@ rewrite expi_arg.
     rewrite divr_gt0 //.
       abstract: myRe0.
       move/lt_total : x0 => /orP [] x0; last by rewrite gtr0_sgz //= invr_gt0.
-      by rewrite ltr0_sgz //= ltr_oppr oppr0 invr_lt0.
+      by rewrite ltr0_sgz //= ltrNr oppr0 invr_lt0.
     abstract: myltr0.
     rewrite -ltcR -normc_def normr_gt0 eq_complex /= negb_and.
     move/lt_total : x0 => /orP [] x0; last by rewrite gtr0_sgz //= invr_eq0 gt_eqF.
@@ -762,7 +762,7 @@ rewrite sin2cos2.
 apply/eqP; rewrite -eqr_opp opprB subr_eq; apply/eqP.
 rewrite -mulNr.
 have /divrr H : 1 + x ^+ 2 \in GRing.unit.
-  by rewrite unitfE gt_eqF // -(addr0 0) ltr_le_add // ?ltr01 // sqr_ge0.
+  by rewrite unitfE gt_eqF // -(addr0 0) ltr_leD // ?ltr01 // sqr_ge0.
 rewrite -{2}H {H} addrC mulNr -mulrBl -invf_div -[LHS]invrK; congr (_ ^-1).
 rewrite -exprVn -div1r expr_div_n expr1n cos2_tan2.
   by rewrite atanK addrK divr1.
@@ -795,11 +795,11 @@ apply/eqP.
 case/boolP : (x == 0) => [/eqP ->|].
   by rewrite atan0 sin0 mul0r.
 move/lt_total => /orP [] x0.
-  rewrite -eqr_opp -(@eqr_expn2 _ 2) //; last 2 first.
+  rewrite -eqr_opp -(@eqrXn2 _ 2) //; last 2 first.
     move/sin_atan_ltr0 : x0; by rewrite oppr_ge0 => /ltW.
     by rewrite -mulNr divr_ge0 // ?sqrtr_ge0 // oppr_ge0 ltW.
   by rewrite 2!sqrrN sqr_sin_atan exprMn exprVn sqr_sqrtr // addr_ge0 // ?ler01 // sqr_ge0.
-rewrite -(@eqr_expn2 _ 2) //; last 2 first.
+rewrite -(@eqrXn2 _ 2) //; last 2 first.
   by rewrite ltW // sin_atan_gtr0.
   by rewrite mulr_ge0 // ?invr_ge0 ?sqrtr_ge0 // ltW.
 by rewrite sqr_sin_atan exprMn exprVn sqr_sqrtr // addr_ge0 // ?ler01 // sqr_ge0.
@@ -842,7 +842,7 @@ Definition half_anglec (x : T[i]) :=
 
 Lemma Re_half_anglec (x : T[i]) : `|x| = 1 -> 0 <= 1 + complex.Re x.
 Proof.
-move=> x1; rewrite -ler_subl_addr add0r.
+move=> x1; rewrite -lerBlDr add0r.
 suff : `| complex.Re x |%:C%C <= `|x|; last by rewrite normc_ge_Re.
 rewrite x1 -lecR; apply: le_trans; by rewrite lecR ler_normr lexx orbT.
 Qed.
@@ -991,13 +991,13 @@ move: H1; rewrite ger0_norm // => ->.
 rewrite sqrtrM; last by rewrite subr_ge0.
 case: (lerP 0 (cos (half_angle a))) => ca0.
   move: H2; rewrite ger0_norm // => ->.
-  rewrite sqrtrM; last by rewrite -ler_sub_addl add0r.
+  rewrite sqrtrM; last by rewrite -lerBDl add0r.
   rewrite -mulf_div divrr ?unitfE ?sqrtr_eq0 -?ltNge ?invr_gt0 ?ltr0Sn // mulr1.
   case/boolP : (cos a == 1) => [/eqP ca1|ca1]; first by rewrite ca1 subrr sqrtr0 2!mul0r.
   rewrite -[LHS]mulr1 -{3}(@divrr _ (Num.sqrt (1 - cos a))); last first.
     by rewrite unitfE sqrtr_eq0 -ltNge subr_gt0 lt_neqAle ca1.
   rewrite mulf_div -sqrtrM; last by rewrite subr_ge0.
-  rewrite -expr2 -sqrtrM; last by rewrite -ler_sub_addl add0r.
+  rewrite -expr2 -sqrtrM; last by rewrite -lerBDl add0r.
   rewrite (mulrC (1 + cos a)) -subr_sqr expr1n.
   rewrite sqrtr_sqr -sin2cos2 sqrtr_sqr.
   rewrite ger0_norm; last by rewrite subr_ge0.
@@ -1006,13 +1006,13 @@ case: (lerP 0 (cos (half_angle a))) => ca0.
 move: (cos_half_angle a).
 rewrite ltr0_norm // => /eqP.
 rewrite eqr_oppLR => /eqP ->.
-rewrite invrN mulrN sqrtrM; last by rewrite -ler_sub_addl add0r.
+rewrite invrN mulrN sqrtrM; last by rewrite -lerBDl add0r.
 rewrite -mulf_div divrr ?unitfE ?sqrtr_eq0 -?ltNge ?invr_gt0 ?ltr0Sn // mulr1.
 case/boolP : (cos a == 1) => [/eqP ca1|ca1]; first by rewrite ca1 subrr sqrtr0 2!mul0r oppr0.
 rewrite -[LHS]mulr1 -{3}(@divrr _ (Num.sqrt (1 - cos a))); last first.
   by rewrite unitfE sqrtr_eq0 -ltNge subr_gt0 lt_neqAle ca1.
 rewrite mulNr mulf_div -sqrtrM; last by rewrite subr_ge0.
-rewrite -expr2 -sqrtrM; last by rewrite -ler_sub_addl add0r.
+rewrite -expr2 -sqrtrM; last by rewrite -lerBDl add0r.
 rewrite (mulrC (1 + cos a)) -subr_sqr expr1n.
 rewrite sqrtr_sqr -sin2cos2 sqrtr_sqr.
 rewrite ger0_norm; last by rewrite subr_ge0.
@@ -1125,7 +1125,7 @@ rewrite neq_lt => /orP[] y0.
     rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 lt_eqF.
     rewrite -mulrDl sqrtrM; last by rewrite addr_ge0 // sqr_ge0.
     rewrite sqrtr_sqrN2 ?lt_eqF // ltr0_norm // invrM; last 2 first.
-      by rewrite unitfE sqrtr_eq0 -ltNge ltr_paddr // ?sqr_ge0 // exprn_even_gt0 // orbC lt_eqF.
+      by rewrite unitfE sqrtr_eq0 -ltNge ltr_pwDl // ?sqr_ge0 // exprn_even_gt0 // orbC lt_eqF.
       by rewrite unitfE invr_eq0 eqr_oppLR oppr0 lt_eqF.
     by rewrite !invrN invrK mulNr opprK.
   rewrite atan2_lt0_lt0E // -piNpi cosDpi ?eqxx ?orbT // cos_atan mul1r expr_div_n.
@@ -1134,7 +1134,7 @@ rewrite {1}atan2_x_gt0E // cos_atan mul1r.
 rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 gt_eqF.
 rewrite expr_div_n -mulrDl sqrtrM; last by rewrite addr_ge0 // sqr_ge0.
 rewrite sqrtr_sqrN2 ?gt_eqF // gtr0_norm // invrM ?invrK //.
-by rewrite unitfE sqrtr_eq0 -ltNge ltr_paddr // ?sqr_ge0 // exprn_gt0.
+by rewrite unitfE sqrtr_eq0 -ltNge ltr_pwDl // ?sqr_ge0 // exprn_gt0.
 by rewrite unitfE invr_neq0 // gt_eqF.
 Qed.
 
@@ -1163,7 +1163,7 @@ rewrite neq_lt => /orP[] y0.
     rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 lt_eqF.
     rewrite -mulrDl sqrtrM; last by rewrite addr_ge0 // sqr_ge0.
     rewrite sqrtr_sqrN2 ?lt_eqF // ltr0_norm // invrM; last 2 first.
-      by rewrite unitfE sqrtr_eq0 -ltNge ltr_paddr // ?sqr_ge0 // exprn_even_gt0 // orbC lt_eqF.
+      by rewrite unitfE sqrtr_eq0 -ltNge ltr_wpDr // ?sqr_ge0 // exprn_even_gt0 // orbC lt_eqF.
       by rewrite unitfE invr_eq0 eqr_oppLR oppr0 lt_eqF.
     rewrite !invrN invrK mulNr mulrN opprK -mulrA (mulrA _^-1) mulVr ?mul1r //.
     by rewrite unitfE lt_eqF.
@@ -1173,7 +1173,7 @@ rewrite {1}atan2_x_gt0E // sin_atan.
 rewrite -{1}(@divrr _ (y ^+ 2)); last by rewrite unitfE sqrf_eq0 gt_eqF.
 rewrite expr_div_n -mulrDl sqrtrM; last by rewrite addr_ge0 // sqr_ge0.
 rewrite sqrtr_sqrN2 ?gt_eqF // gtr0_norm // invrM; last 2 first.
-  by rewrite unitfE sqrtr_eq0 -ltNge ltr_paddr // ?sqr_ge0 // exprn_gt0.
+  by rewrite unitfE sqrtr_eq0 -ltNge ltr_wpDr // ?sqr_ge0 // exprn_gt0.
   by rewrite unitfE invr_neq0 // gt_eqF.
 rewrite invrK -(mulrA x) (mulrA _^-1) mulVr ?mul1r //.
 by rewrite unitfE gt_eqF.

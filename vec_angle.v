@@ -134,7 +134,7 @@ Lemma dotmul_div_N11 v w :
 Proof.
 move=> u0 v0.
 rewrite in_itv /= -ler_norml -(expr_le1 (_ : 0 < 2)%N) //.
-rewrite sqr_normr expr_div_n ler_pdivr_mulr ?mul1r.
+rewrite sqr_normr expr_div_n ler_pdivrMr ?mul1r.
 rewrite -subr_ge0 -norm_crossmul' ?exprn_ge0 ?norm_ge0 //.
 by rewrite exprn_gt0 // mulr_gt0 // norm_gt0.
 Qed.
@@ -168,7 +168,7 @@ rewrite /vec_angle oppr_eq0; case: eqP => [//|/eqP uD0].
 case: eqP => [//|/eqP vD0].
 have H := dotmul_div_N11 uD0 vD0; rewrite in_itv in H.
 rewrite normN dotmulvN mulNr !sin_acos ?sqrrN //.
-by rewrite ler_oppr opprK ler_oppl andbC.
+by rewrite lerNr opprK lerNl andbC.
 Qed.
 
 Lemma sin_vec_angleNv u v : sin (vec_angle (- u) v) = sin (vec_angle u v).
@@ -197,7 +197,7 @@ Proof.
 move/eqP: (sqrrD (norm u) (norm v)); rewrite addrAC -subr_eq => /eqP <-.
 rewrite lerBrDr -mulrnDl -{2}(mulr1 (norm u * norm v)) -mulrDr.
 apply (@le_trans _ _ (norm u * norm v * 2%:R *+ 2)).
-  rewrite ler_muln2r /=; apply ler_pmul => //.
+  rewrite lerMn2r /=; apply ler_pM => //.
     by apply mulr_ge0; apply norm_ge0.
     rewrite -lerBlDr add0r; move: (cos_max (vec_angle u v)).
     by rewrite ler_norml => /andP[].

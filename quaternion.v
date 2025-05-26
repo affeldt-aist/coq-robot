@@ -635,7 +635,7 @@ Qed.
 
 Lemma normqM x y : normq (x * y) = normq x * normq y.
 Proof.
-apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?normq_ge0 //; last first.
+apply/eqP; rewrite -(@eqrXn2 _ 2) // ?normq_ge0 //; last first.
   by rewrite mulr_ge0 // normq_ge0.
 rewrite -quat_scalarE normqE conjqM -mulrA (mulrA x^*q) -normqE.
 rewrite quat_algE mulr_algl -scalerAr exprMn quat_realM.
@@ -691,7 +691,7 @@ apply: le_trans (_ : Num.sqrt (\sum_(i < 4) (`|X i| + `|Y i|) ^+ 2) <= _).
   rewrite -ler_sqr ?nnegrE; try by apply: sqrtr_ge0.
   rewrite !sqr_sqrtr; try by apply: sumr_ge0 => i _; apply: sqr_ge0.
   apply: ler_sum => i _; rewrite !sqrrD.
-  by rewrite !sqr_normE; do ! apply: ler_add => //.
+  by rewrite !sqr_normE; do ! apply: lerD => //.
 rewrite -ler_sqr ?nnegrE; last 2 first.
 - by apply: sqrtr_ge0.
 - by apply: addr_ge0; apply: sqrtr_ge0.
@@ -703,7 +703,7 @@ under [X in _ <= X + _ + _]eq_bigr do rewrite -sqr_normE.
 under [X in _ <= _ + _ X * _ *+2  + _]eq_bigr do rewrite -sqr_normE.
 under [X in _ <= _ + _ + X]eq_bigr do rewrite -sqr_normE.
 under [X in _ <= _ + _ * _ X *+2  + _]eq_bigr do rewrite -sqr_normE.
-do 2 (apply: ler_add => //); rewrite ler_muln2r /=.
+do 2 (apply: lerD => //); rewrite lerMn2r /=.
 rewrite -ler_sqr ?nnegrE; last 2 first.
 - by apply: sumr_ge0 => i _; apply: mulr_ge0; apply: normr_ge0.
 - by apply: mulr_ge0; apply: sqrtr_ge0.
@@ -711,12 +711,12 @@ rewrite exprMn !sqr_sqrtr; last 2 first.
 - by apply: sumr_ge0=> i _; apply: sqr_ge0.
 - by apply: sumr_ge0=> i _; apply: sqr_ge0.
 (* This is Cauchy Schwartz *)
-rewrite -[_ <= _]orFb -[false]/(2 == 0)%nat -ler_muln2r.
+rewrite -[_ <= _]orFb -[false]/(2 == 0)%N -lerMn2r.
 pose u := \sum_(i < 4) \sum_(j < 4) (`|X i| * `|Y j| - `|X j| * `|Y i|) ^+ 2.
 set z1 := \sum_(i < _) _; set z2 := \sum_(i < _) _; set z3 := \sum_(i < _) _.
 suff ->: z2 * z3 *+ 2 = z1 ^+ 2 *+ 2 + u.
   rewrite -{1}(addr0 (_ *+ 2)).
-  apply: ler_add => //.
+  apply: lerD => //.
   by apply: sumr_ge0 => i _; apply: sumr_ge0 => j _; apply: sqr_ge0.
 under [X in _ = _ + X]eq_bigr do
   (under eq_bigr do (rewrite sqrrB !exprMn); rewrite !(sumrN, big_split));
@@ -996,8 +996,10 @@ Qed.
 HB.instance Definition _ x := @GRing.isLinear.Build _ _ _ _ _ (quat_rot_is_linear x).
 
 Lemma quat_rot_isRot_polar v a : norm v = 1 ->
-  isRot (a *+2) v [linear of quat_rot (quat_of_polar a v)].
+  isRot (a *+2) v (quat_rot (quat_of_polar a v)).
 Proof.
+Set Printing All.
+Show Proof.
 move=> v1 /=.
 have vE : (Base.frame v)~i = v by rewrite Base.frame0E // ?normalizeI // norm1_neq0.
 apply/isRotP; split => /=.
@@ -1009,7 +1011,7 @@ Qed.
 Lemma quat_rot_isRot x : x \is uquat ->
   let: a := (polar_of_quat x).1 in
   let: u := (polar_of_quat x).2 in
-  isRot (a *+ 2) u [linear of quat_rot x].
+  isRot (a *+ 2) u (quat_rot x).
 Proof.
 move=> ux /=; set a := _.1; set u := _.2.
 by rewrite -(polar_of_quatK ux) quat_rot_isRot_polar // norm_polar_of_quat.

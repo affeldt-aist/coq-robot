@@ -4,7 +4,7 @@ From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle rot frame rigid screw.
-From mathcomp.analysis Require Import reals forms.
+From mathcomp Require Import reals forms.
 Require Import extra_trigo.
 
 (******************************************************************************)

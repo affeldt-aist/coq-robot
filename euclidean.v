@@ -3,7 +3,7 @@ From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-From mathcomp.analysis Require Import reals forms.
+From mathcomp Require Import reals forms.
 Require Import ssr_ext.
 
 (******************************************************************************)
@@ -189,6 +189,12 @@ Lemma dotmul_trmx u M v : u *d (v *m M) = (u *m M^T) *d v.
 Proof. by rewrite /dotmul trmx_mul mulmxA. Qed.
 
 End com_dot_product.
+
+(* TODO: on devrait ne plus en avoir besoin... *)
+Structure revop X Y Z (f : Y -> X -> Z) := RevOp {
+  fun_of_revop :> X -> Y -> Z;
+  _ : forall x, f x =1 fun_of_revop^~ x
+}.
 
 Section dotmul_bilinear.
 
@@ -643,14 +649,14 @@ rewrite -{1}kv -mulmxA (mulmxA (map_mx _ M)) (_ : map_mx _ M *m _ = 1%:M); last 
   by rewrite -map_mxM mulmxE (eqP MSO) map_mx1.
 rewrite mul1mx -scalemxAr /= -scalemxAl scalerA => /eqP.
 rewrite -subr_eq0 -{1}(scale1r (v *m _)) -scalerBl scaler_eq0 => /orP [].
-  by rewrite subr_eq0 mulrC -sqr_normc -{1}(expr1n _ 2) eqr_expn2 // ?ler01 // => /eqP.
+  by rewrite subr_eq0 mulrC -sqr_normc -{1}(expr1n _ 2) eqrXn2 // ?ler01 // => /eqP.
 by rewrite dotmul_conjc_eq0 (negbTE v0).
 Qed.
 
 Lemma norm_row_of_O (T : rcfType) n M : M \is 'O[T]_n.+1 -> forall i, norm (row i M) = 1.
 Proof.
 move=> MSO i.
-apply/eqP; rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
+apply/eqP; rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
 rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
 Qed.
 
@@ -662,7 +668,7 @@ Lemma norm_col_of_O (T : rcfType) n M : M \is 'O[T]_n.+1 -> forall i, norm (col 
 Proof.
 move=> MSO i.
 apply/eqP.
-rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv tr_col dotmulvv.
+rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv tr_col dotmulvv.
 by rewrite norm_row_of_O ?expr1n // orthogonalV.
 Qed.
 
@@ -689,7 +695,7 @@ rewrite -!addrA subrr 2!addr0.
 move/(congr1 (fun x => - (u *d u) + x)).
 rewrite !addrA (addrC (- (u *d u))) subrr 2!add0r.
 rewrite -2!mulr2n => /eqP.
-by rewrite eqr_pmuln2r // => /eqP.
+by rewrite eqr_pMn2r // => /eqP.
 Qed.
 
 Lemma orth_preserves_norm (T : rcfType) n M : M \is 'O[T]_n.+1 ->
@@ -700,8 +706,8 @@ Lemma Oij_ub (T : rcfType) n (M : 'M[T]_n.+1) : M \is 'O[T]_n.+1 -> forall i j, 
 Proof.
 move=> /norm_row_of_O MO i j; rewrite leNgt; apply/negP => abs.
 move: (MO i) => /(congr1 (fun x => x ^+ 2)); apply/eqP.
-rewrite gt_eqF // sqr_norm (bigD1 j) //= !mxE -(addr0 (1 ^+ 2)) ltr_le_add //.
-by rewrite -(sqr_normr (M _ _)) ltr_expn2r.
+rewrite gt_eqF // sqr_norm (bigD1 j) //= !mxE -(addr0 (1 ^+ 2)) ltr_leD //.
+by rewrite -(sqr_normr (M _ _)) ltrXn2r.
 rewrite sumr_ge0 // => k ij; by rewrite sqr_ge0.
 Qed.
 
@@ -716,7 +722,7 @@ have Mdiag : forall i, M i i = 1.
     by move=> j _; congr (M _ _); apply val_inj => /=; rewrite inordK.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => M (inord i) (inord i))).
   rewrite -[in n.+1%:R](card_ord n.+1) -sum1_card (bigD1 i) //= natrD.
-  rewrite ltr_le_add //; first by rewrite lt_neqAle Mii /= ler_norml1 // Oij_ub.
+  rewrite ltr_leD //; first by rewrite lt_neqAle Mii /= ler_norml1 // Oij_ub.
   rewrite [in X in _ <= X](@big_morph _ _ _ 0 (fun x y => x + y)%R) //; last first.
     by move=> x y; rewrite natrD.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => 1)).
@@ -1178,7 +1184,7 @@ Variable R : comRingType.
 Implicit Types u v w : 'rV[R]_3.
 
 Lemma mulmxl_crossmulr M u v : M *m (u *v v) = u *v (M *m v).
-Proof. by rewrite -(mul_rV_lin1 [linear of crossmul u]) mulmxA mul_rV_lin1. Qed.
+Proof. by rewrite -(mul_rV_lin1 (crossmul u)) mulmxA mul_rV_lin1. Qed.
 
 Lemma mulmxl_crossmull M u v : M *m (u *v v) = ((M *m u) *v v).
 Proof. by rewrite (@lieC _ (vec3 R)) mulmxN mulmxl_crossmulr -(@lieC _ (vec3 R)). Qed.
@@ -1488,15 +1494,15 @@ Lemma norm_crossmul_normal u v : u *d v = 0 ->
   norm u = 1 -> norm v = 1 -> norm (u *v v) = 1.
 Proof.
 move=> uv0 u1 v1; apply/eqP.
-rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 //.
+rewrite -(@eqrXn2 _ 2) // ?norm_ge0 //.
 by rewrite norm_crossmul' u1 v1 uv0 expr0n /= subr0 mulr1 // norm_ge0.
 Qed.
 
 Lemma dotmul_eq0_crossmul_neq0 (u v : 'rV[T]_3) : u != 0 -> v != 0 -> u *d v == 0 -> u *v v != 0.
 Proof.
 move=> u0 v0 uv0.
-rewrite -norm_eq0 -(@eqr_expn2 _ 2) // ?norm_ge0 // exprnP expr0n -exprnP.
-rewrite norm_crossmul' (eqP uv0) expr0n subr0 -expr0n eqr_expn2 //.
+rewrite -norm_eq0 -(@eqrXn2 _ 2) // ?norm_ge0 // exprnP expr0n -exprnP.
+rewrite norm_crossmul' (eqP uv0) expr0n subr0 -expr0n eqrXn2 //.
 by rewrite mulf_eq0 negb_or 2!norm_eq0 u0.
 by rewrite mulr_ge0 // ?norm_ge0.
 Qed.
@@ -1569,7 +1575,7 @@ apply (iffP idP).
   + case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->; by
       [rewrite dotmulC xz0 | rewrite dotmulC yz0 | rewrite dotmulvv nk expr1n].
 - move/orthogonalP => H; apply/and6P; split; first [
-    by rewrite -(@eqr_expn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv H |
+    by rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv H |
     by rewrite H ].
 Qed.
 
@@ -1668,10 +1674,11 @@ rewrite -3!mulrnDl -mulrnBl -[in RHS](mulr_natr _ 2) [in RHS](mulrC _ 2%:R).
 rewrite -[RHS]mulr_natl; congr (_ * _).
 rewrite mulrDr.
 rewrite (addrC _ (M 0 0 * _)); rewrite -!addrA; congr (_ + _).
+rewrite !mulr1.
 rewrite !addrA -mulrDl -!addrA; congr (_ + _).
 rewrite addrCA opprD mulNr; congr (_ + _).
 rewrite opprD addrC mulNr; congr (_ + _).
-by rewrite mulr1 mulrC.
+by rewrite mulrC.
 Qed.
 
 Lemma char_poly3 (M : 'M[T]_3) :

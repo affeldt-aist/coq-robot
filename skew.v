@@ -5,7 +5,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex finset fingroup perm.
 Require Import ssr_ext euclidean vec_angle.
-From mathcomp.analysis Require Import forms reals nsatz_realtype.
+From mathcomp Require Import forms reals nsatz_realtype.
 
 (******************************************************************************)
 (*                         Skew-symmetric matrices                            *)
