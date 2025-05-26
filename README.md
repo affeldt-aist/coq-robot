@@ -33,6 +33,7 @@ Mathematical Components library.
   - [MathComp field](https://math-comp.github.io)
   - [MathComp analysis](https://github.com/math-comp/analysis)
   - [MathComp real closed](https://github.com/math-comp/real-closed)
+  - [MathComp algebra tactics](https://github.com/math-comp/algebra-tactics)
 - Coq namespace: `robot`
 - Related publication(s):
   - [Formal foundations of 3D geometry to model robot manipulators](https://staff.aist.go.jp/reynald.affeldt/documents/robot_cpp_long.pdf) doi:[10.1145/3018610.3018629](https://doi.org/10.1145/3018610.3018629)

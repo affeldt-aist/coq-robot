@@ -28,6 +28,7 @@ depends: [
   "coq-mathcomp-field" { (>= "2.3.0") }
   "coq-mathcomp-analysis" { (>= "1.11.0") }
   "coq-mathcomp-real-closed" { (>= "2.0.0") }
+  "coq-mathcomp-algebra-tactics" { (>= "1.2.4") }
 ]
 
 tags: [
