@@ -1,8 +1,8 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import ring.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean vec_angle frame rot.
@@ -1064,7 +1064,7 @@ apply/row3P; apply/and3P; split; apply/eqP.
   rewrite !(mxE, sum3E) /= !F !mxE /= !F !mxE /=.
   rewrite !dotmulE sum3E /=.
   rewrite /hcayley00 /hcayley01 /hcayley02 !expr2 !mulr2n.
-  nsatz.
+  by field.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
   ((q1^2 - q21^2 - q22^2 - q23^2) {u1, u2, u3} +
@@ -1078,7 +1078,7 @@ apply/row3P; apply/and3P; split; apply/eqP.
   rewrite !(mxE, sum3E) /= !F /= !mxE /= !F !mxE /=.
   rewrite !dotmulE sum3E /=.
   rewrite /hcayley10 /hcayley11 /hcayley12 !expr2 !mulr2n.
-  nsatz.
+  by field.
 (* ForAll[{u1, u2, u3, q1, q21, q22, q23},
   q1^2 + q21^2 + q22^2 + q23^2 == 1,
   ((q1^2 - q21^2 - q22^2 - q23^2) {u1, u2, u3} +
@@ -1092,7 +1092,7 @@ rewrite /crossmul; unlock.
 rewrite !(mxE, sum3E) /= !F /= !mxE /= !F !mxE /=.
 rewrite !dotmulE sum3E /=.
 rewrite /hcayley20 /hcayley21 /hcayley22 !expr2 !mulr2n.
-nsatz.
+by field.
 Qed.
 
 End polar_coordinates.
