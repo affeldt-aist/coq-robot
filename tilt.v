@@ -1,5 +1,6 @@
 From mathcomp Require Import all_ssreflect all_algebra ring.
-From mathcomp Require Import boolp classical_sets reals topology normedtype derive.
+From mathcomp Require Import boolp classical_sets functions reals.
+From mathcomp Require Import topology normedtype derive.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 
 Set Implicit Arguments.
@@ -11,8 +12,6 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldNormedType.Exports.
 
 Local Open Scope ring_scope.
-
-Definition S2 (K : realType) : Type := { x : 'rV[K]_3 | norm x = 1 }.
 
 Section problem_statement.
 Context {K : realType}.
@@ -139,7 +138,7 @@ elim/big_ind2 : _ => //.
   by [].
 - move => a b c d.
   move => H1 H2.
-  rewrite -H1 //. 
+  rewrite -H1 //.
   rewrite -H2 //.
   rewrite -!mulmxE.
   About rotation_tr_mul.
@@ -148,7 +147,7 @@ elim/big_ind2 : _ => //.
   Search "mulmxA".
   Search "rotation_tr_mul".
   Search "trmx".
-  
+
   rewrite -!rotation_inv.
   rewrite !mulmxA.
   rewrite -mulmxA -(mulmxA).
@@ -160,3 +159,68 @@ elim/big_ind2 : _ => //.
   Admitted.
 End basic_facts.
 
+Section Gamma1.
+Context {K : realType}.
+Local Open Scope classical_set_scope.
+
+Definition Gamma1 := [set x : 'rV[K]_6 | norm (@rsubmx _ 1 3 3 x) = 1].
+
+End Gamma1.
+
+Section ode.
+Context {K : realType} {T : normedModType K}.
+Local Open Scope classical_set_scope.
+
+Variable f : K -> (K -> T) -> T.
+
+Definition is_solution (x : K -> T) : Prop :=
+  forall t, x^`() t = f t x.
+
+Definition equilibrium_points := [set p : T | is_solution (cst p)].
+
+Definition state_space :=
+  [set p : T | exists y, is_solution y /\ p \in range y].
+
+End ode.
+
+Section eqn33.
+Context {K : realType}.
+Variable alpha1 : K.
+Hypothesis alpha1_gt0 : 0 < alpha1.
+Variable gamma : K.
+Hypothesis gamma_gt0 : 0 < gamma.
+Local Open Scope classical_set_scope.
+
+Definition eqn33 t (zp1_z2 : K -> 'rV[K]_6) : 'rV[K]_6 :=
+  let zp1 t := @lsubmx _ 1 3 3 (zp1_z2 t) in
+  let z2 t := @rsubmx _ 1 3 3 (zp1_z2 t) in
+  row_mx (- alpha1 *: zp1 t)
+         (gamma *: (z2 t - zp1 t) *m \S('e_2%:R - z2 t) ^+ 2).
+
+Lemma thm11a : state_space eqn33 = Gamma1.
+Proof.
+apply/seteqP; split.
+  move=> p.
+  rewrite /state_space /Gamma1/=.
+  admit.
+admit.
+Admitted.
+
+Definition point1 : 'rV[K]_6 := 0.
+Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2%:R).
+
+Lemma equilibrium_point1 : point1 \in equilibrium_points eqn33.
+Proof.
+Admitted.
+
+Lemma equilibrium_point2 : point2 \in equilibrium_points eqn33.
+Proof.
+Admitted.
+
+Lemma tractories_converge (y : K -> 'rV[K]_6) : is_solution eqn33 y ->
+  y t @[t --> +oo] --> point1 \/ y t @[t --> +oo] --> point2.
+Proof.
+move=> is_sol_y.
+Abort.
+
+End eqn33.
