@@ -43,7 +43,7 @@ End problem_statement.
 Section basic_facts.
 Context {K : realType}.
 
-Lemma fact212 (v w : 'rV[K]_3) : \S(v) *m \S(w) = w^T *m v - (v *m w^T)``_0 *: 1.
+Lemma fact212 (v w : 'rV[K]_3) : \S(v) * \S(w) = w^T *m v - (v *m w^T)``_0 *: 1.
 Proof.
 apply/matrix3P/and9P; split; apply/eqP;
   rewrite !(mxE,sum3E,spinij,sum1E); Simp.r.
@@ -58,4 +58,105 @@ by rewrite mulrC.
 by rewrite !opprD; ring.
 Qed.
 
+About subr0.
+Search "subr0".
+Locate subr0.
+Lemma fact213 (v w : 'rV[K]_3) : \S(v) * \S(w) * \S(v) = - (v *m w^T) ``_0 *: \S(v).
+Proof.
+  rewrite fact212.
+  rewrite mulrBl.
+  rewrite -mulmxE.
+  Search (_*m_) (_*_).
+  rewrite -mulmxA.
+  have: v *m \S(v) = 0.
+  apply: trmx_inj.
+  Search ( _ *m _^T).
+  rewrite trmx_mul.
+  Search ( \S(_)^T ).
+  rewrite tr_spin.
+  Search (\S(_) ) 0.
+  rewrite mulNmx.
+  About mulNmx.
+  rewrite spin_mul_tr.
+  (*Unset Printing Notations.*)
+  rewrite trmx0.
+  rewrite oppr0.
+  by [].
+  move => ->.
+  rewrite mulmx0.
+  rewrite sub0r.
+  Search (_*m _) (_*: _).
+  Search ( _%:A).
+  rewrite -mul_scalar_mx.
+  rewrite -mulNmx.
+  congr (_ *m _).
+  rewrite scalemx1.
+  rewrite rmorphN /=. (* simpl*)
+  by [].
+Qed.
+Lemma fact215 ( v w : 'rV[K]_3) : \S(w *m \S(v)) = \S(w) * \S(v) - \S(v) * \S(w).
+Proof.
+  Search ( \S(_ )).
+  Search (_*v_) (_*m_).
+  rewrite spinE.
+  rewrite spin_crossmul.
+  by [].
+Qed.
+
+Lemma fact216 (v w : 'rV[K]_3): \S(w *m \S(v)) = v^T *m w - w^T *m v.
+Proof.
+  rewrite fact215.
+  
+  rewrite !fact212.
+  Search (_%:A).
+  rewrite -!/(_ *d _).
+  Search (_^T).
+  Search "dotmulC".
+  rewrite dotmulC.
+  rewrite opprB.
+  rewrite addrA.
+  rewrite subrK.
+  by [].
+Qed.
+Search (\S(_)).
+Lemma fact217 (v : 'rV[K]_3): \S(v) ^+ 3 = - (norm v ^+2) *: \S(v).
+  (*Set Printing All.*)
+  exact: spin3.
+Qed.
+
+Search "cV".
+(* ligne!, R est une matrice de rotation, chaque v_i est un vecteur >
+ trouver la notation indicielle  *)
+Lemma fact214 (R : 'M[K]_3) (v_ : seq 'rV[K]_3) : R \is 'SO[K]_3 -> R^T * (\prod_(i <- v_) \S( i )) * R =  (\prod_(i <- v_) \S( i *m R)).
+(* cest spin_similarity mais avec une somme. neutraliser la somme?*)
+Proof.
+move => RSO.
+elim/big_ind2 : _ => //.
+  rewrite -!mulmxE.
+  rewrite mulmx1.
+  rewrite rotation_tr_mul.
+  by [].
+  by [].
+- move => a b c d.
+  move => H1 H2.
+  rewrite -H1 //. 
+  rewrite -H2 //.
+  rewrite -!mulmxE.
+  About rotation_tr_mul.
+  (*Set Printing Parentheseses*)
+  Search "mulrC".
+  Search "mulmxA".
+  Search "rotation_tr_mul".
+  Search "trmx".
+  
+  rewrite -!rotation_inv.
+  rewrite !mulmxA.
+  rewrite -mulmxA -(mulmxA).
+  admit.
+  About spin_similarity.
+  Print is_true.
+- (*move => i _.
+  exact: spin_similarity.*)
+  Admitted.
 End basic_facts.
+
