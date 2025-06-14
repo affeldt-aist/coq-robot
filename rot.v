@@ -89,7 +89,7 @@ Local Open Scope ring_scope.
 Section two_dimensional_rotation.
 
 Variable T : realType.
-Implicit Types (a b : T) (M : 'M[T]_2).
+Implicit Types (a b : angle T) (M : 'M[T]_2).
 
 Definition RO a := col_mx2 (row2 (cos a) (sin a)) (row2 (- sin a) (cos a)).
 
