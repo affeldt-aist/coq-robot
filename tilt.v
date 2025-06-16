@@ -116,7 +116,9 @@ Variable f : K -> (K -> T) -> T.
 Definition is_solution (x : K -> T) : Prop :=
   forall t, x^`() t = f t x.
 
-Definition equilibrium_points := [set p : T | is_solution (cst p)].
+Definition is_equilibrium_point p := is_solution (cst p).
+
+Definition equilibrium_points := [set p : T | is_equilibrium_point p].
 
 Definition state_space :=
   [set p : T | exists y, is_solution y /\ p \in range y].
@@ -160,9 +162,8 @@ Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2%:R).
 
 Check equilibrium_points _.
 
-Lemma equilibrium_point1 : point1 \in equilibrium_points eqn33.
+Lemma equilibrium_point1 : is_equilibrium_point eqn33 point1.
 Proof.
-rewrite /equilibrium_points /is_solution inE /=.
 move => t ; rewrite derive1_cst /eqn33 /point1 ; apply/eqP ; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP. split.
   rewrite scaler_eq0; apply/orP; right; apply/eqP/rowP; move => i; by rewrite !mxE.
   apply/eqP/rowP; move => i; apply/eqP; set N := (X in _ *: X *m _); have : N = 0.
@@ -171,9 +172,9 @@ move => t ; rewrite derive1_cst /eqn33 /point1 ; apply/eqP ; rewrite eq_sym (@ro
 Qed.
 
 From mathcomp Require Import fintype.
-Lemma equilibrium_point2 : point2 \in equilibrium_points eqn33.
+Lemma equilibrium_point2 : is_equilibrium_point eqn33 point2.
 Proof.
-rewrite /equilibrium_points /is_solution inE /= /eqn33 /point2 /= ; move => t; rewrite derive1_cst; apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
+move => t; rewrite derive1_cst; apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
 set N := (X in _ *: X == 0 /\ _).
 have N0 : N = 0.
   apply/rowP; move => i; rewrite !mxE; case: splitP.
@@ -209,15 +210,36 @@ Abort.
 
 End eqn33.
 
+Definition err_vec {R : ringType} n (i : 'I_n.+1) : 'rV[R]_n.+1 :=
+  \row_(j < n.+1) (i == j)%:R.
+
+Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) i :=
+  lim (h^-1 * (f (a + h *: err_vec i) - f a) @[h --> 0^'])%classic.
+
+Definition gradient {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :=
+  \row_(i < n.+1) partial f a i.
+
+Lemma gradientE {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :
+  gradient f a = \sum_(i < n.+1) partial f a i *: 'e_i.
+Proof.
+rewrite /gradient [LHS]row_sum_delta.
+by under eq_bigr do rewrite mxE.
+Qed.
+
+Lemma lsubmx0 {R : nmodType} m n1 n2 : @lsubmx R m n1 n2 0 = 0.
+Proof. by apply/matrixP => i j; rewrite !mxE. Qed.
+
+Lemma rsubmx0 {R : nmodType} m n1 n2 : @rsubmx R m n1 n2 0 = 0.
+Proof. by apply/matrixP => i j; rewrite !mxE. Qed.
+
 Section Lyapunov.
 (* locally positive definite around x that is an equilibrium point *)
 
 From mathcomp.analysis Require Import topology normedtype.
 Open Scope classical_set_scope.
 
-Definition lpd {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
+Definition locposdef {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
   V x = 0 /\ \forall z \near 0^', V z > 0.
-About lpd.
 
 (* locally positive semi definite*)
 Definition lpsd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
@@ -231,47 +253,30 @@ Definition lnsd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Pro
 Definition lnd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
   V x = 0 /\ \forall z \near 0, V z < 0.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.
-Import Order.TTheory GRing.Theory Num.Def Num.Theory.
-Import numFieldNormedType.Exports.
 Local Open Scope classical_set_scope.
 
-Definition err_vec {R : ringType} {n : nat} (i : 'I_n.+1) : 'rV[R]_n.+1 :=
-\row_(j < n.+1) (i == j)%:R.
-
-Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) i :=
-lim (h^-1 * (f (a + h *: err_vec i) - f a) @[h --> 0^']).
-
-Definition gradient {R : realType} {n: nat}  {v_ : seq 'I_n.+1}  (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) : 'rV[R]_n.+1 :=
-  (\sum_(i <- v_) (partial f a i *: 'e_i)).
-
-Definition LieDerivative {R : realType} {n : nat}
-  (V : 'rV[R]_n.+1 -> R)
-  (x : R -> 'rV[R]_n.+1)
-  (t : R) : R :=
+Definition LieDerivative {R : realType} n (V : 'rV[R]_n.+1 -> R) (x : R -> 'rV[R]_n.+1) (t : R) : R :=
   let xdot_t := (x^`()) t in
-  (@gradient R n (enum 'I_n.+1) V (x t)) *d xdot_t.
+  gradient V (x t) *d xdot_t.
 
-Definition is_lyapunov_function {n : nat} 
+Definition is_lyapunov_function n
   (f : K -> (K -> 'rV[K]_n.+1) -> 'rV[K]_n.+1)
   (V : 'rV[K]_n.+1 -> K)
   (x0 : 'rV[K]_n.+1) : Prop :=
-  f 0 (fun _ => x0) = 0 /\
-  lpd V x0 /\
+  [/\ is_equilibrium_point f x0,
+  locposdef V x0 &
   forall traj : K -> 'rV[K]_n.+1,
     is_solution f traj ->
     traj 0 = x0 ->
-    lnsd (fun t => LieDerivative V traj t) 0.
+    lnsd (LieDerivative V traj) 0].
 
 Variable x1_hat : K -> 'rV[K]_3.
 Variable x2_hat : K -> 'rV[K]_3.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 
-Definition p1 t : 'rV[K]_3 := 
+Definition p1 t : 'rV[K]_3 :=
   let x1_t := x1 t in
-  let x2_t := x2 t in  
+  let x2_t := x2 t in
   let x1_hat_t := x1_hat t in
   x2_t + (alpha1 / g0) *: (x1_t - x1_hat_t).
 
@@ -296,89 +301,48 @@ Definition ffun_to_rV6 (f : {ffun 'I_1 * 'I_6 -> K}) : 'rV_6 :=
 
 Lemma V1_is_lyapunov : is_lyapunov_function eqn33 V1 point1.
 Proof.
-split.
-  rewrite /lpd /V1 /eqn33 /point1 /= ; apply/eqP ; rewrite (@row_mx_eq0 _ 1 3 3); apply/andP.
-  split.
-    by rewrite scaler_eq0; apply/orP; right; apply/eqP/rowP; move => i; rewrite !mxE.
-  apply/eqP/rowP; move => i; apply/eqP; set N := (X in _ *: X *m _); have : N = 0.
-    by rewrite /N /=; apply /rowP; move => a; rewrite !mxE subr0.
-  move => n; by rewrite n scaler0 mul0mx.
+split; first exact: equilibrium_point1.
 (*  lpd V1 point1 /\
   (forall traj : K -> 'rV_6,
    is_solution eqn33 traj -> traj 0 = point1 -> lnsd [eta LieDerivative V1 traj] 0)*)
-split.
 (* v1 at point 1 is positive definite*)
-  rewrite /lpd /V1 /point1 -!dotmulvv. 
-  split.
-  (*  lsubmx 0 *d lsubmx 0 / (2 * alpha1) + rsubmx 0 *d rsubmx 0 / (2 * gamma) = 0*)
-    apply/eqP;     set N := (X in X + _ == 0 ). have N0 : lsubmx 0 *d lsubmx 0 = 0. 
-      rewrite /N /=. move => i j k n.
-      apply/eqP. 
-        have M : lsubmx 0 = 0. move => t n0 n1 n2; apply/matrixP; move => d /= p; rewrite !mxE /=.
-        by [].
-      by rewrite M dotmul0v.
-    rewrite /N N0 mul0r add0r. 
-      have B0 : rsubmx 0 = 0. move => t n n0 n1.
-      by apply/eqP; apply/eqP/matrixP => i j; rewrite !mxE.
-      by rewrite B0 dotmul0v mul0r.
+- rewrite /locposdef; split.
+  + by rewrite /V1 /point1 lsubmx0 rsubmx0 norm0 expr0n/= !mul0r add0r.
   (*   \forall z \near 0^', 0 <
                        norm (lsubmx z) ^+ 2 / (2 * alpha1) + norm (rsubmx z) ^+ 2 / (2 * gamma)*)
   have alpha1_pos: 0 < 2 * alpha1 by rewrite mulr_gt0 // ltr0Sn.
   have gamma_pos: 0 < 2 * gamma by rewrite mulr_gt0 //  gamma_gt0.
   near=> z_near.
+  simpl in *.
   set z_rv := ffun_to_rV6 (\val z_near).
-  have z_neq0 : z_near != 0.
-    by near: z_near; apply: nbhs_dnbhs_neq.
+  have z_neq0 : z_near != 0 by near: z_near; exact: nbhs_dnbhs_neq.
   have z_mat_neq0 : z_rv != 0.
     rewrite /z_rv.
-    apply/eqP.
-    move=> zmat0.
-    move: z_neq0.
-    move=> z_near_neq0.
-    rewrite /z_rv in zmat0.
-    have val_inj := @val_inj _ _ _.
-   move: z_near_neq0 zmat0.
-   move=> nz_eq0 conv0.
-   have inj_ffun : forall f, ffun_to_rV6 f = 0 -> f = 0.
-   move=> f f2.
-   apply/ffunP =>[[ i j]].
-   rewrite (ord1 i).
-   move: f2.
-   rewrite /ffun_to_rV6.
-   move/rowP => Hrow.
-   specialize (Hrow j).
-   rewrite !mxE in Hrow.
-   (*rewrite (Hrow : f (ord0, j) = 0).*)
-   rewrite /GRing.zero in Hrow.
-   rewrite /ffun0.
-   rewrite Hrow /=.
-   rewrite /=.
-   Check 0.
-   rewrite /GRing.isNmodule.zero.
-   rewrite /ffun0.
-   Check Hrow.
-   have zero_eq : 0 (ord0, j) = GRing.isNmodule.zero (GRing.Nmodule.class K).
-   by rewrite /ffun0.
-   transitivity (GRing.isNmodule.zero (GRing.Nmodule.class K)).
-     - by [].
-     - by rewrite ffunE.
-   have val_z_eq0 : \val z_near = 0 by apply/inj_ffun.
-   have z_eq0 : z_near = 0.
-   apply: val_inj => //. rewrite val_z_eq0.
-   rewrite /=. 
-   apply/ffunP => [[i j]].
-   rewrite !ffunE.
-  rewrite /ffun0.
-  rewrite /ffun0.
-  rewrite /GRing.zero.
-  rewrite /GRing.isNmodule.zero /mx_val /=.
-  admit.
-  rewrite z_eq0 in nz_eq0.
-  move: nz_eq0.
-  by rewrite eq_refl.
+    rewrite /ffun_to_rV6.
+    apply: contra z_neq0 => /eqP H.
+    apply/eqP/rowP => i.
+    rewrite !mxE.
+    move/rowP : H => /(_ i).
+    by rewrite !mxE//.
+  rewrite /V1.
+  have /orP[/eqP lz0|/eqP rz0] : (@lsubmx _ _ 3 3 z_near != 0) || (@rsubmx _ _ 3 3 z_near != 0).
+    rewrite -negb_and.
+    apply: contra z_neq0 => /andP[/eqP l0 /eqP r0].
+    rewrite -[eqbLHS](@hsubmxK _ _ 3 3) l0 r0.
+    admit.
+
+
+    
+    
+    admit.
+  
+
+  
   apply: addr_gt0.
-  apply: divr_gt0.
-  apply exprn_gt0.
+    apply: divr_gt0.
+      apply exprn_gt0.
+      rewrite norm_gt0.
+      
   admit.
   by apply alpha1_pos.
   apply: divr_gt0; last by apply: gamma_pos.
@@ -399,144 +363,145 @@ split.
   rewrite /z_rv' in Hnz.
   admit.
   admit.
-move => traj dtraj.
-rewrite /LieDerivative /V1 /point1 /lnsd /gradient /partial /err_vec /= .
-move => traj0.
-elim/big_ind : _ => //.
-split.
-  by rewrite dotmul0v.
-  near=> z_near.
-  elim/big_ind : _ => //.
-  by rewrite dotmul0v.
-  move => x y s v.
-  rewrite dotmulDl /= -oppr_ge0 -oppr_le0 /= opprK -oppr_ge0 opprD addr_ge0.
-  by [].
-  by rewrite oppr_ge0.
-  by rewrite oppr_ge0.
-  move => i f. 
-  rewrite !sqr_norm.
-  elim/big_ind : _ => //.
-  elim/big_ind : _ => //.
-  rewrite !mul0r !add0r /=.
-  have /cvg_lim: (h^-1 * (norm (lsubmx ((traj z_near 
- + h *: (\row_j (i == j)%:R : 'rV_6)) : 'rV_(3+3))) ^+ 2 / (2 * alpha1) + 
- norm (rsubmx ((traj z_near + h *: (\row_j (i == j)%:R : 'rV_6)) : 'rV_(3+3))) ^+ 2 / (2 * gamma) - 0) 
- @[h --> 0^']) --> (0:K).
-  set v := (\row_j (i == j)%:R : 'rV_6).
-  have v_structure: v = \row_j (i == j)%:R.
-  by rewrite /v.
-  have taylor: forall h, 
-  norm (traj z_near + h *: v) ^+ 2 = 
-  norm (traj z_near) ^+ 2 + 
-  2 * h * dotmul (traj z_near) v + 
-  h^2 * norm v ^+ 2.
-    move=> h.
-    rewrite !dotmulE.
-    have norm_expand: norm (traj z_near + h *: v) ^+ 2 = 
-  (traj z_near + h *: v) *d (traj z_near + h *: v).
+- move => traj dtraj.
+  rewrite /LieDerivative /V1 /point1 /lnsd.
+  move => traj0.
+  rewrite gradientE; elim/big_ind : _ => //.
+  split.
+    by rewrite dotmul0v.
+    near=> z_near.
+    rewrite gradientE; elim/big_ind : _ => //.
+    by rewrite dotmul0v.
+    move => x y s v.
+    rewrite dotmulDl /= -oppr_ge0 -oppr_le0 /= opprK -oppr_ge0 opprD addr_ge0.
+    by [].
+    by rewrite oppr_ge0.
+    by rewrite oppr_ge0.
+    move => i f. 
+    rewrite /partial.
+    rewrite !sqr_norm.
+    elim/big_ind : _ => //.
+    elim/big_ind : _ => //.
+    rewrite !mul0r !add0r /=.
+    have /cvg_lim: (h^-1 * (norm (lsubmx ((traj z_near 
+   + h *: (\row_j (i == j)%:R : 'rV_6)) : 'rV_(3+3))) ^+ 2 / (2 * alpha1) + 
+   norm (rsubmx ((traj z_near + h *: (\row_j (i == j)%:R : 'rV_6)) : 'rV_(3+3))) ^+ 2 / (2 * gamma) - 0) 
+   @[h --> 0^']) --> (0:K).
+    set v := (\row_j (i == j)%:R : 'rV_6).
+    have v_structure: v = \row_j (i == j)%:R.
+    by rewrite /v.
+    have taylor: forall h, 
+    norm (traj z_near + h *: v) ^+ 2 = 
+    norm (traj z_near) ^+ 2 + 
+    2 * h * dotmul (traj z_near) v + 
+    h^2 * norm v ^+ 2.
+      move=> h.
       rewrite !dotmulE.
-      rewrite /norm /= dotmulE.
-      rewrite sqr_sqrtr //.
-      apply: sumr_ge0 => k _.
-      rewrite sqr_ge0.
-      by [].
-    rewrite norm_expand.
-    rewrite dotmulDl dotmulDr.
-    rewrite -!dotmulE /=.
-    rewrite dotmulDr.
-    rewrite dotmulZv dotmulvZ.
-    rewrite (dotmulC v (traj z_near)).
-    rewrite dotmulvZ dotmulZv.
-    rewrite mulrDl. 
-    rewrite mulrA -expr2.
-    rewrite -!dotmulvv. 
-    rewrite mul1r.  
-    rewrite -mulr2n.   
-    ring.
-    have /cvg_lim: h^-1 *
-  ((norm (lsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * alpha1) +
-   (norm (rsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * gamma) - 0)
-  @[h --> 0^'] --> 0.
-    pose F h := h^-1 *
-  ((norm (lsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * alpha1) +
-   (norm (rsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * gamma) - 0).
-    have split_norm :
-  forall u : 'rV_(3 + 3),
-    norm u ^+ 2 = norm (lsubmx u) ^+ 2 + norm (rsubmx u) ^+ 2.
-    move=> u.
-    admit.
-    admit.
-(* generalize to lsubmx and rsubmx*)
-    admit.
-    admit.
+      have norm_expand: norm (traj z_near + h *: v) ^+ 2 = 
+    (traj z_near + h *: v) *d (traj z_near + h *: v).
+        rewrite !dotmulE.
+        rewrite /norm /= dotmulE.
+        rewrite sqr_sqrtr //.
+        apply: sumr_ge0 => k _.
+        rewrite sqr_ge0.
+        by [].
+      rewrite norm_expand.
+      rewrite dotmulDl dotmulDr.
+      rewrite -!dotmulE /=.
+      rewrite dotmulDr.
+      rewrite dotmulZv dotmulvZ.
+      rewrite (dotmulC v (traj z_near)).
+      rewrite dotmulvZ dotmulZv.
+      rewrite mulrDl. 
+      rewrite mulrA -expr2.
+      rewrite -!dotmulvv. 
+      rewrite mul1r.  
+      rewrite -mulr2n.   
+      ring.
+      have /cvg_lim: h^-1 *
+    ((norm (lsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * alpha1) +
+     (norm (rsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * gamma) - 0)
+    @[h --> 0^'] --> 0.
+      pose F h := h^-1 *
+    ((norm (lsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * alpha1) +
+     (norm (rsubmx ((traj z_near + h *: v) : 'rV_(3 + 3))) ^+ 2) / (2 * gamma) - 0).
+      have split_norm :
+    forall u : 'rV_(3 + 3),
+      norm u ^+ 2 = norm (lsubmx u) ^+ 2 + norm (rsubmx u) ^+ 2.
+      move=> u.
+      admit.
+      admit.
+  (* generalize to lsubmx and rsubmx*)
+      admit.
+      admit.
+      move => x y s v.
+      admit.
+      move => i0 t.
+       have equilibrium : eqn33 z_near traj = 0.
+       admit.
+  admit.
     move => x y s v.
     admit.
     move => i0 t.
-     have equilibrium : eqn33 z_near traj = 0.
+    admit.
+    move => x y s v.
+    split.
+    admit.
+    near=> z.
+     rewrite gradientE; elim/big_ind : _ => //.
+     by rewrite dotmul0v.
+     move=> x0 y0 b a.
+     rewrite dotmulDl.
+     Search "dotmul".
+     rewrite -[X in X <= 0]addr0.
+     rewrite -subr_le0.
+     have : 0 - (x + y) = (-x) + (-y).
+     Search "oppr".
+     rewrite opprD.
+     by rewrite add0r.
+     move => i.
+     rewrite subr0 addr0.
+     rewrite -dotmulDl.
      admit.
-admit.
-  move => x y s v.
+     move=> i0 t.
+     admit.
+     move => i0 t.
+     split.
+     rewrite traj0 /=.
+     rewrite /partial !sqr_norm /=.
+      elim/big_ind : _ => //.
+       elim/big_ind : _ => //.
+       rewrite mul0r.
+       rewrite add0r.
+       rewrite mul0r.
+       admit.
+       move=> x y s v.
+       rewrite mul0r add0r /=.
+       admit.
+       move => i tr.
+       rewrite mul0r add0r.
+       admit.
+       move => x y s v.
+       admit.
+       move => i tru.
   admit.
-  move => i0 t.
-  admit.
-  move => x y s v.
-  split.
-  admit.
-  near=> z.
-   elim/big_ind : _ => //.
-   by rewrite dotmul0v.
-   move=> x0 y0 b a.
-   rewrite dotmulDl.
-   Search "dotmul".
-   rewrite -[X in X <= 0]addr0.
-   rewrite -subr_le0.
-   have : 0 - (x + y) = (-x) + (-y).
-   Search "oppr".
-   rewrite opprD.
-   by rewrite add0r.
-   move => i.
-   rewrite subr0 addr0.
-   rewrite -dotmulDl.
-   admit.
-   move=> i0 t.
-   admit.
-   move => i0 t.
-   split.
-   rewrite traj0 /=.
-   rewrite !sqr_norm /=.
-    elim/big_ind : _ => //.
+     near=> z_near.
+      rewrite gradientE; elim/big_ind : _ => //.
+      by rewrite dotmul0v.
+    move => x0 y0 tr a.
+    
+    admit.
+    move => i tru.
+    rewrite /partial expr2.
+    rewrite !sqr_norm.
      elim/big_ind : _ => //.
-     rewrite mul0r.
-     rewrite add0r.
-     rewrite mul0r.
+     rewrite !mul0r addr0.
      admit.
-     move=> x y s v.
-     rewrite mul0r add0r /=.
+     move => x0 y0 s v.
      admit.
-     move => i tr.
-     rewrite mul0r add0r.
+     move => i1 tr.
+     rewrite !expr2   .
      admit.
-     move => x y s v.
-     admit.
-     move => i tru.
-admit.
-   near=> z_near.
-    elim/big_ind : _ => //.
-    by rewrite dotmul0v.
-  move => x0 y0 tr a.
-  
-  admit.
-  move => i tru.
-  rewrite expr2.
-  rewrite !sqr_norm.
-   elim/big_ind : _ => //.
-   rewrite !mul0r addr0.
-   admit.
-   move => x0 y0 s v.
-   admit.
-   move => i1 tr.
-   rewrite !expr2   .
-   admit.
 Admitted.
 
 End Lyapunov.
