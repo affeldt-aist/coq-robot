@@ -243,15 +243,15 @@ Definition locposdef {R : realType} (T : normedModType R) (V : T -> R) (x : T) :
 
 (* locally positive semi definite*)
 Definition lpsd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
-  V x = 0 /\ \forall z \near 0, V z >= 0.
+  V x = 0 /\ \forall z \near 0^', V z >= 0.
 
 (*locally negative semidefinite *)
 Definition lnsd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
-  V x = 0 /\ \forall z \near 0, V z <= 0.
+  V x = 0 /\ \forall z \near 0^', V z <= 0.
 
 (*locally negative definite*)
 Definition lnd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
-  V x = 0 /\ \forall z \near 0, V z < 0.
+  V x = 0 /\ \forall z \near 0^', V z < 0.
 
 Local Open Scope classical_set_scope.
 
@@ -325,44 +325,37 @@ split; first exact: equilibrium_point1.
     move/rowP : H => /(_ i).
     by rewrite !mxE//.
   rewrite /V1.
-  have /orP[/eqP lz0|/eqP rz0] : (@lsubmx _ _ 3 3 z_near != 0) || (@rsubmx _ _ 3 3 z_near != 0).
+  have /orP[ lz0| rz0] : (@lsubmx _ _ 3 3 z_near != 0) || (@rsubmx _ _ 3 3 z_near != 0).
     rewrite -negb_and.
     apply: contra z_neq0 => /andP[/eqP l0 /eqP r0].
     rewrite -[eqbLHS](@hsubmxK _ _ 3 3) l0 r0.
-    admit.
-
-
-    
-    
-    admit.
-  
-
-  
-  apply: addr_gt0.
-    apply: divr_gt0.
-      apply exprn_gt0.
-      rewrite norm_gt0.
-      
-  admit.
-  by apply alpha1_pos.
-  apply: divr_gt0; last by apply: gamma_pos.
-  apply: exprn_gt0.
-  have := norm_gt0 (rsubmx (z_near : 'rV_(3+3))).
-  rewrite !norm_gt0 /=. 
-  move => _.
-  pose z_rv' := (z_rv : 'rV_(3 + 3)).
-  have Hr : rsubmx z_rv' != 0.
-  move: z_mat_neq0.
-  move=> /eqP Hnz.
-  apply/eqP => /eqP Hr.
-  have Hl : rsubmx z_rv' == 0.
-  move: Hnz.
-  by move => _.
-  move/eqP : Hl => Hl'.
-  move/eqP : Hr => Hr'.
-  rewrite /z_rv' in Hnz.
-  admit.
-  admit.
+    apply/eqP/rowP; move => i; rewrite !mxE /=; case: splitP.
+      move => j k. by rewrite mxE.
+    move => k i3k. by rewrite mxE.  
+  - set rsub :=  @rsubmx _ _ 3 3 z_near.
+    have : norm(rsub) >= 0 by rewrite norm_ge0.
+    set lsub :=  @lsubmx _ _ 3 3 z_near.
+    move => nor.
+    have : norm(lsub) > 0.
+    rewrite lt_neqAle.
+    by rewrite eq_sym norm_eq0 lz0 /= norm_ge0.
+    move => normlsub.
+    Search (_ < _ + _).
+    apply: ltr_pwDl.
+    rewrite divr_gt0 //.
+      by rewrite exprn_gt0 //.
+      rewrite divr_ge0 //.
+      by rewrite exprn_ge0 //.
+      by apply ltW.
+  - apply: ltr_pwDr.
+      rewrite divr_gt0 //.
+      rewrite exprn_gt0 //.
+      rewrite lt_neqAle.
+      Search (norm) 0.
+      rewrite eq_sym.
+      by rewrite norm_eq0 rz0 /= norm_ge0.
+      rewrite divr_ge0 // ?exprn_ge0 // ?norm_ge0 //.
+      by apply ltW.
 - move => traj dtraj.
   rewrite /LieDerivative /V1 /point1 /lnsd.
   move => traj0.
