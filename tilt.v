@@ -232,6 +232,15 @@ Proof. by apply/matrixP => i j; rewrite !mxE. Qed.
 Lemma rsubmx0 {R : nmodType} m n1 n2 : @rsubmx R m n1 n2 0 = 0.
 Proof. by apply/matrixP => i j; rewrite !mxE. Qed.
 
+Lemma dotmulsuml {R : ringType} [n : nat] (u : 'rV_n) (b : 'I_n -> 'rV[R]_n) :
+  (\sum_(i < n) b i) *d u = (\sum_(i < n) b i *d u).
+Proof.
+elim/big_ind2 : _ => //=.
+  by rewrite dotmul0v.
+move=> x y r s <- <-.
+by rewrite dotmulDl.
+Qed.
+
 Section Lyapunov.
 (* locally positive definite around x that is an equilibrium point *)
 
@@ -255,9 +264,25 @@ Definition lnd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop
 
 Local Open Scope classical_set_scope.
 
-Definition LieDerivative {R : realType} n (V : 'rV[R]_n.+1 -> R) (x : R -> 'rV[R]_n.+1) (t : R) : R :=
+Definition LieDerivative {R : realType} n (V : 'rV[R]_n.+1 -> R)
+    (a : R -> 'rV[R]_n.+1) (t : R) : R :=
+  \sum_(i < n.+1) partial V (a t) i * (a^`()%classic t) ``_ i.
+
+Definition LieDerivative_gradient {R : realType} n (V : 'rV[R]_n.+1 -> R)
+    (x : R -> 'rV[R]_n.+1) (t : R) : R :=
   let xdot_t := (x^`()) t in
   gradient V (x t) *d xdot_t.
+
+Lemma LieDerivative_gradientE {R : realType} n (V : 'rV[R]_n.+1 -> R)
+    (x : R -> 'rV[R]_n.+1) :
+  LieDerivative_gradient V x = LieDerivative V x.
+Proof.
+apply/funext => t; rewrite /LieDerivative_gradient /LieDerivative.
+rewrite gradientE dotmulsuml; apply: eq_bigr => /= i _.
+rewrite dotmulE (bigD1 i)//= big1 ?addr0; last first.
+  by move=> j ji; rewrite !mxE/= (negbTE ji) mulr0 mul0r.
+by rewrite !mxE/= eqxx mulr1.
+Qed.
 
 Definition is_lyapunov_function n
   (f : K -> (K -> 'rV[K]_n.+1) -> 'rV[K]_n.+1)
@@ -290,14 +315,31 @@ Definition zp1_z2_eq t (zp1_z2 : K -> 'rV[K]_6) : 'rV[K]_6 :=
   let z2 t := @rsubmx K 1 3 3 (zp1_z2 t) in
   row_mx ((p1 t) *m R t) ((x2_tilde t) *m R t).
 
-Definition V1 (eq_result : 'rV[K]_6) : K :=
-  let zp1 := @lsubmx K 1 3 3 eq_result in
-  let z2 := @rsubmx K 1 3 3 eq_result in
+Definition V1 (zp1_z2 : 'rV[K]_6) : K :=
+  let zp1 := @lsubmx K 1 3 3 (zp1_z2) in
+  let z2 := @rsubmx K 1 3 3 (zp1_z2) in
   (norm zp1)^+2 / (2%:R * alpha1) + (norm z2)^+2 / (2%:R * gamma).
-Search ( {ffun _ -> _} ).
 
 Definition ffun_to_rV6 (f : {ffun 'I_1 * 'I_6 -> K}) : 'rV_6 :=
   \row_(i < 6) f (ord0, i).
+
+Definition V1dot (zp1_z2 : 'rV[K]_6) : K :=
+  let zp1 := @lsubmx K 1 3 3 (zp1_z2) in
+  let z2 := @rsubmx K 1 3 3 (zp1_z2) in
+  - (norm zp1)^+2 + (z2 *m (\S('e_2%:R - z2))^+2 *m z2^T
+                    - z2 *m (\S('e_2%:R - z2))^+2 *m zp1^T)``_0.
+
+Lemma derive_sqrt : (Num.sqrt^`())%classic = (fun t => (2 * Num.sqrt t)^-1) :> (_ -> K).
+Proof.
+Admitted.
+
+Lemma deriveV1 (x : K -> 'rV[K]_6) t :
+  LieDerivative V1 x t = V1dot (x t).
+Proof.
+rewrite /LieDerivative.
+rewrite /V1dot.
+rewrite !mxE.
+Abort.
 
 Lemma V1_is_lyapunov : is_lyapunov_function eqn33 V1 point1.
 Proof.
@@ -357,7 +399,8 @@ split; first exact: equilibrium_point1.
       rewrite divr_ge0 // ?exprn_ge0 // ?norm_ge0 //.
       by apply ltW.
 - move => traj dtraj.
-  rewrite /LieDerivative /V1 /point1 /lnsd.
+  rewrite -LieDerivative_gradientE.
+  rewrite /LieDerivative_gradient /V1 /point1 /lnsd.
   move => traj0.
   rewrite gradientE; elim/big_ind : _ => //.
   split.
