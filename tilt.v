@@ -241,6 +241,62 @@ move=> x y r s <- <-.
 by rewrite dotmulDl.
 Qed.
 
+Lemma derive_sqrt {K : realType} :
+  (Num.sqrt^`())%classic = (fun t => (2 * Num.sqrt t)^-1) :> (_ -> K).
+Proof.
+Admitted.
+
+Local Open Scope classical_set_scope.
+
+Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
+  derive1mx M t = M^`()%classic t.
+Proof.
+apply/rowP => i.
+rewrite /derive1mx !mxE.
+rewrite /derive1.
+Abort.
+
+Lemma derive_norm n (u : K^o -> 'rV[K^o]_n.+1) :
+  (forall t, norm (u t) != 0) ->
+  (1/2 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() =
+  (fun t => (derive1mx u t *m  (u t)^T)``_0) :> (K -> K).
+Proof.
+move=> u0; apply/funext => t.
+rewrite [LHS]derive1E.
+rewrite deriveMl/=; last first.
+   admit.
+rewrite -derive1E.
+rewrite (@derive1_comp _ (@norm _ _ \o u ) (@GRing.exp K ^~ 2) ) ; last 2 first.
+  admit.
+  admit.
+rewrite exp_derive1.
+rewrite derive1_comp /=; last 2 first.
+  admit.
+  admit.
+rewrite !derive_sqrt.
+rewrite !expr1.
+rewrite !(mulrA (1/2)).
+rewrite div1r mulVf //; last by rewrite pnatr_eq0.
+rewrite !mul1r.
+rewrite !dotmulvv.
+rewrite sqrtr_sqr.
+rewrite normr_norm.
+rewrite !mulrA /=.
+have -> : norm (u t) / (2 * norm (u t)) = 1/2.
+  by rewrite invfM// mulrCA divff ?mulr1 ?div1r.
+set X := (X in X^`()%classic).
+have dot : X t =  norm(u t)^+2 by rewrite /X dotmulvv.
+rewrite /X.
+rewrite !derive1mx_dotmul; last 2 first.
+  admit.
+  admit.
+rewrite dotmulP /=.
+set y := derive1mx u t *d u t.
+have -> : y + u t *d derive1mx u t = 2 * y.
+  by rewrite mulr_natl mulr2n dotmulC.
+by rewrite div1r mulrA mulVf ?pnatr_eq0// mul1r mxE eqxx mulr1n.
+Admitted.
+
 Section Lyapunov.
 (* locally positive definite around x that is an equilibrium point *)
 
@@ -329,91 +385,7 @@ Definition V1dot (zp1_z2 : 'rV[K]_6) : K :=
   - (norm zp1)^+2 + (z2 *m (\S('e_2%:R - z2))^+2 *m z2^T
                     - z2 *m (\S('e_2%:R - z2))^+2 *m zp1^T)``_0.
 
-Lemma derive_sqrt : (Num.sqrt^`())%classic = (fun t => (2 * Num.sqrt t)^-1) :> (_ -> K).
-Proof.
-Admitted.
-
-(* TODO derive1E funext*)
-Local Open Scope classical_set_scope.
-
-Lemma derive_norm n (u : K^o -> 'rV[K^o]_n.+1) : 
-(1/2 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() = 
-(fun t => (derive1mx u t *m  (u t)^T)``_0) :>(K->K).
-Proof.
-
-apply/funext => t.
-rewrite [LHS]derive1E.
-rewrite deriveMl ; last first.
- admit.
-Search "derive" (_^+ _).
-Search (_^+2) (GRing.exp).
-rewrite /=.
-Search "derive" 1.
-rewrite -derive1E.
-rewrite (@derive1_comp _ (@norm _ _ \o u ) (@GRing.exp K ^~ 2) ) ; last 2 first.
-admit. admit.
-rewrite exp_derive1.
-rewrite derive1_comp /=.
-rewrite !derive_sqrt.
-rewrite !expr1.
-rewrite !(mulrA (1/2)).
-rewrite div1r mulVf // ; last first.
-rewrite pnatr_eq0 //.
-rewrite !mul1r.
-Search (norm).
-rewrite !dotmulvv ; last first.
-Search (Num.sqrt) (GRing.exp).
-rewrite (sqrtr_sqr).
-Search (`|_|) (norm).
-rewrite normr_norm.
-rewrite !mulrA /=.
-Search "mulr".
-have : norm (u t) / (2 * norm (u t)) = 1/2.
-admit.
-move => i.
-rewrite i.
-set X := (X in X^`()%classic).
-About dotmulvv.
-Search (_ *d _).
-rewrite /X /=.
-have : X t =  norm(u t)^+2.
-by rewrite /X dotmulvv.
-move => dot.
-rewrite /X  in dot.
-rewrite /X.
-rewrite !derive1mx_dotmul.
-Search (_ *m _^T).
-rewrite dotmulP /=.
-Search "derive1mx".
-Search (_ + _) 2.
-set y := derive1mx u t *d u t.
-Search (_*d_).
-have : y + u t *d derive1mx u t = 2 * y.
-rewrite addrC /y /=.
-Search (_*d _).
-rewrite addrC.
-Search (_ * 2).
-rewrite addrC.
-by rewrite mulrDl mul1r addrC dotmulC.
-move => j.
-rewrite j.
-rewrite mulrC !mulrA.
-rewrite -mulrA mulrC -mulrA mul1r /=.
-rewrite mulrA /=.
-Search ( _^-1 * _).
-rewrite mulVf. rewrite mul1r.
-rewrite /y.
-Search (derive1mx).
-rewrite !mxE eqxx mulr1n.
-congr ( _ *d _).
-by rewrite pnatr_eq0.
-move => s j.
-Search "derive_val".
-Search "derivable" "fun".
-Admitted.
-
-Lemma deriveV1 (x : K -> 'rV[K]_6) t :
-  LieDerivative V1 x t = V1dot (x t).
+Lemma deriveV1 (x : K -> 'rV[K]_6) t : LieDerivative V1 x t = V1dot (x t).
 Proof.
 rewrite /LieDerivative /V1 /V1dot.
 set zp1 := @lsubmx _ _ 3 3 _.
@@ -428,7 +400,7 @@ rewrite /partial.
 Search (norm).
 rewrite -!mxtrace_tr_mul.
 Search ( \tr _).
-rewrite trace_mx11
+(*rewrite trace_mx11*)
 Abort.
 
 Lemma V1_is_lyapunov : is_lyapunov_function eqn33 V1 point1.
