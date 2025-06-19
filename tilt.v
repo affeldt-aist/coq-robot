@@ -224,22 +224,41 @@ Definition gradient {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :=
 Definition gradientnew {R : realType} n (f : 'rV[R]_n.+1 -> R) :=
   jacobian (fun x =>  (f x)%:M).
 
-Lemma partialE {R : realType} n (f : 'rV[R]_n.+1 -> R)  (a : 'rV[R]_n.+1) (i : 'I_n.+1) :
-          partial f a i = ('D_'e_i (fun x : 'rV[R]_n.+1 => (f x)%:M : 'rV[R]_1) a) 0%R 0%R.
+Lemma deriveE' {R : realType} n (f : 'rV[R]_n.+1 -> R)  (a : 'rV[R]_n.+1)
+    (i : 'I_n.+1) :
+  ('D_'e_i (fun x : 'rV_n.+1 => (f x)%:M : 'rV[R]_1) a)
+  = ('D_'e_i (fun x : 'rV_n.+1 => (f x)) a)%:M.
 Proof.
-apply/cvg_lim => //.
-apply/cvgrPdist_lt.
-move => eps eps0.
-near=> t.
-Search (norm).
-rewrite derivemxE /jacobian.
-rewrite /= /partial /derive /= coorE /=.
-Search ( 'e__).
-rewrite derivemxE ; last first. admit.
-Search ( 'e__).
-rewrite /partial.
-rewrite deriveE /= ; last first. admit.
+rewrite /derive/=.
+rewrite [X in (X @ _)%classic](_ : _ = scalar_mx \o (fun h =>
+    (h^-1 *: ((f (h *: 'e_i + a)) - (f a))))); last first.
+  apply/funext => h.
+  rewrite /=.
+  admit.
+apply/cvg_lim => //=.
+apply: (@cvg_comp _ _ _ _ scalar_mx _
+(nbhs (lim ((h^-1 *: (f (h *: 'e_i + a) - f a)) @[h --> 0^']))%classic)).
+  admit.
+Admitted.
 
+Lemma partialE {R : realType} n (f : 'rV[R]_n.+1 -> R)  (a : 'rV[R]_n.+1)
+    (i : 'I_n.+1) :
+  partial f a i =
+  ('D_'e_i (fun x : 'rV[R]_n.+1 => (f x)%:M : 'rV[R]_1) a) 0 0.
+Proof.
+rewrite deriveE'.
+rewrite mxE eqxx mulr1n.
+rewrite /partial /derive/=.
+congr (lim (_ @[h --> 0^'])%classic) => //=.
+apply/funext => h .
+congr (_ *: _).
+do 2 f_equal.
+rewrite addrC.
+f_equal.
+congr (_ *: _).
+apply/rowP => j.
+by rewrite !mxE eqxx/= eq_sym.
+Qed.
 
 Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
   derive1mx M t = M^`()%classic t.
@@ -259,17 +278,7 @@ rewrite mxE /jacobian.
 rewrite mxE.
 rewrite -deriveE; last first.
   admit.
-Search ( 'e_i ).
-Unset Printing Notations.
-
-rewrite /derive /= /partial.
-
-have := forall h, (h^-1 * (f (a + h *: err_vec i) - f a)) = 
-(h^-1 *: ((f (h *: 'e_i + a))%:M - (f a)%:M))``_0.
-move => h.
-
-admit.
-Search (_^T).
+by rewrite partialE.
 Admitted.
 
 Lemma gradientE {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :
