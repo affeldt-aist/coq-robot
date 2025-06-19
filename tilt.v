@@ -108,13 +108,14 @@ Definition Gamma1 := [set x : 'rV[K]_6 | norm (@rsubmx _ 1 3 3 x) = 1].
 End Gamma1.
 
 Section ode.
-Context {K : realType} {T : normedModType K}.
+Context {K : realType}.
+Let T := 'rV[K]_6.
 Local Open Scope classical_set_scope.
 
 Variable f : K -> (K -> T) -> T.
 
 Definition is_solution (x : K -> T) : Prop :=
-  forall t, x^`() t = f t x.
+  forall t, derive1mx x t = f t x.
 
 Definition is_equilibrium_point p := is_solution (cst p).
 
@@ -164,7 +165,7 @@ Check equilibrium_points _.
 
 Lemma equilibrium_point1 : is_equilibrium_point eqn33 point1.
 Proof.
-move => t ; rewrite derive1_cst /eqn33 /point1 ; apply/eqP ; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP. split.
+move => t ; rewrite derive1mx_cst /eqn33 /point1 ; apply/eqP ; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP. split.
   rewrite scaler_eq0; apply/orP; right; apply/eqP/rowP; move => i; by rewrite !mxE.
   apply/eqP/rowP; move => i; apply/eqP; set N := (X in _ *: X *m _); have : N = 0.
     rewrite /N /=; apply /rowP; move => a; by rewrite !mxE subr0.
@@ -174,7 +175,7 @@ Qed.
 From mathcomp Require Import fintype.
 Lemma equilibrium_point2 : is_equilibrium_point eqn33 point2.
 Proof.
-move => t; rewrite derive1_cst; apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
+move => t; rewrite derive1mx_cst; apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
 set N := (X in _ *: X == 0 /\ _).
 have N0 : N = 0.
   apply/rowP; move => i; rewrite !mxE; case: splitP.
@@ -213,11 +214,63 @@ End eqn33.
 Definition err_vec {R : ringType} n (i : 'I_n.+1) : 'rV[R]_n.+1 :=
   \row_(j < n.+1) (i == j)%:R.
 
+Locate derive1.
 Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) i :=
   lim (h^-1 * (f (a + h *: err_vec i) - f a) @[h --> 0^'])%classic.
 
 Definition gradient {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :=
   \row_(i < n.+1) partial f a i.
+
+Definition gradientnew {R : realType} n (f : 'rV[R]_n.+1 -> R) :=
+  jacobian (fun x =>  (f x)%:M).
+
+Lemma partialE {R : realType} n (f : 'rV[R]_n.+1 -> R)  (a : 'rV[R]_n.+1) (i : 'I_n.+1) :
+          partial f a i = ('D_'e_i (fun x : 'rV[R]_n.+1 => (f x)%:M : 'rV[R]_1) a) 0%R 0%R.
+Proof.
+apply/cvg_lim => //.
+apply/cvgrPdist_lt.
+move => eps eps0.
+near=> t.
+Search (norm).
+rewrite derivemxE /jacobian.
+rewrite /= /partial /derive /= coorE /=.
+Search ( 'e__).
+rewrite derivemxE ; last first. admit.
+Search ( 'e__).
+rewrite /partial.
+rewrite deriveE /= ; last first. admit.
+
+
+Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
+  derive1mx M t = M^`()%classic t.
+Proof.
+apply/rowP => i.
+rewrite /derive1mx !mxE.
+rewrite /derive1.
+Admitted.
+
+Lemma gradientEE {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :
+  gradient f a = (gradientnew f a)^T.
+Proof.
+rewrite /gradientnew.
+apply/rowP => i.
+rewrite /gradient mxE.
+rewrite mxE /jacobian.
+rewrite mxE.
+rewrite -deriveE; last first.
+  admit.
+Search ( 'e_i ).
+Unset Printing Notations.
+
+rewrite /derive /= /partial.
+
+have := forall h, (h^-1 * (f (a + h *: err_vec i) - f a)) = 
+(h^-1 *: ((f (h *: 'e_i + a))%:M - (f a)%:M))``_0.
+move => h.
+
+admit.
+Search (_^T).
+Admitted.
 
 Lemma gradientE {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :
   gradient f a = \sum_(i < n.+1) partial f a i *: 'e_i.
@@ -240,22 +293,18 @@ elim/big_ind2 : _ => //=.
 move=> x y r s <- <-.
 by rewrite dotmulDl.
 Qed.
+Search (Num.sqrt).
 
-Lemma derive_sqrt {K : realType} :
+Lemma derive_sqrt {K : realType} : 
   (Num.sqrt^`())%classic = (fun t => (2 * Num.sqrt t)^-1) :> (_ -> K).
 Proof.
+apply/funext => i.
+rewrite derive1E /=.
+Search (_^-1) (_*_).
+rewrite invrM. Search (_^-1). 
 Admitted.
 
 Local Open Scope classical_set_scope.
-
-Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
-  derive1mx M t = M^`()%classic t.
-Proof.
-apply/rowP => i.
-rewrite /derive1mx !mxE.
-rewrite /derive1.
-Abort.
-
 Lemma derive_norm n (u : K^o -> 'rV[K^o]_n.+1) :
   (forall t, norm (u t) != 0) ->
   (1/2 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() =
@@ -322,14 +371,14 @@ Local Open Scope classical_set_scope.
 
 Definition LieDerivative {R : realType} n (V : 'rV[R]_n.+1 -> R)
     (a : R -> 'rV[R]_n.+1) (t : R) : R :=
-  \sum_(i < n.+1) partial V (a t) i * (a^`()%classic t) ``_ i.
+  \sum_(i < n.+1) (partial V (a t) i * (derive1mx a t) ``_ i).
 
 Definition LieDerivative_gradient {R : realType} n (V : 'rV[R]_n.+1 -> R)
     (x : R -> 'rV[R]_n.+1) (t : R) : R :=
-  let xdot_t := (x^`()) t in
-  gradient V (x t) *d xdot_t.
+  let xdot_t := derive1mx x t in
+  (gradientnew V (x t) )^T *d xdot_t.
 
-Lemma LieDerivative_gradientE {R : realType} n (V : 'rV[R]_n.+1 -> R)
+(*Lemma LieDerivative_gradientE {R : realType} n (V : 'rV[R]_n.+1 -> R)
     (x : R -> 'rV[R]_n.+1) :
   LieDerivative_gradient V x = LieDerivative V x.
 Proof.
@@ -339,8 +388,10 @@ rewrite dotmulE (bigD1 i)//= big1 ?addr0; last first.
   by move=> j ji; rewrite !mxE/= (negbTE ji) mulr0 mul0r.
 by rewrite !mxE/= eqxx mulr1.
 Qed.
+*)
+Check jacobian.
 
-Definition is_lyapunov_function n
+Definition is_lyapunov_function (n := 5)
   (f : K -> (K -> 'rV[K]_n.+1) -> 'rV[K]_n.+1)
   (V : 'rV[K]_n.+1 -> K)
   (x0 : 'rV[K]_n.+1) : Prop :=
@@ -374,7 +425,7 @@ Definition zp1_z2_eq t (zp1_z2 : K -> 'rV[K]_6) : 'rV[K]_6 :=
 Definition V1 (zp1_z2 : 'rV[K]_6) : K :=
   let zp1 := @lsubmx K 1 3 3 (zp1_z2) in
   let z2 := @rsubmx K 1 3 3 (zp1_z2) in
-  (norm zp1)^+2 / (2%:R * alpha1) + (norm z2)^+2 / (2%:R * gamma).
+  (norm (zp1))^+2 / (2%:R * alpha1) + (norm (z2))^+2 / (2%:R * gamma).
 
 Definition ffun_to_rV6 (f : {ffun 'I_1 * 'I_6 -> K}) : 'rV_6 :=
   \row_(i < 6) f (ord0, i).
@@ -385,22 +436,22 @@ Definition V1dot (zp1_z2 : 'rV[K]_6) : K :=
   - (norm zp1)^+2 + (z2 *m (\S('e_2%:R - z2))^+2 *m z2^T
                     - z2 *m (\S('e_2%:R - z2))^+2 *m zp1^T)``_0.
 
-Lemma deriveV1 (x : K -> 'rV[K]_6) t : LieDerivative V1 x t = V1dot (x t).
+Lemma deriveV1 (x : K -> 'rV[K]_6) t : is_solution eqn33 x -> LieDerivative_gradient V1 x t = V1dot (x t).
 Proof.
-rewrite /LieDerivative /V1 /V1dot.
-set zp1 := @lsubmx _ _ 3 3 _.
-set z2 := @rsubmx _ _ 3 3 _.
+move => eqn33x.
+rewrite /V1dot.
+set zp1 := fun r => @lsubmx K 1 3 3 (x r).
+set z2 := fun r => @rsubmx K 1 3 3 (x r).
+rewrite /LieDerivative_gradient /gradientnew /V1.
+rewrite /jacobian /lin1_mx.
 rewrite !mxE.
-rewrite -!sumrN /=.
-rewrite !addrA.
-rewrite !derive1E.
-Search (norm _ ^+2).
-rewrite -mxtrace_tr_mul.
-rewrite /partial.
-Search (norm).
-rewrite -!mxtrace_tr_mul.
-Search ( \tr _).
-(*rewrite trace_mx11*)
+Search "matrix".
+transitivity (alpha1^-1 * ((derive1mx zp1 t) *d ((zp1 t))) + ((gamma^-1) * ((derive1mx z2 t) *d ((z2 t))))).
+rewrite /derive1mx.
+Search (_ * _) "matrix".
+admit.
+
+rewrite /derive1mx.
 Abort.
 
 Lemma V1_is_lyapunov : is_lyapunov_function eqn33 V1 point1.
