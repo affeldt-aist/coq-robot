@@ -59,12 +59,12 @@ Definition derivable_mx m n (M : R -> 'M[W]_(m, n)) t v :=
 Definition derive1mx m n (M : R -> 'M[W]_(m, n)) := fun t =>
   \matrix_(i < m, j < n) (derive1 (fun x => M x i j) t : W).
 
-Lemma derive1mxE m n t (f : 'I_m -> 'I_n -> R -> W) :
+Lemma derive1mx_matrix m n t (f : 'I_m -> 'I_n -> R -> W) :
   derive1mx (fun x => \matrix_(i, j) f i j x) t =
   \matrix_(i, j) (derive1 (f i j) t : W).
 Proof.
 rewrite /derive1mx; apply/matrixP => ? ?; rewrite !mxE; congr (derive1 _ t).
-rewrite funeqE => ?; by rewrite mxE.
+by rewrite funeqE => ?; rewrite mxE.
 Qed.
 
 Variables m n : nat.
