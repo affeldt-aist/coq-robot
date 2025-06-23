@@ -144,18 +144,16 @@ Definition xi1 t (zp1_zp2 : K -> 'rV[K]_6) : Gamma1 :=
 
 Lemma thm11a : state_space eqn33 = Gamma1.
 Proof.
-apply/seteqP. split.  
-  - move=> p.
-    rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
-    move=> y. 
-    Search (norm) 1.
-    destruct y as [y0 [Heq Hrange]].
-    admit.
-    move => p.
-    rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
-    move => y.
-rewrite /state_space /Gamma1 /eqn33 /is_solution.
-admit.
+apply/seteqP; split.
+- move=> p.
+  rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
+  move=> [y0 [Heq Hrange]].
+  admit.
+- move => p.
+  rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
+  move => y.
+  rewrite /state_space /Gamma1 /eqn33 /is_solution.
+  admit.
 Admitted.
 
 Definition point1 : 'rV[K]_6 := 0.
@@ -215,8 +213,15 @@ Section derive_help.
 Definition err_vec {R : ringType} n (i : 'I_n.+1) : 'rV[R]_n.+1 :=
   \row_(j < n.+1) (i == j)%:R.
 
+Lemma err_vecE {R : ringType} n (i : 'I_n.+1) :
+  err_vec i = 'e_i :> 'rV[R]_n.+1.
+Proof.
+apply/rowP => j.
+by rewrite !mxE eqxx /= eq_sym.
+Qed.
+
 Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) i :=
-  lim (h^-1 * (f (a + h *: err_vec i) - f a) @[h --> 0^'])%classic.
+  lim (h^-1 * (f (a + h *: 'e_i) - f a) @[h --> 0^'])%classic.
 
 Definition gradient_partial {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :=
   \row_(i < n.+1) partial f a i.
@@ -224,38 +229,37 @@ Definition gradient_partial {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_
 Definition gradient_jacobian {R : realType} n (f : 'rV[R]_n.+1 -> 'rV[R]_1) :=
   jacobian (fun x =>  (f x)).
 
-Lemma deriveE' {R : realType} n (f : 'rV[R]_n.+1 -> 'rV[R]_1)  (a : 'rV[R]_n.+1)
-    (i : 'I_n.+1) :
-  ('D_'e_i (fun x : 'rV_n.+1 => (f x) : 'rV[R]_1) a) 0 0
-  = ('D_'e_i (fun x : 'rV_n.+1 => (f x) 0 0) a).
+Local Open Scope classical_set_scope.
+Lemma derivemx_derive {R : realFieldType} (V : normedModType R) m n (f : V -> 'M[R]_(m.+1, n.+1)) (x0 : V) (v : V)
+   (i : 'I_m.+1) (j : 'I_n.+1) :
+  'D_v f x0 i j = 'D_v (fun x => f x i j) x0.
 Proof.
+apply/esym/cvg_lim => //=.
+apply/cvgrPdist_le => /= e e0.
+near=> t.
 Admitted.
+Local Close Scope classical_set_scope.
+
+Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
+  derive1mx M t = M^`()%classic t.
+Proof.
+apply/rowP => i.
+rewrite /derive1mx !mxE.
+rewrite !derive1E.
+by rewrite derivemx_derive.
+Qed.
+
 
 Lemma partial_diff {R : realType} n (f : 'rV[R]_n.+1 -> 'rV[R]_1)  (a : 'rV[R]_n.+1)
     (i : 'I_n.+1) :
   partial (fun x => (f x) 0 0) a i =
   ('D_'e_i (fun x : 'rV[R]_n.+1 => (f x) : 'rV[R]_1) a) 0 0.
 Proof.
-rewrite deriveE'.
-rewrite /=.
-(*rewrite mxE. eqxx mulr1n /partial /derive/=.
-congr (lim (_ @[h --> 0^'])%classic) => //=.
-apply/funext => h .
-congr (_ *: _).
-do 2 f_equal.
-rewrite addrC.
-f_equal.
-congr (_ *: _).
-apply/rowP => j.
-by rewrite !mxE eqxx/= eq_sym.*)
-Admitted.
-
-Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
-  derive1mx M t = M^`()%classic t.
-Proof.
-apply/rowP => i.
-rewrite /derive1mx !mxE /derive1.
-Admitted.
+rewrite derivemx_derive/=.
+rewrite /partial.
+rewrite /derive /=.
+by under eq_fun do rewrite (addrC a).
+Qed.
 
 Lemma gradientEE {R : realType} n (f : 'rV[R]_n.+1 -> 'rV[R]_1) (a : 'rV[R]_n.+1) :
   gradient_partial (fun x => (f x) 0 0) a = (gradient_jacobian f a)^T.
@@ -288,9 +292,8 @@ elim/big_ind2 : _ => //=.
 move=> x y r s <- <-.
 by rewrite dotmulDl.
 Qed.
-Search (Num.sqrt).
 
-Lemma derive_sqrt {K : realType} : 
+Lemma derive_sqrt {K : realType} :
   (Num.sqrt^`())%classic = (fun t => (2 * Num.sqrt t)^-1) :> (_ -> K).
 Proof.
 apply/funext => i.
@@ -301,7 +304,7 @@ Admitted.
 Local Open Scope classical_set_scope.
 Lemma derive_norm n (u : K^o -> 'rV[K^o]_n.+1) :
   (forall t, norm (u t) != 0) ->
-  (1/2 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() =
+  (2^-1 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() =
   (fun t => (derive1mx u t *m  (u t)^T)``_0) :> (K -> K).
 Proof.
 move=> u0; apply/funext => t.
@@ -309,7 +312,7 @@ rewrite [LHS]derive1E.
 rewrite deriveMl/=; last first.
    admit.
 rewrite -derive1E.
-rewrite (@derive1_comp _ (@norm _ _ \o u ) (@GRing.exp K ^~ 2) ) ; last 2 first.
+rewrite (@derive1_comp _ (@norm _ _ \o u ) (@GRing.exp K ^~ 2)) ; last 2 first.
   admit.
   admit.
 rewrite exp_derive1.
@@ -318,15 +321,14 @@ rewrite derive1_comp /=; last 2 first.
   admit.
 rewrite !derive_sqrt.
 rewrite !expr1.
-rewrite !(mulrA (1/2)).
-rewrite div1r mulVf //; last by rewrite pnatr_eq0.
-rewrite !mul1r.
+rewrite !(mulrA 2^-1).
+rewrite mulVf ?pnatr_eq0// mul1r.
 rewrite !dotmulvv.
 rewrite sqrtr_sqr.
 rewrite normr_norm.
 rewrite !mulrA /=.
-have -> : norm (u t) / (2 * norm (u t)) = 1/2.
-  by rewrite invfM// mulrCA divff ?mulr1 ?div1r.
+have -> : norm (u t) / (2 * norm (u t)) = 2^-1.
+  by rewrite invfM// mulrCA divff ?mulr1.
 set X := (X in X^`()%classic).
 have dot : X t =  norm(u t)^+2 by rewrite /X dotmulvv.
 rewrite /X.
@@ -337,8 +339,9 @@ rewrite dotmulP /=.
 set y := derive1mx u t *d u t.
 have -> : y + u t *d derive1mx u t = 2 * y.
   by rewrite mulr_natl mulr2n dotmulC.
-by rewrite div1r mulrA mulVf ?pnatr_eq0// mul1r mxE eqxx mulr1n.
+by rewrite mulrA mulVf ?pnatr_eq0// mul1r mxE eqxx mulr1n.
 Admitted.
+
 End derive_help.
 
 Section Lyapunov.
@@ -437,11 +440,6 @@ Lemma LieDerivative_gradient_jacobianD {R : realType} n
   LieDerivative_gradient_jacobian f x + LieDerivative_gradient_jacobian g x.
 Admitted.
 
-
-
-
-From mathcomp Require Import vector.
-
 Lemma deriveV1 (x : K -> 'rV[K]_6) t : is_solution eqn33 x ->
   LieDerivative_gradient_jacobian V1 x t = V1dot (x t).
 Proof.
@@ -484,198 +482,166 @@ transitivity (alpha1^-1 * (('D_1 zp1 t) *d zp1 t) +
     rewrite -scalerA !mxE eqxx mulr1n; congr *%R.
 Abort.
 
+
 Lemma V1_is_lyapunov : is_lyapunov_function eqn33 V1 point1.
 Proof.
 split; first exact: equilibrium_point1.
-(*  lpd V1 point1 /\
-  (forall traj : K -> 'rV_6,
-   is_solution eqn33 traj -> traj 0 = point1 -> lnsd [eta LieDerivative V1 traj] 0)*)
-(* v1 at point 1 is positive definite*)
 - rewrite /locposdef; split.
   + by rewrite /V1 /point1 lsubmx0 rsubmx0 norm0 expr0n/= !mul0r add0r mxE /=.
-  (*   \forall z \near 0^', 0 <
-                       norm (lsubmx z) ^+ 2 / (2 * alpha1) + norm (rsubmx z) ^+ 2 / (2 * gamma)*)
-  have alpha1_pos: 0 < 2 * alpha1 by rewrite mulr_gt0 // ltr0Sn.
-  have gamma_pos: 0 < 2 * gamma by rewrite mulr_gt0 //  gamma_gt0.
-  near=> z_near.
-  simpl in *.
-  set z_rv := ffun_to_rV6 (\val z_near).
-  have z_neq0 : z_near != 0 by near: z_near; exact: nbhs_dnbhs_neq.
-  have z_mat_neq0 : z_rv != 0.
-    rewrite /z_rv.
-    rewrite /ffun_to_rV6.
-    apply: contra z_neq0 => /eqP H.
-    apply/eqP/rowP => i.
-    rewrite !mxE.
-    move/rowP : H => /(_ i).
-    by rewrite !mxE//.
-  rewrite /V1.
-  have /orP[ lz0| rz0] : (@lsubmx _ _ 3 3 z_near != 0) || (@rsubmx _ _ 3 3 z_near != 0).
-    rewrite -negb_and.
-    apply: contra z_neq0 => /andP[/eqP l0 /eqP r0].
-    rewrite -[eqbLHS](@hsubmxK _ _ 3 3) l0 r0.
-    apply/eqP/rowP; move => i; rewrite !mxE /=; case: splitP.
-      move => j k. by rewrite mxE.
-    move => k i3k. by rewrite mxE.  
-  - set rsub :=  @rsubmx _ _ 3 3 z_near.
-    have : norm(rsub) >= 0 by rewrite norm_ge0.
-    set lsub :=  @lsubmx _ _ 3 3 z_near.
-    move => nor.
-    have : norm(lsub) > 0.
-    rewrite lt_neqAle.
-    by rewrite eq_sym norm_eq0 lz0 /= norm_ge0.
-    move => normlsub.
-    Search (_ < _ + _).
-    rewrite mxE /=.
-    apply: ltr_pwDl.
-    rewrite divr_gt0 //.
-      by rewrite exprn_gt0 //.
-      rewrite divr_ge0 //.
-      by rewrite exprn_ge0 //.
-      by apply ltW.
-  - rewrite mxE /=.
-    apply: ltr_pwDr.
-      rewrite divr_gt0 //.
-      rewrite exprn_gt0 //.
-      rewrite lt_neqAle.
-      Search (norm) 0.
-      rewrite eq_sym.
-      by rewrite norm_eq0 rz0 /= norm_ge0.
-      rewrite divr_ge0 // ?exprn_ge0 // ?norm_ge0 //.
-      by apply ltW.
-- move => traj dtraj traj0.
+  + near=> z_near.
+    simpl in *.
+    set z_rv := ffun_to_rV6 (\val z_near).
+    have z_neq0 : z_near != 0 by near: z_near; exact: nbhs_dnbhs_neq.
+    have z_mat_neq0 : z_rv != 0.
+      apply: contra z_neq0 => /eqP H.
+      apply/eqP/rowP => i; rewrite !mxE.
+      by move/rowP : H => /(_ i); rewrite !mxE.
+    rewrite /V1.
+    have /orP[lz0|rz0] : (@lsubmx _ _ 3 3 z_near != 0) || (@rsubmx _ _ 3 3 z_near != 0).
+      rewrite -negb_and.
+      apply: contra z_neq0 => /andP[/eqP l0 /eqP r0].
+      rewrite -[eqbLHS](@hsubmxK _ _ 3 3) l0 r0.
+      by apply/eqP/rowP; move => i; rewrite !mxE /=; case: splitP => ? ?; rewrite mxE.
+    + set rsub := @rsubmx _ _ 3 3 z_near.
+      have : norm rsub >= 0 by rewrite norm_ge0.
+      set lsub :=  @lsubmx _ _ 3 3 z_near.
+      move => nor.
+      have normlsub : norm lsub > 0 by rewrite norm_gt0.
+      rewrite mxE /= ltr_pwDl//.
+        by rewrite divr_gt0 ?exprn_gt0// mulr_gt0.
+      by rewrite divr_ge0 ?exprn_ge0// mulr_ge0// ltW.
+    - rewrite mxE /= ltr_pwDr//.
+        by rewrite divr_gt0 ?exprn_gt0 ?mulr_gt0// norm_gt0.
+      by rewrite divr_ge0 ?exprn_ge0 ?norm_ge0// mulr_ge0// ltW.
+- move=> traj dtraj traj0.
   rewrite /lnsd /LieDerivative_gradient_jacobian.
   rewrite traj0 /point1.
   split.
-    Search (derive1mx).
-    rewrite derive1mxE' /gradient_jacobian /V1.
+  + rewrite derive1mxE' /gradient_jacobian /V1.
     rewrite !derive1E.
-    rewrite /dotmul. rewrite -trmx_mul /= mxE.
+    rewrite /dotmul.
+    rewrite -trmx_mul /= mxE.
     rewrite /is_solution /derive1mx /eqn33 in dtraj.
-    set f_expr := (fun x : 'rV_5%R.+1 =>
-                     (norm ( @lsubmx K 1 3 3 x) ^+ 2 / (2 * alpha1) + norm ( @rsubmx K 1 3 3 x) ^+ 2 / (2 * gamma))%:M).
+    set f_expr := fun x : 'rV_6 =>
+                     (norm (@lsubmx K 1 3 3 x) ^+ 2 / (2 * alpha1) +
+                      norm (@rsubmx K 1 3 3 x) ^+ 2 / (2 * gamma))%:M.
     pose phi := fun t => f_expr (traj t).
     rewrite /traj0.
-    have eq_point1: 'D_1 traj 0 = 0.
-    rewrite /dtraj /traj0.
-  have deriv_at_0: \matrix_(i, j) (fun x : K => traj x i j)^`() 0 = 
-  row_mx (- alpha1 *: (@lsubmx K 1 3 3 (traj 0)))
-         (gamma *: ((@rsubmx K 1 3 3 (traj 0)) - (@lsubmx K 1 3 3 (traj 0))) *m 
+    have eq_point1 : 'D_1 traj 0 = 0.
+      rewrite /dtraj /traj0.
+      have deriv_at_0: \matrix_(i, j) (fun x : K => traj x i j)^`() 0 =
+        row_mx (- alpha1 *: (@lsubmx K 1 3 3 (traj 0)))
+         (gamma *: ((@rsubmx K 1 3 3 (traj 0)) - (@lsubmx K 1 3 3 (traj 0))) *m
           \S('e_2 - (@rsubmx K 1 3 3 (traj 0))) ^+ 2).
-    exact: dtraj.
-    have deriv_at_point1: 'D_1 traj 0 = 
-                            row_mx (- alpha1 *: @lsubmx K 1 3 3 (traj 0))
-                              (gamma *: (@rsubmx K 1 3 3 (traj 0) - @lsubmx K 1 3 3 (traj 0)) *m 
-                                                                           \S('e_2 - @rsubmx K 1 3 3 (traj 0)) ^+ 2).
-  rewrite -deriv_at_0.
-  rewrite -derive1E /=.
-  apply/matrixP => i j. rewrite -derive1mxE. 
-  rewrite derive1mxE /=. rewrite !mxE /=.
-  admit.
-  have eq_zero: row_mx (- alpha1 *: @lsubmx K 1 3 3 point1)
-                     (gamma *: (@rsubmx K 1 3 3 point1 - @lsubmx K 1 3 3 point1) *m 
-                      \S('e_2 - @rsubmx K 1 3 3 point1) ^+ 2) = 0.
-  have := equilibrium_point1 0.
-  rewrite /is_equilibrium_point /eqn33.
-  move => H.
-  rewrite /point1. apply/matrixP => i j. 
-  rewrite !linear0 addr0.
-  rewrite addr0. rewrite scaler0 mul0mx.
-  by rewrite row_mx0.
-  have traj_deriv_zero: 'D_1 traj 0 = 0.
-  rewrite deriv_at_point1. 
-  rewrite traj0.
-  by rewrite eq_zero.
-  by rewrite traj_deriv_zero.
-  rewrite eq_point1.
-  rewrite mul0mx /=.
-  by rewrite mxE.
-  near=> z.
-  rewrite derive1mxE'.
-  rewrite /gradient_jacobian /=.
-  Search (_*d_) (_*m_).
-  rewrite /dotmul /=.
-  Search (_^T).
-  rewrite /is_solution /derive1mx /eqn33 in dtraj.
-  rewrite -trmx_mul /=. rewrite mxE /=.
-  rewrite /V1 /=. rewrite -derivemxE /=.
-  rewrite [x in ('D_ _ x _)] (_ : _ = (fun x0 : 'rV_6 =>
-                  (norm ( @lsubmx K 1 3 3 x0) ^+ 2 / (2 * alpha1))%:M) \+ (fun x0 => (norm (@lsubmx K 1 3 3 x0) ^+ 2 / (2 * gamma))%:M)).
-  rewrite deriveD /=.
-  rewrite mxE.
-  rewrite [x in ('D_ _ x _) ](_ : _ = (1 / alpha1) * (1/2)  \*: (fun x0 : 'rV_6 => (norm (@lsubmx K 1 3 3 x0) ^+ 2)%:M : 'rV[K]_1)).
-  rewrite !deriveZ /=.
-  under [in X in _ + X] eq_fun => x0.
-  rewrite [_ / (2 * gamma)]mulrC.
-  over.
-  rewrite /=.
-  rewrite [X in _ + X]
-  (_ : 'D_((traj^`())%classic z) (fun x0 : 'rV[K]_6 => ((2 * gamma)^-1 * norm (@lsubmx K 1 3 3 x0) ^+ 2)%:M : 'rV[K]_1) (traj z) 0 0 = 
-       (2 * gamma)^-1 *: 'D_((traj^`())%classic z) (fun x0 : 'rV[K]_6 => (norm (@rsubmx K 1 3 3 x0) ^+ 2)%:M : 'rV[K]_1) (traj z) 0 0).
-  pose f := fun x0 : 'rV_6 => (norm (@lsubmx K 1 3 3 x0))%:M : 'rV[K]_1.
-  pose F := fun x0 : 'rV_6 => (f x0) ^+ 2.
-  set dF_l : 'rV[K]_1 := 'D_((traj^`())%classic z)
+        exact: dtraj.
+      have deriv_at_point1 : 'D_1 traj 0 =
+        row_mx (- alpha1 *: @lsubmx K 1 3 3 (traj 0))
+         (gamma *: (@rsubmx K 1 3 3 (traj 0) - @lsubmx K 1 3 3 (traj 0)) *m
+          \S('e_2 - @rsubmx K 1 3 3 (traj 0)) ^+ 2).
+        rewrite -deriv_at_0.
+        rewrite -derive1E /=.
+        apply/matrixP => i j; rewrite !mxE.
+        rewrite ord1.
+        by rewrite derive1E derivemx_derive// -derive1E.
+      have eq_zero: row_mx (- alpha1 *: @lsubmx K 1 3 3 point1)
+        (gamma *: (@rsubmx K 1 3 3 point1 - @lsubmx K 1 3 3 point1) *m
+         \S('e_2 - @rsubmx K 1 3 3 point1) ^+ 2) = 0.
+        have := equilibrium_point1 0.
+        rewrite /is_equilibrium_point /eqn33.
+        move => H.
+        rewrite /point1. apply/matrixP => i j.
+        rewrite !linear0 addr0.
+        rewrite addr0. rewrite scaler0 mul0mx.
+        by rewrite row_mx0.
+      have traj_deriv_zero: 'D_1 traj 0 = 0.
+        rewrite deriv_at_point1.
+        rewrite traj0.
+        by rewrite eq_zero.
+      by rewrite traj_deriv_zero.
+    rewrite eq_point1.
+    rewrite mul0mx /=.
+    by rewrite mxE.
+  + near=> z.
+    rewrite derive1mxE'.
+    rewrite /gradient_jacobian /=.
+    rewrite /dotmul /=.
+    rewrite /is_solution /derive1mx /eqn33 in dtraj.
+    rewrite -trmx_mul /=. rewrite mxE /=.
+    rewrite /V1 /=.
+    rewrite -derivemxE /=; last first.
+      admit.
+    rewrite [x in ('D_ _ x _)] (_ : _ = (fun x0 : 'rV_6 =>
+               (norm (@lsubmx K 1 3 3 x0) ^+ 2 / (2 * alpha1))%:M) \+
+               (fun x0 => (norm (@rsubmx K 1 3 3 x0) ^+ 2 / (2 * gamma))%:M)); last first.
+      by apply/funext => v/=; rewrite !raddfD.
+    rewrite deriveD /=; last 2 first.
+      admit.
+      admit.
+    rewrite mxE.
+    rewrite [x in ('D_ _ x _) ](_ : _ = alpha1^-1 * 2^-1 \*:
+        (fun x0 : 'rV_6 => (norm (@lsubmx K 1 3 3 x0) ^+ 2)%:M : 'rV[K]_1)); last first.
+      apply/funext => x/=.
+      by rewrite mulrC invfM (mulrC _ alpha1^-1) scale_scalar_mx.
+    rewrite !deriveZ /=; last first.
+      admit.
+    under [in X in _ + X] eq_fun => x0.
+      rewrite [_ / (2 * gamma)]mulrC.
+      over.
+    rewrite /=.
+    rewrite [X in _ + X <= 0] (_ : _ =
+      (2 * gamma)^-1 *: 'D_((traj^`())%classic z)
+        (fun x0 : 'rV[K]_6 => (norm (@rsubmx K 1 3 3 x0) ^+ 2)%:M : 'rV[K]_1) (traj z) 0 0); last first.
+      admit.
+    pose f := fun x0 : 'rV_6 => (norm (@lsubmx K 1 3 3 x0))%:M : 'rV[K]_1.
+    pose F := fun x0 : 'rV_6 => (f x0) ^+ 2.
+    set dF_l : 'rV[K]_1 := 'D_((traj^`())%classic z)
              (fun x0 : 'rV_6 => (norm (@lsubmx K 1 3 3 x0) ^+ 2)%:M) (traj z).
-  rewrite !mxE.
-  set a := 1 / alpha1 * (1 / 2).
-  set b := (2 * gamma)^-1.
-  set dF_r : 'rV[K]_1 := 'D_((traj^`())%classic z)
+    rewrite !mxE.
+    set a := alpha1^-1 * 2^-1.
+    set b := (2 * gamma)^-1.
+    set dF_r : 'rV[K]_1 := 'D_((traj^`())%classic z)
                (fun x0 : 'rV[K]_6 => (norm (@rsubmx K 1 3 3 x0) ^+ 2)%:M) (traj z).
-  have: dF_l``_0 = (2 *: (@lsubmx K 1 3 3 (traj z)) 0 0).
-  rewrite /dF_l.
-  set u := fun t => @lsubmx K 1 3 3 (traj t).
-  have Hnorm_neq0 : forall t, norm (u t) != 0.
-  admit.
-  have Hderiv : 
-  (((1 / 2) \*o (GRing.exp (R:=K))^~ 2 \o norm (n:=3)) \o u)^`() =
-  (fun t => (derive1mx u t *m (u t)^T) 0 0).
-  apply: derive_norm => t.
-  apply: Hnorm_neq0.
-  have: dF_r``_0 = 2 * (@rsubmx K 1 3 3 (traj z)) 0 0.
-  set v := fun t => @rsubmx K 1 3 3 (traj t).
-   have Hvnorm_neq0 : forall t, norm (v t) != 0.
-  admit.
-   have Hvderiv : 
-  (((1 / 2) \*o (GRing.exp (R:=K))^~ 2 \o norm (n:=3)) \o v)^`() =
-  (fun t => (derive1mx v t *m (v t)^T) 0 0).
-  apply: derive_norm => t.
-  apply:Hvnorm_neq0.
-  have -> : dF_r``_0 = ((fun t => (derive1mx v t *m (v t)^T) 0 0) z).
-  rewrite /dF_r. rewrite -!derive1mxE'.
-  set g := fun (x0 : 'rV_6) => ((norm (@rsubmx K 1 3 3 x0)) ^+ 2)%:M.
-  have : ('D_(derive1mx traj z) g (traj z)) 0 0
-        = (((fun t => norm (v t)) ^+ 2)^`() z).
-  admit.
-  move => etc.
-  rewrite /g.
-  rewrite etc.
-  Search "derive" (_^+_).
-  rewrite derive1E.
-  rewrite deriveX /=.
- admit.
- admit.
- admit.
- rewrite /v /derive1mx.
- admit.
- move => d.
- rewrite /a /b /=.
-  rewrite -oppr_ge0 /=.
-  have ab_pos : 0 < a + b.
-    rewrite /a /b.
-    apply: addr_gt0.
-    apply: mulr_gt0.
-    apply: divr_gt0.
-    by [].
-    by apply alpha1_gt0.
-    by apply divr_gt0.
-    rewrite -div1r.
-    apply: divr_gt0.
-    by [].
-    apply: mulr_gt0.
-    by [].
-    by apply gamma_gt0.
-  have  : (@lsubmx K 1 3 3 (traj z))``_0 = (dF_l``_0 / 2).
+    have: dF_l``_0 = (2 *: (@lsubmx K 1 3 3 (traj z)) 0 0).
+    rewrite /dF_l.
+    set u := fun t => @lsubmx K 1 3 3 (traj t).
+    have Hderiv :
+      ((2^-1 \*o (GRing.exp (R:=K))^~ 2 \o norm (n:=3)) \o u)^`() =
+        (fun t => (derive1mx u t *m (u t)^T) 0 0).
+      apply: derive_norm => t.
+      rewrite norm_eq0.
+      admit.
+    have: dF_r``_0 = 2 * (@rsubmx K 1 3 3 (traj z)) 0 0.
+      set v := fun t => @rsubmx K 1 3 3 (traj t).
+      have -> : dF_r``_0 = ((fun t => (derive1mx v t *m (v t)^T) 0 0) z).
+        rewrite /dF_r. rewrite -!derive1mxE'.
+        set g := fun (x0 : 'rV_6) => ((norm (@rsubmx K 1 3 3 x0)) ^+ 2)%:M.
+        have : ('D_(derive1mx traj z) g (traj z)) 0 0
+               = ((fun t => norm (v t)) ^+ 2)^`() z.
+          rewrite derivemx_derive//.
+          rewrite derive1E//=.
+          admit.
+        move => etc.
+        rewrite /g.
+        rewrite etc.
+        rewrite derive1E.
+        rewrite deriveX /=.
+          admit.
+        admit.
+      admit.
+   admit.
+rewrite /v /derive1mx.
+move => d.
+rewrite /a /b /=.
+rewrite -oppr_ge0 /=.
+have ab_pos : 0 < a + b.
+ rewrite addr_gt0//.
+   by rewrite mulr_gt0 ?invr_gt0.
+ by rewrite invr_gt0 ?mulr_gt0.
+have : (@lsubmx K 1 3 3 (traj z))``_0 = (dF_l``_0 / 2).
   have Hrsubmx_eq : (@rsubmx K 1 3 3 (traj z))``_0 = (dF_r``_0) / 2.
+    admit.
+  admit.
+admit.
 Admitted.
 
 End Lyapunov.
