@@ -598,53 +598,60 @@ split; first exact: equilibrium_point1.
   set dF_r : 'rV[K]_1 := 'D_((traj^`())%classic z)
                (fun x0 : 'rV[K]_6 => (norm (@rsubmx K 1 3 3 x0) ^+ 2)%:M) (traj z).
   have: dF_l``_0 = (2 *: (@lsubmx K 1 3 3 (traj z)) 0 0).
+  rewrite /dF_l.
+  set u := fun t => @lsubmx K 1 3 3 (traj t).
+  have Hnorm_neq0 : forall t, norm (u t) != 0.
   admit.
+  have Hderiv : 
+  (((1 / 2) \*o (GRing.exp (R:=K))^~ 2 \o norm (n:=3)) \o u)^`() =
+  (fun t => (derive1mx u t *m (u t)^T) 0 0).
+  apply: derive_norm => t.
+  apply: Hnorm_neq0.
   have: dF_r``_0 = 2 * (@rsubmx K 1 3 3 (traj z)) 0 0.
+  set v := fun t => @rsubmx K 1 3 3 (traj t).
+   have Hvnorm_neq0 : forall t, norm (v t) != 0.
   admit.
-  move=> l r.
-  Set Printing Parentheses.
-  Search (_<=0) (0<=_).
-  rewrite l r.
-  rewrite /=.
+   have Hvderiv : 
+  (((1 / 2) \*o (GRing.exp (R:=K))^~ 2 \o norm (n:=3)) \o v)^`() =
+  (fun t => (derive1mx v t *m (v t)^T) 0 0).
+  apply: derive_norm => t.
+  apply:Hvnorm_neq0.
+  have -> : dF_r``_0 = ((fun t => (derive1mx v t *m (v t)^T) 0 0) z).
+  rewrite /dF_r. rewrite -!derive1mxE'.
+  set g := fun (x0 : 'rV_6) => ((norm (@rsubmx K 1 3 3 x0)) ^+ 2)%:M.
+  have : ('D_(derive1mx traj z) g (traj z)) 0 0
+        = (((fun t => norm (v t)) ^+ 2)^`() z).
+  admit.
+  move => etc.
+  rewrite /g.
+  rewrite etc.
+  Search "derive" (_^+_).
+  rewrite derive1E.
+  rewrite deriveX /=.
+ admit.
+ admit.
+ admit.
+ rewrite /v /derive1mx.
+ admit.
+ move => d.
+ rewrite /a /b /=.
   rewrite -oppr_ge0 /=.
   have ab_pos : 0 < a + b.
-  rewrite /a /b.
-  apply: addr_gt0.
-  apply: mulr_gt0.
-  apply: divr_gt0.
-  by [].
-  by apply alpha1_gt0.
-  by apply divr_gt0.
-  rewrite -div1r.
-  apply: divr_gt0.
-  by [].
-  apply: mulr_gt0.
-  by [].
-  by apply gamma_gt0.
+    rewrite /a /b.
+    apply: addr_gt0.
+    apply: mulr_gt0.
+    apply: divr_gt0.
+    by [].
+    by apply alpha1_gt0.
+    by apply divr_gt0.
+    rewrite -div1r.
+    apply: divr_gt0.
+    by [].
+    apply: mulr_gt0.
+    by [].
+    by apply gamma_gt0.
   have  : (@lsubmx K 1 3 3 (traj z))``_0 = (dF_l``_0 / 2).
-  move: r.
-  move=> ->.
-  rewrite scaler_nat.
-  by field.
-  move=> Hlsubmx_eq.
-
-  rewrite Hlsubmx_eq.
   have Hrsubmx_eq : (@rsubmx K 1 3 3 (traj z))``_0 = (dF_r``_0) / 2.
-  move: l => Hl. by rewrite Hl; field.
-
-  rewrite Hrsubmx_eq.
-  rewrite scalerA.
-  rewrite scalerA.
-  rewrite scalerA.
-  rewrite -div1r.
-  rewrite !opprD.
-  rewrite subr_ge0.
-  rewrite mulrA.
-  rewrite scalerA. 
-  rewrite -subr_ge0.
-  have dF_l_pos : 0 <= dF_l``_0.
-  rewrite r.
-  Search (_ <= _ ^+ 2).
 Admitted.
 
 End Lyapunov.
