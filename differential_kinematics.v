@@ -756,13 +756,13 @@ rewrite /geo_jac; set a := (X in _ *m @row_mx _ _ 3 3 X _).
 rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
 - rewrite /scara_lin_vel (_ : @trans_of_hom R \o _ = trans); last first.
     rewrite funeqE => x /=; exact: trans_of_hom_hom.
-  rewrite /trans /scara_trans derive1mxE [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
+  rewrite /trans /scara_trans derive1mx_matrix [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
   transitivity (
       derive1 (theta1 : R^o -> R^o) t *: (Fim1 0 t)~k *v (\o{Fmax t} - \o{Fim1 0 t}) +
       derive1 (theta2 : R^o -> R^o) t *: (Fim1 1 t)~k *v (\o{Fmax t} - \o{Fim1 1 t}) +
       derive1 (d3 : R^o -> R^o) t *: (Fim1 2 t)~k +
       derive1 (theta4 : R^o -> R^o) t *: (Fim1 3%:R t)~k *v (\o{Fmax t} - \o{Fim1 3%:R t})).
-    rewrite /scara_joint_velocities /scara_joint_variables derive1mxE /geo_jac_lin /=.
+    rewrite /scara_joint_velocities /scara_joint_variables derive1mx_matrix /geo_jac_lin /=.
     apply/rowP => i; rewrite 3![in RHS]mxE [in LHS]mxE sum4E;
           (repeat apply: f_equal2).
     - rewrite 2!mxE /=.
@@ -895,7 +895,7 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
   transitivity (derive1 (theta1 : R^o -> R^o) t *: (Fim1 0 t)~k +
                 derive1 (theta2 : R^o -> R^o) t *: (Fim1 1 t)~k +
                 derive1 (theta4 : R^o -> R^o) t *: (Fim1 3%:R t)~k).
-    rewrite /scara_joint_velocities /scara_joint_variables derive1mxE /geo_jac_ang /=.
+    rewrite /scara_joint_velocities /scara_joint_variables derive1mx_matrix /geo_jac_ang /=.
     apply/rowP => i; rewrite !mxE sum4E !mxE {1}mulr0 addr0.
     by rewrite -!/(Fim1 _) [Fim1 0 _]lock [Fim1 1 _]lock [Fim1 3%:R _]lock /= -!lock.
   rewrite !Hzvec -2!scalerDl e2row row3Z mulr0 mulr1.
