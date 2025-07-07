@@ -18,14 +18,61 @@ Proof. by apply/matrixP => i j; rewrite !mxE. Qed.
 Lemma rsubmx_const  {R : nmodType} (r : R) m n1 n2 : rsubmx (const_mx r : 'M_(m, n1 + n2)) = const_mx r.
 Proof. by apply/matrixP => i j; rewrite !mxE. Qed.
 
-Lemma derive_sqrt {K : realType} :
-  (Num.sqrt^`())%classic = (fun t => (2 * Num.sqrt t)^-1) :> (_ -> K).
-Proof.
-apply/funext => i.
-rewrite derive1E /=.
-rewrite invrM.
-(* utiliser la reciproque de la fonction carree?*)
+From mathcomp Require Import sequences exp realfun.
+
+Lemma derive1_powR {K : realType} (r : K) : (fun a => a `^ r)^`()%classic = (fun x => r * x `^ (r - 1)).
 Admitted.
+
+Global Instance is_derive1_sqrt {K : realType} (x : K) : 0 < x -> is_derive x 1 Num.sqrt (2 * Num.sqrt x)^-1.
+Proof.
+move=> x_gt0.
+have sqrtK : {in Num.pos, cancel (@Num.sqrt K) (fun x => x ^+ 2)}.
+  by move=> a a0; rewrite sqr_sqrtr// ltW.
+rewrite -[x]sqrtK//.
+apply: (@is_derive_inverse K (fun x => x ^+ 2)).
+- near=> z.
+  rewrite sqrtr_sqr gtr0_norm//.
+  have [xz|zx|->] := ltgtP z (Num.sqrt x); last first.
+  + by rewrite sqrtr_gt0.
+  + by rewrite (lt_trans _ zx)// sqrtr_gt0.
+  + move: xz.
+    near: z.
+    exists (Num.sqrt x / 2).
+      rewrite /=.
+      rewrite mulr_gt0 //.
+      by rewrite sqrtr_gt0 x_gt0.
+      rewrite invr_gt0.
+      by [].
+    move=> r/=.
+    move=> /[swap] rx.
+    rewrite gtr0_norm ?subr_gt0//.
+    rewrite ltrBlDl.
+    rewrite -ltrBlDr.
+    apply: le_lt_trans.
+    rewrite subr_ge0.
+    rewrite ger_pMr.
+    rewrite invf_le1.
+    by rewrite ler1n.
+    by [].
+    by rewrite sqrtr_gt0.
+- near=> z.
+  exact: exprn_continuous.
+- rewrite !sqrtK//; split.
+    exact: exprn_derivable (* TODO: renaming *).
+  by rewrite exp_derive (* TODO: renaming -> issue *) expr1 scaler1.
+- by rewrite mulf_neq0 ?pnatr_eq0// gt_eqF// sqrtr_gt0 exprn_gt0// sqrtr_gt0.
+Unshelve. all: by end_near. 
+Qed.
+
+Lemma derive_sqrt {K : realType} (r : K) : 0 < r ->
+   (Num.sqrt^`())%classic r = (2 * Num.sqrt r)^-1 :> K.
+Proof.
+move=> r0.
+rewrite derive1E.
+Search is_derive.
+apply: derive_val.
+exact: is_derive1_sqrt.
+Qed.
 
 Definition defposmx {R : realType}  m (mat : 'M[R]_(m,m)) : Prop :=
   mat \is sym m R /\ forall a : R, eigenvalue mat a -> a > 0.
@@ -38,13 +85,13 @@ split.
   move => matsym.
   move => eigen.
   move => x xneq0.
-  Search "eigenvalue".
   apply/eigen.
   apply/eigenvalueP.
   exists x => //.
   rewrite /=.
   apply/matrixP.
   move => i j.
+(* theoreme spectral?*)
 Admitted.
 
 Lemma CauchySchwarz_vec {R : realType} {n : nat} : forall (a b : 'rV[R]_n.+1), (a *d b)^+2 <= (a *d a) * (b *d b).
@@ -55,19 +102,13 @@ suffices: 0 <= (b *d b) * (a *d a) - (a *d b) ^+ 2.
   move => h.
   rewrite mulrC in h.
   apply h.
-rewrite subr_ge0.
-rewrite expr2.
-rewrite mulrC.
-rewrite !dotmulvv.
-rewrite /=.
-rewrite -expr2.
+rewrite subr_ge0 expr2 mulrC !dotmulvv /= -expr2.
 case: (boolP (b == 0)) => [/eqP b0|hb].
   rewrite b0.
   rewrite dotmulv0 expr0n.
   rewrite norm0.
   rewrite expr0n // /=.
-  rewrite mul0r.
-  done.
+  by rewrite mul0r.
 pose t := (a *d b) / (norm b ^+ 2).
 have h : 0 <= norm (a - t *: b) ^+ 2.
   rewrite exprn_ge0 //.
@@ -81,23 +122,13 @@ have h1 : 0 <= a *d a - (a *d b) ^+ 2 / norm b ^+ 2.
   move: h.
   rewrite dotmulBr dotmulvZ.
   rewrite (dotmulC ((a *d b / norm b ^+ 2) *: b) a).
-  rewrite dotmulvZ dotmulC.
-  rewrite dotmulvv /t.
-  rewrite expr2.
-  rewrite /=.
-  rewrite -!expr2.
-  rewrite dotmulZv.
-  rewrite dotmulvv.
+  rewrite dotmulvZ dotmulC dotmulvv /t expr2 -!expr2 dotmulZv dotmulvv.
   rewrite divfK /=; last first.
     by rewrite sqrf_eq0 norm_eq0.
-  rewrite subrr.
-  rewrite subr0.
-  rewrite !expr2.
-  by rewrite mulrAC.
+  by rewrite subrr subr0 !expr2 mulrAC.
 have h2 : 0 <= norm b ^+ 2 * (a *d a) - (a *d b) ^+ 2.
   have pos: 0 < norm b ^+ 2. 
-    rewrite exprn_gt0 //.
-    by rewrite norm_gt0.
+    by rewrite exprn_gt0 // norm_gt0.
   suff: norm b ^+ 2 * (a *d a - (a *d b) ^+ 2 / norm b ^+ 2) = 
       norm b ^+ 2 * (a *d a) - (a *d b) ^+ 2.
     move=> eq_step.
@@ -107,8 +138,7 @@ have h2 : 0 <= norm b ^+ 2 * (a *d a) - (a *d b) ^+ 2.
   congr (_ - _)%R.
   by rewrite mulrCA divff ?mulr1// sqrf_eq0 norm_eq0.
 rewrite -subr_ge0 mulrC.
-rewrite dotmulvv in h2.
-by rewrite mulrC in h2.
+by rewrite dotmulvv mulrC in h2.
 Qed.
 
 Lemma young_inequality_vec {R : realType} {n : nat} : forall  (a b : 'rV[R]_n.+1), 
@@ -125,9 +155,7 @@ rewrite -!dotmulvv.
 have: 0 <= norm(a - b)^+2.
   rewrite expr2.
   by rewrite mulr_ge0 // norm_ge0.
-rewrite -dotmulvv.
-rewrite dotmulD.
-rewrite !dotmulvv.
+rewrite -dotmulvv dotmulD !dotmulvv.
 move => h.
 rewrite -mulr_natl in h.
 have h2 : 2 * (a *d b)  <= norm a ^+ 2 + norm (- b) ^+ 2.
@@ -137,26 +165,6 @@ have h2 : 2 * (a *d b)  <= norm a ^+ 2 + norm (- b) ^+ 2.
 rewrite -ler_pdivlMl// in h2.
 rewrite -mulrDr.
 by rewrite normN in h2.
-Qed.
-
-Local Open Scope classical_set_scope.
-Lemma derivemx_derive {R : realFieldType} (V : normedModType R) m n
-   (f : V -> 'M[R]_(m.+1, n.+1)) (x0 : V) (v : V) (i : 'I_m.+1) (j : 'I_n.+1) :
-  'D_v f x0 i j = 'D_v (fun x => f x i j) x0.
-Proof.
-apply/esym/cvg_lim => //=.
-apply/cvgrPdist_le => /= e e0.
-near=> t.
-Admitted.
-Local Close Scope classical_set_scope.
-
-Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
-  derive1mx M t = M^`()%classic t.
-Proof.
-apply/rowP => i.
-rewrite /derive1mx !mxE.
-rewrite !derive1E.
-by rewrite derivemx_derive.
 Qed.
 
 Local Open Scope classical_set_scope.
@@ -182,16 +190,95 @@ Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n
 Definition gradient_partial {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :=
   \row_(i < n.+1) partial f a i.
 
+Section derive_help.
+Local Open Scope classical_set_scope.
+Lemma derivemx_derive {R : realFieldType} (V : normedModType R) m n
+   (f : V -> 'M[R]_(m.+1, n.+1)) (x0 : V) (v : V) (i : 'I_m.+1) (j : 'I_n.+1) :
+  'D_v f x0 i j = 'D_v (fun x => f x i j) x0.
+Proof.
+apply/esym/cvg_lim => //=.
+apply/cvgrPdist_le => /= e e0.
+near=> t.
+Admitted.
+Local Close Scope classical_set_scope.
+
+Lemma derive1mxE' {R : realFieldType} {n : nat} (M : R -> 'rV[R]_n.+1) t :
+  derive1mx M t = M^`()%classic t.
+Proof.
+apply/rowP => i.
+by rewrite /derive1mx !mxE !derive1E derivemx_derive.
+Qed.
+
 Lemma partial_diff {R : realType} n (f : 'rV[R]_n.+1 -> 'rV[R]_1)  (a : 'rV[R]_n.+1)
     (i : 'I_n.+1) :
   partial (fun x => (f x) 0 0) a i =
   ('D_'e_i (fun x : 'rV[R]_n.+1 => (f x) : 'rV[R]_1) a) 0 0.
 Proof.
-rewrite derivemx_derive/=.
-rewrite /partial.
-rewrite /derive /=.
+rewrite derivemx_derive/= /partial /derive /=.
 by under eq_fun do rewrite (addrC a).
 Qed.
+
+Lemma gradient_partial_sum {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :
+  gradient_partial f a = \sum_(i < n.+1) partial f a i *: 'e_i.
+Proof.
+rewrite /gradient_partial [LHS]row_sum_delta.
+by under eq_bigr do rewrite mxE.
+Qed.
+
+Definition err_vec {R : ringType} n (i : 'I_n.+1) : 'rV[R]_n.+1 :=
+  \row_(j < n.+1) (i == j)%:R.
+
+Lemma err_vecE {R : ringType} n (i : 'I_n.+1) :
+  err_vec i = 'e_i :> 'rV[R]_n.+1.
+Proof.
+apply/rowP => j.
+by rewrite !mxE eqxx /= eq_sym.
+Qed.
+
+Local Open Scope classical_set_scope.
+Lemma derive_norm {K : realType} n (u : K^o -> 'rV[K^o]_n.+1) :
+ forall t:K, 0 <= t ->  (forall t, norm (u t) != 0) ->
+  (2^-1 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() =
+  (fun t => (derive1mx u t *m  (u t)^T)``_0) :> (K -> K).
+Proof.
+move=> u0 t0 norm0. apply/funext => t.
+rewrite [LHS]derive1E deriveMl/=; last first.
+  admit.
+rewrite -derive1E.
+rewrite (@derive1_comp _ (@norm _ _ \o u ) (@GRing.exp K ^~ 2)) ; last 2 first.
+  admit.
+  admit.
+rewrite exp_derive1 derive1_comp /=; last 2 first.
+  admit.
+  admit.
+rewrite !(derive_sqrt); last first.
+  rewrite dotmulvv.
+  rewrite lt0r.
+  apply/andP; split.
+  by apply/expf_neq0.
+  by rewrite exprn_ge0 ?norm_ge0.
+  rewrite !expr1.
+  rewrite derive1mxE'.
+rewrite !(mulrA 2^-1) mulVf ?pnatr_eq0// mul1r.
+rewrite !dotmulvv sqrtr_sqr normr_norm !mulrA /=.
+have -> : norm (u t) / (2 * norm (u t)) = 2^-1.
+  by rewrite invfM// mulrCA divff ?mulr1.
+set X := (X in X^`()%classic).
+have dot : X t =  norm(u t)^+2 by rewrite /X dotmulvv.
+rewrite /X !derive1mx_dotmul; last 2 first.
+  admit.
+  admit.
+rewrite dotmulP /=.
+set y := derive1mx u t *d u t.
+have -> : y + u t *d derive1mx u t = 2 * y.
+  by rewrite mulr_natl mulr2n dotmulC.
+rewrite mulrA mulVf ?pnatr_eq0// mul1r mxE eqxx mulr1n.
+by rewrite -derive1mxE'.
+Admitted.
+
+End derive_help.
+
+Section LieDerivative.
 
 Definition LieDerivative {R : realType} n (V : 'rV[R]_n.+1 -> R)
     (a : R -> 'rV[R]_n.+1) (t : R) : R :=
@@ -209,69 +296,6 @@ rewrite /gradient_partial mxE mxE /jacobian mxE -deriveE; last first.
   admit.
 by rewrite partial_diff.
 Admitted.
-
-Lemma gradient_partial_sum {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :
-  gradient_partial f a = \sum_(i < n.+1) partial f a i *: 'e_i.
-Proof.
-rewrite /gradient_partial [LHS]row_sum_delta.
-by under eq_bigr do rewrite mxE.
-Qed.
-
-Section derive_help.
-
-Definition err_vec {R : ringType} n (i : 'I_n.+1) : 'rV[R]_n.+1 :=
-  \row_(j < n.+1) (i == j)%:R.
-
-Lemma err_vecE {R : ringType} n (i : 'I_n.+1) :
-  err_vec i = 'e_i :> 'rV[R]_n.+1.
-Proof.
-apply/rowP => j.
-by rewrite !mxE eqxx /= eq_sym.
-Qed.
-
-
-Local Open Scope classical_set_scope.
-Lemma derive_norm {K : realType} n (u : K^o -> 'rV[K^o]_n.+1) :
-  (forall t, norm (u t) != 0) ->
-  (2^-1 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() =
-  (fun t => (derive1mx u t *m  (u t)^T)``_0) :> (K -> K).
-Proof.
-move=> u0; apply/funext => t.
-rewrite [LHS]derive1E.
-rewrite deriveMl/=; last first.
-  admit.
-rewrite -derive1E.
-rewrite (@derive1_comp _ (@norm _ _ \o u ) (@GRing.exp K ^~ 2)) ; last 2 first.
-  admit.
-  admit.
-rewrite exp_derive1.
-rewrite derive1_comp /=; last 2 first.
-  admit.
-  admit.
-rewrite !derive_sqrt.
-rewrite !expr1.
-rewrite !(mulrA 2^-1).
-rewrite mulVf ?pnatr_eq0// mul1r.
-rewrite !dotmulvv.
-rewrite sqrtr_sqr.
-rewrite normr_norm.
-rewrite !mulrA /=.
-have -> : norm (u t) / (2 * norm (u t)) = 2^-1.
-  by rewrite invfM// mulrCA divff ?mulr1.
-set X := (X in X^`()%classic).
-have dot : X t =  norm(u t)^+2 by rewrite /X dotmulvv.
-rewrite /X.
-rewrite !derive1mx_dotmul; last 2 first.
-  admit.
-  admit.
-rewrite dotmulP /=.
-set y := derive1mx u t *d u t.
-have -> : y + u t *d derive1mx u t = 2 * y.
-  by rewrite mulr_natl mulr2n dotmulC.
-by rewrite mulrA mulVf ?pnatr_eq0// mul1r mxE eqxx mulr1n.
-Admitted.
-
-End derive_help.
 
 Definition LieDerivative_jacobian1 {R : realType} n (V : 'rV[R]_n.+1 -> 'rV[R]_1)
     (x : R -> 'rV[R]_n.+1) (t : R) : R :=
@@ -309,13 +333,9 @@ rewrite -trmx_mul.
 rewrite ( _ : lin1_mx ('d f (x t) \+ 'd g (x t)) =
   lin1_mx ('d f (x t)) + lin1_mx ('d g (x t))); last first.
   apply/matrixP => i j.
-  rewrite mxE.
-  rewrite [RHS]mxE //.
-  rewrite [in LHS] /=.
-  rewrite [LHS]mxE.
+  rewrite mxE [RHS]mxE // [in LHS] /= [LHS]mxE.
   by congr (_+_); rewrite mxE.
-rewrite [in LHS] mulmxDr /=.
-rewrite mxE mxE.
+rewrite [in LHS] mulmxDr /= mxE mxE.
 by congr (_+_); 
   rewrite -trmx_mul [RHS]mxE.
 Admitted.
@@ -331,54 +351,46 @@ Qed.
 
 Lemma LieDerivative_jacobian1_norm {K : realType} (f : 'rV[K]_6 -> 'rV_3) 
   (x : K -> 'rV[K]_6) (t : K) :
+  0 <= t -> (forall t0, norm (f t0) != 0) -> 
   LieDerivative_jacobian1 (fun y => ((norm (f y)) ^+ 2)%:M) x t =
     (2%:R *: derive1mx (f \o x) t *m (f (x t))^T) 0 0.
 Proof.
-rewrite /LieDerivative_jacobian1 /jacobian1 /dotmul.
-rewrite /jacobian dotmulP /dotmul -trmx_mul.
-rewrite !derive1mxE' /= mxE mxE /= !fctE.
-rewrite !derive1E.
-rewrite mulr1n.
-rewrite -scalemxAl.
-rewrite [RHS]mxE.
-apply: (@mulfI _ 2^-1); first by rewrite invr_eq0// pnatr_eq0.
-rewrite mulrA mulVf ?pnatr_eq0// mul1r.
-set h := (fun x0 : 'rV_6 => (norm (f x0) ^+ 2)%:M).
-set tmp : {linear 'rV_6 -> 'rV_1} := 'd h (x t).
-rewrite -[in RHS]derive1E.
-have : forall t0 : K^o, norm (f (x t0)) != 0.
+move => t0 f0.
+rewrite /LieDerivative_jacobian1.
+rewrite /jacobian1.
+rewrite /dotmul.
+rewrite -trmx_mul.
+rewrite -derivemxE; last first.
   admit.
-move=> /derive_norm.
-move=> /(congr1 (fun z => z t)).
-rewrite /=.
-rewrite derive1mxE'.
-move=> <-.
+have fx0 : forall t0 : K^o, norm (f (x t0)) != 0 by move => s; apply: f0.
+have := @derive_norm K _ (f \o x) _ t0 fx0.
+move=> /( congr1 (fun z => z t)).
+rewrite -scalemxAl [X in _ -> _ = X]mxE.
+move => <-.
+rewrite derive1Ml; last first.
+  admit.
+rewrite mulrA divff // ?pnatr_eq0 // mul1r.
+rewrite mxE.
+rewrite fctE.
 rewrite derive1E.
-rewrite deriveMl//=; last admit.
-congr *%R.
-rewrite /tmp /h.
-rewrite [in RHS]deriveE; last first.
+transitivity ( ('D_(derive1mx x t) (fun y : 'rV_6 => (norm (f y) ^+ 2)) (x t)) ).
   admit.
-have /= := (@diff_comp _ _ _ _ x (fun z => (norm (f z) ^+ 2%R))).
-move=> ->; last 2 first.
+rewrite deriveE ; last first.
+  admit.
+rewrite derive1mxE'.
+rewrite derive1E.
+rewrite deriveE ; last first.
+  admit.
+transitivity(('d (fun y : 'rV_6 => norm (f y) ^+ 2) (x t ) \o ('d x t)) 1).
+by [].
+rewrite -diff_comp; last 2 first. 
   admit.
   admit.
-rewrite /=.
-rewrite -[in RHS]deriveE; last first.
-  admit.
-rewrite -/h.
-have -> : ('D_1 x t *m lin1_mx 'd h (x t)) =
-      'D_('d x t 1) (fun z : 'rV_6 => (norm (f z) ^+ 2%R)%:M) (x t).
-  have := (@derivemxE K 5 0 h (x t) ('d x t 1)).
-  move=> ->; last admit.
-  congr (_ *m _).
-  rewrite deriveE//.
-  admit.
-rewrite derivemx_derive/=.
-congr ('D_('d x t 1) _ (x t)).
-apply/funext => v.
-by rewrite mxE eqxx mulr1n.
+rewrite deriveE //.
+admit.
 Admitted.
+
+End LieDerivative.
 
 Section ode.
 Context {K : realType}.
@@ -466,7 +478,6 @@ Lemma fact216 (v w : 'rV[K]_3): \S(w *m \S(v)) = v^T *m w - w^T *m v.
 Proof.
 by rewrite fact215 !fact212 -!/(_ *d _) dotmulC opprB addrA subrK.
 Qed.
-Search (\S(_)).
 Lemma fact217 (v : 'rV[K]_3): \S(v) ^+ 3 = - (norm v ^+2) *: \S(v).
   exact: spin3.
 Qed.
@@ -588,17 +599,6 @@ Open Scope classical_set_scope.
 Section Lyapunov.
 Local Open Scope classical_set_scope.
 
-(*Lemma LieDerivative_gradientE {R : realType} n (V : 'rV[R]_n.+1 -> R)
-    (x : R -> 'rV[R]_n.+1) :
-  LieDerivative_gradient_partial V x = LieDerivative V x.
-Proof.
-apply/funext => t; rewrite /LieDerivative_gradient /LieDerivative.
-rewrite gradientE dotmulsuml; apply: eq_bigr => /= i _.
-rewrite dotmulE (bigD1 i)//= big1 ?addr0; last first.
-  by move=> j ji; rewrite !mxE/= (negbTE ji) mulr0 mul0r.
-by rewrite !mxE/= eqxx mulr1.
-Qed.*)
-
 Context {K : realType}.
 Variable x1_hat : K -> 'rV[K]_3.
 Variable x2_hat : K -> 'rV[K]_3.
@@ -649,8 +649,6 @@ move=> eqn33x.
 pose zp1 := fun r => Lsubmx (x r).
 pose z2 := fun r => Rsubmx (x r).
 rewrite /V1.
-(*rewrite LieDerivative_gradient_jacobianD.
-rewrite [X in LieDerivative_gradient_jacobian X] LieDerivative_gradient_jacobianMl.*)
   rewrite /V1.
   rewrite [X in LieDerivative_jacobian1 X _ _](_ : _ =
     (fun zp1_z2 : 'rV_6 =>
@@ -700,20 +698,10 @@ have H1 : derive1mx zp1 t = (- alpha1 *: Lsubmx (x t)).
   admit. (* from eqn33? *)
 have H2 : derive1mx z2 t = (gamma *: (Rsubmx (x t) - Lsubmx (x t)) *m \S('e_2 - Rsubmx (x t)) ^+ 2).
   admit.
-rewrite H1.
-rewrite -scalemxAl.
-rewrite mxE.
+rewrite H1 -scalemxAl mxE.
 rewrite [X in X + _](mulrA (alpha1^-1) (- alpha1)).
-rewrite mulrN. 
-rewrite mulVf ?gt_eqF// mulN1r.
-rewrite H2.
-rewrite -scalemxAl.
-rewrite mulmxA.
-rewrite -scalemxAl.
-rewrite [in X in _ + X]mxE.
-rewrite scalerA.
-rewrite mulVf ?gt_eqF//.
-rewrite scale1r.
+rewrite mulrN mulVf ?gt_eqF// mulN1r H2 -scalemxAl mulmxA -scalemxAl.
+rewrite [in X in _ + X]mxE scalerA mulVf ?gt_eqF// scale1r.
 have -> : ((Lsubmx (x t)) *m (Lsubmx (x t))^T) 0 0 = norm (Lsubmx (x t)) ^+2.
   rewrite sqr_sqrtr.
     rewrite dotmulP.
@@ -724,19 +712,12 @@ rewrite /V1dot.
 congr +%R.
 set Lmx := lsubmx _.
 set Rmx := rsubmx _.
-rewrite -2![in RHS]mulmxA.
-rewrite -mulmxBr.
-rewrite -mulmxBr.
-rewrite -linearB/=.
+rewrite -2![in RHS]mulmxA -mulmxBr -mulmxBr -linearB/=.
 rewrite -[X in _ = (X *m (_ *m _)) 0 0]trmxK.
 rewrite -[X in _ = (_ *m (X *m _)) 0 0]trmxK.
-rewrite mulmxA.
-rewrite -trmx_mul.
-rewrite -trmx_mul.
-rewrite [RHS]mxE.
+rewrite mulmxA -trmx_mul -trmx_mul [RHS]mxE.
 rewrite -(mulmxA (Rmx - Lmx)).
-rewrite mulmxE.
-rewrite -expr2.
+rewrite mulmxE -expr2.
 have -> : (\S('e_2 - Rmx) ^+ 2)^T = \S('e_2 - Rmx) ^+ 2.
   apply/esym/eqP.
   rewrite -symE.
@@ -802,18 +783,14 @@ split; first exact: equilibrium_point1.
    apply/funext => zp1_z2.
    by rewrite scalar_mxM -!mul_scalar_mx scalar_mxC.
    rewrite func_eq2.
-  rewrite !LieDerivative_jacobian1Ml /=.
-  rewrite !fctE.
-  rewrite !LieDerivative_jacobian1_eq0_equilibrium.
+  rewrite !LieDerivative_jacobian1Ml /= !fctE !LieDerivative_jacobian1_eq0_equilibrium.
   by rewrite scaler0 scaler0 add0r.
    rewrite /is_solution /eqn33 in dtraj.
-   rewrite -derive1E.
-   rewrite -derive1mxE'.
+   rewrite -derive1E -derive1mxE'.
    rewrite dtraj/= traj0 /point1.
    by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
   rewrite /is_solution /eqn33 in dtraj.
-   rewrite -derive1E.
-   rewrite -derive1mxE'.
+   rewrite -derive1E -derive1mxE'.
    rewrite dtraj/= traj0 /point1.
    by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
   + near=> z.
@@ -827,23 +804,20 @@ split; first exact: equilibrium_point1.
       by rewrite -scale_scalar_mx.
     have func_eq: (fun zp1_z2 : 'rV_6 => (norm (Lsubmx zp1_z2) ^+ 2 *: c1)%:M) = 
               (fun zp1_z2 : 'rV_6 => c1 *: (norm (Lsubmx zp1_z2) ^+ 2)%:M).
-   move => n.
-   apply/funext => zp1_z2.
-   by rewrite scalar_mxM -!mul_scalar_mx scalar_mxC.
-   rewrite (_ : (fun zp1_z2 : 'rV_6 => (norm (Rsubmx zp1_z2) ^+ 2 * c2)%:M) =
+      move => n.
+      apply/funext => zp1_z2.
+      by rewrite scalar_mxM -!mul_scalar_mx scalar_mxC.
+    rewrite (_ : (fun zp1_z2 : 'rV_6 => (norm (Rsubmx zp1_z2) ^+ 2 * c2)%:M) =
      (fun zp1_z2 : 'rV_6 => (norm (Rsubmx zp1_z2) ^+ 2 *: c2)%:M)) ; last first.
-  apply/funext => y.
-  by rewrite -scale_scalar_mx.
-   rewrite func_eq.
+      apply/funext => y.
+      by rewrite -scale_scalar_mx.
+    rewrite func_eq.
     have func_eq2: (fun zp1_z2 : 'rV_6 => (norm (Rsubmx zp1_z2) ^+ 2 *: c2)%:M) = 
               (fun zp1_z2 : 'rV_6 => c2 *: (norm (Rsubmx zp1_z2) ^+ 2)%:M).
-   move => n.
-   apply/funext => zp1_z2.
-   by rewrite scalar_mxM -!mul_scalar_mx scalar_mxC.
-   rewrite func_eq2.
-  rewrite !LieDerivative_jacobian1Ml /=.
-  rewrite !fctE.
-  rewrite !LieDerivative_jacobian1_norm.
+      move => n.
+      apply/funext => zp1_z2.
+      by rewrite scalar_mxM -!mul_scalar_mx scalar_mxC.
+    rewrite func_eq2 !LieDerivative_jacobian1Ml /= !fctE !LieDerivative_jacobian1_norm.
   pose zp1 := fun r => Lsubmx (traj r).
   pose z2 := fun r => Rsubmx (traj r).
   rewrite -[Lsubmx \o traj]/zp1.
@@ -851,170 +825,107 @@ split; first exact: equilibrium_point1.
   have: c1 *: (2 *: derive1mx zp1 z *m (Lsubmx (traj z))^T) 0 0 + 
           c2 *: (2 *: derive1mx z2 z *m (Rsubmx (traj z))^T) 0 0 
              = V1dot (traj z).
-  rewrite -scalemxAl mxE (scalerA c1 2) mulrAC mulVf ?pnatr_eq0// div1r.
-  rewrite -scalemxAl [in X in _ + X]mxE (scalerA c2 2) mulrAC mulVf ?pnatr_eq0// div1r.
-  have H1 : derive1mx zp1 z = (- alpha1 *: Lsubmx (traj z)).
-    admit. (* from eqn33? *)
-  have H2 : derive1mx z2 z = (gamma *: (Rsubmx (traj z) - Lsubmx (traj z)) *m \S('e_2 - Rsubmx (traj z)) ^+ 2).
-    admit.
-  rewrite H1 -scalemxAl mxE [X in X + _](mulrA (alpha1^-1) (- alpha1)) mulrN mulVf ?gt_eqF// mulN1r.
-  rewrite H2 -scalemxAl mulmxA -scalemxAl [in X in _ + X]mxE scalerA mulVf ?gt_eqF// scale1r.
-  have -> : ((Lsubmx (traj z)) *m (Lsubmx (traj z))^T) 0 0 = norm (Lsubmx (traj z)) ^+2.
-    rewrite sqr_sqrtr /dotmul.
-    admit.
-    admit.
-  rewrite /V1dot.
-  congr +%R.
-  set Lmx := lsubmx _.
-  set Rmx := rsubmx _.
-  rewrite -2![in RHS]mulmxA -mulmxBr -mulmxBr -linearB/=.
-  rewrite -[X in _ = (X *m (_ *m _)) 0 0]trmxK -[X in _ = (_ *m (X *m _)) 0 0]trmxK.
-  rewrite mulmxA -trmx_mul -trmx_mul [RHS]mxE -(mulmxA (Rmx - Lmx)) mulmxE -expr2.
-  have -> : (\S('e_2 - Rmx) ^+ 2)^T = \S('e_2 - Rmx) ^+ 2.
-    apply/esym/eqP.
-    rewrite -symE.
-    exact: sqr_spin_is_sym.
-  by rewrite mulmxA.
-move=> ->.
-(* this form matches the one in the paper, we can safely proceed
- TODO survey of available properties: Young, Cauchy Schwartz? Forme quadratique? 
- Calcul des valeurs propres d'une matrice?
- Matrice definie positive?
- Conclure sur le signe d'une equation comme ca?*)
-rewrite /V1dot.
-rewrite -/(zp1 z).
-rewrite -/(z2 z).
-set w := (z2 z) *m \S('e_2).
-pose u1 : 'rV[K]_2 := \row_(i < 2) [eta (fun=> 0) with 0 |-> norm (zp1 z), 1 |-> norm w] i.
-pose u2 : 'M[K]_(2,2) := \matrix_(i < 2, j < 2)
+    rewrite -scalemxAl mxE (scalerA c1 2) mulrAC mulVf ?pnatr_eq0// div1r.
+    rewrite -scalemxAl [in X in _ + X]mxE (scalerA c2 2) mulrAC mulVf ?pnatr_eq0// div1r.
+    have H1 : derive1mx zp1 z = (- alpha1 *: Lsubmx (traj z)).
+      admit. (* from eqn33? *)
+    have H2 : derive1mx z2 z = (gamma *: (Rsubmx (traj z) - Lsubmx (traj z)) *m \S('e_2 - Rsubmx (traj z)) ^+ 2).
+      admit.
+    rewrite H1 -scalemxAl mxE [X in X + _](mulrA (alpha1^-1) (- alpha1)) mulrN mulVf ?gt_eqF// mulN1r.
+    rewrite H2 -scalemxAl mulmxA -scalemxAl [in X in _ + X]mxE scalerA mulVf ?gt_eqF// scale1r.
+    have -> : ((Lsubmx (traj z)) *m (Lsubmx (traj z))^T) 0 0 = norm (Lsubmx (traj z)) ^+2.
+      rewrite sqr_sqrtr /dotmul.
+      admit.
+      admit.
+    rewrite /V1dot.
+    congr +%R.
+    set Lmx := lsubmx _.
+    set Rmx := rsubmx _.
+    rewrite -2![in RHS]mulmxA -mulmxBr -mulmxBr -linearB/=.
+    rewrite -[X in _ = (X *m (_ *m _)) 0 0]trmxK -[X in _ = (_ *m (X *m _)) 0 0]trmxK.
+    rewrite mulmxA -trmx_mul -trmx_mul [RHS]mxE -(mulmxA (Rmx - Lmx)) mulmxE -expr2.
+    have -> : (\S('e_2 - Rmx) ^+ 2)^T = \S('e_2 - Rmx) ^+ 2.
+      apply/esym/eqP.
+      rewrite -symE.
+      exact: sqr_spin_is_sym.
+    by rewrite mulmxA.
+    move=> ->.
+    rewrite /V1dot -/(zp1 z) -/(z2 z).
+    set w := (z2 z) *m \S('e_2).
+    pose u1 : 'rV[K]_2 := \row_(i < 2) [eta (fun=> 0) with 0 |-> norm (zp1 z), 1 |-> norm w] i.
+    pose u2 : 'M[K]_(2,2) := \matrix_(i < 2, j < 2)
   [eta (fun=> 0) with (0,0) |-> 1,
                       (0,1) |-> -2^-1,
                       (1,0) |-> -2^-1,
                       (1,1) |-> 1] (i,j).
-apply: (@le_trans _ _ ((- u1 *m u2 *m u1^T) ``_ 0)).
-  rewrite mxE.
-  have eq0T : z2 z *m \S(z2 z)^T = 0.
-    apply: trmx_inj.
-    rewrite trmx_mul.
-    rewrite trmxK.
-    rewrite spin_mul_tr.
-    by rewrite trmx0.
-  have H2 : z2 z *m \S('e_2 - z2 z) = z2 z *m \S('e_2).
-    rewrite spinD.
-    rewrite spinN.
-    rewrite -tr_spin.
-    rewrite !mulmxDr.
-    rewrite !eq0T.
-    by rewrite !addr0.
-  have H1 : (z2 z *m \S('e_2 - z2 z)^+2 *m (z2 z)^T) 0 0 = - (norm w)^+2.
-    rewrite /w.
-    rewrite spinD.
-    rewrite spinN.
-    rewrite -tr_spin.
-    rewrite mulmxA.
-    rewrite !mulmxDr.
-    rewrite mulmxDl.
-    rewrite !eq0T.
-    rewrite !addr0.
-    rewrite -dotmulvv.
-    rewrite /dotmul.
-    rewrite trmx_mul.
-    rewrite mxE [X in _ + X = _](_ : _ = 0) ?addr0; last first.
-      rewrite tr_spin.
-      rewrite -mulmxA.
-      rewrite mulNmx.
-      rewrite spin_mul_tr.
-      by rewrite mulmxN mulmx0 oppr0 mxE.
-    rewrite tr_spin.
-    rewrite mulNmx.
-    rewrite mulmxN [in RHS]mxE opprK.
-    by rewrite mulmxA.
-  rewrite H1.
-  rewrite mxE.
-  rewrite addrA.
-   rewrite expr2.
-  rewrite mulmxA.
-  rewrite H2.
-  rewrite -/w.
-  rewrite -dotmulNv.
-  rewrite addrC.
-  rewrite -mulmxN.
-  rewrite -expr2.
-  set a :=   (w *m - \S('e_2 - z2 z)).
-  have neg_spin: norm (w *m - \S('e_2 - z2 z)) = norm (w).
-    rewrite orth_preserves_norm //.
-    admit.
-  rewrite /a.
-  have cauchy : ((w *m - \S('e_2 - z2 z) *d (zp1 z))%:M : 'rV_1) 0 0 <= norm(w *m - (\S('e_2 - z2 z))) *
+    apply: (@le_trans _ _ ((- u1 *m u2 *m u1^T) ``_ 0)).
+    rewrite mxE.
+    have eq0T : z2 z *m \S(z2 z)^T = 0.
+      apply: trmx_inj ; by rewrite trmx_mul trmxK spin_mul_tr trmx0.
+    have H2 : z2 z *m \S('e_2 - z2 z) = z2 z *m \S('e_2).
+      by rewrite spinD spinN -tr_spin !mulmxDr !eq0T !addr0.
+    have H1 : (z2 z *m \S('e_2 - z2 z)^+2 *m (z2 z)^T) 0 0 = - (norm w)^+2.
+      rewrite /w spinD spinN -tr_spin mulmxA !mulmxDr mulmxDl !eq0T.
+      rewrite !addr0 -dotmulvv /dotmul trmx_mul.
+      rewrite mxE [X in _ + X = _](_ : _ = 0) ?addr0; last first.
+        by rewrite tr_spin -mulmxA mulNmx spin_mul_tr mulmxN mulmx0 oppr0 mxE.
+      by rewrite tr_spin mulNmx mulmxN [in RHS]mxE opprK mulmxA.
+    rewrite H1 mxE addrA expr2 mulmxA.
+    rewrite H2 -/w -dotmulNv addrC -mulmxN -expr2.
+    set a :=   (w *m - \S('e_2 - z2 z)).
+    have neg_spin: norm (w *m - \S('e_2 - z2 z)) = norm (w).
+      rewrite orth_preserves_norm //.
+      admit.
+    rewrite /a.
+    have cauchy : ((w *m - \S('e_2 - z2 z) *d (zp1 z))%:M : 'rV_1) 0 0 <= norm(w *m - (\S('e_2 - z2 z))) *
                 norm(zp1 z).
-    rewrite mxE /= mulr1n.
-    rewrite (le_trans (ler_norm _)) //.
-    rewrite -ler_sqr // ; last first.
-      by rewrite nnegrE //  mulr_ge0 ?norm_ge0 //.
-      rewrite exprMn.
-      rewrite sqr_normr.
-      rewrite (le_trans (CauchySchwarz_vec _ _)) //.
-      by rewrite !dotmulvv.
-  apply: (@le_trans _ _  (norm (w *m - \S('e_2 - z2 z)) * norm (zp1 z)  + (- norm (zp1 z) ^+ 2 - norm w ^+ 2))).
-    rewrite lerD2r.
-    rewrite (le_trans _ (cauchy)) //.
-    by rewrite mxE eqxx mulr1n.
-  rewrite neg_spin.
-  rewrite /a .
-  rewrite /u1 /u2.
-  rewrite ![in leRHS]mxE.
-  rewrite !sum2E/=.
-  rewrite ![in leRHS]mxE.
-  rewrite !sum2E/=.
-  rewrite ![in leRHS]mxE.
-  rewrite /=.
-  rewrite !mulr1.
-  rewrite mulrN.
-  rewrite mulNr.
-  rewrite opprK.
-  rewrite mulrDl.
-  rewrite mulNr.
-  rewrite -expr2.
-  rewrite [in leLHS] addrCA.
-  rewrite -!addrA.
-  rewrite lerD2l.
-  rewrite mulrDl.
-  rewrite (mulNr (norm w)).
-  rewrite -expr2.
-  rewrite !addrA.
-  rewrite lerD2r.
-  rewrite !(mulrN , mulNr).
-  rewrite opprK.
-  rewrite -mulrA.
-  rewrite [in leRHS](mulrC _ (norm w)).
-  rewrite -mulrDr.
-  rewrite [in leRHS](mulrC (2 ^-1)).
-  rewrite -mulrDr.
-  Search (2^-1).
-  rewrite -div1r.
-  rewrite -splitr mulr1.
-  by [].
-have def: defposmx u2.
-admit.
-rewrite defposmxP in def.
-have u2neq0 : u2 != 0.
-admit.
-case H: (u1 == 0).
-  move/eqP: H => ->.
-  rewrite mulNmx.
-  rewrite mul0mx.
-  by rewrite mulNmx mul0mx mxE mxE oppr0.
+      rewrite mxE /= mulr1n (le_trans (ler_norm _)) //.
+      rewrite -ler_sqr // ; last first.
+        by rewrite nnegrE //  mulr_ge0 ?norm_ge0 //.
+      by rewrite exprMn sqr_normr (le_trans (CauchySchwarz_vec _ _)) // !dotmulvv.
+    apply: (@le_trans _ _  (norm (w *m - \S('e_2 - z2 z)) * norm (zp1 z)  + (- norm (zp1 z) ^+ 2 - norm w ^+ 2))).
+      rewrite lerD2r.
+      rewrite (le_trans _ (cauchy)) //.
+      by rewrite mxE eqxx mulr1n.
+    rewrite neg_spin /a /u1 /u2.
+    rewrite ![in leRHS]mxE !sum2E/= ![in leRHS]mxE !sum2E/= ![in leRHS]mxE /=.
+    rewrite !mulr1 mulrN mulNr opprK mulrDl mulNr -expr2.
+    rewrite [in leLHS] addrCA -!addrA lerD2l mulrDl (mulNr (norm w)).
+    rewrite -expr2 !addrA lerD2r !(mulrN , mulNr) opprK -mulrA.
+    rewrite [in leRHS](mulrC _ (norm w)) -mulrDr [in leRHS](mulrC (2 ^-1)).
+    by rewrite -mulrDr -div1r -splitr mulr1.
+  have def: defposmx u2.
+  rewrite /defposmx /u2.
+  split.
+   - rewrite /= symE.
+     apply/eqP/matrixP.
+     move => i j.
+     rewrite !mxE.
+     case: ifPn => [/eqP[->{i} ->{j}//]|].
+     case: ifPn => [/eqP[->{i} ->{j}//]|].
+     case: ifPn => [/eqP[->{i} ->{j}//]|].
+     case: ifPn => [/eqP[->{i} ->{j}//]|].
+     by move: i j => [[|[|//]]] /= ? [[|[|]]].
+   - move=> a.
+     move/eigenvalueP => [u] /[swap] u0 H.
+     move: (H) => /rowP/(_ ord0); rewrite !mxE sum2E/= !mxE eqxx mulr1/= => H1.
+     move: H => /rowP/(_ (lift ord0 ord0)); rewrite !mxE sum2E/= !mxE/= mulr1/= => H2.
+     (* mq u = 0 donc contradiction *)
+     admit.
+  rewrite defposmxP in def.
+  have u2neq0 : u2 != 0.
+    apply/matrix0Pn.
+    exists 1.
+    exists 1.
+    by rewrite mxE /= oner_neq0.
+  case H: (u1 == 0).
+    move/eqP: H => ->.
+    by rewrite mulNmx mul0mx mulNmx mul0mx mxE mxE oppr0.
   move: H => /negP H. 
   have u1_neq0 : u1 != 0 by apply/negP.
   move: (def u1 u1_neq0) => Hpos.
-  rewrite -oppr_ge0.
-  rewrite -oppr_le0.
-  rewrite opprK.
+  rewrite -oppr_ge0 -oppr_le0 opprK.
   apply ltW.
-  rewrite -oppr_gt0.
-  rewrite mulNmx.
-  rewrite !mulNmx.
-  rewrite mxE.
-  rewrite opprK.
-  by rewrite Hpos.
+  by rewrite -oppr_gt0 mulNmx !mulNmx mxE opprK Hpos.
+Admitted.
 End Lyapunov.
