@@ -10,11 +10,9 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 
+(* spin and matrix/norm properties*) 
 Lemma sqr_spin_tr  {R : realType} (u : 'rV[R]_3) : (\S(u) ^+ 2)^T = \S(u) ^+ 2.
 Proof. apply/esym/eqP; rewrite -symE ; exact: sqr_spin_is_sym. Qed.
-
-Lemma norm_squared {R : realType} (n : nat) (u : 'rV[R]_n.+1) : (u *m (u)^T) 0 0  = norm (u) ^+2.
-Proof. by rewrite -dotmulvv /dotmul. Qed.
 
 Lemma tr_spin_mul {R : realType} (u : 'rV[R]_3) : u *m \S(u)^T = 0.
 Proof. by apply: trmx_inj ; rewrite trmx_mul trmxK spin_mul_tr trmx0. Qed.
@@ -50,6 +48,9 @@ rewrite mulmxE sqrspin.
   rewrite mxE -mulNrn.
   by [].
 Qed.
+
+Lemma norm_squared {R : realType} (n : nat) (u : 'rV[R]_n.+1) : (u *m (u)^T) 0 0  = norm (u) ^+2.
+Proof. by rewrite -dotmulvv /dotmul. Qed.
 
 Lemma sqr_inj {R : rcfType} : {in Num.nneg &, injective (fun x : R => x ^+ 2)}.
 Proof. by move=> x y x0 y0 /(congr1 (@Num.sqrt R)); rewrite !sqrtr_sqr! ger0_norm. Qed.
@@ -577,20 +578,20 @@ il existe une solution depuis tout point:
 gamma1 ⊆ state_space*)
 (* prouver invariance geometrique, tangence donc les trajectoires restent dans gamma1:
  state_space ⊆ gamma1
-Definition xi1 t (zp1_zp2 : K -> 'rV[K]_6) : Gamma1 :=
-  let zp1*)
-
+*)
 Lemma thm11a : state_space (fun a b => eqn33 b a) = Gamma1.
 Proof.
+(* il existe une solution depuis tout point*) 
 apply/seteqP; split.
 - move=> p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
   move=> [y0 [Heq Hrange]].
   admit.
+(* toute image d'une trajectoire est dans gamma
+nagumo theorem *)
 - move => p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
-  move => y.
-  rewrite /state_space /Gamma1 /eqn33 /is_solution.
+  move => norme.
   admit.
 Admitted.
 
@@ -691,6 +692,31 @@ Definition V1dot (zp1_z2 : 'rV[K]_6) : K :=
   - (norm zp1)^+2 + (z2 *m (\S('e_2%:R - z2))^+2 *m z2^T
                     - z2 *m (\S('e_2%:R - z2))^+2 *m zp1^T)``_0.
 
+Lemma derive_lsubE (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Lsubmx (traj r)):  (fun r : K => Lsubmx (traj r))^`() z = Lsubmx ((traj^`())%classic z).
+Proof.
+apply/matrixP => i j.
+rewrite !derive1E.
+rewrite !deriveE ; last 2 first.
+  admit.
+  admit.
+rewrite diff_comp ; last 2 first.
+  admit.
+  admit.
+rewrite /= -!deriveE /=.
+rewrite !derivemx_derive /=.
+Admitted.
+
+Lemma derive_rsubE (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Rsubmx (traj r)) : (fun r : K => Rsubmx (traj r))^`() z = Rsubmx ((traj^`())%classic z).
+Proof.
+apply/matrixP => i j.
+rewrite !derive1E !deriveE ; last 2 first.
+  admit.
+  admit.
+rewrite diff_comp ; last 2 first.
+  admit.
+  admit.
+Admitted.
+
 Lemma derive_zp1 (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Lsubmx (traj r))  (dtraj : is_solution (fun a : K => (eqn33 alpha1 gamma)^~ a) traj) :
   derive1mx zp1 z = (- alpha1 *: Lsubmx (traj z)).
 Proof.
@@ -698,22 +724,22 @@ rewrite /zp1.
 move : dtraj.
 rewrite /is_solution /eqn33.
 move=> /(_ z).
-rewrite /zp1 /=.
 move=> /(congr1 Lsubmx).
 rewrite row_mxKl.
 rewrite !derive1mxE' => <-.
-rewrite !derive1E !deriveE; last 2 first. (* TODO LEMMA*)
-  admit.
-  admit.
-apply/matrixP => i j.
-  admit.
-Admitted.
+apply: derive_lsubE.
+Qed.
 
 Lemma derive_z2  (z : K) (traj : K -> 'rV_5%R.+1) (z2 := fun r => Rsubmx (traj r))  (dtraj : is_solution (fun a : K => (eqn33 alpha1 gamma)^~ a) traj) :
-   derive1mx z2 z = (* TODO LEMMA*)
+   derive1mx z2 z = 
               (gamma *: (Rsubmx (traj z) - Lsubmx (traj z)) *m \S('e_2 - Rsubmx (traj z)) ^+ 2).
 Proof.
-Admitted.
+rewrite /z2; move: dtraj; rewrite /is_solution /eqn33; move => /(_ z).
+move => /(congr1 Rsubmx).
+rewrite row_mxKr.
+rewrite !derive1mxE' => <-.
+apply: derive_rsubE.
+Qed.
 
 Lemma derive_V1dot (c1 := (2^-1 / alpha1)) (c2 := (2^-1 / gamma)) (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Lsubmx (traj r))
  (z2 := fun r => Rsubmx (traj r)) (dtraj : is_solution (fun a : K => (eqn33 alpha1 gamma)^~ a) traj) 
