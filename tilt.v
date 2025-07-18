@@ -12,15 +12,14 @@ Local Open Scope ring_scope.
 
 (* spin and matrix/norm properties*) 
 Lemma sqr_spin_tr  {R : realType} (u : 'rV[R]_3) : (\S(u) ^+ 2)^T = \S(u) ^+ 2.
-Proof. apply/esym/eqP; rewrite -symE ; exact: sqr_spin_is_sym. Qed.
+Proof. by apply/esym/eqP; rewrite -symE ; exact: sqr_spin_is_sym. Qed.
 
 Lemma tr_spin_mul {R : realType} (u : 'rV[R]_3) : u *m \S(u)^T = 0.
 Proof. by apply: trmx_inj ; rewrite trmx_mul trmxK spin_mul_tr trmx0. Qed.
 
 Lemma norm_spin {R : realType} (u : 'rV[R]_3) (v : 'rV[R]_3) :  (u *m \S(v - u) ^+ 2 *m (u)^T) 0 0 = - norm (u *m \S(v)) ^+ 2.
 Proof.
-rewrite spinD spinN -tr_spin mulmxA !mulmxDr mulmxDl !tr_spin_mul.
-rewrite !addr0 -dotmulvv /dotmul trmx_mul.
+rewrite spinD spinN -tr_spin mulmxA !mulmxDr mulmxDl !tr_spin_mul !addr0 -dotmulvv /dotmul trmx_mul.
 rewrite mxE [X in _ + X = _](_ : _ = 0) ?addr0; last first.
 by rewrite tr_spin -mulmxA mulNmx spin_mul_tr mulmxN mulmx0 oppr0 mxE.
 by rewrite tr_spin mulNmx mulmxN [in RHS]mxE opprK mulmxA.
@@ -32,7 +31,7 @@ Proof. by apply/eqP ; rewrite dotmulC dotmul_trmx -normalvv normal_sym tr_spin_m
 Lemma dotmulspin2 {R : realType} (u : 'rV[R]_3) (v : 'rV[R]_3) : (u *m \S(v)) *d u = 0.
 Proof. by apply/eqP ; rewrite -normalvv normal_sym spinE -normalmN (@lieC _ (vec3 R)) /= opprK crossmul_normal. Qed.
 
-Lemma ortho {R : realType} (a : 'rV[R]_3) (b : 'rV[R]_3) : (a - b) *d (b *m \S(a))= 0.
+Lemma ortho {R : realType} (u : 'rV[R]_3) (v : 'rV[R]_3) : (u - v) *d (v *m \S(u))= 0.
 Proof. by rewrite dotmulBl dotmulC dotmulspin1 dotmulC dotmulspin2 subr0. Qed.
 
 Lemma sqr_spin {R : realType} (u : 'rV[R]_3) (norm_u1 : norm u = 1) : \S(u) *m \S(u) = u^T *m u - 1%:M.
@@ -40,13 +39,9 @@ Proof.
 have sqrspin : \S(u) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A by rewrite sqr_spin.
 rewrite expr2 norm_u1 expr2 mulr1 in sqrspin.
 rewrite mulmxE sqrspin.
-  apply/matrixP => i j.
-  rewrite mxE /= [in RHS]mxE /=.
-  congr (_+_).
-  rewrite mxE mxE /= mul1r.
-  rewrite [in RHS]mxE [in RHS]mxE /= -mulNrn.
-  rewrite mxE -mulNrn.
-  by [].
+  apply/matrixP => i j ; rewrite mxE /= [in RHS]mxE /=.
+  congr (_+_); rewrite mxE mxE /= mul1r.
+  by rewrite [in RHS]mxE [in RHS]mxE /= -mulNrn mxE -mulNrn.
 Qed.
 
 Lemma norm_squared {R : realType} (n : nat) (u : 'rV[R]_n.+1) : (u *m (u)^T) 0 0  = norm (u) ^+2.
@@ -452,7 +447,7 @@ Definition is_equilibrium_point p := is_solution (cst p).
 Definition equilibrium_points := [set p : T | is_equilibrium_point p].
 
 Definition state_space :=
-  [set p : T | exists y, is_solution y /\ p \in range y].
+  [set p : T | exists y, is_solution y /\ exists t, p = y t].
 
 End ode.
 
@@ -579,16 +574,50 @@ gamma1 ⊆ state_space*)
 (* prouver invariance geometrique, tangence donc les trajectoires restent dans gamma1:
  state_space ⊆ gamma1
 *)
+
+Lemma inv_Gamma1 p (p33 : state_space (fun a b => eqn33 b a) p) :
+  let y := sval (cid p33) in
+  let t := sval (cid ((svalP (cid p33)).2)) in
+  forall Delta, Delta >= 0 -> state_space (fun a b => eqn33 b a) (y (t + Delta)).
+Proof.
+case: p33 => /= y sol_y Delta Delta_ge0.
+rewrite /state_space/=.
+exists y; split=> //.
+  by case: sol_y.
+case: cid => //= y' y'sol.
+case: cid => t'/= pt'.
+
+
+
+
+eexists.
+Abort.
+
+
+
+
+
+
+
+
+
 Lemma thm11a : state_space (fun a b => eqn33 b a) = Gamma1.
 Proof.
-(* il existe une solution depuis tout point*) 
+(* toute solution de eqn33 est dans gamma
+nagumo theorem *)
 apply/seteqP; split.
 - move=> p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
   move=> [y0 [Heq Hrange]].
+  move: Hrange.
+  move => exi.
+  case: exi.
+  move=> t.
+  move=> ->.
+  have Heqt := Heq t.
+  
   admit.
-(* toute image d'une trajectoire est dans gamma
-nagumo theorem *)
+(* il existe une solution depuis tout point, cauchy lipschitz*) 
 - move => p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
   move => norme.
@@ -767,13 +796,10 @@ Lemma deriveV1 (x : K -> 'rV[K]_6) t : is_solution (fun a b => @eqn33 K alpha1 g
 Proof.
 move=> eqn33x.
 rewrite /V1.
-rewrite [X in LieDerivative_jacobian1 X _ _](_ : _ =
-    (fun zp1_z2 : 'rV_6 =>
+rewrite [X in LieDerivative_jacobian1 X _ _](_ : _ =  (fun zp1_z2 : 'rV_6 =>
      (norm (Lsubmx zp1_z2) ^+ 2 / (2 * alpha1))%:M)
     +
-    (fun zp1_z2 : 'rV_6 =>
-     (norm (Rsubmx zp1_z2) ^+ 2 / (2 * gamma))%:M)
-    ); last first.
+    (fun zp1_z2 : 'rV_6 => (norm (Rsubmx zp1_z2) ^+ 2 / (2 * gamma))%:M)); last first.
     apply/funext => y/=.
     rewrite fctE.
     by rewrite raddfD.
