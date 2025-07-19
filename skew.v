@@ -2,9 +2,10 @@
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex finset fingroup perm ring.
 Require Import ssr_ext euclidean vec_angle.
-From mathcomp Require Import forms reals.
+From mathcomp Require Import reals.
 
 (******************************************************************************)
 (*                         Skew-symmetric matrices                            *)
@@ -35,9 +36,6 @@ Reserved Notation "'\S(' w ')'" (at level 3, format "'\S(' w ')'").
 Reserved Notation "''so[' R ]_ n" (at level 8, n at level 2, format "''so[' R ]_ n").
 
 Local Open Scope ring_scope.
-
-(* TODO: overrides forms.v *)
-Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
 
 Section keyed_qualifiers_anti_sym.
 
@@ -277,7 +275,13 @@ Proof.
 rewrite (@lieC _ (vec3 R)) -linearNr [RHS]lieC/= -linearNr [u]row_sum_delta/=.
 rewrite -/(mulmxr _ _) !linear_sum /=; apply: eq_bigr=> i _.
 rewrite /spin; unlock.
-by rewrite !linearZ /= -scalemxAl -rowE linearN /= rowK linearNl opprK.
+rewrite 2!linearZ/=.
+rewrite -scalemxAl -rowE.
+rewrite (linearNr _ (- v))/=.
+rewrite (@lieC _ (vec3 R)) opprK/=.
+rewrite rowK.
+rewrite (@lieC _ (vec3 R))/=.
+by rewrite [in RHS]linearN/=.
 Qed.
 
 Lemma spin0 : \S( 0 ) = 0.
@@ -420,7 +424,8 @@ Lemma spin_crossmul u v : \S(v *v u) = \S(u) *m \S(v) - \S(v) *m \S(u).
 Proof.
 apply/eqP/mulmxP => w.
 rewrite [in LHS]spinE mulmxBr !mulmxA ![in RHS]spinE.
-rewrite (@lieC _ (vec3 R) v w) linearNr opprK.
+rewrite (@lieC _ (vec3 R) v w)/=.
+rewrite linearN/= opprK.
 move/eqP: (@jacobi _ (vec3 R) v u w); rewrite eq_sym -subr_eq eq_sym => /eqP -> /=.
 by rewrite add0r (@lieC _ (vec3 R) w) opprK.
 Qed.

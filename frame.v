@@ -2,9 +2,9 @@
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex fingroup perm reals.
 Require Import ssr_ext euclidean skew vec_angle.
-From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
 (*                                Frames                                      *)
@@ -147,7 +147,9 @@ case: (lerP 0 (f~i *d (f~j *v f~k))) => [/ger0_norm ->|/ltr0_norm -> /eqP].
   by left; rewrite H // ?noframe_norm // norm_icrossj.
 - rewrite eqr_oppLR => /eqP.
   rewrite dot_crossmulC => /dotmulN1_inv H.
-  by right; rewrite linearNl /= H // ?opprK // ?noframe_norm // norm_icrossj.
+  right.
+  rewrite (linearNl _ (f|,1))/=.
+  by rewrite H // ?opprK // ?noframe_norm // norm_icrossj.
 Qed.
 
 Lemma noframe_pos : (f~k == f~i *v f~j) = (noframe_sgn == 1).
@@ -155,14 +157,16 @@ Proof.
 apply/idP/idP => [/eqP H|].
   by rewrite noframe_sgnE H dot_crossmulC dotmulvv norm_icrossj expr1n.
 case: noframek => [/eqP //|] /eqP.
-rewrite linearNl -eqr_oppLR noframe_sgnE dot_crossmulC => /eqP <-.
+rewrite (linearNl _ f|,1)/=.
+rewrite -eqr_oppLR noframe_sgnE dot_crossmulC => /eqP <-.
 by rewrite dotmulNv dotmulvv noframe_norm expr1n eqrNxx oner_eq0.
 Qed.
 
 Lemma noframe_neg : (f~k == - f~i *v f~j) = (noframe_sgn == - 1).
 Proof.
 apply/idP/idP => [/eqP H|].
-- rewrite noframe_sgnE H dot_crossmulC linearNl dotmulvN dotmulvv.
+- rewrite noframe_sgnE H dot_crossmulC.
+  rewrite (linearNl _ f|,1)/= dotmulvN dotmulvv.
   by rewrite norm_icrossj expr1n.
 case: noframek => [|/eqP //] /eqP.
 rewrite noframe_sgnE => /eqP ->.
@@ -182,9 +186,11 @@ Qed.
 Lemma noframe_negP : f~k = - f~i *v f~j -> f~j = f~i *v f~k /\ f~i = f~k *v f~j.
 Proof.
 move=> ->; split.
-- rewrite linearNl /= linearNr /= double_crossmul dotmulvv.
+- rewrite (linearNl _ f|,1) /=.
+  rewrite (linearNr _ f|,0) /= double_crossmul dotmulvv.
   by rewrite noframe_norm expr1n scale1r idotj scale0r add0r opprK.
-- rewrite linearNl (@lieC _ (vec3 T)) linearNr opprK /= double_crossmul dotmulvv.
+- rewrite (linearNl _ f|,1)/=.
+  rewrite (@lieC _ (vec3 T)) linearNr opprK /= double_crossmul dotmulvv.
   by rewrite noframe_norm expr1n scale1r dotmulC idotj scale0r subr0.
 Qed.
 
@@ -264,7 +270,9 @@ case: noframek => e3e1e2.
   by rewrite !scalerA -scalerBl scalerN -scaleNr opprB mulrC (mulrC w3).
 - case: (noframe_negP e3e1e2) => Hj Hi.
   rewrite (_ : _ *v _ = - v2 *: f~k); last first.
-    by rewrite linearZ /= e3e1e2 linearNl scalerN scaleNr opprK.
+    rewrite linearZ /= e3e1e2.
+    rewrite (linearNl _ f|,1)/=.
+    by rewrite scalerN scaleNr opprK.
   rewrite scaleNr opprK.
   rewrite (_ : _ *v _ = v3 *: f~j); last by rewrite linearZ /= -Hj.
   rewrite scalerN.
@@ -508,7 +516,7 @@ Proof. by rewrite /j colinearNv normalcompvN. Qed.
 
 Lemma kN : k (- u) = - k u.
 Proof.
-by rewrite /k (_ : j (- u) = j u); [rewrite linearNl | rewrite -jN].
+by rewrite /k (_ : j (- u) = j u); [rewrite (linearNl _ (j u)) | rewrite -jN].
 Qed.
 
 End base1_lemmas.
@@ -704,7 +712,10 @@ case: ifPn => [|_].
     rewrite !mxE !eqxx /= => /eqP; by rewrite oner_eq0.
   rewrite /i (negbTE (norm1_neq0 v1)) normalizeI // in Hk.
   rewrite /i (negbTE (norm1_neq0 v1)) normalizeI //.
-  rewrite {1}Hk linearZl_LR /= vecij -2!scalemxAl {1}Hk linearZ /= -scalemxAr.
+  rewrite {1}Hk.
+  rewrite (linearZl_LR crossmul 'e_1).
+  rewrite /=.
+  rewrite vecij -2!scalemxAl {1}Hk linearZ /= -scalemxAr.
   by rewrite dotmulP dote2 scale_scalar_mx mulr0 mul_scalar_mx scale0r scaler0.
 apply/eqP.
 rewrite /normalize linearZr_LR -!scalemxAl scaler_eq0; apply/orP; right.
@@ -805,8 +816,8 @@ Proof. exact/orthogonal_unit/FromTo_is_O. Qed.
 Lemma FromTo_is_SO A B : A _R^ B \is 'SO[T]_3.
 Proof.
 rewrite FromToE.
-(*rewrite rpredM // ?Frame.MSO // noframe_inv rotationV Frame.MSO.
-Qed.*) Admitted.
+by rewrite rpredM // ?Frame.MSO // noframe_inv rotationV Frame.MSO.
+Qed.
 
 Lemma FromTo_comp A B C : (C _R^ B) *m (B _R^ A) = C _R^ A.
 Proof.

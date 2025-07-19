@@ -1,12 +1,12 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import ring.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean vec_angle frame rot.
-From mathcomp.analysis Require Import forms.
 Require Import extra_trigo.
 
 (******************************************************************************)
@@ -84,9 +84,6 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
-
-(* TODO: overrides forms.v *)
-Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
 
 Section quaternion0.
 Variable R : ringType.
@@ -242,14 +239,14 @@ Lemma mul1q : left_id 1%:q mulq.
 Proof.
 case=> a a'; rewrite /mulq /=; congr mkQuat; Simp.r => /=.
   by rewrite dotmul0v subr0.
-by rewrite linear0l addr0.
+by rewrite (linear0l _ a') addr0.
 Qed.
 
 Lemma mulq1 : right_id 1%:q mulq.
 Proof.
 case=> a a'; rewrite /mulq /=; congr mkQuat; Simp.r => /=.
   by rewrite dotmulv0 subr0.
-by rewrite linear0r addr0.
+by rewrite (linear0r _ a') addr0.
 Qed.
 
 Lemma mulqDl : left_distributive mulq (@addq R).
@@ -296,7 +293,11 @@ Lemma realqE x : x \is realq R -> x = (x.1)%:q.
 Proof. by rewrite qualifE; case: x => [x1 x2] /= /eqP->. Qed.
 
 Lemma quat_realM (r s : R) : (r * s)%:q = r%:q * s%:q.
-Proof. by congr mkQuat; rewrite /= (dotmul0v, linear0l); Simp.r. Qed.
+Proof.
+congr mkQuat; rewrite /= ?dotmul0v ?subr0// !scaler0.
+rewrite !add0r.
+by rewrite (@liexx _ (vec3 R)).
+Qed.
 
 Lemma iiN1 : `i * `i = -1.
 Proof. by congr mkQuat; rewrite (dote2, @liexx _ (vec3 R)) /=; Simp.r. Qed.
@@ -360,7 +361,7 @@ case: x y => [x1 x2] [y1 y2]; apply/eqP.
 rewrite !mulqE /mulq /= scaleqE /= eq_quat /=.
 apply/andP; split; first by Simp.r; rewrite mulrBr mulrA dotmulZv.
 apply/eqP; Simp.r; rewrite 2!scalerDr scalerA -2!addrA; congr (_ + _).
-by rewrite linearZl_LR /=; congr (_ + _); rewrite scalerA mulrC -scalerA.
+by rewrite (linearZl_LR _ y2)/=; congr (_ + _); rewrite scalerA mulrC -scalerA.
 Qed.
 
 HB.instance Definition _ := @GRing.Lmodule_isLalgebra.Build R (quat R) quatAl.
@@ -372,7 +373,7 @@ rewrite !mulqE /mulq /= scaleqE /= eq_quat /=.
 apply/andP; split; first by Simp.r; rewrite /= mulrBr mulrCA mulrA dotmulvZ.
 apply/eqP; Simp.r; rewrite 2!scalerDr !scalerA.
 rewrite (mulrC k); congr (_ + _ + _).
-by rewrite linearZr_LR/=.
+by rewrite (linearZr_LR _ x2)/=.
 Qed.
 
 HB.instance Definition _ := @GRing.Lalgebra_isAlgebra.Build _ (quat R) quatAr.
@@ -998,8 +999,6 @@ HB.instance Definition _ x := @GRing.isLinear.Build _ _ _ _ _ (quat_rot_is_linea
 Lemma quat_rot_isRot_polar v a : norm v = 1 ->
   isRot (a *+2) v (quat_rot (quat_of_polar a v)).
 Proof.
-Set Printing All.
-Show Proof.
 move=> v1 /=.
 have vE : (Base.frame v)~i = v by rewrite Base.frame0E // ?normalizeI // norm1_neq0.
 apply/isRotP; split => /=.
@@ -1284,7 +1283,8 @@ Fact invdE x : x \in unitd ->
   invd x = dual_of_mat (x.1^-1%:M * (1 - deps R * x.2%:M * (x.1)^-1%:M)).
 Proof.
 move : x => [q r] /=; rewrite inE /= => qu; rewrite /invd inE /= qu.
-by rewrite /dual_of_mat !(mxE,sum2E) /=; Simp.r.
+rewrite /dual_of_mat !(mxE,sum2E) /=; repeat Simp.r.
+by [].
 Qed.
 
 Lemma mulVd : {in unitd, left_inverse 1 invd *%R}.
@@ -1448,7 +1448,7 @@ Notation "x '^*dq'" := (conjdq x) : dual_scope.
 
 (* WIP: dual quaternions and rigid body transformations *)
 Section dquat_rbt.
-Variable R : realType (*realType*).
+Variable R : realType.
 Local Open Scope dual_scope.
 Implicit Types u x : dquat R.
 

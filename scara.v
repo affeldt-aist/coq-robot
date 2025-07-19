@@ -2,9 +2,10 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle rot frame rigid screw.
-From mathcomp Require Import reals forms.
+From mathcomp Require Import reals.
 Require Import extra_trigo.
 
 (******************************************************************************)
@@ -67,7 +68,7 @@ rewrite /A21.
 rewrite homM RzM mulmx_row3_col3 !scale0r !add0r e2row !row3Z row3D. Simp.r.
 rewrite homM RzM addrC (addrC _ theta2) addrA; congr hom.
 rewrite mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
-by rewrite -!mulrA -mulrBr -cosD -mulrDr (addrC (_ * sin theta1)) -sinD/= add0r.
+by rewrite -!mulrA -mulrBr -cosD -mulrDr (addrC (_ * sin theta1)) -sinD/=; Simp.r.
 Qed.
 
 End hom_scara.
@@ -113,7 +114,10 @@ Definition g := g0 * `e$(theta4, t4) *
 
 Lemma S1 : `e$(theta1, t1) = hRz theta1.
 Proof.
-rewrite /t1 /rjoint_twist linearNl /= linear0r oppr0 etwist_Rz; last first.
+rewrite /t1 /rjoint_twist.
+rewrite (linearNl _ q1)/=.
+rewrite (linear0r _ w1)/=.
+rewrite oppr0 etwist_Rz; last first.
   by rewrite -norm_eq0 normeE oner_eq0.
 by rewrite -Rz_eskew.
 Qed.
@@ -123,7 +127,9 @@ Lemma point_axis_twist (d : R) :
   \pt( axis \T((- 'e_2%:R *v row3 d 0 0), 'e_2%:R) ) = row3 d 0 0.
 Proof.
 rewrite {1}/axis ang_tcoorE (negbTE (norm1_neq0 (normeE _ _))) /=.
-rewrite normeE expr1n invr1 scale1r lin_tcoorE linearNl linearNr /=.
+rewrite normeE expr1n invr1 scale1r lin_tcoorE.
+rewrite (linearNl _ ((row3 d)``_0))/=.
+rewrite (linearNr _ ('e_2))/=.
 rewrite double_crossmul dotmulvv normeE expr1n scale1r /w2 /q2 e2row.
 rewrite dotmulE sum3E !mxE /=. by Simp.r.
 Qed.
@@ -162,10 +168,10 @@ rewrite mulrBr mulr1 addrCA subrr addr0 subrr.
 rewrite homM mulr1 mulmx1 row3D. Simp.r.
 rewrite homM RzM mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
 rewrite (addrC _ (a1 * (1 - cos theta2))) mulrBr mulr1 mulrDl !addrA subrK.
-rewrite mulrDl addrAC subrr add0r.
+rewrite mulrDl ?add0r addrAC subrr add0r.
 rewrite homM RzM mulmx_row3_col3 e2row !row3Z !row3D. Simp.r.
 rewrite addrC (addrC theta4) addrA; congr hom.
-rewrite /scara_trans/= !add0r; congr row3.
+rewrite /scara_trans/= ?add0r; congr row3.
 - by rewrite mulrDl -addrA -!mulrA -mulrBr -cosD addrC.
 - by rewrite mulrDl -addrA -!mulrA -mulrDr (addrC (cos theta2 * _)) -sinD addrC.
 Qed.

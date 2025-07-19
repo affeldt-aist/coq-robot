@@ -5,9 +5,9 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg reals complex.
 From mathcomp Require Import interval trigo fingroup perm.
+From mathcomp Require Import sesquilinear.
 Require Import extra_trigo.
 Require Import ssr_ext euclidean skew vec_angle frame.
-From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
 (*                              Rotations                                     *)
@@ -78,9 +78,6 @@ Reserved Notation "'`e^(' a ',' w ')'" (format "'`e^(' a ','  w ')'").
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-(* TODO: overrides forms.v *)
-Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
 
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
@@ -619,8 +616,8 @@ Lemma emx30M M : `e(0, M) = 1.
 Proof. by rewrite /emx3 sin0 cos0 subrr 2!scale0r 2!addr0. Qed.
 
 Lemma emx30M' M a : cos a = 1 -> sin a = 0 -> `e(a, M) = 1.
-Proof. 
-by rewrite /emx3 => -> ->; rewrite subrr 2!scale0r 2!addr0. 
+Proof.
+by rewrite /emx3 => -> ->; rewrite subrr 2!scale0r 2!addr0.
 Qed.
 
 Lemma tr_emx3 a M : `e(a, M)^T = `e(a, M^T).
@@ -688,7 +685,7 @@ rewrite scaler_nat mulr2n opprD addrCA.
 by rewrite (_ : 1%:A = 1) // ?subrCA ?subrr ?addr0 // -idmxE scale1r.
 Qed.
 
-Lemma eskew_pi' w a : 
+Lemma eskew_pi' w a :
   norm w = 1 -> cos a = -1 -> sin a = 0 -> `e^(a, w) = w^T *m w *+ 2 - 1.
 Proof.
 move=> w1 Hs Hc.
@@ -907,7 +904,7 @@ pose f := Base.frame w.
 apply/isRotP; split => /=.
 - rewrite -rodriguesP // /rodrigues (norm_normalize w0) expr1n scale1r.
   rewrite dotmul_normalize_norm scalerA -mulrA divrr ?mulr1 ?unitfE ?norm_eq0 //.
-  by rewrite subrK linearZl_LR /= (@liexx _ (vec3 T)) 2!scaler0 addr0.
+  by rewrite subrK (linearZl_LR _ w)/= (@liexx _ (vec3 T)) 2!scaler0 addr0.
 - rewrite -rodriguesP // /rodrigues dotmulC norm_normalize // expr1n scale1r.
   rewrite (_ : normalize w = Base.i w) (*NB: lemma?*); last by rewrite /Base.i (negbTE w0).
   rewrite -Base.jE -Base.kE.
@@ -970,7 +967,8 @@ rewrite 2!rowframeE (@lieC _ (vec3 T) (row _ _)) /= SO_jcrossk; last first.
   by rewrite -(col_mx3_row (NOFrame.M (Base.frame e))) -!rowframeE Base.is_SO.
 rewrite -rowframeE Base.frame0E ?norm1_neq0 //.
 rewrite normalizeI // {2}(axialnormalcomp p e) linearD /=.
-by rewrite crossmul_axialcomp add0r (@lieC _ (vec3 T)) /= linearNl opprK.
+rewrite crossmul_axialcomp add0r (@lieC _ (vec3 T)) /=.
+by rewrite (linearNl _ (normalcomp p e))/= opprK.
 Qed.
 
 Lemma normalcomp_mulO' a Q u p : norm u = 1 -> isRot a u (mx_lin1 Q) ->
@@ -1104,7 +1102,9 @@ move=> MSO Msym.
 case/eskew_is_onto_SO : (MSO) => a aB Ma.
 move: (Msym).
 rewrite {1}Ma /emx3.
-rewrite symE !linearD /= trmx1 /= !linearZ /= sqr_spin !linearD /= !linearN /=.
+rewrite symE !linearD /= trmx1 /= !linearZ /= sqr_spin !linearD /=.
+do 2 rewrite (linearN _ (norm (normalize (vaxis_euler M)) ^+ 2)%:A)/=.
+rewrite (linearN _ (norm (normalize (vaxis_euler M)) ^+ 2)%:A^T)/=.
 rewrite trmx_mul trmxK scalemx1 tr_scalar_mx tr_spin.
 rewrite !addrA subr_eq subrK.
 rewrite [in X in _ == X]addrC -subr_eq0 !addrA !opprD !addrA addrK.
@@ -1628,7 +1628,8 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
   - have v2 : v *d F|,2%:R = 1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0).
-      rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r) linearZr_LR /=.
+      rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r).
+      rewrite (linearZr_LR _ F|,1)/=.
       rewrite (frame_jcrossk F) => /scaler_eq1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scale1r; by left.
@@ -1636,7 +1637,9 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,addr0,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 v1 !(scale0r,add0r,scale1r,addr0,scaleN1r).
-      rewrite linearNl linearZr_LR /= (frame_jcrossk F) -scaleNr => /scaler_eqN1; apply.
+      rewrite (linearNl _ _ F|,1)/=.
+      rewrite (linearZr_LR _ _ (v *d F|,2))/=.
+      rewrite (frame_jcrossk F) -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     rewrite v2 u1 !scaleN1r; by right.
 have pi2B : - pi < (pi : T) / 2%:R <= pi.
@@ -1659,8 +1662,9 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scale1r,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scale1r,addr0).
-      rewrite linearDr /= linearZr_LR /= (@lieC _ (vec3 T)) /= (frame_jcrossk F).
-      rewrite linearZr_LR /= (@liexx _ (vec3 T)) scaler0 addr0 scalerN -scaleNr => /scaler_eqN1; apply.
+      rewrite (linearDr _ F|,2)/=.
+      rewrite (linearZr_LR _ _ (v *d F|,1)) /= (@lieC _ (vec3 T)) /= (frame_jcrossk F).
+      rewrite (linearZr_LR _ _ (v *d F|,2)) /= (@liexx _ (vec3 T)) scaler0 addr0 scalerN -scaleNr => /scaler_eqN1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     have v2 : v *d F|,2%:R = 0.
       move: normv => /(congr1 (fun x => x ^+ 2)).
@@ -1674,7 +1678,11 @@ case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
       move: uva0.
       rewrite {1}(orthogonal_expansion F u) u0 u1 u2 !(scale0r,add0r,scaleN1r).
       rewrite {1}(orthogonal_expansion F v) v0 !(scale0r,add0r,scaleN1r).
-      rewrite linearDr 2!linearNl 2!linearZr_LR /= (@liexx _ (vec3 T)) scaler0 subr0.
+      rewrite (linearDr _ (- F|,2))/=.
+      do 2 rewrite (linearNl _ _ (F|,2))/=.
+      rewrite (linearZr_LR _ _ (v *d F|,1))/=.
+      rewrite (linearZr_LR _ _ (v *d F|,2))/=.
+      rewrite /= (@liexx _ (vec3 T)) scaler0 subr0.
       rewrite -scalerN (@lieC _ (vec3 T)) /= opprK (frame_jcrossk F) => /scaler_eq1; apply.
       by rewrite -norm_eq0 noframe_norm oner_eq0.
     have v2 : v *d F|,2%:R = 0.
