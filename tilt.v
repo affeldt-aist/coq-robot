@@ -134,6 +134,36 @@ apply: (@is_derive_inverse K (fun x => x ^+ 2)).
 Unshelve. all: by end_near. 
 Qed.
 
+Lemma derive1mx_rsubmx {R: realType} n m :
+  forall (f : R -> 'rV[R]_(n + m)) (t : R),
+  derive1mx (fun x => rsubmx (f x)) t = rsubmx (derive1mx f t).
+Proof.
+  move=> f t.
+  rewrite /derive1mx.
+  rewrite -!derive1mx_matrix /=.
+  apply/matrixP => i j.
+  rewrite !mxE /=.
+  rewrite /rsubmx /=.
+  under eq_fun do rewrite mxE mxE.
+  symmetry.
+  by under eq_fun do rewrite mxE.
+Qed.
+
+Lemma derive1mx_lsubmx {R: realType} n m :
+  forall (f : R -> 'rV[R]_(n + m)) (t : R),
+  derive1mx (fun x => lsubmx (f x)) t = lsubmx (derive1mx f t).
+Proof.
+  move=> f t.
+  rewrite /derive1mx.
+  rewrite -!derive1mx_matrix /=.
+  apply/matrixP => i j.
+  rewrite !mxE /=.
+  rewrite /lsubmx /=.
+  under eq_fun do rewrite mxE mxE.
+  symmetry.
+  by under eq_fun do rewrite mxE.
+Qed.
+
 Lemma derive_sqrt {K : realType} (r : K) : 0 < r ->
    (Num.sqrt^`())%classic r = (2 * Num.sqrt r)^-1 :> K.
 Proof.
@@ -586,20 +616,8 @@ exists y; split=> //.
   by case: sol_y.
 case: cid => //= y' y'sol.
 case: cid => t'/= pt'.
-
-
-
-
 eexists.
 Abort.
-
-
-
-
-
-
-
-
 
 Lemma thm11a : state_space (fun a b => eqn33 b a) = Gamma1.
 Proof.
@@ -615,8 +633,59 @@ apply/seteqP; split.
   move=> t.
   move=> ->.
   have Heqt := Heq t.
-  
+  have : derive1(fun t=> ('e_2 - Rsubmx (y0 t)) *d (('e_2 - Rsubmx (y0 t)))) = 0.
+  transitivity (fun t => -2 * (Rsubmx(y0^`()%classic t) *d ('e_2 - Rsubmx (y0 t)))). 
+  apply/funext => x.
+  rewrite -!derive1mxE' /= /dotmul.
+  under eq_fun do rewrite dotmulP /=.
+  rewrite dotmulP.
+  rewrite !mxE /= mulr1n.
+  under eq_fun do rewrite !mxE /= mulr1n.
+  rewrite !derive1mx_dotmul; last 2 first.
+    admit.
+    admit.
+  rewrite /dotmul /=.
+  rewrite !derive1mxE' /=.
+  rewrite [in RHS]mulr2n.
+  rewrite [RHS]mulNr.
+  rewrite [in RHS]mulrDl.
+  rewrite !mul1r.
+  rewrite !dotmulP /=.
+  rewrite dotmulC.
+  rewrite [in RHS]dotmulC.
+  rewrite !linearD /=.
+  rewrite -!derive1mxE'.
+  rewrite !mxE /= !mulr1n.
+  have -> : (derive1mx (fun x0 : K => 'e_2 - Rsubmx (y0 x0)) x) 
+            = - (Rsubmx (derive1mx y0 x)).
+  rewrite derive1mxB /= ; last 2 first.
+    admit.
+    admit.
+  rewrite derive1mx_cst /= sub0r.
+  congr (-_).
+  apply derive1mx_rsubmx.
+  ring.
+  have : forall t, (Rsubmx (y0^`()%classic t) =  (gamma *: (Rsubmx (y0 t) - Lsubmx (y0 t)) *m \S('e_2 - Rsubmx (y0 t)) ^+ 2)).
+  move => t0.
+  rewrite -derive1mxE'.
+  rewrite Heq.
+  by rewrite row_mxKr.
+  move => Rsu.
+  apply/funext => t0.
+  rewrite /dotmul.
+  transitivity (-2 * (gamma *: (Rsubmx (y0 t0) - Lsubmx (y0 t0)) *m \S('e_2 - Rsubmx (y0 t0)) ^+ 2 
+               *m ('e_2 - Rsubmx (y0 t0))^T) 0 0).
+  by rewrite Rsu /=.
+  rewrite !mulmxA.
+  apply/eqP.
+  rewrite mulf_eq0 /=.
+  rewrite oppr_eq0 ?pnatr_eq0 /=.
+  rewrite -!mulmxA.
+  rewrite spin_mul_tr.
+  by rewrite !mulmx0 mxE.
+  move => eq0.
   admit.
+  (* condition initiale?*)
 (* il existe une solution depuis tout point, cauchy lipschitz*) 
 - move => p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
@@ -721,42 +790,12 @@ Definition V1dot (zp1_z2 : 'rV[K]_6) : K :=
   - (norm zp1)^+2 + (z2 *m (\S('e_2%:R - z2))^+2 *m z2^T
                     - z2 *m (\S('e_2%:R - z2))^+2 *m zp1^T)``_0.
 
-Lemma derive_lsubE (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Lsubmx (traj r)):  (fun r : K => Lsubmx (traj r))^`() z = Lsubmx ((traj^`())%classic z).
-Proof.
-apply/matrixP => i j.
-rewrite !derive1E.
-rewrite !deriveE ; last 2 first.
-  admit.
-  admit.
-rewrite diff_comp ; last 2 first.
-  admit.
-  admit.
-rewrite /= -!deriveE /=.
-rewrite !derivemx_derive /=.
-Admitted.
-
-Lemma derive_rsubE (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Rsubmx (traj r)) : (fun r : K => Rsubmx (traj r))^`() z = Rsubmx ((traj^`())%classic z).
-Proof.
-apply/matrixP => i j.
-rewrite !derive1E !deriveE ; last 2 first.
-  admit.
-  admit.
-rewrite diff_comp ; last 2 first.
-  admit.
-  admit.
-Admitted.
-
 Lemma derive_zp1 (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Lsubmx (traj r))  (dtraj : is_solution (fun a : K => (eqn33 alpha1 gamma)^~ a) traj) :
   derive1mx zp1 z = (- alpha1 *: Lsubmx (traj z)).
 Proof.
-rewrite /zp1.
-move : dtraj.
-rewrite /is_solution /eqn33.
-move=> /(_ z).
+rewrite /zp1; move : dtraj ; rewrite /is_solution /eqn33 ; move=> /(_ z).
 move=> /(congr1 Lsubmx).
-rewrite row_mxKl.
-rewrite !derive1mxE' => <-.
-apply: derive_lsubE.
+rewrite row_mxKl ; move => bla ; by rewrite derive1mx_lsubmx.
 Qed.
 
 Lemma derive_z2  (z : K) (traj : K -> 'rV_5%R.+1) (z2 := fun r => Rsubmx (traj r))  (dtraj : is_solution (fun a : K => (eqn33 alpha1 gamma)^~ a) traj) :
@@ -764,10 +803,8 @@ Lemma derive_z2  (z : K) (traj : K -> 'rV_5%R.+1) (z2 := fun r => Rsubmx (traj r
               (gamma *: (Rsubmx (traj z) - Lsubmx (traj z)) *m \S('e_2 - Rsubmx (traj z)) ^+ 2).
 Proof.
 rewrite /z2; move: dtraj; rewrite /is_solution /eqn33; move => /(_ z).
-move => /(congr1 Rsubmx).
-rewrite row_mxKr.
-rewrite !derive1mxE' => <-.
-apply: derive_rsubE.
+move => /(congr1 Rsubmx); rewrite row_mxKr; move => bla.
+by rewrite derive1mx_rsubmx.
 Qed.
 
 Lemma derive_V1dot (c1 := (2^-1 / alpha1)) (c2 := (2^-1 / gamma)) (z : K) (traj : K -> 'rV_5%R.+1) (zp1 := fun r => Lsubmx (traj r))
@@ -921,7 +958,6 @@ rewrite -(thm11a gamma_gt0 alpha1_gt0 ).
   rewrite /state_space/=.
   exists traj.
   split => //.
-  rewrite inE/=.
   by exists t.
 Qed.
 
