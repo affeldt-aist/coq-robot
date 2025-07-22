@@ -2,7 +2,7 @@ From mathcomp Require Import all_ssreflect all_algebra ring.
 From mathcomp Require Import boolp classical_sets functions reals.
 From mathcomp Require Import topology normedtype derive.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
-
+Require Import lasalle pendulum.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -291,13 +291,29 @@ Definition gradient_partial {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_
 
 Section derive_help.
 Local Open Scope classical_set_scope.
+Lemma derivemx_derive1 {R : realFieldType} m n
+   (f : R -> 'M[R]_(m.+1, n.+1)) (x0 : R) (i : 'I_m.+1) (j : 'I_n.+1) :
+  'D_1 f x0 i j = 'D_1 (fun x => f x i j) x0.
+Proof.
+rewrite /=.
+rewrite -!derive1E.
+rewrite (_ : (fun x  => f x i j) = (fun M : 'M_(m.+1,n.+1) => M i j)  \o f ) //.
+Admitted.
+
 Lemma derivemx_derive {R : realFieldType} (V : normedModType R) m n
    (f : V -> 'M[R]_(m.+1, n.+1)) (x0 : V) (v : V) (i : 'I_m.+1) (j : 'I_n.+1) :
   'D_v f x0 i j = 'D_v (fun x => f x i j) x0.
 Proof.
-apply/esym/cvg_lim => //=.
-apply/cvgrPdist_le => /= e e0.
-near=> t.
+rewrite !deriveE; last 2 first.
+  admit.
+  admit.
+rewrite (_ : (fun x : V => f x i j) = (fun M : 'M_(m.+1,n.+1) => M i j)  \o f ).
+rewrite [in RHS]diff_comp ; last 2 first.
+  admit.
+  admit.
+rewrite /=.
+From mathcomp Require Import landau.
+under eq_fun do rewrite /=.
 Admitted.
 Local Close Scope classical_set_scope.
 
@@ -685,44 +701,31 @@ apply/seteqP; split.
   by rewrite !mulmx0 mxE.
   under eq_fun do rewrite dotmulvv /=.
   move => h.
-   (*move/eqP in eq0; exact: eq0.
-  have eq0_final : ('e_2 - Rsubmx (y0 t)) *d (- Rsubmx (derive1mx y0 t)) = 0.
-    rewrite -derive1mx_rsubmx.
-    rewrite derive1mxB in eq02 ; last 2 first.
-      admit.
-      admit.
-  rewrite derive1mx_cst /= sub0r in eq02 ; exact eq02.
-  rewrite Heqt  row_mxKr /= in eq0_final.
-  have etc : gamma * (('e_2 - Rsubmx (y0 t)) *d ((Rsubmx (y0 t) - Lsubmx (y0 t)) *m \S('e_2 - Rsubmx (y0 t)) ^+ 2)) = 0.
-    rewrite dotmulvN in eq0_final.
-    move/eqP in eq0_final.
-    rewrite oppr_eq0 in eq0_final.
-    rewrite -scalemxAl /= in eq0_final.
-    rewrite dotmulvZ in eq0_final.
-    move/eqP in eq0_final; exact eq0_final.
-  have orth : ('e_2 - Rsubmx (y0 t)) *d ((Rsubmx (y0 t) - Lsubmx (y0 t)) *m \S('e_2 - Rsubmx (y0 t)) ^+ 2) = 0.
-    move/eqP in etc.
-    rewrite mulrI_eq0 // in etc.
-    move/eqP in etc; exact etc.
-    admit.*)
   have y0_init : y0 0 \in Gamma1.
     admit.
-  have norm_constant : norm ('e_2 - Rsubmx (y0 t)) = norm ('e_2 - Rsubmx (y0 0)).
-    have h_at_t : ((fun x : K => norm ('e_2 - Rsubmx (y0 x)) ^+ 2)^`())%classic t = 0.
-      by rewrite h.
-    move: h_at_t.
-    under eq_fun do rewrite -dotmulvv.
-    rewrite derive1mx_dotmul/= ; last 2 first.
-      admit.
-      admit.
-    rewrite dotmulC -mulr2n.
-    move=> etc.
-    move/eqP in etc.
-    rewrite mulrn_eq0 /= in etc.
-    admit.
-  rewrite norm_constant.
+  have norm_constant : norm ('e_2 - Rsubmx (y0 t))^+2 = norm ('e_2 - Rsubmx (y0 0))^+2.
+    have : forall x0, is_derive x0 (1:K) (fun x : K => norm ('e_2 - Rsubmx (y0 x)) ^+ 2) 0. 
+      move => x0.
+      apply: DeriveDef.
+        admit.
+      by rewrite -derive1E h.
+    rewrite /=.
+    move/is_derive_0_is_cst.
+    move/ (_ _ 0).
+    move => s0.
+    by apply: s0.
   move: y0_init.
-  by rewrite inE /= => ->.
+  rewrite inE /Gamma1 /=.
+  move=> Hnorm0. (* reecrire ce charabia*)
+  rewrite Hnorm0 in norm_constant.
+  move: norm_constant.
+  move=> Hsq.
+  apply/eqP.
+  rewrite [RHS]expr2 mulr1 in Hsq.
+  move/eqP in Hsq.
+  rewrite sqrp_eq1 in Hsq ; last first.
+    exact: norm_ge0.
+  exact : Hsq.
 (* il existe une solution depuis tout point, cauchy lipschitz*) 
 - move => p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
