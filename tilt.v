@@ -336,17 +336,17 @@ Qed.
 
 Local Open Scope classical_set_scope.
 Lemma derive_norm {K : realType} n (u : K^o -> 'rV[K^o]_n.+1) (t : K) :
-  (2^-1 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() t =
-  (fun t => (derive1mx u t *m  (u t)^T)``_0) t :> K.
+  (1 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() t =
+  2*(fun t => (derive1mx u t *m  (u t)^T)``_0) t :> K.
 Proof.
 rewrite [LHS]derive1E deriveMl/=; last first.
   admit.
-rewrite -derive1E.
+rewrite -derive1E mul1r.
 under eq_fun do rewrite -dotmulvv.
 rewrite dotmulP mxE /= mulr1n derive1mx_dotmul ; last 2 first.
 admit.
 admit.
-rewrite [X in _ * (_ + X) =  _]dotmulC.
+rewrite dotmulC.
 by field.
 Admitted.
 
@@ -440,7 +440,7 @@ rewrite -scalemxAl [X in _ -> _ = X]mxE.
 move => <-.
 rewrite derive1Ml; last first.
   admit.
-rewrite mulrA divff // ?pnatr_eq0 // mul1r.
+rewrite mul1r.
 rewrite !mxE.
 rewrite derive1E.
 transitivity ( ('D_(derive1mx x t) (fun y : 'rV_6 => (norm (f y) ^+ 2)) (x t)) ).
@@ -683,9 +683,46 @@ apply/seteqP; split.
   rewrite -!mulmxA.
   rewrite spin_mul_tr.
   by rewrite !mulmx0 mxE.
-  move => eq0.
-  admit.
-  (* condition initiale?*)
+  under eq_fun do rewrite dotmulvv /=.
+  move => h.
+   (*move/eqP in eq0; exact: eq0.
+  have eq0_final : ('e_2 - Rsubmx (y0 t)) *d (- Rsubmx (derive1mx y0 t)) = 0.
+    rewrite -derive1mx_rsubmx.
+    rewrite derive1mxB in eq02 ; last 2 first.
+      admit.
+      admit.
+  rewrite derive1mx_cst /= sub0r in eq02 ; exact eq02.
+  rewrite Heqt  row_mxKr /= in eq0_final.
+  have etc : gamma * (('e_2 - Rsubmx (y0 t)) *d ((Rsubmx (y0 t) - Lsubmx (y0 t)) *m \S('e_2 - Rsubmx (y0 t)) ^+ 2)) = 0.
+    rewrite dotmulvN in eq0_final.
+    move/eqP in eq0_final.
+    rewrite oppr_eq0 in eq0_final.
+    rewrite -scalemxAl /= in eq0_final.
+    rewrite dotmulvZ in eq0_final.
+    move/eqP in eq0_final; exact eq0_final.
+  have orth : ('e_2 - Rsubmx (y0 t)) *d ((Rsubmx (y0 t) - Lsubmx (y0 t)) *m \S('e_2 - Rsubmx (y0 t)) ^+ 2) = 0.
+    move/eqP in etc.
+    rewrite mulrI_eq0 // in etc.
+    move/eqP in etc; exact etc.
+    admit.*)
+  have y0_init : y0 0 \in Gamma1.
+    admit.
+  have norm_constant : norm ('e_2 - Rsubmx (y0 t)) = norm ('e_2 - Rsubmx (y0 0)).
+    have h_at_t : ((fun x : K => norm ('e_2 - Rsubmx (y0 x)) ^+ 2)^`())%classic t = 0.
+      by rewrite h.
+    move: h_at_t.
+    under eq_fun do rewrite -dotmulvv.
+    rewrite derive1mx_dotmul/= ; last 2 first.
+      admit.
+      admit.
+    rewrite dotmulC -mulr2n.
+    move=> etc.
+    move/eqP in etc.
+    rewrite mulrn_eq0 /= in etc.
+    admit.
+  rewrite norm_constant.
+  move: y0_init.
+  by rewrite inE /= => ->.
 (* il existe une solution depuis tout point, cauchy lipschitz*) 
 - move => p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
