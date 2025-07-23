@@ -366,6 +366,12 @@ rewrite dotmulC.
 by field.
 Admitted.
 
+Lemma derive1mx_row_mx  {R : realFieldType} {n : nat}  {m : nat} :
+forall (f : R -> 'rV[R]_(n + m)) (g : R -> 'rV[R]_(n + m)) (t : R),
+  derive1mx (fun x => row_mx (f x) (g x)) t =
+                row_mx (derive1mx f t) (derive1mx g t).
+Admitted.
+
 End derive_help.
 
 Section LieDerivative.
@@ -650,87 +656,144 @@ apply/seteqP; split.
   move=> ->.
   have Heqt := Heq t.
   have : derive1(fun t=> ('e_2 - Rsubmx (y0 t)) *d (('e_2 - Rsubmx (y0 t)))) = 0.
-  transitivity (fun t => -2 * (Rsubmx(y0^`()%classic t) *d ('e_2 - Rsubmx (y0 t)))). 
-  apply/funext => x.
-  rewrite -!derive1mxE' /= /dotmul.
-  under eq_fun do rewrite dotmulP /=.
-  rewrite dotmulP.
-  rewrite !mxE /= mulr1n.
-  under eq_fun do rewrite !mxE /= mulr1n.
-  rewrite !derive1mx_dotmul; last 2 first.
-    admit.
-    admit.
-  rewrite /dotmul /=.
-  rewrite !derive1mxE' /=.
-  rewrite [in RHS]mulr2n.
-  rewrite [RHS]mulNr.
-  rewrite [in RHS]mulrDl.
-  rewrite !mul1r.
-  rewrite !dotmulP /=.
-  rewrite dotmulC.
-  rewrite [in RHS]dotmulC.
-  rewrite !linearD /=.
-  rewrite -!derive1mxE'.
-  rewrite !mxE /= !mulr1n.
-  have -> : (derive1mx (fun x0 : K => 'e_2 - Rsubmx (y0 x0)) x) 
-            = - (Rsubmx (derive1mx y0 x)).
-  rewrite derive1mxB /= ; last 2 first.
-    admit.
-    admit.
-  rewrite derive1mx_cst /= sub0r.
-  congr (-_).
-  apply derive1mx_rsubmx.
-  ring.
-  have : forall t, (Rsubmx (y0^`()%classic t) =  (gamma *: (Rsubmx (y0 t) - Lsubmx (y0 t)) *m \S('e_2 - Rsubmx (y0 t)) ^+ 2)).
-  move => t0.
-  rewrite -derive1mxE'.
-  rewrite Heq.
-  by rewrite row_mxKr.
-  move => Rsu.
-  apply/funext => t0.
-  rewrite /dotmul.
-  transitivity (-2 * (gamma *: (Rsubmx (y0 t0) - Lsubmx (y0 t0)) *m \S('e_2 - Rsubmx (y0 t0)) ^+ 2 
-               *m ('e_2 - Rsubmx (y0 t0))^T) 0 0).
-  by rewrite Rsu /=.
-  rewrite !mulmxA.
-  apply/eqP.
-  rewrite mulf_eq0 /=.
-  rewrite oppr_eq0 ?pnatr_eq0 /=.
-  rewrite -!mulmxA.
-  rewrite spin_mul_tr.
-  by rewrite !mulmx0 mxE.
-  under eq_fun do rewrite dotmulvv /=.
-  move => h.
-  have y0_init : y0 0 \in Gamma1.
-    admit.
-  have norm_constant : norm ('e_2 - Rsubmx (y0 t))^+2 = norm ('e_2 - Rsubmx (y0 0))^+2.
-    have : forall x0, is_derive x0 (1:K) (fun x : K => norm ('e_2 - Rsubmx (y0 x)) ^+ 2) 0. 
-      move => x0.
-      apply: DeriveDef.
+    transitivity (fun t => -2 * (Rsubmx(y0^`()%classic t) *d ('e_2 - Rsubmx (y0 t)))). 
+      apply/funext => x.
+      rewrite -!derive1mxE' /= /dotmul.
+      under eq_fun do rewrite dotmulP /=.
+      rewrite dotmulP.
+      rewrite !mxE /= mulr1n.
+      under eq_fun do rewrite !mxE /= mulr1n.
+      rewrite !derive1mx_dotmul; last 2 first.
         admit.
-      by rewrite -derive1E h.
-    rewrite /=.
-    move/is_derive_0_is_cst.
-    move/ (_ _ 0).
-    move => s0.
-    by apply: s0.
-  move: y0_init.
-  rewrite inE /Gamma1 /=.
-  move=> Hnorm0. (* reecrire ce charabia*)
-  rewrite Hnorm0 in norm_constant.
-  move: norm_constant.
-  move=> Hsq.
-  apply/eqP.
-  rewrite [RHS]expr2 mulr1 in Hsq.
-  move/eqP in Hsq.
-  rewrite sqrp_eq1 in Hsq ; last first.
-    exact: norm_ge0.
-  exact : Hsq.
+        admit.
+      rewrite /dotmul /= !derive1mxE' /= [in RHS]mulr2n [RHS]mulNr [in RHS]mulrDl.
+      rewrite !mul1r !dotmulP /= dotmulC [in RHS]dotmulC !linearD /=.
+      rewrite -!derive1mxE' !mxE /= !mulr1n.
+      have -> : (derive1mx (fun x0 : K => 'e_2 - Rsubmx (y0 x0)) x) 
+            = - (Rsubmx (derive1mx y0 x)).
+        rewrite derive1mxB /= ; last 2 first.
+          admit.
+          admit.
+        rewrite derive1mx_cst /= sub0r.
+        congr (-_).
+        apply derive1mx_rsubmx.
+      ring.
+      have : forall t, (Rsubmx (y0^`()%classic t) =  (gamma *: (Rsubmx (y0 t) - Lsubmx (y0 t)) *m            \S('e_2 - Rsubmx (y0 t)) ^+ 2)).
+        move => t0.
+        rewrite -derive1mxE'.
+        rewrite Heq.
+        by rewrite row_mxKr.
+      move => Rsu.
+      apply/funext => t0.
+      rewrite /dotmul.
+      transitivity (-2 * (gamma *: (Rsubmx (y0 t0) - Lsubmx (y0 t0)) *m \S('e_2 - Rsubmx (y0 t0)) ^+ 2 
+               *m ('e_2 - Rsubmx (y0 t0))^T) 0 0).
+        by rewrite Rsu /=.
+      rewrite !mulmxA.
+      apply/eqP.
+      rewrite mulf_eq0 /= oppr_eq0 ?pnatr_eq0 /= -!mulmxA spin_mul_tr.
+      by rewrite !mulmx0 mxE.
+    under eq_fun do rewrite dotmulvv /=.
+    move => h.
+    have y0_init : y0 0 \in Gamma1. (* TODO general hypothesis*)
+      admit.
+    have norm_constant : norm ('e_2 - Rsubmx (y0 t))^+2 = norm ('e_2 - Rsubmx (y0 0))^+2.
+      have : forall x0, is_derive x0 (1:K) (fun x : K => norm ('e_2 - Rsubmx (y0 x)) ^+ 2) 0. 
+        move => x0.
+        apply: DeriveDef.
+          admit.
+        by rewrite -derive1E h.
+      rewrite /=.
+      move/is_derive_0_is_cst.
+      move/ (_ _ 0).
+      move => s0.
+      by apply: s0.
+    move: y0_init.
+    rewrite inE /Gamma1 /=.
+    move=> Hnorm0. (* reecrire ce charabia*)
+    rewrite Hnorm0 in norm_constant.
+    move: norm_constant.
+    move=> Hsq.
+    apply/eqP.
+    rewrite [RHS]expr2 mulr1 in Hsq.
+    move/eqP in Hsq.
+    rewrite sqrp_eq1 in Hsq ; last first.
+      exact: norm_ge0.
+    exact : Hsq.
 (* il existe une solution depuis tout point, cauchy lipschitz*) 
 - move => p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
   move => norme.
+  eexists.
+  split.
+  move=> t.
+  apply/matrixP => i j.
+  have [i_lt | i_ge] := ltnP i 3.
+  set y := fun t : K =>
+  row_mx (expR (- alpha1 * t) *: Lsubmx p)
+         ('e_2 + expR (- gamma * t) *: (Rsubmx p - 'e_2)).
+  have D_y : forall t, derive1mx y t =
+  row_mx (- alpha1 *: Lsubmx (y t))
+         (gamma *: (Rsubmx (y t) - Lsubmx (y t)) *m \S('e_2 - Rsubmx (y t)) ^+ 2).
+  move => t0.
+  rewrite /y /=  !row_mxKl !row_mxKr.
+  set f := fun t1 : K => row_mx (expR (- alpha1 * t1) *: Lsubmx p)
+                             ('e_2 + expR (- gamma * t1) *: (Rsubmx p - 'e_2)).
+  have -> : derive1mx f t0 =
+  row_mx (derive1mx (fun t => expR (- alpha1 * t) *: Lsubmx p) t0)
+         (derive1mx (fun t => 'e_2 + expR (- gamma * t) *: (Rsubmx p - 'e_2)) t0).
+  
   admit.
+  rewrite !derive1mxD.
+  Search derive1mx.
+  Search (_ *: _) (_*m_).
+  under eq_fun do rewrite -!mul_mx_scalar.
+  rewrite !derive1mxM /=.
+  rewrite !derive1mx_lsubmx /=.
+  Search row_mx lsubmx.
+  Search expR.
+  have -> : derive1mx (fun t1 : K => (expR (- alpha1 * t1))%:M) = 
+               (fun t1 => (- alpha1) *:  (expR (- alpha1 * t1))%:M).
+  admit.
+  rewrite !derive1mx_cst /= lsubmx_const /= !mul0mx !add0r.
+  rewrite -[in RHS]mul_mx_scalar -[in RHS]mul_mx_scalar/=.
+  congr(row_mx).
+  by rewrite -mul_mx_scalar /= mulmxA.
+  under eq_fun do rewrite -mul_scalar_mx.
+  have -> : derive1mx (fun x : K => (expR (- gamma * x))%:M *m (Rsubmx p - 'e_2 )) = 
+               (fun x => (- gamma ) *:  (expR (- gamma * x))%:M *m (Rsubmx p - 'e_2)).
+  admit.
+  Search ( \S(_) ^+2).
+  rewrite skew.sqr_spin /=.
+    admit.
+    admit.
+    admit.
+    admit.
+    admit.
+  instantiate (1 := fun t : K =>
+  row_mx (expR (- alpha1 * t) *: Lsubmx p)
+         ('e_2 + expR (- gamma * t) *: (Rsubmx p - 'e_2))).
+  rewrite /=.
+  rewrite !row_mxKl !row_mxKr.
+  rewrite -/y.
+  rewrite D_y.
+  rewrite /y /=.
+  by rewrite !row_mxKl !row_mxKr.
+  rewrite /= !row_mxKl !row_mxKr.
+  pose y := fun t : K =>
+  row_mx (expR (- alpha1 * t) *: Lsubmx p)
+         ('e_2 + expR (- gamma * t) *: (Rsubmx p - 'e_2)).
+  have D_y : forall t, derive1mx y t =
+  row_mx (- alpha1 *: Lsubmx (y t))
+         (gamma *: (Rsubmx (y t) - Lsubmx (y t)) *m \S('e_2 - Rsubmx (y t)) ^+ 2).
+  move => t0.
+    admit.
+  by rewrite /y D_y  !row_mxKl !row_mxKr.
+  exists 0.
+  rewrite !mulr0 expR0 !scale1r addrA.
+  transitivity ( row_mx (Lsubmx p) (Rsubmx p )); last first.
+    admit.
+  by rewrite hsubmxK.
 Admitted.
 
 Definition point1 : 'rV[K]_6 := 0.
