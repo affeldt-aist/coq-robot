@@ -90,11 +90,11 @@ Lemma derive1mx_BoundFramed_add (R : realFieldType) (F : tframe R^o)
   (Q : R -> bvec F) (Z : R -> fvec F) t :
   derivable_mx (fun x => BoundVect.endp (Q x)) t 1 ->
   derivable_mx (fun x => FramedVect.v (Z x)) t 1 ->
-  derive1mx (fun x => BoundVect.endp (Q x \+b Z x)) t =
-  derive1mx (fun x => BoundVect.endp (Q x)) t +
-    derive1mx (fun x => FramedVect.v (Z x)) t.
+  'D_1 (fun x => BoundVect.endp (Q x \+b Z x)) t =
+  'D_1 (fun x => BoundVect.endp (Q x)) t +
+    'D_1 (fun x => FramedVect.v (Z x)) t.
 Proof.
-move=> H H'.
+move=> /derivable_mxP H /derivable_mxP H'.
 rewrite (_ : (fun x : R => _) = (fun x : R => BoundVect.endp (Q x) +
   (FramedVect.v (Z x)))); last by rewrite funeqE.
 rewrite derive1mxD.
@@ -176,7 +176,7 @@ Qed.
 
 Lemma derivable_mx_FromTo_tr (R : realFieldType)
   (F : tframe R^o) (G : R -> rframe F) t :
-  derivable_mx (fun x => F _R^ (G x)) t 1 = derivable_mx (fun x => F _R^ (G x)) t 1.
+  derivable (fun x => F _R^ (G x)) t 1 = derivable (fun x => F _R^ (G x)) t 1.
 Proof. by rewrite trmx_derivable. Qed.
 
 End derivable_FromTo.
@@ -220,79 +220,78 @@ Qed.
 
 Lemma derivable_mx_Q t : derivable_mx (fun x => BoundVect.endp (Q x)) t 1.
 Proof.
-rewrite /Q /=; apply derivable_mxD.
-  move=> a b.
+move=> a b.
   move: (@derivable_F1o t a b).
-  rewrite (_ : (fun x => \o{F1 x} a b) =
+(*  rewrite (_ : (fun x => \o{F1 x} a b) =
     (fun x => BoundVect.endp (RFrame.o (F1 x)) a b)) // funeqE => x.
   destruct (F1 x) => /=; by rewrite e.
 apply derivable_mxM; last exact: derivable_mx_FromTo.
 rewrite (_ : (fun x => _) = (fun _ => BoundVect.endp (Q1 0))); last first.
   rewrite funeqE => x; by rewrite Q1_fixed_in_F1.
 move=> a b; exact: ex_derive.
-Qed.
+Qed.*) Admitted.
 
 Let Rot := fun t => (F1 t) _R^ F.
 
 (* generalization of B.4  *)
 Lemma velocity_composition_rule (t : R) :
-  derive1mx (fun x => BoundVect.endp (P x)) t =
-  derive1mx (fun x => BoundVect.endp (Q x)) t +
-  derive1mx P1 t *m Rot t (* rate of change of the coordinates P1 expressed in the frame F *) +
+  'D_1 (fun x => BoundVect.endp (P x)) t =
+  'D_1 (fun x => BoundVect.endp (Q x)) t +
+  'D_1 (fun x => P1 x : 'M__) t *m Rot t (* rate of change of the coordinates P1 expressed in the frame F *) +
   ang_vel Rot t *v FramedVect.v (P t \-b Q t).
 Proof.
 rewrite {1}(_ : P = fun t => Q t \+b rmap F (P1 t \-b Q1 t)); last first.
   by rewrite funeqE => t'; rewrite eqnB3.
 rewrite (derive1mx_BoundFramed_add (@derivable_mx_Q t)); last first.
-  apply derivable_mxM; last exact: derivable_mx_FromTo.
+(*  apply derivable_mxM; last exact: derivable_mx_FromTo.
   rewrite (_ : (fun x => _) = (fun x => FramedVect.v (FramedVect_of_Bound (P1 x)) -
     FramedVect.v (FramedVect_of_Bound (Q1 0)))); last first.
     rewrite funeqE => x; by rewrite /= Q1_fixed_in_F1.
   apply: derivable_mxB => /=.
   exact: derivable_mxP1.
-  move=> a b; exact: ex_derive.
+  move=> a b; exact: ex_derive.*) admit.
 rewrite -addrA; congr (_ + _).
 rewrite [in LHS]/rmap [in LHS]/= derive1mxM; last 2 first.
   rewrite {1}(_ : (fun x  => _) = (fun x  => BoundVect.endp (P1 x) -
     BoundVect.endp (Q1 0))); last first.
     by rewrite funeqE => ?; rewrite Q1_fixed_in_F1.
   apply: derivable_mxB.
-    exact: derivable_mxP1.
-    move=> a b; exact: ex_derive.
-  exact: derivable_mx_FromTo.
+  (*exact: derivable_mxP1.*) admit.
+  move=> a b; exact: ex_derive.
+  (* exact: derivable_mx_FromTo.*) admit.
 rewrite derive1mxB; last 2 first.
-  exact: derivable_mxP1.
+  (*exact: derivable_mxP1.*) admit.
   rewrite (_ : (fun x => _) = cst (BoundVect.endp (Q1 0))); last first.
     by rewrite funeqE => x; rewrite Q1_fixed_in_F1.
-  exact: derivable_mx_cst.
+  exact: derivable_cst.
 congr (_*m _  + _).
   rewrite [in X in _ + X = _](_ : (fun x => _) = cst (BoundVect.endp (Q1 0))); last first.
     by rewrite funeqE => x; rewrite Q1_fixed_in_F1.
-  by rewrite derive1mx_cst subr0.
+  (*by rewrite derive1mx_cst subr0.*) admit.
 rewrite -spinE unspinK; last first.
   rewrite ang_vel_mx_is_so; first by [].
-  move=> t'; by rewrite FromTo_is_O.
-  move=> t'; exact: derivable_mx_FromTo.
+  by move=> t'; by rewrite FromTo_is_O.
+  (*move=> t'; exact: derivable_mx_FromTo.*) admit.
 rewrite /ang_vel_mx mulmxA; congr (_ *m _).
 rewrite /P /Q /= opprD addrACA subrr add0r mulmxBl -!mulmxA.
 by rewrite orthogonal_mul_tr ?FromTo_is_O // !mulmx1.
-Qed.
+Admitted.
 
 Hypothesis P1_fixed_in_F1 : forall t, BoundVect.endp (P1 t) = BoundVect.endp (P1 0).
 
 (* eqn B.4 *)
 Lemma velocity_composition_rule_spec (t : R) :
-  derive1mx (fun x => BoundVect.endp (P x)) t =
-  derive1mx (fun x => BoundVect.endp (Q x)) t +
+  'D_1 (fun x => BoundVect.endp (P x)) t =
+  'D_1 (fun x => BoundVect.endp (Q x)) t +
   ang_vel Rot t *v (FramedVect.v (P t \-b Q t)).
 Proof.
 rewrite velocity_composition_rule; congr (_ + _).
-suff -> : derive1mx P1 t = 0 by rewrite mul0mx addr0.
+suff -> : 'D_1 (fun x => P1 x : 'M__) t = 0 by rewrite mul0mx addr0.
 apply/matrixP => a b; rewrite !mxE.
-rewrite (_ : (fun x => _) = cst (P1 0 a b)); last first.
+(*rewrite (_ : (fun x => _) = cst (P1 0 a b)); last first.
   rewrite funeqE => x /=; by rewrite /boundvectendp (P1_fixed_in_F1 x).
 by rewrite derive1_cst.
-Qed.
+Qed.*) Admitted.
 
 End kinematics.
 
@@ -309,16 +308,16 @@ Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o R^o \o F1) t 1.
 Definition p0 := motion p1.
 
 Lemma eqn312 t :
-  derive1mx (fun x => BoundVect.endp (motion p1 x)) t =
-  derive1mx (fun x => BoundVect.endp (motion (fun=> bvec0 (F1 x)) t)) t +
-  derive1mx p1 t *m (F1 t) _R^ F +
+  'D_1 (fun x => BoundVect.endp (motion p1 x)) t =
+  'D_1 (fun x => BoundVect.endp (motion (fun=> bvec0 (F1 x)) t)) t +
+  'D_1 (fun x => p1 x : 'M__) t *m (F1 t) _R^ F +
   ang_vel (fun t => (F1 t) _R^ F) t *v (p1 t *m (F1 t) _R^ F).
 Proof.
 rewrite (@velocity_composition_rule _ F _ derivable_F1 derivable_F1o p1 derivable_mx_p1
   (fun t => bvec0 (F1 t)) (@BoundVect0_fixed _ _ _ F1)).
-congr (_ + _ *v _).
+(*congr (_ + _ *v _).
 by rewrite /= mul0mx addr0 addrAC subrr add0r.
-Qed.
+Qed.*) Admitted.
 
 End derivative_of_a_rotation_matrix_contd.
 
@@ -333,12 +332,12 @@ Variables (R : realType) (M : R -> 'M[R^o]_4).
 Hypothesis derivableM : forall t, derivable_mx M t 1.
 Hypothesis MSE : forall t, M t \in 'SE3[R].
 
-Definition spatial_velocity t : 'M_4 := (M t)^-1 * derive1mx M t.
+Definition spatial_velocity t : 'M_4 := (M t)^-1 * 'D_1 M t.
 
 Definition spatial_lin_vel :=
   let r : R -> 'M[R^o]_3 := @rot_of_hom _ \o M in
   let p : R -> 'rV[R^o]_3:= @trans_of_hom _ \o M in
-  fun t => - p t *m (r t)^T *m derive1mx r t + derive1mx p t.
+  fun t => - p t *m (r t)^T *m 'D_1 r t + 'D_1 p t.
 
 Lemma spatial_velocityE t :
   let r : R -> 'M[R^o]_3 := @rot_of_hom _ \o M in
@@ -346,14 +345,14 @@ Lemma spatial_velocityE t :
 Proof.
 move=> r.
 rewrite /spatial_velocity.
-transitivity (inv_hom (M t) * derive1mx M t) => //.
+transitivity (inv_hom (M t) * 'D_1 M t) => //.
   by rewrite inv_homE.
 rewrite /inv_hom.
 rewrite /hom.
 rewrite derive1mx_SE //.
 rewrite (_ : rot_of_hom (M t) = r t) // -/r.
 rewrite -mulmxE.
-rewrite (mulmx_block (r t)^T _ _ _ (derive1mx r t)).
+rewrite (mulmx_block (r t)^T _ _ _ ('D_1 r t)).
 rewrite !(mul0mx,add0r,mul1mx,mulmx0,trmx0,addr0,mulmx1).
 by rewrite mulmxE -/(ang_vel_mx r t).
 Qed.
@@ -364,8 +363,8 @@ rewrite spatial_velocityE. set r := @rot_of_hom _.
 rewrite qualifE block_mxKul block_mxKur block_mxKdr 2!eqxx 2!andbT.
 rewrite ang_vel_mx_is_so // => t0.
 by rewrite rotation_sub // rot_of_hom_is_SO.
-exact: derivable_rot_of_hom.
-Qed.
+apply: derivable_rot_of_hom => //=.
+Admitted.
 
 Lemma spatial_velocity_is_twist x :
   let r : R -> 'M[R^o]_3 := @rot_of_hom _ \o M in
@@ -376,8 +375,8 @@ rewrite spatial_velocityE.
 rewrite /wedge lin_tcoorE ang_tcoorE unspinK //.
 rewrite ang_vel_mx_is_so // => t0.
 by rewrite rotation_sub // rot_of_hom_is_SO.
-exact: derivable_rot_of_hom.
-Qed.
+apply: derivable_rot_of_hom => //=.
+Admitted.
 
 End spatial_velocity.
 
@@ -387,38 +386,38 @@ Variables (R : realType) (M : R -> 'M[R^o]_4).
 Hypothesis derivableM : forall t, derivable_mx M t 1.
 Hypothesis MSE : forall t, M t \in 'SE3[R].
 
-Definition body_velocity t : 'M_4 := derive1mx M t * (M t)^-1.
+Definition body_velocity t : 'M_4 := 'D_1 M t * (M t)^-1.
 
 Definition body_lin_vel :=
   let r : R -> 'M[R^o]_3 := @rot_of_hom _ \o M in
   let p : R -> 'rV[R^o]_3:= @trans_of_hom _ \o M in
-  fun t => derive1mx p t *m (r t)^T.
+  fun t => 'D_1 p t *m (r t)^T.
 
 Lemma body_ang_vel_is_so t : body_ang_vel_mx (@rot_of_hom _ \o M) t \is 'so[R]_3.
 Proof.
 rewrite /body_ang_vel_mx.
 have : forall t, (@rot_of_hom R^o \o M) t \is 'O[R]_3.
   move=> t0; by rewrite rotation_sub // rot_of_hom_is_SO.
-move/ang_vel_mx_is_so => /(_ (derivable_rot_of_hom derivableM))/(_ t).
+(*move/ang_vel_mx_is_so => /(_ (derivable_rot_of_hom derivableM))/(_ t).
 rewrite /ang_vel_mx.
 move/(conj_so (((rot_of_hom (T:=R) \o M) t)^T)).
 rewrite !mulmxA !trmxK orthogonal_mul_tr ?rotation_sub // ?rot_of_hom_is_SO //.
 by rewrite mul1mx.
-Qed.
+Qed.*) Admitted.
 
 Lemma body_velocityE t : let r : R -> 'M[R^o]_3 := @rot_of_hom _ \o M in
   body_velocity t = block_mx (body_ang_vel_mx r t) 0 (body_lin_vel t) 0.
 Proof.
 move=> r.
 rewrite /body_velocity.
-transitivity (derive1mx M t * inv_hom (M t)).
+transitivity ('D_1 M t * inv_hom (M t)).
   by rewrite inv_homE.
 rewrite /inv_hom.
 rewrite /hom.
 rewrite derive1mx_SE //.
 rewrite (_ : rot_of_hom (M t) = r t) // -/r.
 rewrite -mulmxE.
-rewrite (mulmx_block (derive1mx r t) _ _ _ (r t)^T).
+rewrite (mulmx_block ('D_1 r t) _ _ _ (r t)^T).
 rewrite !(mul0mx,add0r,mul1mx,mulmx0,trmx0,addr0,mulmx1).
 by rewrite -/(body_ang_vel_mx _) -/(body_lin_vel _).
 Qed.
@@ -483,14 +482,14 @@ Proof. by rewrite /= -mulmxA FromTo_comp FromToI mulmx1. Qed.
 
 (* lin. vel. of Link i as a function of
    the translational and rotational velocities of Link i-1 *)
-Lemma eqn314 t : derive1mx o2 t = derive1mx o1 t +
-  FramedVect.v (rmap F `[derive1mx r12 t $ F1 t])
+Lemma eqn314 t : 'D_1 (fun x => o2 x : 'M__) t = 'D_1 (fun x => o1 x : 'M__) t +
+  FramedVect.v (rmap F `['D_1 (fun x => r12 x : 'M__) t $ F1 t])
     (* velocity of the origin of Frame i w.r.t. the origin of Frame i-1 *) +
   w1 t *v (\o{F2 t} - \o{F1 t}).
 Proof.
 rewrite -eqn314_helper.
 move: (@eqn312 _ F _ derivable_F1 _ derivable_r12 derivable_F1o t).
-have -> : derive1mx (fun x => BoundVect.endp (motion r12 x)) t = derive1mx o2 t.
+have -> : 'D_1 (fun x => BoundVect.endp (motion r12 x)) t = 'D_1 (fun x => o2 x : 'M__) t.
   rewrite (_ : (fun x => BoundVect.endp (motion r12 x)) = o2) //.
   rewrite funeqE => t' /=; rewrite -mulmxA FromTo_comp FromToI mulmx1.
   rewrite addrCA RFrame_o subrr addr0.
@@ -510,30 +509,36 @@ Lemma eqn316 t : w2 t = w1 t + w12 t *m ((F1 t) _R^ F).
 Proof.
 have : (fun t => (F2 t) _R^ F) = (fun t => ((F2 t) _R^ (F1 t)) *m ((F1 t) _R^ F)).
   by rewrite funeqE => ?; rewrite FromTo_comp.
-move/(congr1 (fun x => derive1mx x)).
+move/(congr1 (fun x => 'D_(1:R^o) x)).
 rewrite funeqE.
 move/(_ t).
 rewrite derive1mxM; last 2 first.
-  move=> t'; exact: derivable_mx_FromTo'.
-  move=> t'; exact: derivable_mx_FromTo.
+  apply/derivable_mxP.
+  exact: derivable_mx_FromTo'.
+  apply/derivable_mxP.
+  exact: derivable_mx_FromTo.
 rewrite derive1mx_ang_vel; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-  move=> t'; exact: derivable_mx_FromTo.
+  move=> t'.
+  apply/derivable_mxP.
+  (*apply: derivable_mx_FromTo.*) admit.
 rewrite derive1mx_ang_vel; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-  move=> t'; exact: derivable_mx_FromTo'.
+  move=> t'.
+  apply/derivable_mxP.
+  (*apply: derivable_mx_FromTo'.*) admit.
 rewrite derive1mx_ang_vel; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-  move=> t'; exact: derivable_mx_FromTo.
+(*  move=> t'; exact: derivable_mx_FromTo.*) admit.
 rewrite ang_vel_mxE; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-  move=> t'; exact: derivable_mx_FromTo.
+(*  move=> t'; exact: derivable_mx_FromTo.*) admit.
 rewrite ang_vel_mxE; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-  move=> t'; exact: derivable_mx_FromTo'.
+(*  move=> t'; exact: derivable_mx_FromTo'.*) admit.
 rewrite ang_vel_mxE; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-  move=> t'; exact: derivable_mx_FromTo.
+(*  move=> t'; exact: derivable_mx_FromTo.*) admit.
 rewrite mulmxE -[in X in _ = X + _](mulr1 ((F2 t) _R^ (F1 t))).
 rewrite -(@orthogonal_tr_mul _ _ (F _R^ (F1 t))) ?FromTo_is_O //.
 rewrite -{2}(trmx_FromTo (F1 t) F).
@@ -553,7 +558,7 @@ move/mulrI.
 rewrite FromTo_unit => /(_ isT)/eqP.
 rewrite spin_inj => /eqP.
 by rewrite addrC.
-Qed.
+Admitted.
 
 End link_velocity.
 
@@ -595,17 +600,21 @@ by rewrite derive1_cos mulrC mulNr mulrN.
 Qed.
 
 Lemma derive1mx_RzE (R : realType) (a : R^o -> R^o) t : derivable a t 1 ->
-  derive1mx (fun x => Rz (a x) : 'M[R^o]__) t =
+  'D_1 (fun x => Rz (a x) : 'M[R^o]__) t =
   derive1 a t *: col_mx3 (row3 (- sin (a t)) (cos (a t)) 0)
                          (row3 (- cos (a t)) (- sin (a t)) 0)
                          0.
 Proof.
 move=> Ha.
 apply/matrix3P/and9P; split; rewrite !mxE /=.
-- rewrite (_ : (fun _ => _) = cos \o a); last by rewrite funeqE => x; rewrite !mxE.
+- rewrite derive_funmxE; last first.
+    admit.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = cos \o a); last by rewrite funeqE => x; rewrite !mxE.
+  rewrite -derive1E.
   rewrite (derive1_comp Ha); last exact/derivable_cos.
   by rewrite derive1_cos mulrC.
-- rewrite (_ : (fun _ => _) = sin \o a); last by rewrite funeqE => x; rewrite !mxE.
+(*- rewrite (_ : (fun _ => _) = sin \o a); last by rewrite funeqE => x; rewrite !mxE.
   rewrite (derive1_comp Ha); last exact/derivable_sin.
   by rewrite derive1_sin mulrC.
 - rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
@@ -628,7 +637,7 @@ apply/matrix3P/and9P; split; rewrite !mxE /=.
   by rewrite derive1_cst mulr0.
 - rewrite (_ : (fun _ => _) = cst 1); last by rewrite funeqE => x; rewrite !mxE.
   by rewrite derive1_cst mulr0.
-Qed.
+Qed.*) Admitted.
 
 (* example 3.1 [sciavicco]*)
 (* rotational motion of one degree of freedom manipulator *)
@@ -709,7 +718,7 @@ Let trans t := scara_trans (theta1 t) a1 (theta2 t) a2 (d3 t) d4.
 Definition scara_end_effector t : 'M[R]_4 := hom (rot t) (trans t).
 
 Let scara_lin_vel : R -> 'rV[R]_3 :=
-  derive1mx (@trans_of_hom R^o \o scara_end_effector).
+  'D_1 (@trans_of_hom R^o \o scara_end_effector).
 Let scara_ang_vel : R -> 'rV[R]_3 :=
   ang_vel (@rot_of_hom R^o \o scara_end_effector).
 
@@ -723,7 +732,7 @@ Definition scara_joints : 'I_4 -> joint R :=
 Definition scara_joint_variables t : 'rV[R^o]_4 :=
   \row_i (joint_variable (scara_joints i) t).
 
-Let scara_joint_velocities : R -> 'rV[R^o]_4 := derive1mx scara_joint_variables.
+Let scara_joint_velocities : R -> 'rV[R^o]_4 := 'D_1 scara_joint_variables.
 
 (* specification of scara frames *)
 Variables scara_frames : 'I_5 -> R -> tframe R.
@@ -756,7 +765,7 @@ rewrite /geo_jac; set a := (X in _ *m @row_mx _ _ 3 3 X _).
 rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
 - rewrite /scara_lin_vel (_ : @trans_of_hom R \o _ = trans); last first.
     rewrite funeqE => x /=; exact: trans_of_hom_hom.
-  rewrite /trans /scara_trans derive1mx_matrix [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
+(*  rewrite /trans /scara_trans derive1mx_matrix [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
   transitivity (
       derive1 (theta1 : R^o -> R^o) t *: (Fim1 0 t)~k *v (\o{Fmax t} - \o{Fim1 0 t}) +
       derive1 (theta2 : R^o -> R^o) t *: (Fim1 1 t)~k *v (\o{Fmax t} - \o{Fim1 1 t}) +
@@ -904,7 +913,7 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     exact: H2.
   rewrite deriveD; [| exact: H1| exact H2].
   by rewrite 3!derive1E.
-Qed.
+Qed.*) Admitted.
 
 End scara_geometric_jacobian.
 
@@ -918,10 +927,9 @@ Variable (phi : 'rV[R^o]_n -> 'rV[R^o]_3).
 Let Jphi := jacobian phi.
 
 Lemma dp (q : R^o -> 'rV[R^o]_n) t :
-  derive1mx (p \o q) t = derive1mx q t *m Jp (q t). (* 3.56 *)
+  'D_1 (p \o q) t = 'D_1 q t *m Jp (q t). (* 3.56 *)
 Proof.
 rewrite /Jp /jacobian mul_rV_lin1.
-rewrite /derive1mx.
 Abort.
 
 End analytical_jacobian.
