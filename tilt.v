@@ -1,9 +1,8 @@
-
 From mathcomp Require Import all_ssreflect all_algebra ring.
 From mathcomp Require Import boolp classical_sets functions reals.
 From mathcomp Require Import topology normedtype derive.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
-(*Require Import lasalle pendulum.*)
+Require Import lasalle pendulum.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -300,22 +299,23 @@ Proof.
 rewrite /=.
 rewrite -!derive1E.
 rewrite (_ : (fun x  => f x i j) = (fun M : 'M_(m.+1,n.+1) => M i j)  \o f ) //.
+rewrite fctE.
 Admitted.
 
 Lemma derivemx_derive {R : realFieldType} (V : normedModType R) m n
    (f : V -> 'M[R]_(m.+1, n.+1)) (x0 : V) (v : V) (i : 'I_m.+1) (j : 'I_n.+1) :
   'D_v f x0 i j = 'D_v (fun x => f x i j) x0.
 Proof.
-rewrite !deriveE; last 2 first.
-  admit.
-  admit.
-rewrite (_ : (fun x : V => f x i j) = (fun M : 'M_(m.+1,n.+1) => M i j)  \o f ).
-rewrite [in RHS]diff_comp ; last 2 first.
-  admit.
-  admit.
-rewrite /=.
-From mathcomp Require Import landau.
-under eq_fun do rewrite /=.
+rewrite /derive /=.
+set g := fun h => h^-1 *: (f (h *: v + x0) - f x0).
+have Hfunc : forall x, g x i j = x^-1 *: (f (x *: v + x0) i j - f x0 i j).
+  move=> x.
+  rewrite /g mxE.
+  rewrite mxE.
+  by rewrite mxE.
+under eq_fun do rewrite -Hfunc.
+symmetry.
+Search lim ( 'M_(_,_)).
 Admitted.
 Local Close Scope classical_set_scope.
 
@@ -614,18 +614,70 @@ End Gamma1.
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
+(* definition du probleme *)
+Record equa_diff (K : realType) := {
+  equa_f : 'rV[K]_6 -> 'rV[K]_6 ; (* autonomous *)
+  equa_S0 : set 'rV[K]_6 ; (* intended to be invariant *)
+  equa_fk : exists k, k.-lipschitz_equa_S0 equa_f ;
+    (* hypothesis for existence and uniqueness of a solution *)
+  equa_t0 : K ; (* initial time *)
+}.
+
+Definition is_invariant_solution_equa_diff
+    {K : realType} (e : equa_diff K) (y : K -> 'rV[K]_6) :=
+  is_solution (fun y t => equa_f e (y t)) y /\
+  (y (equa_t0 e) \in equa_S0 e ->
+    (forall t, t > 0 -> y (equa_t0 e + t) \in equa_S0 e)).
+
 Section eqn33.
 Variable K : realType.
 Variable alpha1 : K.
 Variable gamma : K.
+Variable y0 : K -> 'rV[K]_6.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
+Hypothesis y0init: y0 0 \in Gamma1.
 
 Definition eqn33 (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
   let zp1_point := Left \o zp1_z2_point in
   let z2_point := Right \o zp1_z2_point in
   fun t => row_mx (- alpha1 *: zp1_point t)
          (gamma *: (z2_point t - zp1_point t) *m \S('e_2%:R - z2_point t) ^+ 2).
+
+Definition eqn33' (zp1_z2_point : 'rV[K]_6) : 'rV[K]_6 :=
+  let zp1_point := Left zp1_z2_point in
+  let z2_point := Right zp1_z2_point in
+  row_mx (- alpha1 *: zp1_point)
+         (gamma *: (z2_point - zp1_point) *m \S('e_2%:R - z2_point) ^+ 2).
+
+Lemma eqn33E y t : eqn33 y t = eqn33' (y t). Proof. by []. Qed.
+
+Lemma eqn33'_lipschitz : exists k, k.-lipschitz_setT eqn33'.
+Proof.
+near (pinfty_nbhs K) => k.
+exists k => -[/= x y] _.
+rewrite /eqn33'.
+set fx := row_mx (- alpha1 *: Left x)
+                  (gamma *: (Right x - Left x) *m \S('e_2 - Right x) ^+ 2).
+set fy := row_mx (- alpha1 *: Left y)
+                  (gamma *: (Right y - Left y) *m \S('e_2 - Right y) ^+ 2).
+rewrite /Num.norm/=.
+rewrite !mx_normrE.
+apply: bigmax_le => /=.
+  admit.
+move=> -[a b] _.
+rewrite /=.
+rewrite [leRHS](_ : _ = \big[maxr/0]_ij (maxr alpha1 gamma * `|(x - y) ij.1 ij.2|)); last first.
+  admit.
+rewrite (le_trans (@ler_peMl _ (maxr alpha1 gamma) _ _ _))//.
+  admit.
+apply: le_trans; last first.
+  exact: (@le_bigmax _ _ _ 0 (fun ij => maxr alpha1 gamma * `|(x - y) ij.1 ij.2|) (a, b)).
+rewrite /=.
+apply: (@le_trans _ _ (`|(maxr alpha1 gamma *: fx - maxr alpha1 gamma *: fy) a b|)).
+  admit.
+apply: (@le_trans _ _ (`|maxr alpha1 gamma *: x a b - maxr alpha1 gamma *: y a b|)); last first.
+Admitted.
 
 (* cauchy lipschitz par F1 qui definit un champ de vecteur lisse :
 il existe une solution depuis tout point:
@@ -641,7 +693,7 @@ Lemma inv_Gamma1 p (p33 : state_space eqn33 p) :
 Proof.
 case: p33 => /= y sol_y Delta Delta_ge0.
 rewrite /state_space/=.
-exists y; split=> //.
+exists y; split.
   by case: sol_y.
 case: cid => //= y' y'sol.
 case: cid => t'/= pt'.
@@ -654,16 +706,13 @@ Proof.
 nagumo theorem *)
 apply/seteqP; split.
 - move=> p.
-  rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
-  move=> [y0 [Heq Hrange]].
-  move: Hrange.
-  move => exi.
-  case: exi.
+  move=> [y [Heq]].
+  case.
   move=> t.
   move=> ->.
   have Heqt := Heq t.
-  have : derive1(fun t=> ('e_2 - Right (y0 t)) *d (('e_2 - Right (y0 t)))) = 0.
-    transitivity (fun t => -2 * (Right(y0^`()%classic t) *d ('e_2 - Right (y0 t)))). 
+  have : derive1(fun t=> ('e_2 - Right (y t)) *d (('e_2 - Right (y t)))) = 0.
+    transitivity (fun t => -2 * (Right(y^`()%classic t) *d ('e_2 - Right (y t)))). 
       apply/funext => x.
       rewrite -!derive1mxE' /= /dotmul.
       under eq_fun do rewrite dotmulP /=.
@@ -676,8 +725,8 @@ apply/seteqP; split.
       rewrite /dotmul /= !derive1mxE' /= [in RHS]mulr2n [RHS]mulNr [in RHS]mulrDl.
       rewrite !mul1r !dotmulP /= dotmulC [in RHS]dotmulC !linearD /=.
       rewrite -!derive1mxE' !mxE /= !mulr1n.
-      have -> : (derive1mx (fun x0 : K => 'e_2 - Right (y0 x0)) x) 
-            = - (Right (derive1mx y0 x)).
+      have -> : (derive1mx (fun x0 : K => 'e_2 - Right (y x0)) x) 
+            = - (Right (derive1mx y x)).
         rewrite derive1mxB /= ; last 2 first.
           admit.
           admit.
@@ -685,7 +734,7 @@ apply/seteqP; split.
         congr (-_).
         apply derive1mx_rsubmx.
       ring.
-      have : forall t, (Right (y0^`()%classic t) =  (gamma *: (Right (y0 t) - Left (y0 t)) *m            \S('e_2 - Right (y0 t)) ^+ 2)).
+      have : forall t, (Right (y^`()%classic t) =  (gamma *: (Right (y t) - Left (y t)) *m            \S('e_2 - Right (y t)) ^+ 2)).
         move => t0.
         rewrite -derive1mxE'.
         rewrite Heq.
@@ -693,19 +742,17 @@ apply/seteqP; split.
       move => Rsu.
       apply/funext => t0.
       rewrite /dotmul.
-      transitivity (-2 * (gamma *: (Right (y0 t0) - Left (y0 t0)) *m \S('e_2 - Right (y0 t0)) ^+ 2 
-               *m ('e_2 - Right (y0 t0))^T) 0 0).
+      transitivity (-2 * (gamma *: (Right (y t0) - Left (y t0)) *m \S('e_2 - Right (y t0)) ^+ 2 
+               *m ('e_2 - Right (y t0))^T) 0 0).
         by rewrite Rsu /=.
       rewrite !mulmxA.
       apply/eqP.
       rewrite mulf_eq0 /= oppr_eq0 ?pnatr_eq0 /= -!mulmxA spin_mul_tr.
       by rewrite !mulmx0 mxE.
-    under eq_fun do rewrite dotmulvv /=.
+    under eq_fun do rewrite dotmulvv /=. (* derivee de la norme est egale a 0*)
     move => h.
-    have y0_init : y0 0 \in Gamma1. (* TODO general hypothesis*)
-      admit.
-    have norm_constant : norm ('e_2 - Right (y0 t))^+2 = norm ('e_2 - Right (y0 0))^+2.
-      have : forall x0, is_derive x0 (1:K) (fun x : K => norm ('e_2 - Right (y0 x)) ^+ 2) 0. 
+    have norm_constant : norm ('e_2 - Right (y t))^+2 = norm ('e_2 - Right (y 0))^+2.
+      have : forall x0, is_derive x0 (1:K) (fun x : K => norm ('e_2 - Right (y x)) ^+ 2) 0. 
         move => x0.
         apply: DeriveDef.
           admit.
@@ -715,9 +762,11 @@ apply/seteqP; split.
       move/ (_ _ 0).
       move => s0.
       by apply: s0.
-    move: y0_init.
+    move: y0init.
     rewrite inE /Gamma1 /=.
     move=> Hnorm0. (* reecrire ce charabia*)
+    replace y with y0. (* vient de l'unicite des solutions de l'EDO. cauchy lipschitz ... *)
+    replace y with y0 in norm_constant.
     rewrite Hnorm0 in norm_constant.
     move: norm_constant.
     move=> Hsq.
@@ -727,55 +776,21 @@ apply/seteqP; split.
     rewrite sqrp_eq1 in Hsq ; last first.
       exact: norm_ge0.
     exact : Hsq.
-(* il existe une solution depuis tout point, cauchy lipschitz*)
+    admit.
+    admit.
 - move=> p.
   rewrite /state_space /Gamma1 /eqn33 /is_solution /=.
   move=> norme.
-  pose y := fun t : K => row_mx (expR (- alpha1 * t) *: Left p)
-                              ('e_2 + expR (- gamma * t) *: (Right p - 'e_2)).
-  have D_y : forall t, derive1mx y t =
-      row_mx (- alpha1 *: Left (y t))
-             (gamma *: (Right (y t) - Left (y t)) *m \S('e_2 - Right (y t)) ^+ 2).
-    move=> t0.
-    rewrite /y /= !row_mxKl !row_mxKr.
-    transitivity (
-      row_mx (derive1mx (fun t1 => (expR (- alpha1 * t1) *: Left p)) t0)
-             (derive1mx (fun t1 => 'e_2 + expR (- gamma * t1) *: (Right p - 'e_2)) t0)).
-      admit.
-    congr row_mx.
-      under eq_fun do rewrite -!mul_mx_scalar.
-      rewrite !derive1mxM /=; last 2 first.
-        admit.
-        admit.
-      rewrite derive1mx_lsubmx.
-      rewrite derive1mx_cst.
-      rewrite lsubmx_const mul0mx add0r.
-      (* TODO: derive_comp *)
-      admit.
-    transitivity ((- gamma *: expR (- gamma * t0) *: (Right p - 'e_2))).
-      rewrite derive1mxD; last 2 first.
-        admit.
-        admit.
-      rewrite derive1mx_cst/= add0r.
-      admit.
-    rewrite opprD addrA subrr add0r.
-    rewrite spinN.
-    rewrite spinZ.
-    rewrite sqrrN.
-    rewrite exprZn.
-    rewrite (expr2 (\S(_))) -mulmxE.
-    rewrite sqr_spin//; last first.
-      admit.
-    admit.
-  exists y; split.
-    move=> t; apply/matrixP => i j.
-      have /matrixP := D_y t.
-      exact.
   exists 0.
-  rewrite /y !mulr0 expR0 !scale1r addrA.
-  transitivity (row_mx (Left p) (Right p )); last first.
-    by rewrite addrAC subrr add0r.
-  by rewrite hsubmxK.
+  split.
+  move => t. 
+  rewrite derive1mx_cst /=.
+  rewrite !lsubmx_const !rsubmx_const /= !scalerBr /=.
+  by rewrite !scaler0 subr0 mul0mx row_mx0 /=.
+  have init : p = 0 0. (* most likely a false hypothesis*)
+  admit.
+  exists 0.
+  apply init.
 Admitted.
 
 Definition point1 : 'rV[K]_6 := 0.
@@ -950,6 +965,9 @@ Hypothesis gamma_gt0 : 0 < gamma.
 Variable R : K -> 'M[K]_3.
 Variable v : K -> 'rV[K]_3.
 Definition x1 := v.
+Variable y0 : K -> 'rV[K]_6.
+Hypothesis y0init: y0 0 \in Gamma1.
+Hypothesis y0sol : is_solution (eqn33 alpha1 gamma) y0.
 
 Definition p1 t : 'rV[K]_3 :=
   let x1_t := x1 t in
@@ -1024,8 +1042,8 @@ Qed.
 Lemma Gamma1_traj (traj : K -> 'rV_6) t :
   is_solution (eqn33 alpha1 gamma) traj -> Gamma1 (traj t).
 Proof.
-move=> ?.
-rewrite -(thm11a gamma_gt0 alpha1_gt0).
+move=> iss.
+rewrite -(thm11a gamma_gt0 alpha1_gt0 y0init ).
 exists traj; split => //.
 by exists t.
 Qed.
