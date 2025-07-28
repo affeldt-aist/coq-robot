@@ -1661,9 +1661,8 @@ rewrite [X in _ + _ + X](_ : _ = - M 0 2%:R * M 2%:R 0); last first.
   rewrite [in X in X * _]/=.
   rewrite coefD coefM sum2E subn0 coefC coefC mulr0 add0r.
   rewrite coefC mul0r add0r coefM sum2E subn0 subnn coefC [in X in X * _`_1]/=.
-  rewrite !coefD !coefX !coefN !coefC/=.
-  rewrite !mul0r !addr0/= subr0 mulr1.
-  by rewrite mulNr.
+  rewrite coefD coefX coefN !coefC/= !(subr0,mul0r,mulr0,mulr1,addr0).
+  by rewrite coefB coefC/= subr0 coefX eqxx mulr1 mulNr.
 rewrite /Z.
 apply/(@mulrI _ 2%:R); first exact: pnatf_unit.
 rewrite mulrA div1r divrr ?pnatf_unit // mul1r.
