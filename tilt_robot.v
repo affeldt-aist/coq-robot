@@ -115,9 +115,9 @@ Lemma norm_squared {R : rcfType} n (u : 'rV[R]_n) :
   (u *m (u)^T) 0 0 = norm u ^+2.
 Proof. by rewrite -dotmulvv /dotmul. Qed.
 
-Lemma derive1mx_rsubmx {R : realType} n m :
-  forall (f : R -> 'rV[R]_(n + m)) (t : R),
-  derive1mx (fun x => rsubmx (f x)) t = rsubmx (derive1mx f t).
+Lemma derive1mx_rsubmx {R : realType} :
+  forall (f : R -> 'rV[R]_(3 + 3)) (t : R),
+  derive1mx (fun x => rsubmx (f x)) t = @rsubmx R _ 3 3 (derive1mx f t).
 Proof.
 move=> f t.
 rewrite /derive1mx.
@@ -130,9 +130,9 @@ symmetry.
 by under eq_fun do rewrite mxE.
 Qed.
 
-Lemma derive1mx_lsubmx {R : realType} n m :
-  forall (f : R -> 'rV[R]_(n + m)) (t : R),
-  derive1mx (fun x => lsubmx (f x)) t = lsubmx (derive1mx f t).
+Lemma derive1mx_lsubmx {R : realType} :
+  forall (f : R -> 'rV[R]_(3 + 3)) (t : R),
+  derive1mx (fun x => lsubmx (f x)) t = @lsubmx R _ 3 3 (derive1mx f t).
 Proof.
 move=> f t.
 rewrite /derive1mx.

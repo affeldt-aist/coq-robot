@@ -13,7 +13,7 @@ Require Import ssr_ext euclidean rigid skew.
 (*                  Derivatives of time-varying matrices                      *)
 (*                                                                            *)
 (*    derive1mx M(t) == the derivative matrix of M(t)                         *)
-(*      ang_vel_mx M == angular velocity matrix of M(t) 　　　　　　　　　　　　  *)
+(*      ang_vel_mx M == angular velocity matrix of M(t)                       *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -36,30 +36,61 @@ Lemma mxE_funeqE (R : realFieldType) (V W : normedModType R)
   (fun x => f x i j).
 Proof. by rewrite funeqE => ?; rewrite mxE. Qed.
 
-Section Derive_lemmasVW.
-Variables (R : numFieldType) (V W : normedModType R).
-Implicit Types f g : V -> W.
+Section derive_funmx.
+Local Open Scope classical_set_scope.
+Variable R : realFieldType.
+Context {m n : nat}.
 
-(* TODO: Fixme in MCA *)
-Lemma derive_cst (k : W) (x v : V) : 'D_v (cst k) x = 0.
-Proof. by rewrite derive_val. Qed.
+Lemma derive_funmxE (M : R -> 'M[R]_(m.+1, n.+1)) (t : R) v :
+  derivable M t v ->
+  'D_v M t = \matrix_(i < m.+1, j < n.+1) 'D_v (fun t => M t i j) t.
+Proof.
+move=> /cvg_ex[/= l Hl]; apply/cvg_lim => //=.
+apply/cvgrPdist_le => /= e e0.
+move/cvgrPdist_le : (Hl) => /(_ (e / 2)).
+rewrite divr_gt0// => /(_ isT)[d /= d0 dle].
+near=> x.
+rewrite [in leLHS]/Num.Def.normr/= mx_normrE.
+apply/(bigmax_le _ (ltW e0)) => -[/= i j] _.
+rewrite [in leLHS]mxE/= [X in _ + X]mxE -[X in X - _](subrK (l i j)).
+rewrite -(addrA (_ - _)) (le_trans (ler_normD _ _))// (splitr e) lerD//.
+- rewrite mxE.
+  suff : (h^-1 *: (M (h *: v + t) i j - M t i j)) @[h --> 0^'] --> l i j.
+    move/cvg_lim => /=; rewrite /derive /= => ->//.
+    by rewrite subrr normr0 divr_ge0// ltW.
+  apply/cvgrPdist_le => /= r r0.
+  move/cvgrPdist_le : Hl => /(_ r r0)[/= s s0] sr.
+  near=> y.
+  have : `|l - y^-1 *: (M (y *: v + t) - M t)| <= r.
+    rewrite sr//=; last by near: y; exact: nbhs_dnbhs_neq.
+    by rewrite sub0r normrN; near: y; exact: dnbhs0_lt.
+  apply: le_trans.
+  rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
+  by under eq_bigr do rewrite !mxE; exact: (le_bigmax _ _ (i, j)).
+- rewrite mxE.
+  have : `|l - x^-1 *: (M (x *: v + t) - M t)| <= e / 2.
+    apply: dle => //=; last by near: x; exact: nbhs_dnbhs_neq.
+    by rewrite sub0r normrN; near: x; exact: dnbhs0_lt.
+  apply: le_trans.
+  rewrite [in leRHS]/Num.Def.normr/= mx_normrE/=.
+  under eq_bigr do rewrite !mxE.
+  apply: le_trans; last exact: le_bigmax.
+  by rewrite !mxE.
+Unshelve. all: by end_near. Qed.
 
-End Derive_lemmasVW.
-
-Lemma derive1_cst {R : numFieldType} (V : normedModType R) (k : V) t : ((cst k)^`() t)%classic = 0.
-Proof. by rewrite derive1E derive_cst. Qed.
+End derive_funmx.
 
 Section derive_mx.
 
 Variable (R : realFieldType) (V W : normedModType R).
 
-Definition derivable_mx m n (M : R -> 'M[W]_(m, n)) t v :=
+Definition derivable_mx m n (M : R -> 'M[W]_(m.+1, n.+1)) t v :=
   forall i j, derivable (fun x : R^o => (M x) i j) t v.
 
-Definition derive1mx m n (M : R -> 'M[W]_(m, n)) := fun t =>
-  \matrix_(i < m, j < n) (derive1 (fun x => M x i j) t : W).
+Definition derive1mx m n (M : R -> 'M[W]_(m.+1, n.+1)) := fun t =>
+  \matrix_(i < m.+1, j < n.+1) (derive1 (fun x => M x i j) t : W).
 
-Lemma derive1mx_matrix m n t (f : 'I_m -> 'I_n -> R -> W) :
+Lemma derive1mx_matrix m n t (f : 'I_m.+1 -> 'I_n.+1 -> R -> W) :
   derive1mx (fun x => \matrix_(i, j) f i j x) t =
   \matrix_(i, j) (derive1 (f i j) t : W).
 Proof.
@@ -68,7 +99,7 @@ by rewrite funeqE => ?; rewrite mxE.
 Qed.
 
 Variables m n : nat.
-Implicit Types M N : R -> 'M[W]_(m, n).
+Implicit Types M N : R -> 'M[W]_(m.+1, n.+1).
 
 Lemma derivable_mxD M N t : derivable_mx M t 1 -> derivable_mx N t 1 ->
   derivable_mx (fun x => M x + N x) t 1.
@@ -113,11 +144,11 @@ move=> H a b.
 by rewrite (_ : (fun _ => _) = (fun x => (M x) b i)) // funeqE => z; rewrite 2!mxE.
 Qed.
 
-Lemma derivable_mx_cst (P : 'M[W]_(m, n)) t : derivable_mx (cst P) t 1.
+Lemma derivable_mx_cst (P : 'M[W]_(m.+1, n.+1)) t : derivable_mx (cst P) t 1.
 Proof. move=> a b; by rewrite (_ : (fun x : R => _) = cst (P a b)). Qed.
 
 
-Lemma derive1mx_cst (P : 'M[W]_(m, n)) : derive1mx (cst P) = cst 0.
+Lemma derive1mx_cst (P : 'M[W]_(m.+1, n.+1)) : derive1mx (cst P) = cst 0.
 Proof.
 rewrite /derive1mx funeqE => t; apply/matrixP => i j; rewrite !mxE.
 by rewrite (_ : (fun x : R => _) = cst (P i j)) // derive1_cst.
@@ -157,10 +188,10 @@ Section derive_mx_R.
 
 Variables (R : realFieldType) (m n k : nat).
 
-Lemma derivable_mxM (f : R -> 'M[R^o]_(m, k)) (g : R -> 'M[R^o]_(k, n)) t :
+Lemma derivable_mxM (f : R -> 'M[R^o]_(m.+1, k.+1)) (g : R -> 'M[R^o]_(k.+1, n.+1)) t :
   derivable_mx f t 1 -> derivable_mx g t 1 -> derivable_mx (fun x => f x *m g x) t 1.
 Proof.
-move=> Hf Hg a b. evar (f1 : 'I_k -> R^o -> R^o).
+move=> Hf Hg a b. evar (f1 : 'I_k.+1 -> R^o -> R^o).
 rewrite (_ : (fun x => _) = (\sum_i f1 i)); last first.
   rewrite funeqE => t'; rewrite mxE fct_sumE; apply: eq_bigr => k0 _.
   rewrite /f1; reflexivity.
@@ -234,10 +265,10 @@ case: fintype.splitP => /= [j Hj|[] [] //= ? ni]; rewrite mxE /=.
 rewrite mulr1n; congr (_ ``_ _); apply val_inj; by rewrite /= ni addn0.
 Qed.
 
-Lemma derivable_row_belast (R : realFieldType) n (u : R -> 'rV[R^o]_n.+1) (t : R) (v : R):
+Lemma derivable_row_belast (R : realFieldType) n (u : R -> 'rV[R^o]_n.+2) (t : R) (v : R):
   derivable_mx u t v -> derivable_mx (fun x => row_belast (u x)) t v.
 Proof.
-move=> H i j; move: (H ord0 (widen_ord (leqnSn n) j)) => {H}.
+move=> H i j; move: (H ord0 (widen_ord (leqnSn n.+1) j)) => {H}.
 set f := fun _ => _. set g := fun _ => _.
 by rewrite (_ : f = g) // funeqE => x; rewrite /f /g mxE.
 Qed.
@@ -251,7 +282,7 @@ rewrite -dotmulDr; congr dotmul; apply/matrixP => i j; rewrite !(castmxE,mxE) /=
 case: fintype.splitP => [k /= jk|[] [] // ? /= jn]; by rewrite !(mxE,addr0,add0r,mul0rn).
 Qed.
 
-Lemma derive1mx_dotmul_belast (R : realFieldType) n (u v : R^o -> 'rV[R^o]_n.+1) t :
+Lemma derive1mx_dotmul_belast (R : realFieldType) n (u v : R^o -> 'rV[R^o]_n.+2) t :
   let u' x := row_belast (u x) in let v' x := row_belast (v x) in
   u' t *d derive1mx v' t + (u t)``_ord_max *: derive (fun x => (v x)``_ord_max) t 1 =
   u t *d derive1mx v t.
@@ -285,7 +316,7 @@ End row_belast.
 (* TODO: could be derived from more generic lemmas about bilinearity in derive.v? *)
 Section product_rules.
 
-Lemma derive1mx_dotmul (R : realFieldType) n (u v : R^o -> 'rV[R^o]_n) (t : R^o) :
+Lemma derive1mx_dotmul (R : realFieldType) n (u v : R^o -> 'rV[R^o]_n.+1) (t : R^o) :
   derivable_mx u t 1 -> derivable_mx v t 1 ->
   derive1 (fun x => u x *d v x : R^o) t =
   derive1mx u t *d v t + u t *d derive1mx v t.
@@ -300,8 +331,11 @@ rewrite (_ : (fun _ : R => _) = \sum_(k < _) f k); last first.
 rewrite derive_sum; last by move=> ?; exact: derivableM (U _ _) (V _ _).
 rewrite {}/f.
 elim: n u v => [|n IH] u v in U V *.
-  rewrite big_ord0 (_ : v t = 0) ?dotmulv0 ?add0r; last by apply/rowP => [[]].
-  rewrite (_ : u t = 0) ?dotmul0v //; by apply/rowP => [[]].
+  rewrite big_ord_recl/= big_ord0 addr0.
+  rewrite /dotmul !mxE !sum1E !mxE.
+  rewrite deriveM//=.
+  rewrite !derive1E addrC.
+  by rewrite mulrC.
 rewrite [LHS]big_ord_recr /=.
 set u' := fun x => row_belast (u x). set v' := fun x => row_belast (v x).
 transitivity (derive1mx u' t *d v' t + u' t *d derive1mx v' t +
@@ -315,8 +349,8 @@ rewrite -(addrA (_ + _)) [in RHS]addrC derive1mx_dotmul_belast; congr (_ + _).
 by rewrite [in RHS]dotmulC -derive1mx_dotmul_belast addrC dotmulC.
 Qed.
 
-Lemma derive1mxM (R : realFieldType) n m p (M : R -> 'M[R^o]_(n, m))
-  (N : R^o -> 'M[R^o]_(m, p)) (t : R^o) :
+Lemma derive1mxM (R : realFieldType) n m p (M : R -> 'M[R^o]_(n.+1, m.+1))
+  (N : R^o -> 'M[R^o]_(m.+1, p.+1)) (t : R^o) :
   derivable_mx M t 1 -> derivable_mx N t 1 ->
   derive1mx (fun t => M t *m N t) t =
     derive1mx M t *m N t + M t *m (derive1mx N t).

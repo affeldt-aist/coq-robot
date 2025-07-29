@@ -154,7 +154,7 @@ by field.
 Admitted.
 
 Lemma derive1mx_row_mx  {R : realFieldType} {n : nat}  {m : nat} :
-forall (f : R -> 'rV[R]_(n + m)) (g : R -> 'rV[R]_(n + m)) (t : R),
+forall (f : R -> 'rV[R]_(n.+1 + m.+1)) (g : R -> 'rV[R]_(n.+1 + m.+1)) (t : R),
   derive1mx (fun x => row_mx (f x) (g x)) t =
                 row_mx (derive1mx f t) (derive1mx g t).
 Admitted.
@@ -322,7 +322,7 @@ Definition LieDerivative_partial {R : realType} n (V : 'rV[R]_n.+1 -> R)
 
 Section ode_equation.
 Context {K : realType} {n : nat}.
-Let T := 'rV[K]_n.
+Let T := 'rV[K]_n.+1.
 
 Variable f : (K -> T) -> K -> T.
 
@@ -486,7 +486,7 @@ gamma1 ⊆ state_space*)
  state_space ⊆ gamma1
 *)
 
-Lemma inv_Gamma1 p (p33 : state_space eqn33 p) :
+Lemma invariant_state_space33 p (p33 : state_space eqn33 p) :
   let y := sval (cid p33) in
   let t := sval (cid (svalP (cid p33)).2) in
   forall Delta, Delta >= 0 -> state_space eqn33 (y (t + Delta)).
@@ -873,7 +873,7 @@ rewrite mulmxN normN.
 pose zp1 := fun r => Left (traj r).
 pose z2 := fun r => Right (traj r).
 set w := (z2 z) *m \S('e_2).
-have Gamma1_traj t : Gamma1 (traj t) by apply/Gamma1_traj.
+have Gamma1_traj t : state_space33 (traj t) by apply/Gamma1_traj.
 rewrite /norm.
 rewrite !dotmulvv [RHS]sqrtr_sqr sqrtr_sqr.
 have Hnorm_sq : norm (w *m \S('e_2 - Right (traj z))) ^+ 2 = norm w ^+ 2.
@@ -949,13 +949,13 @@ rewrite -oppr_ge0 -oppr_le0 opprK ltW//.
 by rewrite -oppr_gt0 mulNmx !mulNmx mxE opprK Hpos.
 Unshelve. all: try by end_near. Qed.
 
-Lemma V1_point_is_lnsd (traj : K -> 'rV_6) :
-  solves_equation (eqn33 alpha1 gamma) traj ->
-  traj 0 = point1 ->
-  locnegsemidef (LieDerivative (V1 alpha1 gamma) traj) 0.
+Lemma V1_point_is_lnsd (y : K -> 'rV_6) :
+  solves_equation (eqn33 alpha1 gamma) y ->
+  y 0 = point1 ->
+  locnegsemidef (LieDerivative (V1 alpha1 gamma) y) 0.
 Proof.
 move=> dtraj traj0.
-have Gamma1_traj t : Gamma1 (traj t) by apply/Gamma1_traj.
+have Gamma1_traj t : state_space33 (y t) by apply/Gamma1_traj.
 rewrite /locnegsemidef /V1.
 rewrite LieDerivativeD /=.
 split; last exact/near0_le0.
@@ -963,8 +963,8 @@ rewrite !invfM /=.
 rewrite !fctE.
 under [X in LieDerivative X _ _ + _]eq_fun do rewrite mulrC.
 under [X in _ + LieDerivative X _ _]eq_fun do rewrite mulrC.
-rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Left.
-rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Right.
+rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Left.
+rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Right.
 rewrite /= !fctE !derivative_LieDerivative_eq0; last 2 first.
   rewrite -derive1E -derive1mxE' [LHS]dtraj /eqn33/= traj0 /point1.
   by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
