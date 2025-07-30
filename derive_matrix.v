@@ -280,6 +280,79 @@ apply: le_trans; last first.
 by rewrite /=.
 Unshelve. all: by end_near. Qed.
 
+From mathcomp Require Import ring.
+
+Lemma derivable_row3 (a b c : R -> R) t :
+  derivable a t 1 ->
+  derivable b t 1 ->
+  derivable c t 1 ->
+  derivable (fun x : R => row3 (a x) (b x) (c x)) t 1.
+Proof.
+move=> /cvg_ex[/= l Hl] /cvg_ex[/= o Ho] /cvg_ex[/= p Hp].
+apply/cvg_ex; exists (row3 l o p) => /=.
+apply/cvgrPdist_le => /= e e0.
+move/cvgrPdist_le : Hl => /(_ _ e0)[r/= r0 re].
+move/cvgrPdist_le : Ho => /(_ _ e0)[s/= s0 se].
+move/cvgrPdist_le : Hp => /(_ _ e0)[u/= u0 ue].
+near=> x.
+rewrite /Num.Def.normr/= mx_normrE.
+apply: bigmax_le.
+  exact: ltW.
+move=> /= [i j] _.
+rewrite (ord1 i){i}/=.
+rewrite row3N.
+rewrite row3D.
+rewrite row3Z.
+rewrite row3N.
+rewrite row3D.
+rewrite row3E.
+rewrite ![in leLHS]mxE/=.
+case: fintype.splitP => [j0|].
+  rewrite (ord1 j0) => _.
+  rewrite !mxE eqxx/= mulr1n.
+  apply: re.
+  rewrite /= sub0r normrN.
+  near: x.
+  by apply: dnbhs0_lt.
+  near: x.
+  by apply: nbhs_dnbhs_neq.
+move=> k j1k.
+rewrite !mxE.
+case: fintype.splitP => [k0|k0].
+  rewrite (ord1 k0) => _.
+  rewrite !mxE eqxx/= mulr1n.
+  apply: se.
+  rewrite /= sub0r normrN.
+  near: x.
+  by apply: dnbhs0_lt.
+  near: x.
+  by apply: nbhs_dnbhs_neq.
+rewrite (ord1 k0) => _.
+rewrite !mxE eqxx/= mulr1n.
+apply: ue.
+rewrite /= sub0r normrN.
+near: x.
+by apply: dnbhs0_lt.
+near: x.
+by apply: nbhs_dnbhs_neq.
+Unshelve. all: by end_near. Qed.
+
+Lemma derivable_coord (a : R -> 'rV[R]_n.+1) t (i : 'I_n.+1) :
+  derivable a t 1 ->
+  derivable (fun x : R => (a x)``_i) t 1.
+Proof.
+move=> /cvg_ex[/= l Hl].
+apply/cvg_ex; exists (l``_i) => /=.
+apply/cvgrPdist_le => /= e e0.
+move/cvgrPdist_le : Hl => /(_ _ e0) Hl.
+apply: filterS Hl => x.
+rewrite {1}/Num.Def.normr/= mx_normrE.
+move/bigmax_leP => -[_/=].
+move/(_ (ord0, i)).
+rewrite !mxE/=.
+exact.
+Qed.
+
 Lemma derive1mx_cst (P : 'M[R]_(m.+1, n.+1)) : (cst P)^`()%classic = cst 0.
 Proof.
 apply/funext => ?.
@@ -339,20 +412,8 @@ Qed.
 End derive_mx_R.
 
 Section derive_mx_SE.
-
 Variables (R : rcfType) (M : R -> 'M[R^o]_4).
-
-
-Lemma SE_derivable : (forall t, M t \is 'SE3[R]) ->
-  forall t, derivable M t 1.
-Proof.
-move=> ME/= t.
-apply/derivable_mxP.
-move=> [[|[|[|[|//]]]]] Hi [[|[|[|[|//]]]]] Hj.
-- have : (fun t => M t (Ordinal Hi) (Ordinal Hj)) = 0.
-    apply/funext => x.
-    have := ME x.
-Admitted.
+Hypothesis Mt1 : forall t, derivable M t 1.
 
 Lemma derivable_rot_of_hom : (forall t, derivable M t 1) ->
   forall x, derivable (@rot_of_hom _ \o M) x 1.
@@ -367,6 +428,21 @@ have /derivable_mxP := H x.
 exact.
 Qed.
 
+Lemma derivable_trans_of_hom : (forall t, derivable M t 1) ->
+  forall x, derivable (@trans_of_hom _ \o M) x 1.
+Proof.
+move=> H x.
+apply/derivable_mxP => i j.
+rewrite /trans_of_hom.
+rewrite /=.
+rewrite (_ : (fun _ => _) = (fun y => (M y) (rshift 3 i) (lshift 1 j))); last first.
+  rewrite funeqE => y.
+  by rewrite !mxE.
+rewrite /= in H.
+have /derivable_mxP := H x.
+exact.
+Qed.
+
 Local Open Scope classical_set_scope.
 
 Lemma derive1mx_SE : (forall t, M t \in 'SE3[R]) ->
@@ -375,11 +451,9 @@ Lemma derive1mx_SE : (forall t, M t \in 'SE3[R]) ->
     ('D_1 (@trans_of_hom R^o \o M) t) 0.
 Proof.
 move=> MSE t.
-rewrite !derive_funmxE//; last 3 first.
-  admit.
-  apply: derivable_rot_of_hom => /= x.
-  exact: SE_derivable.
-  exact: SE_derivable.
+rewrite !derive_funmxE//; last 2 first.
+  by apply: derivable_trans_of_hom => /= x.
+  by apply: derivable_rot_of_hom => /= x.
 rewrite block_mxEh.
 rewrite {1}(_ : M = (fun x => hom (rot_of_hom (M x)) (trans_of_hom (M x)))); last first.
   rewrite funeqE => x; by rewrite -(SE3E (MSE x)).
@@ -403,7 +477,7 @@ case: (@splitP 3 1 i) => [i0 ii0|i0 ii0].
 rewrite (_ : i = rshift 3 i0); last exact/val_inj.
 rewrite (_ : (fun _ => _) = (fun=> 1)) ?derive_cst // (ord1 i0) ?mxE //.
 by rewrite funeqE => x; rewrite /hom (block_mxEdr (rot_of_hom (M x))) mxE.
-Admitted.
+Qed.
 
 End derive_mx_SE.
 
@@ -441,11 +515,12 @@ case: fintype.splitP => [k /= jk|[] [] // ? /= jn]; by rewrite !(mxE,addr0,add0r
 Qed.
 
 Lemma derive1mx_dotmul_belast (R : realFieldType) n (u v : R^o -> 'rV[R^o]_n.+2) t :
+  derivable v t 1 ->
   let u' x := row_belast (u x) in let v' x := row_belast (v x) in
   u' t *d 'D_1 v' t + (u t)``_ord_max *: derive (fun x => (v x)``_ord_max) t 1 =
   u t *d 'D_1 v t.
 Proof.
-move=> u' v'.
+move=> vt1 u' v'.
 rewrite (row_belast_last ('D_1 v t)) ?addn1 // => /= ?.
 rewrite dotmul_belast; congr (_ + _).
   rewrite 2!dotmulE [in RHS]big_ord_recr /=.
@@ -455,11 +530,13 @@ rewrite dotmul_belast; congr (_ + _).
   rewrite mulr0 addr0; apply/eq_bigr => i _; rewrite castmxE !mxE; congr (_ * _).
   case: fintype.splitP => [k /= ik|[] [] //= ?]; rewrite !mxE.
     rewrite derive_funmxE//; last first.
-      admit.
+      rewrite /v'.
+      apply/derivable_mxP.
+      apply: derivable_row_belast.
+      by apply/derivable_mxP.
     rewrite /= !mxE/=.
-    rewrite derive_funmxE//; last first.
-      admit.
-    rewrite /= !mxE/=.
+    rewrite derive_funmxE//.
+    rewrite mxE/=.
     f_equal.
     by rewrite funeqE => x; rewrite /v' !mxE; congr ((v _) _ _); by apply/val_inj.
   by rewrite addn0 => /eqP/negPn; rewrite (ltn_eqF (ltn_ord i)).
@@ -474,9 +551,8 @@ case: fintype.splitP => [j /= /eqP/negPn | [] [] //= ? Hn].
   by rewrite (gtn_eqF (ltn_ord j)).
 rewrite mxE/= mulr1n.
 rewrite derive_funmxE//; last first.
-  admit.
 by rewrite mxE//.
-Admitted.
+Qed.
 
 End row_belast.
 
@@ -519,8 +595,12 @@ transitivity ('D_1 u' t *d v' t + u' t *d 'D_1 v' t +
   apply eq_bigr => i _; congr (derive _ t 1).
   by rewrite funeqE => x; rewrite !mxE.
 rewrite (deriveM (U _ _) (V _ _)) /= -!addrA addrC addrA.
-rewrite -(addrA (_ + _)) [in RHS]addrC derive1mx_dotmul_belast; congr (_ + _).
-by rewrite [in RHS]dotmulC -derive1mx_dotmul_belast addrC dotmulC.
+rewrite -(addrA (_ + _)) [in RHS]addrC derive1mx_dotmul_belast; last first.
+  exact/derivable_mxP.
+congr (_ + _).
+rewrite [in RHS]dotmulC -derive1mx_dotmul_belast; last first.
+  exact/derivable_mxP.
+by rewrite addrC dotmulC.
 Qed.
 
 Lemma derive1mxM (R : realFieldType) n m p (M : R -> 'M[R^o]_(n.+1, m.+1))
@@ -530,7 +610,8 @@ Lemma derive1mxM (R : realFieldType) n m p (M : R -> 'M[R^o]_(n.+1, m.+1))
     'D_1 M t *m N t + M t *m ('D_1 N t).
 Proof.
 move=> HM HN; apply/matrixP => i j.
-rewrite derive_funmxE; last admit.
+rewrite derive_funmxE/=; last first.
+  exact/derivable_mxM.
 rewrite ![in LHS]mxE.
 rewrite (_ : (fun x => _) = fun x => \sum_k (M x) i k * (N x) k j); last first.
   by rewrite funeqE => x; rewrite !mxE.
@@ -540,12 +621,35 @@ rewrite (_ : (fun x => _) =
   by rewrite 3!mxE.
 rewrite (derive1mx_dotmul (derivable_mx_row HM)); last first.
   rewrite /=.
-  (* derivable_mx_col HN*) admit.
-(*by rewrite [in RHS]mxE; congr (_  + _); rewrite [in RHS]mxE dotmulE;
-   apply/eq_bigr => /= k _; rewrite !mxE; apply: f_equal2;
-   try by congr (@derive1 _ R^o _ t);
-          rewrite funeqE => z; rewrite !mxE.
-Qed.*) Admitted.
+  rewrite -trmx_derivable/=.
+  exact: (derivable_mx_col HN).
+rewrite [in RHS]mxE; congr +%R.
+  rewrite dotmulE.
+  rewrite [in RHS]mxE.
+  apply: eq_bigr => /= k _.
+  rewrite !mxE/=.
+  congr *%R.
+  rewrite derive_funmxE//= mxE.
+  rewrite derive_funmxE//=; last first.
+    exact/derivable_mx_row.
+  rewrite !mxE//=.
+  f_equal.
+  apply/funext => y.
+  by rewrite !mxE.
+rewrite dotmulE.
+rewrite [in RHS]mxE.
+apply: eq_bigr => /= k _.
+rewrite !mxE/=.
+congr *%R.
+rewrite derive_funmxE//=; last first.
+  rewrite -trmx_derivable//=.
+  exact/derivable_mx_col.
+rewrite !mxE//=.
+rewrite derive_funmxE//= !mxE.
+f_equal.
+apply/funext => y.
+by rewrite !mxE.
+Qed.
 
 Lemma derive1mx_crossmul (R : realFieldType) (u v : R -> 'rV[R^o]_3) t :
   derivable u t 1 -> derivable v t 1 ->
@@ -556,14 +660,50 @@ move=> U V.
 evar (f : R -> 'rV[R]_3); rewrite (_ : (fun x : R => _) = f); last first.
   rewrite funeqE => x; exact: crossmulE.
 rewrite {}/f; apply/rowP => i; rewrite mxE.
-(*rewrite (mxE_funeqE (fun x : R^o => _)) /= mxE 2!crossmulE !{1}[in RHS]mxE /=.
-case: ifPn => [/eqP _|/ifnot0P/orP[]/eqP -> /=];
-  rewrite ?derive1E (deriveD (derivableM (U _ _) (V _ _))
-    (derivableN (derivableM (U _ _) (V _ _))));
-  rewrite (deriveN (derivableM (U _ _) (V _ _))) 2!(deriveM (U _ _) (V _ _));
-  rewrite addrCA -!addrA; congr (_ + (_ + _)); by [ rewrite mulrC |
-  rewrite opprD addrC; congr (_ + _); rewrite mulrC ].
-Qed.*) Admitted.
+rewrite derive_funmxE/=; last first.
+  by apply: derivable_row3;
+   apply: derivableB => //=;
+      by apply: derivableM => //=; exact: derivable_coord.
+rewrite !mxE/=.
+rewrite (mxE_funeqE (fun x : R => _))/=.
+rewrite 2!crossmulE !{1}[in RHS]mxE /=.
+case: ifPn => [/eqP _|/ifnot0P/orP[]/eqP -> /=].
+- rewrite deriveB//=; [ |
+    by apply: derivableM => //=; exact: derivable_coord..].
+  rewrite deriveM//=; [|exact: derivable_coord..].
+  rewrite deriveM//=; [|exact: derivable_coord..].
+  rewrite addrCA -!addrA; congr (_ + (_ + _)).
+    by rewrite derive_funmxE//= mxE.
+    by rewrite mulrC derive_funmxE//= mxE.
+    rewrite addrC opprD mulrC.
+    rewrite derive_funmxE//= mxE.
+    congr (_ - _)%R.
+    by rewrite derive_funmxE//= mxE.
+- (*TOOD: copipe *)
+  rewrite deriveB//=; [ |
+    by apply: derivableM => //=; exact: derivable_coord..].
+  rewrite deriveM//=; [|exact: derivable_coord..].
+  rewrite deriveM//=; [|exact: derivable_coord..].
+  rewrite addrCA -!addrA; congr (_ + (_ + _)).
+    by rewrite derive_funmxE//= mxE.
+    by rewrite mulrC derive_funmxE//= mxE.
+    rewrite addrC opprD mulrC.
+    rewrite derive_funmxE//= mxE.
+    congr (_ - _)%R.
+    by rewrite derive_funmxE//= mxE.
+- (*TOOD: copipe *)
+  rewrite deriveB//=; [ |
+    by apply: derivableM => //=; exact: derivable_coord..].
+  rewrite deriveM//=; [|exact: derivable_coord..].
+  rewrite deriveM//=; [|exact: derivable_coord..].
+  rewrite addrCA -!addrA; congr (_ + (_ + _)).
+    by rewrite derive_funmxE//= mxE.
+    by rewrite mulrC derive_funmxE//= mxE.
+    rewrite addrC opprD mulrC.
+    rewrite derive_funmxE//= mxE.
+    congr (_ - _)%R.
+    by rewrite derive_funmxE//= mxE.
+Qed.
 
 End product_rules.
 
