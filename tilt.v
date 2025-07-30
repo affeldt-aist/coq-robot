@@ -110,7 +110,9 @@ Proof.
 rewrite /=.
 rewrite -!derive1E.
 rewrite (_ : (fun x  => f x i j) = (fun M : 'M_(m.+1,n.+1) => M i j)  \o f ) //.
-rewrite fctE.
+rewrite !fctE.
+Search "derive" ('M_(_,_)).
+rewrite derive1mxE''.
 Admitted.
 
 Lemma derivemx_derive {R : realFieldType} (V : normedModType R) m n
@@ -424,14 +426,98 @@ Definition is_invariant_solution_equa_diff {K : realType}
   (y (equa_t0 e) \in equa_S0 e ->
     (forall t, t > 0 -> y (equa_t0 e + t) \in equa_S0 e)).
 
+Section problem_statement.
+Variable K : realType.
+Variable alpha1 : K.
+Variable gamma : K.
+Variable g0 : K.
+Variable y0 : K -> 'rV[K]_6.
+Variable R : K -> 'M[K]_3.
+Variable p : K -> 'rV[K]_3.
+Variable y_g : K -> 'rV[K]_3.
+Variable y_a : K -> 'rV[K]_3.
+Variable y_m : K -> 'rV[K]_3.
+Definition x1 (t : K) := 'D_1 p t *m (R t) .
+Definition x2 (t : K) : 'rV_3 := 'e_2 *m R t (* eqn (8) *).
+Definition S2 := [set x : 'rV[K]_3 | norm x = 1].
+Definition x1_point (t : K) := 'D_1 x1 t.
+Definition x2_point (t : K) := 'D_1 x2 t.
+Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
+Hypothesis derivableR : forall t, derivable R t 1.
+Hypothesis gamma_gt0 : 0 < gamma.
+Hypothesis alpha1_gt0 : 0 < alpha1.
+Definition w t := ang_vel R t.
+
+Lemma x2_s2 (t0 : K) : x2 t0 \in S2.
+Proof.
+rewrite /S2 /x2 /=.
+rewrite inE /= orth_preserves_norm.
+  by rewrite normeE.
+by rewrite rotation_sub // rotationV.
+Qed.
+
+(* eqn (11) *)
+
+
+Lemma derive1rV_ang_vel (q : K -> 'rV[K]_3) t :
+  'D_1 q t = 'D_1 (fun t => q t *m R t) t + unspin (R t) *v q t.
+Proof.
+Admitted.
+
+Lemma derive_x2point (t : K) : x2_point t = x2 t *m \S( w t ).
+Proof.
+rewrite /w.
+rewrite -ang_vel_mxE; last 2 first.
+  by move=> ?; rewrite rotation_sub.
+  by [].
+rewrite /x2_point.
+rewrite /x2.
+have ->: 'D_1 (fun t0 : K => 'e_2 *m (R t0)) t = ('e_2 *m 'D_1 (fun t => (R t)) t).
+  move => n.
+  rewrite /=.
+  rewrite derive1mxM//=; last first.
+  by rewrite derive_cst mul0mx add0r.
+rewrite /=.
+rewrite derive1mx_ang_vel /=; last 2 first.
+  by move=> ?; rewrite rotation_sub.
+  admit.
+rewrite mulmxA.
+done.
+Admitted.
+
+Lemma derive_x1point (t : K) :
+'D_1 x1 t = (x1 t) *m  ( \S(w t) ) + 
+              ('D_1 p t) *m \S(w t ) + 
+                                               'D_1 (fun t => 'D_1 p t) t 
+                                              + const_mx g0 *m x2 t
+                                               - (x2 t) *m const_mx g0.
+Proof.
+rewrite -ang_vel_mxE; last 2 first.
+  by move=> ?; rewrite rotation_sub.
+  by [].
+rewrite /x1 /x2.
+rewrite !mulmxA /=.
+rewrite -[RHS]addrA.
+rewrite [X in _ = _ + _ + _ + X](_ : _ = 0) ?addr0; last first.
+  apply/eqP; rewrite subr_eq0; apply/eqP.
+  rewrite -mulmxA.
+  admit.
+set A := 'D_1 p t.
+set Rt := R t.
+set dR := 'D_1 R t.
+Admitted.
+
+End problem_statement.
+
 Section eqn33.
 Variable K : realType.
 Variable alpha1 : K.
 Variable gamma : K.
-Variable y0 : K -> 'rV[K]_6.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
-Hypothesis y0init : y0 0 \in state_space33.
+Variable g0 : K.
+Variable y0 : K -> 'rV[K]_6.
+Variable R : K -> 'M[K]_3.
 
 Definition eqn33 (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
   let zp1_point := Left \o zp1_z2_point in
@@ -557,9 +643,10 @@ apply/seteqP; split.
     move => s0.
     by apply: s0.
   rewrite /state_space33/=.
-  move: y0init.
+(*  move: y0init.
   rewrite inE /state_space33 /=.
   move=> Hnorm0. (* reecrire ce charabia *)
+*)
 
 (*  replace y with y0. (* vient de l'unicite des solutions de l'EDO. cauchy lipschitz ... *)
   replace y with y0 in norm_constant.
@@ -751,7 +838,6 @@ Hypothesis alpha1_gt0 : 0 < alpha1.
 Hypothesis gamma_gt0 : 0 < gamma.
 Variable R : K -> 'M[K]_3.
 Variable v : K -> 'rV[K]_3.
-Definition x1 := v.
 Variable y0 : K -> 'rV[K]_6.
 Hypothesis y0init: y0 0 \in state_space33.
 Hypothesis y0sol : solves_equation (eqn33 alpha1 gamma) y0.
@@ -826,10 +912,10 @@ Lemma Gamma1_traj (y : K -> 'rV_6) t :
   solves_equation (eqn33 alpha1 gamma) y -> state_space33 (y t).
 Proof.
 move=> iss.
-rewrite -(thm11a gamma_gt0 alpha1_gt0 y0init ).
+rewrite -(thm11a gamma_gt0 alpha1_gt0).
 exists y; split => //.
 by exists t.
-Qed.
+Admitted.
 
 Lemma norm_u1 (traj : K -> 'rV_6) (z : K) (z2 := Right \o traj)
     (zp1 := Left \o traj)  (u := 'e_2 - z2 z) :
@@ -986,3 +1072,4 @@ split; first exact: equilibrium_point1.
 Qed.
 
 End Lyapunov.
+
