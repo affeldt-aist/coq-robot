@@ -474,9 +474,9 @@ Variable R : K -> 'M[K]_3.
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 Hypothesis derivableR : forall t, derivable R t 1.
 Variable p : K -> 'rV[K]_3.
-Let v t := 'D_1 p t.
+Let v t := 'D_1 p t *m R t.
 Let x1 t := v t.
-Let x2 t : 'rV_3 := 'e_2 *m R t (* eqn (8) *).
+Let x2 t : 'rV_3 := ('e_2) *m R t (* eqn (8) *).
 Let x1_point t := 'D_1 x1 t.
 Let x2_point t := 'D_1 x2 t.
 Let w t := ang_vel R t.
@@ -510,12 +510,12 @@ Admitted.
 
 (* eqn 10*)
 Notation y_a := (y_a p R g0).
-Lemma derive_x1point t : 'D_1 x1 t = - x1 t *m \S(w t) + y_a t - ('e_2 *m R t) *m g0%:M.
+Lemma derive_x1point t : 'D_1 x1 t = x1 t *m \S(w t) + y_a t - g0 *: 'e_2 *m R t.
 Proof.
-rewrite /y_a -addrA addrK.
+rewrite /y_a/= -addrA addrK.
 rewrite /x1.
-rewrite addrCA addrA mulNmx subrr add0r.
-by [].
+rewrite addrCA addrA mulNmx /= /v /w.
+by rewrite (addrC(-_)) subrr add0r.
 Qed.
 
  (* eqn 11b *)
@@ -536,8 +536,7 @@ rewrite /=.
 rewrite derive1mx_ang_vel /=; last 2 first.
   by move=> ?; rewrite rotation_sub.
   admit.
-rewrite mulmxA.
-done.
+by rewrite mulmxA.
 Admitted.
 
 End problem_statementA.
@@ -563,7 +562,44 @@ Notation x2 := (x2 R).
 Let p1 t := x2 t - x2_prime_hat t. 
 Let x2_tilde (t : K) := x2 t - x2_hat t.
 Let p1_point t := 'D_1 p1 t. 
-Lemma derive_p1 t : 'D_1 p1 t = - p1 t *m \S(w t) - gamma *: p1 t.
+
+
+Lemma derive_p1 t : 'D_1 p1 t = p1 t *m \S(w t) - gamma *: p1 t.
+Proof.
+rewrite /p1.
+rewrite derive1mxB; last 2 first.
+  admit.
+  admit.
+rewrite /x2_prime_hat /=.
+rewrite deriveZ /=; last first.
+  admit.
+rewrite derive1mxM; last 2 first.
+  admit.
+  admit.
+rewrite derive1mx_ang_vel; last 2 first.
+  admit.
+  admit.
+rewrite -scaleNr opprK -scaleNr opprK.
+rewrite !mulmxA.
+rewrite addrAC.
+rewrite derive1mxB; last 2 first.
+  admit.
+  admit.
+rewrite derive1mx_ang_vel; last 2 first.
+  admit.
+  admit.
+rewrite mulmxA. 
+rewrite -(mulmxA('e_2)).
+rewrite orthogonal_mul_tr /=. 
+rewrite -(mulmxA('e_2)) mul1mx.
+rewrite ang_vel_mxE; last 2 first.
+  admit.
+  admit.
+rewrite /w.
+rewrite derive_cst mul0mx add0r.
+rewrite /x2.
+rewrite /v.
+Abort.
 
 End problem_statementB.
 
