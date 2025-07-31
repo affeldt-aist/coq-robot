@@ -432,13 +432,40 @@ Variable K : realType.
 Variable p : K -> 'rV[K]_3.
 Variable R : K -> 'M[K]_3.
 Variable g0 : K.
-Let v t := 'D_1 p t.
+Let v t := 'D_1 p t *m R t.
 Let w t := ang_vel R t.
-Definition y_a t := v t *m \S( w t) + 'D_1 v t +  'e_2 *m R t *m g0%:M.
-Definition x2 (t : K) : 'rV_3 := 'e_2 *m R t.
+Definition y_a t := - v t *m \S( w t) + 'D_1 v t + g0 *: 'e_2 *m R t.
+Definition x2 t : 'rV_3 := 'e_2 *m R t.
 End ya.
 
 Definition S2 {K : realType} := [set x : 'rV[K]_3 | norm x = 1].
+
+Section ya_E.
+Context {K : realType}.
+Variable R : K -> 'M[K]_3.
+Hypothesis RSO : forall t, R t \is 'SO[K]_3.
+Variable p : K -> 'rV[K]_3.
+Variable g0 : K.
+Let v t := 'D_1 p t *m R t.
+Let w t := ang_vel R t.
+
+Lemma ya_E t : ('D_1 ('D_1 p) t + g0 *: 'e_2) *m R t = y_a p R g0 t.
+Proof.
+rewrite mulmxDl /y_a/=.
+congr +%R.
+rewrite [in RHS]derive1mxM; [|admit|admit].
+rewrite derive1mx_ang_vel//; [|admit|admit].
+rewrite ang_vel_mxE//; [|admit|admit].
+rewrite addrCA.
+rewrite -mulmxE.
+rewrite -mulNmx.
+rewrite [X in _ = _ X]addrC.
+rewrite !mulNmx.
+rewrite -mulmxA.
+by rewrite subrr addr0.
+Admitted.
+
+End ya_E.
 
 Section problem_statementA.
 Variable K : realType.
