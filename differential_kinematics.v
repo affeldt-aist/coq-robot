@@ -217,18 +217,24 @@ apply fv_eq => /=; rewrite -mulmxDl; congr (_ *m _).
 by rewrite addrCA subrr addr0.
 Qed.
 
-Lemma derivable_mx_Q t : derivable_mx (fun x => BoundVect.endp (Q x)) t 1.
+Lemma derivable_mx_Q t : derivable (fun x => BoundVect.endp (Q x)) t 1.
 Proof.
-move=> a b.
+rewrite /Q/=; apply: derivable_mxD.
+  apply/derivable_mxP.
+  move=> a b.
   move: (@derivable_F1o t a b).
-  (*rewrite (_ : (fun x => \o{F1 x} a b) =
-    (fun x => BoundVect.endp (RFrame.o (F1 x)) a b)) // funeqE => x.
-  destruct (F1 x) => /=; by rewrite e.
-apply derivable_mxM; last exact: derivable_mx_FromTo.
+  rewrite [X in derivable X _ _ -> _](_ : _ =
+    (fun x => BoundVect.endp (RFrame.o (F1 x)) a b)); last first.
+    apply/funext => x/=.
+    by destruct (F1 x) => /=; by rewrite e.
+  by [].
+apply derivable_mxM; last first.
+  apply/derivable_mxP.
+  exact: derivable_mx_FromTo.
 rewrite (_ : (fun x => _) = (fun _ => BoundVect.endp (Q1 0))); last first.
   rewrite funeqE => x; by rewrite Q1_fixed_in_F1.
 move=> a b; exact: ex_derive.
-Qed.*) Admitted.
+Qed.
 
 Let Rot := fun t => (F1 t) _R^ F.
 
@@ -241,7 +247,8 @@ Lemma velocity_composition_rule (t : R) :
 Proof.
 rewrite {1}(_ : P = fun t => Q t \+b rmap F (P1 t \-b Q1 t)); last first.
   by rewrite funeqE => t'; rewrite eqnB3.
-rewrite (derive1mx_BoundFramed_add (@derivable_mx_Q t)); last first.
+have /derivable_mxP tmp := (@derivable_mx_Q t).
+rewrite (derive1mx_BoundFramed_add tmp); last first.
   apply/derivable_mxP.
   apply derivable_mxM; last first.
     apply/derivable_mxP.
@@ -536,24 +543,32 @@ rewrite derive1mx_ang_vel; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
   move=> t'.
   apply/derivable_mxP => /=.
-  (*apply: derivable_mx_FromTo.*) admit.
+  by apply: derivable_mx_FromTo'.
 rewrite derive1mx_ang_vel; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
   move=> t'.
   apply/derivable_mxP.
-  (*apply: derivable_mx_FromTo'.*) admit.
+  by apply: derivable_mx_FromTo => //.
 rewrite derive1mx_ang_vel; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-(*  move=> t'; exact: derivable_mx_FromTo.*) admit.
+  move=> t'.
+  apply/derivable_mxP => /=.
+  by apply: derivable_mx_FromTo.
 rewrite ang_vel_mxE; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-(*  move=> t'; exact: derivable_mx_FromTo.*) admit.
+  move=> t'.
+  apply/derivable_mxP => /=.
+  by apply: derivable_mx_FromTo.
 rewrite ang_vel_mxE; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-(*  move=> t'; exact: derivable_mx_FromTo'.*) admit.
+  move=> t'.
+  apply/derivable_mxP => /=.
+  by apply: derivable_mx_FromTo'.
 rewrite ang_vel_mxE; last 2 first.
   move=> t'; by rewrite FromTo_is_O.
-(*  move=> t'; exact: derivable_mx_FromTo.*) admit.
+  move=> t'.
+  apply/derivable_mxP => /=.
+  by apply: derivable_mx_FromTo.
 rewrite mulmxE -[in X in _ = X + _](mulr1 ((F2 t) _R^ (F1 t))).
 rewrite -(@orthogonal_tr_mul _ _ (F _R^ (F1 t))) ?FromTo_is_O //.
 rewrite -{2}(trmx_FromTo (F1 t) F).
@@ -573,7 +588,7 @@ move/mulrI.
 rewrite FromTo_unit => /(_ isT)/eqP.
 rewrite spin_inj => /eqP.
 by rewrite addrC.
-Admitted.
+Qed.
 
 End link_velocity.
 
@@ -614,6 +629,46 @@ move=> H; rewrite (derive1_comp H); last exact: derivable_cos.
 by rewrite derive1_cos mulrC mulNr mulrN.
 Qed.
 
+Definition Rz' (T : realType) (a : T) :=
+  col_mx3 (row3 (- sin a) (cos a) 0) (row3 (- cos a) (sin a) 0) 'e_2.
+
+Lemma derivable_Rz {R : realType} (a : R -> R) t :
+  derivable a t 1 ->
+  derivable (fun x : R^o => Rz (a x)) t 1.
+Proof.
+move=> at1.
+apply/derivable_mxP.
+move=> [[|[|[|//=]]]] ? [[|[|[|//=]]]] ?.
+- rewrite [X in derivable X t 1](_ : _ = cos \o a); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_cos_comp.
+- rewrite [X in derivable X t 1](_ : _ = sin \o a); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_sin_comp.
+- rewrite [X in derivable X t 1](_ : _ = 0); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_cst.
+- rewrite [X in derivable X t 1](_ : _ = - sin \o a); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  apply/derivableN.
+  exact/derivable_sin_comp.
+- rewrite [X in derivable X t 1](_ : _ = cos \o a); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_cos_comp.
+- rewrite [X in derivable X t 1](_ : _ = 0); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_cst.
+- rewrite [X in derivable X t 1](_ : _ = 0); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_cst.
+- rewrite [X in derivable X t 1](_ : _ = 0); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_cst.
+- rewrite [X in derivable X t 1](_ : _ = 1); last first.
+    by apply/funext => x/=; rewrite !mxE/=.
+  exact/derivable_cst.
+Qed.
+
 Lemma derive1mx_RzE (R : realType) (a : R^o -> R^o) t : derivable a t 1 ->
   'D_1 (fun x => Rz (a x) : 'M[R^o]__) t =
   derive1 a t *: col_mx3 (row3 (- sin (a t)) (cos (a t)) 0)
@@ -623,36 +678,61 @@ Proof.
 move=> Ha.
 apply/matrix3P/and9P; split; rewrite !mxE /=.
 - rewrite derive_funmxE; last first.
-    admit.
+    exact: derivable_Rz.
   rewrite mxE/=.
   rewrite (_ : (fun _ => _) = cos \o a); last by rewrite funeqE => x; rewrite !mxE.
   rewrite -derive1E.
   rewrite (derive1_comp Ha); last exact/derivable_cos.
   by rewrite derive1_cos mulrC.
-(*- rewrite (_ : (fun _ => _) = sin \o a); last by rewrite funeqE => x; rewrite !mxE.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = sin \o a); last by rewrite funeqE => x; rewrite !mxE.
+  rewrite -derive1E.
   rewrite (derive1_comp Ha); last exact/derivable_sin.
   by rewrite derive1_sin mulrC.
-- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
-  by rewrite derive1_cst mulr0.
-- rewrite (_ : (fun _ => _) = - sin \o a); last by rewrite funeqE => x; rewrite !mxE.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive_cst mulr0.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = - sin \o a); last by rewrite funeqE => x; rewrite !mxE.
   rewrite (_ : - _ \o _ = - (sin \o a)) // derive1E deriveN; last first.
     apply/derivable1_diffP/differentiable_comp.
     exact/derivable1_diffP.
     exact/derivable1_diffP/derivable_sin.
-  rewrite -derive1E (derive1_comp Ha); last exact/derivable_sin.
+  rewrite -!derive1E (derive1_comp Ha); last exact/derivable_sin.
   by rewrite derive1_sin mulrN mulrC.
-- rewrite (_ : (fun _ => _) = cos \o a); last by rewrite funeqE => x; rewrite !mxE.
-  rewrite (derive1_comp Ha); last exact/derivable_cos.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = cos \o a); last by rewrite funeqE => x; rewrite !mxE.
+  rewrite -derive1E (derive1_comp Ha); last exact/derivable_cos.
   by rewrite derive1_cos mulrN mulNr mulrC.
-- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
-  by rewrite derive1_cst mulr0.
-- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
-  by rewrite derive1_cst mulr0.
-- rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
-  by rewrite derive1_cst mulr0.
-- rewrite (_ : (fun _ => _) = cst 1); last by rewrite funeqE => x; rewrite !mxE.
-  by rewrite derive1_cst mulr0.
-Qed.*) Admitted.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive_cst mulr0.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive_cst mulr0.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+  rewrite (_ : (fun _ => _) = \0); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive_cst mulr0.
+- rewrite derive_funmxE; last first.
+    exact: derivable_Rz.
+  rewrite mxE/=.
+ rewrite (_ : (fun _ => _) = cst 1); last by rewrite funeqE => x; rewrite !mxE.
+  by rewrite derive_cst mulr0.
+Qed.
 
 (* example 3.1 [sciavicco]*)
 (* rotational motion of one degree of freedom manipulator *)
@@ -764,6 +844,10 @@ Hypothesis o2E : forall t, \o{Fim1 2%:R t} = \o{Fim1 1 t} +
 Hypothesis o3E : forall t, \o{Fim1 3%:R t} = \o{Fim1 2%:R t} + (d3 t) *: 'e_2.
 Hypothesis o4E : forall t, \o{Fmax t} = \o{Fim1 3%:R t} + d4 *: 'e_2.
 
+Lemma derivable_joint_variable t : derivable (fun t0 : R^o => \row_i joint_variable (scara_joints i) t0) t 1.
+Proof.
+Admitted.
+
 Lemma scale_realType (K : realType) (k1 : K) (k2 : K^o) : k1 *: k2 = k1 * k2.
 Proof. by []. Qed.
 
@@ -782,7 +866,17 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     rewrite funeqE => x /=; exact: trans_of_hom_hom.
   rewrite /trans /scara_trans.
   rewrite derive_funmxE//=; last first.
-    admit.
+    apply: derivable_row3; apply: derivableD => /=; [| | | | exact: derivable_cst |exact: H3].
+    apply: derivableM; first exact: derivable_cst.
+    apply: derivable_cos_comp.
+    exact: derivableD.
+    apply: derivableM; first exact: derivable_cst.
+    by apply: derivable_cos_comp.
+    apply: derivableM; first exact: derivable_cst.
+    apply: derivable_sin_comp.
+    exact: derivableD.
+    apply: derivableM; first exact: derivable_cst.
+    by apply: derivable_sin_comp.
   rewrite [RHS]row3_proj /= ![in RHS]mxE [in RHS]/=.
   transitivity (
       derive1 (theta1 : R^o -> R^o) t *: (Fim1 0 t)~k *v (\o{Fmax t} - \o{Fim1 0 t}) +
@@ -791,20 +885,27 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
       derive1 (theta4 : R^o -> R^o) t *: (Fim1 3%:R t)~k *v (\o{Fmax t} - \o{Fim1 3%:R t})).
     rewrite /scara_joint_velocities /scara_joint_variables.
     rewrite derive_funmxE; last first.
-      admit.
+      exact: derivable_joint_variable.
     rewrite /geo_jac_lin /=.
     apply/rowP => i; rewrite 3![in RHS]mxE [in LHS]mxE sum4E;
           (repeat apply: f_equal2).
     - rewrite 2!mxE /=.
       rewrite (linearZl_LR _ (\o{Fmax t} - \o{Fim1``_t}))/=.
-      (*by rewrite [in RHS]mxE.*) admit.
+      rewrite [in RHS]mxE !derive1E//=.
+      under eq_fun do rewrite !mxE/=.
+      done.
     - rewrite 2!mxE /=.
       rewrite (linearZl_LR _ (\o{Fmax t} - \o{Fim1 1 t}))/=.
-      (*by rewrite [in RHS]mxE.*) admit.
-    - (*by rewrite 2!mxE [in RHS]mxE.*) admit.
+      under eq_fun do rewrite !mxE/=.
+      rewrite derive1E/=.
+      by rewrite !mxE.
+    - rewrite 2!mxE [in RHS]mxE/=.
+      rewrite derive1E/=.
+      by under eq_fun do rewrite !mxE/=.
     - rewrite 2!mxE /=.
       rewrite (linearZl_LR _ (\o{Fmax t} - \o{Fim1 3 t}))/= [in RHS]mxE.
-      admit.
+      rewrite derive1E.
+      by under eq_fun do rewrite !mxE/=.
   rewrite o0E subr0.
   rewrite {1}o4E.
   rewrite (linearDr _ (_ *: Fim1``_t|,2)) /=.
@@ -842,15 +943,21 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
   rewrite {1}o2E {1}o1E.
   rewrite (_ : (fun _ => _) =
                 (a2 \*: (cos \o (theta2 + theta1) : R^o -> R^o)) +
-                (a1 *: (cos \o theta1 : R^o -> R^o))) //.
+                (a1 *: (cos \o theta1 : R^o -> R^o))); last first.
+    apply/funext => x/=.
+    by rewrite !mxE/=.
   rewrite (_ : (fun _ => _) = (a2 \*: (sin \o (theta2 + theta1) : _ -> R^o)) +
-                              (a1 *: (sin \o theta1 : _ -> R^o))) //.
+                              (a1 *: (sin \o theta1 : _ -> R^o))); last first.
+    apply/funext => x/=.
+    by rewrite !mxE/=.
   rewrite row3e2; congr (_ + _ *: _); last first.
   - by rewrite Hzvec.
-(*  - rewrite [in RHS]derive1E [in RHS]deriveD; last 2 first.
+  - rewrite derive1E.
+    under eq_fun do rewrite !mxE/=.
+    rewrite [in RHS]deriveD; last 2 first.
       exact: ex_derive.
       exact: H3.
-    by rewrite deriveE // diff_cst add0r derive1E.
+    by rewrite derive_cst// add0r.
   - rewrite 3!(linearDr _ ((theta1^`())%classic t *: Fim1``_t|,2))/=.
     rewrite (linearDr _ (Fim1 1 t)|,2)/=.
     rewrite (linearZr_LR _ _ (a1 * cos (theta1 t)))/=.
@@ -865,8 +972,8 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     rewrite scalerBr.
     rewrite -!addrA addrCA addrC -!addrA (addrCA (- _)) !addrA.
     rewrite -2!addrA [in RHS]addrC; congr (_ + _).
-    - rewrite !scalerA -2!scalerDl row3e1; congr (_ *: _).
-      rewrite [in RHS]derive1E deriveD; last 2 first.
+    + rewrite !scalerA -2!scalerDl row3e1; congr (_ *: _).
+      rewrite deriveD; last 2 first.
         apply/derivableZ/derivable_sin_comp/derivableD; [exact H2 | exact H1].
         exact/derivableZ/derivable_sin_comp.
       rewrite deriveZ /=; last first.
@@ -890,9 +997,9 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
         rewrite derive1E.
         by rewrite addrC.
       by rewrite derive1E addrC.
-    - rewrite !{1}scalerA !addrA -3!{1}scaleNr -2!scalerDl row3e0.
+    + rewrite !{1}scalerA !addrA -3!{1}scaleNr -2!scalerDl row3e0.
       congr (_ *: _).
-      rewrite [in RHS]derive1E deriveD; last 2 first.
+      rewrite deriveD; last 2 first.
         by apply/derivableZ/derivable_cos_comp/derivableD; [exact H2 | exact H1].
         by apply/derivableZ/derivable_cos_comp; exact H1.
       rewrite deriveZ /=; last first.
@@ -926,16 +1033,29 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
   transitivity (derive1 (theta1 : R^o -> R^o) t *: (Fim1 0 t)~k +
                 derive1 (theta2 : R^o -> R^o) t *: (Fim1 1 t)~k +
                 derive1 (theta4 : R^o -> R^o) t *: (Fim1 3%:R t)~k).
-    rewrite /scara_joint_velocities /scara_joint_variables derive1mx_matrix /geo_jac_ang /=.
+    rewrite /scara_joint_velocities /scara_joint_variables.
+    rewrite derive_funmxE; last first.
+      (* derivable (fun t0 : R^o => \row_i joint_variable (scara_joints i) t0) t 1 *)
+      exact: derivable_joint_variable.
+    rewrite /geo_jac_ang /=.
     apply/rowP => i; rewrite !mxE sum4E !mxE {1}mulr0 addr0.
-    by rewrite -!/(Fim1 _) [Fim1 0 _]lock [Fim1 1 _]lock [Fim1 3%:R _]lock /= -!lock.
+    rewrite -!/(Fim1 _) [Fim1 0 _]lock [Fim1 1 _]lock [Fim1 3%:R _]lock /= -!lock.
+    rewrite !derive1E.
+    under eq_fun do rewrite !mxE/=.
+    rewrite -[RHS]addrA.
+    rewrite -[LHS]addrA.
+    congr (_ + _).
+    under eq_fun do rewrite !mxE/=.
+    congr (_ + _).
+    under eq_fun do rewrite !mxE/=.
+    done.
   rewrite !Hzvec -2!scalerDl e2row row3Z mulr0 mulr1.
   rewrite [in RHS]derive1E deriveD; [|apply/derivableD|by []]; last 2 first.
     exact: H1.
     exact: H2.
   rewrite deriveD; [| exact: H1| exact H2].
   by rewrite 3!derive1E.
-Qed.*) Admitted.
+Qed.
 
 End scara_geometric_jacobian.
 
