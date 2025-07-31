@@ -426,27 +426,33 @@ Definition is_invariant_solution_equa_diff {K : realType}
   (y (equa_t0 e) \in equa_S0 e ->
     (forall t, t > 0 -> y (equa_t0 e + t) \in equa_S0 e)).
 
-Section problem_statement.
+Section ya.
+(* mesure de l'accelerometre *)
 Variable K : realType.
-Variable alpha1 : K.
-Variable gamma : K.
-Variable g0 : K.
-Variable y0 : K -> 'rV[K]_6.
-Variable R : K -> 'M[K]_3.
 Variable p : K -> 'rV[K]_3.
-Variable y_g : K -> 'rV[K]_3.
-Variable y_a : K -> 'rV[K]_3.
-Variable y_m : K -> 'rV[K]_3.
-Definition x1 (t : K) := 'D_1 p t *m (R t) .
-Definition x2 (t : K) : 'rV_3 := 'e_2 *m R t (* eqn (8) *).
-Definition S2 := [set x : 'rV[K]_3 | norm x = 1].
-Definition x1_point (t : K) := 'D_1 x1 t.
-Definition x2_point (t : K) := 'D_1 x2 t.
+Variable R : K -> 'M[K]_3.
+Variable g0 : K.
+Let v t := 'D_1 p t.
+Let w t := ang_vel R t.
+Definition y_a t := v t *m \S( w t) + 'D_1 v t +  'e_2 *m R t *m g0%:M.
+Definition x2 (t : K) : 'rV_3 := 'e_2 *m R t.
+End ya.
+
+Definition S2 {K : realType} := [set x : 'rV[K]_3 | norm x = 1].
+
+Section problem_statementA.
+Variable K : realType.
+Variable g0 : K.
+Variable R : K -> 'M[K]_3.
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 Hypothesis derivableR : forall t, derivable R t 1.
-Hypothesis gamma_gt0 : 0 < gamma.
-Hypothesis alpha1_gt0 : 0 < alpha1.
-Definition w t := ang_vel R t.
+Variable p : K -> 'rV[K]_3.
+Let v t := 'D_1 p t.
+Let x1 t := v t.
+Let x2 t : 'rV_3 := 'e_2 *m R t (* eqn (8) *).
+Let x1_point t := 'D_1 x1 t.
+Let x2_point t := 'D_1 x2 t.
+Let w t := ang_vel R t.
 
 Lemma x2_s2 (t0 : K) : x2 t0 \in S2.
 Proof.
@@ -456,14 +462,36 @@ rewrite inE /= orth_preserves_norm.
 by rewrite rotation_sub // rotationV.
 Qed.
 
-(* eqn (11) *)
-
-
-Lemma derive1rV_ang_vel (q : K -> 'rV[K]_3) t :
-  'D_1 q t = 'D_1 (fun t => q t *m R t) t + unspin (R t) *v q t.
+Lemma dRu t (u : K -> 'rV[K]_3) (T : K -> 'M[K]_3) (w' := ang_vel T)
+  : 'D_1 (fun t => u t *m T t) t = u t *m T t *m \S(w' t) + 'D_1 u t *m T t. 
 Proof.
+rewrite derive1mxM; last 2 first.
+  admit.
+  admit.
+rewrite addrC.
+congr(_+_).
+rewrite -ang_vel_mxE; last 2 first.
+  admit.
+  admit.
+rewrite -mulmxA.
+rewrite mulmxE.
+rewrite -derive1mx_ang_vel; last 2 first.
+  admit.
+  admit.
+by [].
 Admitted.
 
+(* eqn 10*)
+Notation y_a := (y_a p R g0).
+Lemma derive_x1point t : 'D_1 x1 t = - x1 t *m \S(w t) + y_a t - ('e_2 *m R t) *m g0%:M.
+Proof.
+rewrite /y_a -addrA addrK.
+rewrite /x1.
+rewrite addrCA addrA mulNmx subrr add0r.
+by [].
+Qed.
+
+ (* eqn 11b *)
 Lemma derive_x2point (t : K) : x2_point t = x2 t *m \S( w t ).
 Proof.
 rewrite /w.
@@ -485,29 +513,32 @@ rewrite mulmxA.
 done.
 Admitted.
 
-Lemma derive_x1point (t : K) :
-'D_1 x1 t = (x1 t) *m  ( \S(w t) ) + 
-              ('D_1 p t) *m \S(w t ) + 
-                                               'D_1 (fun t => 'D_1 p t) t 
-                                              + const_mx g0 *m x2 t
-                                               - (x2 t) *m const_mx g0.
-Proof.
-rewrite -ang_vel_mxE; last 2 first.
-  by move=> ?; rewrite rotation_sub.
-  by [].
-rewrite /x1 /x2.
-rewrite !mulmxA /=.
-rewrite -[RHS]addrA.
-rewrite [X in _ = _ + _ + _ + X](_ : _ = 0) ?addr0; last first.
-  apply/eqP; rewrite subr_eq0; apply/eqP.
-  rewrite -mulmxA.
-  admit.
-set A := 'D_1 p t.
-set Rt := R t.
-set dR := 'D_1 R t.
-Admitted.
+End problem_statementA.
 
-End problem_statement.
+Section problem_statementB.
+Variable K : realType.
+Variable gamma : K.
+Variable alpha1 : K. 
+Variable p : K -> 'rV[K]_3.
+Let v t := 'D_1 p t.
+Variable R : K -> 'M[K]_3.
+Let w t := ang_vel R t.
+Variable x1_hat : K -> 'rV[K]_3.
+Variable x2_hat : K -> 'rV[K]_3.
+Let y_g := w.
+Variable g0 : K.
+Notation y_a := (y_a p R g0).
+Let x2_prime_hat t := -(alpha1 / gamma) *: (v t - x1_hat t).
+Let x1_hat_dot t := - x1_hat t *m \S(y_g t) + y_a t - g0 *: x2_prime_hat t.
+Let x2_hat_dot t := x2_hat t *m - \S(y_g t - gamma *: x2_prime_hat t *m \S(x2_hat t)).
+Hypothesis x2_hat_S2 : x2_hat 0 \in S2.
+Notation x2 := (x2 R).
+Let p1 t := x2 t - x2_prime_hat t. 
+Let x2_tilde (t : K) := x2 t - x2_hat t.
+Let p1_point t := 'D_1 p1 t. 
+Lemma derive_p1 t : 'D_1 p1 t = - p1 t *m \S(w t) - gamma *: p1 t.
+
+End problem_statementB.
 
 Section eqn33.
 Variable K : realType.
