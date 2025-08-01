@@ -452,8 +452,9 @@ Variable R : K -> 'M[K]_3.
 Variable g0 : K.
 Let v t := 'D_1 p t *m R t.
 Let w t := ang_vel R t.
-Definition y_a t := - v t *m \S( w t) + 'D_1 v t + g0 *: 'e_2 *m R t.
+Let x1 t := v t.
 Definition x2 t : 'rV_3 := 'e_2 *m R t.
+Definition y_a t := - x1 t  *m \S( w t) + 'D_1 x1 t + g0 *: x2 t.
 End ya.
 
 Definition S2 {K : realType} := [set x : 'rV[K]_3 | norm x = 1].
@@ -528,7 +529,7 @@ Admitted.
 
 (* eqn 10*)
 Notation y_a := (y_a p R g0).
-Lemma derive_x1point t : 'D_1 x1 t = x1 t *m \S(w t) + y_a t - g0 *: 'e_2 *m R t.
+Lemma derive_x1 t : 'D_1 x1 t = x1 t *m \S(w t) + y_a t - g0 *: x2 t.
 Proof.
 rewrite /y_a/= -addrA addrK.
 rewrite /x1.
@@ -537,7 +538,7 @@ by rewrite (addrC(-_)) subrr add0r.
 Qed.
 
  (* eqn 11b *)
-Lemma derive_x2point (t : K) : x2_point t = x2 t *m \S( w t ).
+Lemma derive_x2 (t : K) : x2_point t = x2 t *m \S( w t ).
 Proof.
 rewrite /w.
 rewrite -ang_vel_mxE; last 2 first.
@@ -564,60 +565,203 @@ Variable K : realType.
 Variable gamma : K.
 Variable alpha1 : K.
 Variable p : K -> 'rV[K]_3.
-Let v t := 'D_1 p t.
 Variable R : K -> 'M[K]_3.
+Hypothesis derivableR : forall t, derivable R t 1.
+Let v t := 'D_1 p t *m R t.
 Let w t := ang_vel R t.
 Variable x1_hat : K -> 'rV[K]_3.
 Variable x2_hat : K -> 'rV[K]_3.
-Let y_g := w.
 Variable g0 : K.
+Hypotheses g0_eq0 : g0 != 0.
 Notation y_a := (y_a p R g0).
-Let x2_prime_hat t := -(alpha1 / gamma) *: (v t - x1_hat t).
-Let x1_hat_dot t := - x1_hat t *m \S(y_g t) + y_a t - g0 *: x2_prime_hat t.
-Let x2_hat_dot t := x2_hat t *m - \S(y_g t - gamma *: x2_prime_hat t *m \S(x2_hat t)).
+Let x1 t := v t.
+Let x2'hat t := -(alpha1 / g0) *: (x1 t - x1_hat t). (* 12b*)
+Hypothesis eq12a : forall t, 'D_1 x1_hat t = x1_hat t *m \S(w t) + y_a t - g0 *: x2'hat t.
+Hypothesis eq12c : forall t, 'D_1 x2_hat t = x2_hat t *m \S(w t - gamma *: x2'hat t *m \S(x2_hat t)). (*12c*)
 Hypothesis x2_hat_S2 : x2_hat 0 \in S2.
 Notation x2 := (x2 R).
-Let p1 t := x2 t - x2_prime_hat t.
-Let x2_tilde (t : K) := x2 t - x2_hat t.
+Let p1 t := x2 t - x2'hat t. 
+Let x2_tilde t :=  x2 t - x2_hat t.
 Let p1_point t := 'D_1 p1 t.
+Let x2_tilde_point t := 'D_1 x2_tilde t.
+Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 
-
-Lemma derive_p1 t : 'D_1 p1 t = p1 t *m \S(w t) - gamma *: p1 t.
+Lemma p1E t : p1 t = x2 t + (alpha1 / g0) *: (x1 t - x1_hat t).
 Proof.
-rewrite /p1.
-rewrite deriveB; last 2 first.
-  admit.
-  admit.
-rewrite /x2_prime_hat /=.
-rewrite deriveZ /=; last first.
-  admit.
-rewrite derive_mulmx; last 2 first.
-  admit.
-  admit.
-rewrite derive1mx_ang_vel; last 2 first.
-  admit.
-  admit.
-rewrite -scaleNr opprK -scaleNr opprK.
-rewrite !mulmxA.
-rewrite addrAC.
-rewrite deriveB; last 2 first.
-  admit.
-  admit.
-rewrite derive1mx_ang_vel; last 2 first.
-  admit.
-  admit.
-rewrite mulmxA.
-rewrite -(mulmxA('e_2)).
-rewrite orthogonal_mul_tr /=.
-rewrite -(mulmxA('e_2)) mul1mx.
-rewrite ang_vel_mxE; last 2 first.
-  admit.
-  admit.
-rewrite /w.
-rewrite derive_cst mul0mx add0r.
-rewrite /x2.
-rewrite /v.
+rewrite /p1 /x2 /x2'hat.
+rewrite /x1.
+by rewrite scaleNr opprK.
+Qed.
+
+Lemma derivex1_hat t : 'D_1 x1_hat t = x1_hat t *m \S(w t).
+Proof.
+rewrite eq12a.
+rewrite /y_a/=.
 Abort.
+
+Lemma derivex2_hat t : 'D_1 x2_hat t = x2_hat t *m \S(w t).
+Proof.
+rewrite eq12c.
+Abort.
+
+Lemma derive_p1 t : 'D_1 p1 t = p1 t *m \S(w t) - alpha1 *: p1 t.
+Proof.
+simpl in *.
+transitivity ('D_1 (fun t => x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) t).
+  rewrite /=.
+  f_equal.
+  apply/funext => x.
+  by rewrite p1E.
+rewrite /=.
+rewrite deriveD//=; last 2 first.
+  admit. (* ok *)
+  admit.
+rewrite deriveZ//=; last admit.
+rewrite deriveB//; [|admit|admit].
+rewrite (derive_x1 g0).
+rewrite -/(x2 t).
+rewrite derive_x2//.
+rewrite -/(x2 t).
+rewrite -/(v t).
+rewrite -/(x1 t).
+rewrite -/(w t).
+rewrite eq12a.
+transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t) - alpha1 *: p1 t).
+  transitivity (x2 t *m \S(w t) + (alpha1 / g0) *: (x1 t *m \S(w t) - g0 *: x2 t - (x1_hat t *m \S(w t) - g0 *: x2'hat t))).
+    do 2 f_equal.  
+    rewrite -3![in LHS]addrA.
+    rewrite -[in RHS]addrA.
+    congr +%R.
+    rewrite opprD.
+    rewrite addrCA.
+    rewrite [in RHS]opprB.
+    rewrite [in RHS]addrA [in RHS]addrC.
+    congr +%R.
+    by rewrite opprD addrACA subrr add0r opprK.
+  rewrite (_ : x1 t *m \S(w t) - g0 *: x2 t - (x1_hat t *m \S(w t) - g0 *: x2'hat t) =
+               (x1 t - x1_hat t) *m \S(w t) - g0 *: (x2 t - x2'hat t)); last first.
+    rewrite mulmxBl scalerDr.
+    rewrite scalerN.
+    rewrite opprB.
+    rewrite addrA [LHS]addrC 2!addrA.
+    rewrite -addrA; congr +%R.
+      by rewrite addrC.
+    by rewrite opprB addrC.
+  rewrite -/(p1 t).
+  rewrite scalerDr.
+  rewrite addrA.
+  rewrite scalemxAl.
+  rewrite -mulmxDl.
+  rewrite -p1E.
+  rewrite scalerN scalerA.
+  by rewrite divfK//.
+by rewrite -p1E.
+Admitted.
+
+Hypothesis norm_x2_hat : forall t, norm (x2_hat t) = 1.
+
+Lemma derive_x2tilde t : x2_tilde_point t = x2_tilde t *m \S( w t) + gamma *: (x2_tilde t - p1 t) *m \S( x2_hat t ) ^+ 2 .
+Proof.
+rewrite /x2_tilde_point /x2_tilde.
+rewrite deriveB; last 2 first.
+  admit.
+  admit.
+rewrite derive_x2//.
+rewrite -/(x2 t) -/(w t).
+rewrite -/(x2_tilde t).
+rewrite eq12c.
+rewrite spinD.
+rewrite spinN.
+rewrite -scalemxAl.
+rewrite (spinZ gamma).
+rewrite mulmxBr.
+rewrite opprB.
+rewrite [LHS]addrA.
+rewrite [in LHS]addrC.
+rewrite addrA.
+rewrite (addrC _ (x2 t *m \S(w t))).
+rewrite -mulmxBl.
+rewrite -/(x2_tilde t).
+congr +%R.
+rewrite -scalemxAr.
+rewrite -[RHS]scalemxAl.
+congr (_ *: _).
+rewrite fact216.
+xxx
+rewrite mulmxA.
+
+rewrite -mulmxDl.
+
+rewrite skew.sqr_spin /=.
+rewrite norm_x2_hat expr1n.
+have -> : norm ( x2_hat t) ^+ 2 = 1.
+  admit.
+have -> :  (gamma *: (x2 t - x2_hat t) - gamma *: (x2 t - x2_prime_hat t)) = - gamma *: (x2_hat t - x2_prime_hat t).
+  rewrite -scalerBr.
+  rewrite !opprB.
+  rewrite addrA.
+  rewrite addrC.
+  rewrite addrA addrA.
+  have -> : (- x2 t + x2 t ) = 0.
+    by rewrite addrC subrr.
+  rewrite sub0r.
+  rewrite scalerDr.
+  rewrite scalerN.
+  rewrite scalerBr.
+  rewrite scaleNr.
+  congr (  - (gamma *: x2_hat t)  + _).
+  rewrite scaleNr.
+  by rewrite opprK.
+rewrite mulmxBl.
+have -> : - gamma *: (x2_hat t - x2_prime_hat t) *m ((x2_hat t)^T *m x2_hat t - 1%:A) = 0.
+rewrite scalerBr.
+rewrite !mulmxBl /=.
+rewrite !mulmxDr.
+rewrite !mulmxA.
+rewrite linearZ /=.
+rewrite -scalemxAl -scalemxAl.
+rewrite -!scalemxAr.
+rewrite opprD.
+rewrite -[in LHS]scaleNr.
+rewrite addrA scale1r.
+rewrite mulmxN mulmx1.
+rewrite !scalemxAl. 
+rewrite !scaleNr.
+rewrite scale1r.
+rewrite !opprK.
+have -> :  - (gamma *: x2_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_hat t - - (gamma *: x2_prime_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_prime_hat t *m -1 =  - (gamma *: x2_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_hat t + (gamma *: x2_prime_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_prime_hat t *m -1.
+  by rewrite !mulNmx opprK.
+rewrite -scalerN.
+rewrite -scalemxAl.
+rewrite mulNmx.
+have -> : (x2_hat t *m (x2_hat t)^T) = 1.
+  Search (`|_|).
+  rewrite dotmulP /=.
+  Search (norm) (dotmul).
+  rewrite dotmulvv.
+  admit.
+rewrite scalerN /=.
+rewrite mulmxN mulmx1.
+have -> :   - gamma%:A *m x2_hat t + gamma *: x2_hat t = 0.
+rewrite addrC.
+rewrite mulNmx.
+Search (_ *m_) (_ *:_).
+rewrite -mul_scalar_mx.
+by rewrite scalemx1 subrr.
+rewrite add0r.
+rewrite -mulmxA.
+have -> : (x2_hat t)^T *m x2_hat t = 1.
+Search (_ ^T *m _).
+  Search (norm _ = 1).
+
+  
+  apply/trmx_inj.
+  rewrite trmx_mul.
+  rewrite dotmulP.
+  admit.
+by rewrite mulmx1 subrr.
+by rewrite addr0.
+Admitted.
 
 End problem_statementB.
 
