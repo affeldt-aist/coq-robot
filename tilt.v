@@ -88,73 +88,80 @@ Definition locnegsemidef {R : realType} (T : normedModType R) (V : T -> R) (x : 
 Definition lnd  {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
   V x = 0 /\ \forall z \near 0^', V z < 0.
 
-Section derive_matrix.
-Variable R : realFieldType.
-Context {m n : nat}.
-
-From mathcomp Require Import constructive_ereal.
-
-Lemma derive1mxE'' (M : R -> 'M[R]_(m.+1, n.+1)) (t : R) :
-  derivable M t 1 ->
-  M^`() t = \matrix_(i < m.+1, j < n.+1) (fun t : R => M t i j)^`() t.
-Admitted. (* Proved in MathComp-Analysis, to be PRed *)
-
-End derive_matrix.
-
 Section derive_help.
 Local Open Scope classical_set_scope.
-Lemma derivemx_derive1 {R : realFieldType} m n
-   (f : R -> 'M[R]_(m.+1, n.+1)) (x0 : R) (i : 'I_m.+1) (j : 'I_n.+1) :
-  'D_1 f x0 i j = 'D_1 (fun x => f x i j) x0.
-Proof.
-rewrite /=.
-rewrite -!derive1E.
-rewrite (_ : (fun x  => f x i j) = (fun M : 'M_(m.+1,n.+1) => M i j)  \o f ) //.
-rewrite !fctE.
-Search "derive" ('M_(_,_)).
-rewrite derive1mxE''.
-Admitted.
 
-Lemma derivemx_derive {R : realFieldType} (V : normedModType R) m n
-   (f : V -> 'M[R]_(m.+1, n.+1)) (x0 : V) (v : V) (i : 'I_m.+1) (j : 'I_n.+1) :
-  'D_v f x0 i j = 'D_v (fun x => f x i j) x0.
+Lemma derivable_dotmul {R : realFieldType} {n}
+    (u v : R -> 'rV[R]_n.+1) t :
+  derivable u t 1 -> derivable v t 1 ->
+  derivable (fun x => u x *d v x) t 1.
 Proof.
-rewrite /derive /=.
-set g := fun h => h^-1 *: (f (h *: v + x0) - f x0).
-have Hfunc : forall x, g x i j = x^-1 *: (f (x *: v + x0) i j - f x0 i j).
-  move=> x.
-  rewrite /g mxE.
-  rewrite mxE.
-  by rewrite mxE.
-under eq_fun do rewrite -Hfunc.
-symmetry.
-Search lim ( 'M_(_,_)).
-Admitted.
-Local Close Scope classical_set_scope.
+move=> ut1 vt1/=.
+rewrite /dotmul.
+rewrite (_ : (fun x : R => _) =
+    \sum_k (fun x : R => (u x)``_k * (v x) 0 k)); last first.
+  apply/funext => x.
+   rewrite !mxE.
+   under eq_bigr do rewrite !mxE.
+   elim/big_ind2 : _ => //= f a g b -> ->.
+   by rewrite fctE.
+apply: derivable_sum => i.
+by apply: derivableM => //=; exact: derivable_coord.
+Qed.
 
-Local Open Scope classical_set_scope.
 Lemma derive_norm {K : realType} n (u : K^o -> 'rV[K^o]_n.+1) (t : K) :
+  u t != 0 ->
+  derivable u t 1 ->
   (1 \*o (@GRing.exp K ^~ 2) \o @norm K n.+1 \o u)^`() t =
-  2*(fun t => ('D_1 u t *m  (u t)^T)``_0) t :> K.
+  2 * (fun t => ('D_1 u t *m  (u t)^T)``_0) t :> K.
 Proof.
+move=> u0 ut1.
 rewrite [LHS]derive1E deriveMl/=; last first.
-  admit.
+  apply/derivable1_diffP.
+  apply/(@differentiable_comp _ _ _ _ (fun x => norm (u x)) (fun x => x ^+ 2)) => //=.
+  rewrite /norm.
+  apply/(@differentiable_comp _ _ _ _ _ (fun x => Num.sqrt x)) => //=.
+    apply/derivable1_diffP.
+    exact/derivable_dotmul.
+  apply/derivable1_diffP.
+  apply/ex_derive.
+  apply: is_derive1_sqrt.
+  rewrite dotmulvv.
+  by rewrite exprn_gt0// norm_gt0.
 rewrite -derive1E mul1r.
 under eq_fun do rewrite -dotmulvv.
 rewrite dotmulP mxE /= mulr1n.
 rewrite derive1E.
-rewrite derive1mx_dotmul ; last 2 first.
-admit.
-admit.
+rewrite derive_dotmul ; last 2 first.
+  exact: ut1.
+  exact: ut1.
 rewrite dotmulC.
 by field.
-Admitted.
+Qed.
+
+Lemma derivable_scalar_mx {R : realFieldType} n (f : 'rV[R]_n.+1 -> R)
+    (a : 'rV[R]_n.+1) v :
+  derivable f a v ->
+  derivable (@scalar_mx _ 1 \o f) a v.
+Proof.
+move=> /cvg_ex[/= l fav].
+apply/cvg_ex => /=.
+exists (\col_(i < 1) l).
+apply/cvgrPdist_le => /= e e0.
+move/cvgrPdist_le : fav => /(_ _ e0).
+apply: filterS => x.
+apply: le_trans.
+rewrite [in leLHS]/Num.Def.normr/= !mx_normrE/=.
+apply: bigmax_le => //= -[i j] _.
+rewrite !mxE/=.
+by rewrite !ord1 eqxx !mulr1n.
+Qed.
 
 Lemma derive1mx_row_mx  {R : realFieldType} {n : nat}  {m : nat} :
 forall (f : R -> 'rV[R]_(n.+1 + m.+1)) (g : R -> 'rV[R]_(n.+1 + m.+1)) (t : R),
   'D_1 (fun x => row_mx (f x) (g x)) t =
                 row_mx ('D_1 f t) ('D_1 g t).
-Admitted.
+Abort.
 
 End derive_help.
 
@@ -169,9 +176,13 @@ Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n
 
 Lemma partial_diff {R : realType} n (f : 'rV[R]_n.+1 -> R)  (a : 'rV[R]_n.+1)
     (i : 'I_n.+1) :
+  derivable f a 'e_i ->
   partial f a i = ('D_'e_i (@scalar_mx _ 1 \o f) a) 0 0.
 Proof.
-rewrite derivemx_derive/= /partial /derive /=.
+move=> fa1.
+rewrite derive_mx ?mxE//=; last first.
+  exact: derivable_scalar_mx.
+rewrite /partial.
 under eq_fun do rewrite (addrC a).
 by under [in RHS]eq_fun do rewrite !mxE/= !mulr1n.
 Qed.
@@ -185,7 +196,7 @@ Lemma err_vecE {R : ringType} n (i : 'I_n.+1) :
 Proof.
 apply/rowP => j.
 by rewrite !mxE eqxx /= eq_sym.
-Abort.
+Qed.
 
 Definition gradient_partial {R : realType} n (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) :=
   \row_(i < n.+1) partial f a i.
@@ -202,11 +213,12 @@ Lemma gradient_partial_jacobian1 {R : realType} n (f : 'rV[R]_n.+1 -> R)
   gradient_partial f v = (jacobian1 f v)^T.
 Proof.
 move=> fa; apply/rowP => i.
-rewrite /gradient_partial mxE mxE /jacobian mxE -deriveE.
-  by rewrite partial_diff.
-apply: differentiable_comp => //.
-exact: differentiable_scalar_mx.
-Unshelve. all: by end_near. Qed.
+rewrite /gradient_partial mxE mxE /jacobian mxE -deriveE; last first.
+  apply: differentiable_comp => //.
+  exact: differentiable_scalar_mx.
+rewrite partial_diff//.
+exact/diff_derivable.
+Qed.
 
 End gradient.
 
@@ -242,8 +254,11 @@ by rewrite mxE [in RHS]mxE -scalemxAr mxE.
 Qed.
 
 Lemma LieDerivativeD {K : realType} n (f g : 'rV_n.+1 -> K) (x : K -> 'rV_n.+1) :
+  (forall t, differentiable f (x t)) ->
+  (forall t, differentiable g (x t)) ->
   LieDerivative (f + g) x = LieDerivative f x + LieDerivative g x.
 Proof.
+move=> dfx dgx.
 rewrite /LieDerivative /jacobian1 !fctE /dotmul /jacobian.
 apply/funext => t.
 rewrite (_ : (fun x0 : 'rV_n.+1 => (f x0 + g x0)%:M) =
@@ -252,8 +267,10 @@ rewrite (_ : (fun x0 : 'rV_n.+1 => (f x0 + g x0)%:M) =
   apply/matrixP => i j.
   by rewrite !mxE mulrnDl.
 rewrite [X in ((lin1_mx X )^T *m ('D_1 x t)^T) 0 0 = _ ](@diffD K _ _ _ _ (x t)) ; last 2 first.
-  admit.
-  admit.
+  apply/differentiable_comp => //.
+  exact/differentiable_scalar_mx.
+  apply/differentiable_comp => //.
+  exact/differentiable_scalar_mx.
 rewrite -trmx_mul.
 rewrite ( _ : lin1_mx ('d _ (x t) \+ 'd _ (x t)) =
   lin1_mx ('d (@scalar_mx _ _ \o f) (x t)) + lin1_mx ('d (@scalar_mx _ _ \o g) (x t))); last first.
@@ -262,7 +279,7 @@ rewrite ( _ : lin1_mx ('d _ (x t) \+ 'd _ (x t)) =
   by congr +%R; rewrite mxE.
 rewrite [in LHS] mulmxDr /= mxE mxE. by congr +%R;
   rewrite -trmx_mul [RHS]mxE.
-Admitted.
+Qed.
 
 Lemma derivative_LieDerivative_eq0 {K : realType} n
     (f : 'rV_n.+1 -> K) (x : K -> 'rV[K]_n.+1) (t : K) :
@@ -298,7 +315,8 @@ transitivity ( ('D_('D_1 x t) (fun y : 'rV_6 => (norm (f y) ^+ 2)) (x t)) ).
   admit.
 rewrite deriveE ; last first.
   admit.
-rewrite derive_funmxE//=; last admit.
+rewrite derive_mx//=; last first.
+  admit.
 rewrite deriveE ; last first.
   admit.
 transitivity(('d (fun y : 'rV_6 => norm (f y) ^+ 2) (x t ) \o ('d x t)) 1).
@@ -453,7 +471,7 @@ Lemma ya_E t : ('D_1 ('D_1 p) t + g0 *: 'e_2) *m R t = y_a p R g0 t.
 Proof.
 rewrite mulmxDl /y_a/=.
 congr +%R.
-rewrite [in RHS]derive1mxM; [|admit|admit].
+rewrite [in RHS]derive_mulmx; [|admit|admit].
 rewrite derive1mx_ang_vel//; [|admit|admit].
 rewrite ang_vel_mxE//; [|admit|admit].
 rewrite addrCA.
@@ -492,7 +510,7 @@ Qed.
 Lemma dRu t (u : K -> 'rV[K]_3) (T : K -> 'M[K]_3) (w' := ang_vel T)
   : 'D_1 (fun t => u t *m T t) t = u t *m T t *m \S(w' t) + 'D_1 u t *m T t. 
 Proof.
-rewrite derive1mxM; last 2 first.
+rewrite derive_mulmx; last 2 first.
   admit.
   admit.
 rewrite addrC.
@@ -530,21 +548,21 @@ rewrite /x2.
 have ->: 'D_1 (fun t0 : K => 'e_2 *m (R t0)) t = ('e_2 *m 'D_1 (fun t => (R t)) t).
   move => n.
   rewrite /=.
-  rewrite derive1mxM//=; last first.
+  rewrite derive_mulmx//=; last first.
   by rewrite derive_cst mul0mx add0r.
 rewrite /=.
 rewrite derive1mx_ang_vel /=; last 2 first.
   by move=> ?; rewrite rotation_sub.
-  admit.
+  by [].
 by rewrite mulmxA.
-Admitted.
+Qed.
 
 End problem_statementA.
 
 Section problem_statementB.
 Variable K : realType.
 Variable gamma : K.
-Variable alpha1 : K. 
+Variable alpha1 : K.
 Variable p : K -> 'rV[K]_3.
 Let v t := 'D_1 p t.
 Variable R : K -> 'M[K]_3.
@@ -559,21 +577,21 @@ Let x1_hat_dot t := - x1_hat t *m \S(y_g t) + y_a t - g0 *: x2_prime_hat t.
 Let x2_hat_dot t := x2_hat t *m - \S(y_g t - gamma *: x2_prime_hat t *m \S(x2_hat t)).
 Hypothesis x2_hat_S2 : x2_hat 0 \in S2.
 Notation x2 := (x2 R).
-Let p1 t := x2 t - x2_prime_hat t. 
+Let p1 t := x2 t - x2_prime_hat t.
 Let x2_tilde (t : K) := x2 t - x2_hat t.
-Let p1_point t := 'D_1 p1 t. 
+Let p1_point t := 'D_1 p1 t.
 
 
 Lemma derive_p1 t : 'D_1 p1 t = p1 t *m \S(w t) - gamma *: p1 t.
 Proof.
 rewrite /p1.
-rewrite derive1mxB; last 2 first.
+rewrite deriveB; last 2 first.
   admit.
   admit.
 rewrite /x2_prime_hat /=.
 rewrite deriveZ /=; last first.
   admit.
-rewrite derive1mxM; last 2 first.
+rewrite derive_mulmx; last 2 first.
   admit.
   admit.
 rewrite derive1mx_ang_vel; last 2 first.
@@ -582,15 +600,15 @@ rewrite derive1mx_ang_vel; last 2 first.
 rewrite -scaleNr opprK -scaleNr opprK.
 rewrite !mulmxA.
 rewrite addrAC.
-rewrite derive1mxB; last 2 first.
+rewrite deriveB; last 2 first.
   admit.
   admit.
 rewrite derive1mx_ang_vel; last 2 first.
   admit.
   admit.
-rewrite mulmxA. 
+rewrite mulmxA.
 rewrite -(mulmxA('e_2)).
-rewrite orthogonal_mul_tr /=. 
+rewrite orthogonal_mul_tr /=.
 rewrite -(mulmxA('e_2)) mul1mx.
 rewrite ang_vel_mxE; last 2 first.
   admit.
@@ -639,7 +657,10 @@ set fy := row_mx (- alpha1 *: Left y)
 rewrite /Num.norm/=.
 rewrite !mx_normrE.
 apply: bigmax_le => /=.
-  admit.
+  rewrite mulr_ge0//.
+  apply: le_trans; last first.
+    apply: (le_bigmax _ _ (ord0, ord0)) => //.
+  by [].
 move=> -[a b] _.
 rewrite /=.
 rewrite [leRHS](_ : _ = \big[maxr/0]_ij (maxr alpha1 gamma * `|(x - y) ij.1 ij.2|)); last first.
@@ -683,13 +704,14 @@ apply/seteqP; split.
     transitivity (fun t => -2 * (Right(y^`()%classic t) *d ('e_2 - Right (y t)))).
       apply/funext => x.
       rewrite !derive1E.
-      rewrite derive_funmxE; last admit.
+      rewrite derive_mx; last first.
+        admit.
       rewrite /dotmul.
       under eq_fun do rewrite dotmulP /=.
       rewrite dotmulP.
       rewrite !mxE /= mulr1n.
       under eq_fun do rewrite !mxE /= mulr1n.
-      rewrite !derive1mx_dotmul; last 2 first.
+      rewrite !derive_dotmul/=; last 2 first.
         admit.
         admit.
       rewrite /dotmul /=.
@@ -698,16 +720,17 @@ apply/seteqP; split.
       rewrite !mxE /= !mulr1n.
       have -> : ('D_1 (fun x0 : K => 'e_2 - Right (y x0)) x)
             = - (Right ('D_1 y x)).
-        rewrite derive1mxB /= ; last 2 first.
+        rewrite deriveB /= ; last 2 first.
           exact: derivable_cst.
           admit.
         rewrite derive_cst /= sub0r.
         congr (-_).
-        by apply derive1mx_rsubmx.
+        rewrite derive_rsubmx//=.
+        admit. (* forall x, derivable y x 1 *)
       rewrite -(_ : 'D_1 y x = (\matrix_(i, j) 'D_1 (fun t0 : K => y t0 i j) x)); last first.
         apply/matrixP => a b; rewrite !mxE.
-        rewrite derive_funmxE//= ?mxE//.
-        admit.
+        rewrite derive_mx//= ?mxE//.
+        admit. (* derivable y x 1 *)
       ring.
     have Rsu t0 : (Right (y^`()%classic t0) =
                   (gamma *: (Right (y t0) - Left (y t0)) *m \S('e_2 - Right (y t0)) ^+ 2)).
@@ -940,15 +963,17 @@ Lemma derive_zp1 (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gam
   'D_1 (Left \o traj) z = - alpha1 *: Left (traj z).
 Proof.
 move=> /(_ z)/(congr1 Left).
-by rewrite row_mxKl => ?; rewrite derive1mx_lsubmx.
-Qed.
+rewrite row_mxKl => ?; rewrite derive_lsubmx//=.
+admit. (* forall x : K, derivable traj x 1 *)
+Admitted.
 
 Lemma derive_z2  (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gamma) traj ->
    'D_1 (Right \o traj) z =
    gamma *: (Right (traj z) - Left (traj z)) *m \S('e_2 - Right (traj z)) ^+ 2.
 Proof.
-by move => /(_ z)/(congr1 Right); rewrite row_mxKr => ?; rewrite derive1mx_rsubmx.
-Qed.
+move => /(_ z)/(congr1 Right); rewrite row_mxKr => ?; rewrite derive_rsubmx//=.
+admit. (* forall x : K, derivable traj x 1 *)
+Admitted.
 
 Let c1 := 2^-1 / alpha1.
 Let c2 := 2^-1 / gamma.
@@ -978,6 +1003,9 @@ Qed.
 Lemma differentiable_norm_Left (y : 'rV[K]_6) :
   differentiable (fun x : 'rV_6 => norm (Left x) ^+ 2 : K) y.
 Proof.
+apply/(@differentiable_comp _ _ _ _ (fun x => norm (Left x)) (fun x => x ^+ 2)) => //=.
+apply/differentiable_comp.
+  (*derivable_lsubmx.*) admit.
 Admitted.
 
 Lemma differentiable_norm_Right (y : 'rV[K]_6) :
@@ -990,7 +1018,13 @@ Lemma deriveV1 (x : K -> 'rV[K]_6) t : solves_equation (eqn33 alpha1 gamma) x ->
 Proof.
 move=> eqn33x.
 rewrite /V1.
-rewrite LieDerivativeD.
+rewrite LieDerivativeD; last 2 first.
+  move=> t0.
+  apply: differentiableM => //=.
+  exact: differentiable_norm_Left.
+  move=> t0.
+  apply: differentiableM => //=.
+  exact: differentiable_norm_Right.
 rewrite !invfM /=.
 rewrite fctE.
 under [X in LieDerivative X _ _ + _]eq_fun do rewrite mulrC.
@@ -1166,4 +1200,3 @@ split; first exact: equilibrium_point1.
 Qed.
 
 End Lyapunov.
-
