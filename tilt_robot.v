@@ -24,7 +24,7 @@ Lemma CauchySchwarz_vec {R : realType} {n : nat} (a b : 'rV[R]_n.+1) :
   (a *d b)^+2 <= (a *d a) * (b *d b).
 Proof.
 suffices: 0 <= (b *d b) * (a *d a) - (a *d b) ^+ 2.
-  rewrite -subr_ge0.
+  rewrite subr_ge0.
   rewrite mulrC.
   exact.
 rewrite subr_ge0 expr2 mulrC !dotmulvv /= -expr2.
@@ -115,30 +115,62 @@ Lemma norm_squared {R : rcfType} n (u : 'rV[R]_n) :
   (u *m (u)^T) 0 0 = norm u ^+2.
 Proof. by rewrite -dotmulvv /dotmul. Qed.
 
-Lemma derive1mx_rsubmx {R : realType} :
-  forall (f : R -> 'rV[R]_(3 + 3)) (t : R),
-  'D_1 (fun x => rsubmx (f x)) t = @rsubmx R _ 3 3 ('D_1 f t).
+Lemma derivable_rsubmx {R : realType} {V : normedModType R} (f : V -> 'rV[R]_(3 + 3)) t v :
+  (forall x, derivable f x v) ->
+  derivable (fun x => rsubmx (f x)) t v.
 Proof.
-move=> f t.
-apply/matrixP => i j.
-rewrite !mxE /=.
-rewrite /rsubmx /=.
-(*under eq_fun do rewrite mxE mxE.
-symmetry.
-by under eq_fun do rewrite mxE.
-Qed.*) Admitted.
+move=> /= => df1.
+apply/derivable_mxP => i j/=.
+rewrite (ord1 i).
+have /cvg_ex[/= l Hl]:= df1 t.
+apply/cvg_ex => /=; exists (l``_(rshift 3 j)).
+apply/cvgrPdist_le => /= e e0.
+move/cvgrPdist_le : Hl => /(_ _ e0).
+apply: filterS => x.
+apply: le_trans.
+rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
+apply: le_trans; last first.
+  exact: (le_bigmax _ _ (ord0, rshift 3 j)).
+by rewrite !mxE.
+Qed.
 
-Lemma derive1mx_lsubmx {R : realType} :
-  forall (f : R -> 'rV[R]_(3 + 3)) (t : R),
-  'D_1 (fun x => lsubmx (f x)) t = @lsubmx R _ 3 3 ('D_1 f t).
+Lemma derive_rsubmx {R : realType} {V : normedModType R} (f : V -> 'rV[R]_(3 + 3)) t v:
+  (forall x, derivable f x v) ->
+  'D_v (fun x => rsubmx (f x)) t = @rsubmx R _ 3 3 ('D_v f t).
 Proof.
-move=> f t.
-(*rewrite /derive1mx.
-rewrite -!derive1mx_matrix /=.
-apply/matrixP => i j.
-rewrite !mxE /=.
-rewrite /lsubmx /=.
-under eq_fun do rewrite mxE mxE.
-symmetry.
-by under eq_fun do rewrite mxE.
-Qed.*) Admitted.
+move=> df1; apply/matrixP => i j; rewrite !mxE /=.
+rewrite derive_mx ?mxE//=; last exact: derivable_rsubmx.
+rewrite derive_mx ?mxE//=.
+f_equal.
+by apply/funext => x; rewrite !mxE.
+Qed.
+
+Lemma derivable_lsubmx {R : realType} {V : normedModType R} (f : V -> 'rV[R]_(3 + 3)) t v :
+  (forall x, derivable f x v) ->
+  derivable (fun x => lsubmx (f x)) t v.
+Proof.
+move=> /= => df1.
+apply/derivable_mxP => i j/=.
+rewrite (ord1 i).
+have /cvg_ex[/= l Hl]:= df1 t.
+apply/cvg_ex => /=; exists (l``_(lshift 3 j)).
+apply/cvgrPdist_le => /= e e0.
+move/cvgrPdist_le : Hl => /(_ _ e0).
+apply: filterS => x.
+apply: le_trans.
+rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
+apply: le_trans; last first.
+  exact: (le_bigmax _ _ (ord0, lshift 3 j)).
+by rewrite !mxE.
+Qed.
+
+Lemma derive_lsubmx {R : realType} {V : normedModType R} (f : V -> 'rV[R]_(3 + 3)) t v :
+  (forall x, derivable f x v) ->
+  'D_v (fun x => lsubmx (f x)) t = @lsubmx R _ 3 3 ('D_v f t).
+Proof.
+move=> df1; apply/matrixP => i j; rewrite !mxE /=.
+rewrite derive_mx ?mxE//=; last exact: derivable_lsubmx.
+rewrite derive_mx ?mxE//=.
+f_equal.
+by apply/funext => x; rewrite !mxE.
+Qed.
