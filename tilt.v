@@ -340,9 +340,10 @@ Context {K : realType} {n : nat}.
 Let T := 'rV[K]_n.+1.
 
 Variable f : (K -> T) -> K -> T.
+(*Variable y0 : T.*)
 
 Definition solves_equation (z : K -> T) : Prop :=
-  (forall t, derivable z t (1:K)%R) /\ forall t, 'D_1 z t = f z t.
+  (*z 0 = t0 /\*) (forall t, derivable z t (1:K)%R) /\ forall t, 'D_1 z t = f z t.
 
 Definition is_equilibrium_point x := solves_equation (cst x).
 
@@ -935,31 +936,29 @@ move=> t; rewrite derive_cst /eqn33 /point1; apply/eqP.
 rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP. split.
   rewrite scaler_eq0; apply/orP; right; apply/eqP/rowP; move => i.
   rewrite /zp1 /p1 /= /x2 /x2'hat /x1.
-  admit.
+  by rewrite lsubmx_const.
 apply/eqP/rowP; move => i; apply/eqP; set N := (X in _ *: X *m _); have : N = 0.
   rewrite /N /=; apply /rowP; move => a. 
-  rewrite mxE.
-  admit.
+  rewrite !mxE.
+  by rewrite subrr.
 by move => n; rewrite n scaler0 mul0mx.
-Admitted.
+Qed.
 
 Lemma equilibrium_point2 : is_equilibrium_point eqn33 point2.
 Proof.
-split => //=.
+split => //.
 move => t; rewrite derive_cst; apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
 set N := (X in _ *: X == 0 /\ _).
 have N0 : N = 0.
-  apply/rowP; move => i; rewrite /p1.
-  rewrite /N /zp1 /p1.
-  admit.
-    (*move => j _; by rewrite mxE.
+  apply/rowP; move => i; rewrite !mxE; case: splitP.
+    move => j _; by rewrite mxE.
   move => k /= i3k.
   have := ltn_ord i.
-  by rewrite i3k -ltn_subRL subnn.*)
+  by rewrite i3k -ltn_subRL subnn.
 split.
   by rewrite scaler_eq0 N0 eqxx orbT.
 rewrite -scalemxAl scalemx_eq0 gt_eqF//=.
-(*rewrite -[Left point2]/N N0 subr0.
+rewrite -[Left point2]/N N0 subr0.
 set M := (X in X *m _); rewrite -/M.
 have ME : M = 2 *: 'e_2.
   apply/rowP => i; rewrite !mxE eqxx/=.
@@ -971,8 +970,7 @@ have ME : M = 2 *: 'e_2.
   by rewrite !mxE eqxx/=.
 rewrite ME -scalemxAl scalemx_eq0 pnatr_eq0/= [X in X *: _](_ : _ = 1 + 1)// scalerDl scale1r opprD addrA subrr sub0r spinN sqrrN expr2 -mulmxE mulmxA.
 by rewrite (_ : 'e_2 *m _ = 0) ?mul0mx// ; apply: trmx_inj; rewrite trmx_mul trmx0 tr_spin mulNmx spin_mul_tr oppr0.
-Qed.*)
-Admitted.
+Qed.
 
 (* this lemma asks for lyapunov + lasalle *)
 Lemma tractories_converge (y : K -> 'rV[K]_6) : solves_equation eqn33 y ->
@@ -1346,9 +1344,11 @@ Admitted.
 Lemma V1_is_lyapunov_stable :
   is_lyapunov_stable_at (eqn33 alpha1 gamma) (V1 alpha1 gamma) point1.
 Proof.
-split; first exact: equilibrium_point1.
+split.
+- by apply: equilibrium_point1 => //.
 - exact: V1_is_lyapunov_candidate.
-- exact: V1_point_is_lnsd.
+- move=> traj1 ? ? ?.
+  by apply: V1_point_is_lnsd => //.
 Qed.
 
 End Lyapunov.
