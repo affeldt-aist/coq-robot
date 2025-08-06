@@ -447,12 +447,11 @@ Definition is_invariant_solution_equa_diff {K : realType}
 Section ya.
 (* mesure de l'accelerometre *)
 Variable K : realType.
-Variable p : K -> 'rV[K]_3.
+Variable v : K -> 'rV[K]_3.
 Variable R : K -> 'M[K]_3.
 Variable g0 : K.
-Let v t := 'D_1 p t *m R t.
 Let w t := ang_vel R t.
-Let x1 t := v t.
+Let x1 t :=  v t *m R t.
 Definition x2 t : 'rV_3 := 'e_2 *m R t.
 Definition y_a t := - x1 t  *m \S( w t) + 'D_1 x1 t + g0 *: x2 t.
 End ya.
@@ -463,12 +462,11 @@ Section ya_E.
 Context {K : realType}.
 Variable R : K -> 'M[K]_3.
 Hypothesis RSO : forall t, R t \is 'SO[K]_3.
-Variable p : K -> 'rV[K]_3.
+Variable v : K -> 'rV[K]_3.
 Variable g0 : K.
-Let v t := 'D_1 p t *m R t.
 Let w t := ang_vel R t.
 
-Lemma ya_E t : ('D_1 ('D_1 p) t + g0 *: 'e_2) *m R t = y_a p R g0 t.
+Lemma ya_E t : ('D_1 v t + g0 *: 'e_2) *m R t = y_a v R g0 t.
 Proof.
 rewrite mulmxDl /y_a/=.
 congr +%R.
@@ -482,6 +480,7 @@ rewrite [X in _ = _ X]addrC.
 rewrite !mulNmx.
 rewrite -mulmxA.
 by rewrite subrr addr0.
+by rewrite /x2 scalemxAl.
 Admitted.
 
 End ya_E.
@@ -492,9 +491,8 @@ Variable g0 : K.
 Variable R : K -> 'M[K]_3.
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 Hypothesis derivableR : forall t, derivable R t 1.
-Variable p : K -> 'rV[K]_3.
-Let v t := 'D_1 p t *m R t.
-Let x1 t := v t.
+Variable v : K -> 'rV[K]_3.
+Let x1 t := v t *m R t.
 Let x2 t : 'rV_3 := ('e_2) *m R t (* eqn (8) *).
 Let x1_point t := 'D_1 x1 t.
 Let x2_point t := 'D_1 x2 t.
@@ -528,12 +526,12 @@ by [].
 Admitted.
 
 (* eqn 10*)
-Notation y_a := (y_a p R g0).
+Notation y_a := (y_a v R g0).
 Lemma derive_x1 t : 'D_1 x1 t = x1 t *m \S(w t) + y_a t - g0 *: x2 t.
 Proof.
 rewrite /y_a/= -addrA addrK.
 rewrite /x1.
-rewrite addrCA addrA mulNmx /= /v /w.
+rewrite addrCA addrA mulNmx /= /w.
 by rewrite (addrC(-_)) subrr add0r.
 Qed.
 
@@ -564,17 +562,16 @@ Section problem_statementB.
 Variable K : realType.
 Variable gamma : K.
 Variable alpha1 : K.
-Variable p : K -> 'rV[K]_3.
+Variable v : K -> 'rV[K]_3.
 Variable R : K -> 'M[K]_3.
 Hypothesis derivableR : forall t, derivable R t 1.
-Let v t := 'D_1 p t *m R t.
 Let w t := ang_vel R t.
 Variable x1_hat : K -> 'rV[K]_3.
 Variable x2_hat : K -> 'rV[K]_3.
 Variable g0 : K.
 Hypotheses g0_eq0 : g0 != 0.
-Notation y_a := (y_a p R g0).
-Let x1 t := v t.
+Notation y_a := (y_a v R g0).
+Let x1 t := v t *m R t.
 Let x2'hat t := -(alpha1 / g0) *: (x1 t - x1_hat t). (* 12b*)
 Hypothesis eq12a : forall t, 'D_1 x1_hat t = x1_hat t *m \S(w t) + y_a t - g0 *: x2'hat t.
 Hypothesis eq12c : forall t, 'D_1 x2_hat t = x2_hat t *m \S(w t - gamma *: x2'hat t *m \S(x2_hat t)). (*12c*)
@@ -585,6 +582,8 @@ Let x2_tilde t :=  x2 t - x2_hat t.
 Let p1_point t := 'D_1 p1 t.
 Let x2_tilde_point t := 'D_1 x2_tilde t.
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
+Let zp1 t := p1 t *m (R t)^T.
+Let z2 t := x2_tilde t *m (R t)^T.  
 
 Lemma p1E t : p1 t = x2 t + (alpha1 / g0) *: (x1 t - x1_hat t).
 Proof.
@@ -597,6 +596,17 @@ Lemma derivex1_hat t : 'D_1 x1_hat t = x1_hat t *m \S(w t).
 Proof.
 rewrite eq12a.
 rewrite /y_a/=.
+rewrite !derive_mulmx; last 2 first.
+  admit.
+  admit.
+rewrite -/(w t).
+rewrite !addrA.
+rewrite !scalemxAl.
+rewrite mulNmx.
+rewrite -addrA -addrA -addrA -addrA.
+have -> : (- (v t *m R t *m \S(w t)) + ('D_1 v t *m R t + (v t *m 'D_1 R t + (g0 *: 'e_2 *m R t - g0 *: x2'hat t)))) = 0.
+rewrite !addrA.
+rewrite -mulmxN.
 Abort.
 
 Lemma derivex2_hat t : 'D_1 x2_hat t = x2_hat t *m \S(w t).
@@ -618,9 +628,9 @@ rewrite deriveD//=; last 2 first.
   admit.
 rewrite deriveZ//=; last admit.
 rewrite deriveB//; [|admit|admit].
-rewrite (derive_x1 g0).
-rewrite -/(x2 t).
-rewrite derive_x2//.
+rewrite !(derive_x2) //.
+rewrite -/(x2 t) /=.
+rewrite (derive_x1 g0) //.
 rewrite -/(x2 t).
 rewrite -/(v t).
 rewrite -/(x1 t).
@@ -660,9 +670,9 @@ Admitted.
 
 Hypothesis norm_x2_hat : forall t, norm (x2_hat t) = 1.
 
-Lemma derive_x2tilde t : x2_tilde_point t = x2_tilde t *m \S( w t) + gamma *: (x2_tilde t - p1 t) *m \S( x2_hat t ) ^+ 2 .
+Lemma derive_x2tilde t : 'D_1 x2_tilde t = x2_tilde t *m \S( w t) - gamma *: (x2_tilde t - p1 t) *m \S( x2_hat t ) ^+ 2 .
 Proof.
-rewrite /x2_tilde_point /x2_tilde.
+rewrite /x2_tilde.
 rewrite deriveB; last 2 first.
   admit.
   admit.
@@ -684,83 +694,102 @@ rewrite -mulmxBl.
 rewrite -/(x2_tilde t).
 congr +%R.
 rewrite -scalemxAr.
+rewrite -mulNmx.
+rewrite -scalerN.
 rewrite -[RHS]scalemxAl.
 congr (_ *: _).
-rewrite fact216.
-xxx
-rewrite mulmxA.
-
-rewrite -mulmxDl.
-
-rewrite skew.sqr_spin /=.
-rewrite norm_x2_hat expr1n.
-have -> : norm ( x2_hat t) ^+ 2 = 1.
-  admit.
-have -> :  (gamma *: (x2 t - x2_hat t) - gamma *: (x2 t - x2_prime_hat t)) = - gamma *: (x2_hat t - x2_prime_hat t).
-  rewrite -scalerBr.
-  rewrite !opprB.
-  rewrite addrA.
-  rewrite addrC.
-  rewrite addrA addrA.
-  have -> : (- x2 t + x2 t ) = 0.
-    by rewrite addrC subrr.
-  rewrite sub0r.
-  rewrite scalerDr.
-  rewrite scalerN.
-  rewrite scalerBr.
-  rewrite scaleNr.
-  congr (  - (gamma *: x2_hat t)  + _).
-  rewrite scaleNr.
-  by rewrite opprK.
+rewrite /x2_tilde /p1.
+rewrite (opprB _ (x2'hat t)).
+rewrite -addrA.
+rewrite (addrC (x2 t)).
+rewrite addrA subrK.
+rewrite opprD opprK.
 rewrite mulmxBl.
-have -> : - gamma *: (x2_hat t - x2_prime_hat t) *m ((x2_hat t)^T *m x2_hat t - 1%:A) = 0.
-rewrite scalerBr.
-rewrite !mulmxBl /=.
-rewrite !mulmxDr.
-rewrite !mulmxA.
-rewrite linearZ /=.
-rewrite -scalemxAl -scalemxAl.
-rewrite -!scalemxAr.
-rewrite opprD.
-rewrite -[in LHS]scaleNr.
-rewrite addrA scale1r.
-rewrite mulmxN mulmx1.
-rewrite !scalemxAl. 
-rewrite !scaleNr.
-rewrite scale1r.
-rewrite !opprK.
-have -> :  - (gamma *: x2_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_hat t - - (gamma *: x2_prime_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_prime_hat t *m -1 =  - (gamma *: x2_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_hat t + (gamma *: x2_prime_hat t) *m (x2_hat t)^T *m x2_hat t + gamma *: x2_prime_hat t *m -1.
-  by rewrite !mulNmx opprK.
-rewrite -scalerN.
-rewrite -scalemxAl.
-rewrite mulNmx.
-have -> : (x2_hat t *m (x2_hat t)^T) = 1.
-  Search (`|_|).
-  rewrite dotmulP /=.
-  Search (norm) (dotmul).
-  rewrite dotmulvv.
-  admit.
-rewrite scalerN /=.
-rewrite mulmxN mulmx1.
-have -> :   - gamma%:A *m x2_hat t + gamma *: x2_hat t = 0.
-rewrite addrC.
-rewrite mulNmx.
-Search (_ *m_) (_ *:_).
-rewrite -mul_scalar_mx.
-by rewrite scalemx1 subrr.
-rewrite add0r.
-rewrite -mulmxA.
-have -> : (x2_hat t)^T *m x2_hat t = 1.
-Search (_ ^T *m _).
-  Search (norm _ = 1).
+rewrite [X in _ = X + _](_ : _ = 0) ?add0r; last first.
+  rewrite mulmxA.
+  rewrite -(mulmxA(x2_hat t)) sqr_spin //.
+  rewrite mulmxDr !mulmxA.
+  rewrite dotmul1 // mul1mx.
+  by rewrite mulmxN mulmx1 subrr.
+rewrite expr2.
+rewrite -mulmxE.
+rewrite fact215 -mulmxE.
+rewrite -spin_crossmul.
+rewrite [in RHS]mulmxA.
+rewrite [in RHS]spinE.
+rewrite spinE spinE.
+by rewrite [LHS](@lieC _ (vec3 K))/=.
+Admitted.
 
-  
-  apply/trmx_inj.
-  rewrite trmx_mul.
-  rewrite dotmulP.
+Lemma Rx2 t : x2_hat t *m (R t)^T = 'e_2 - z2 t.
+Proof.
+rewrite /z2.
+rewrite /x2_tilde.
+rewrite mulmxBl.
+rewrite opprB.
+rewrite addrCA.
+rewrite [X in _ + X](_ : _ = 0) ?addr0//.
+rewrite /x2 -mulmxA.
+by rewrite orthogonal_mul_tr ?rotation_sub// mulmx1 subrr.
+Qed.
+
+Lemma derive_zp1t t : 'D_1 zp1 t = -alpha1 *: zp1 t.
+Proof.
+rewrite /zp1.
+rewrite derive_mulmx; last 2 first.
   admit.
-by rewrite mulmx1 subrr.
-by rewrite addr0.
+  admit.
+rewrite derive_p1.
+rewrite mulmxBl.
+rewrite addrAC.
+apply/eqP.
+rewrite subr_eq.
+rewrite [in eqbRHS]addrC.
+rewrite scaleNr.
+rewrite scalemxAl subrr /=.
+rewrite derive_trmx; last by admit.
+rewrite derive1mx_ang_vel //; last by move => t0; rewrite rotation_sub.
+rewrite ang_vel_mxE //; last by move => t1 ; rewrite rotation_sub.
+rewrite -/(w t).
+rewrite -mulmxA.
+rewrite -mulmxDr.
+rewrite trmx_mul.
+rewrite tr_spin.
+by rewrite mulNmx subrr mulmx0.
+Admitted.
+
+Lemma derive_z2t t : 'D_1 z2 t = gamma *: (z2 t - zp1 t) *m - \S('e_2 -z2 t)^+2.
+Proof.
+rewrite [LHS]derive_mulmx; last 2 first.
+  admit.
+  admit.
+simpl in *.
+rewrite derive_trmx//.
+rewrite derive1mx_ang_vel; last 2 first.
+  by move => t0; rewrite rotation_sub.
+  by [].
+rewrite !ang_vel_mxE; last 2 first.
+  by move => t0; rewrite rotation_sub.
+  by [].
+rewrite trmx_mul mulmxA -mulmxDl.
+rewrite derive_x2tilde /=.
+rewrite addrAC -/(w t) tr_spin mulmxN subrr sub0r.
+rewrite -scalemxAl -scaleNr -scalemxAl.
+rewrite mulmxN -scalemxAl -[in RHS]scaleNr.
+congr (- _ *: _).
+rewrite -Rx2.
+rewrite -spin_similarity; last admit.
+rewrite trmxK.
+rewrite [in RHS]expr2 -mulmxE !mulmxA.
+congr (_ *m _ *m _).
+rewrite -[in RHS]mulmxA.
+rewrite orthogonal_tr_mul ?rotation_sub// mulmx1.
+congr (_ *m _).
+rewrite mulmxBl; congr (_ - _).
+   (* do a lemma with that *)
+  rewrite /z2 -mulmxA.
+  by rewrite orthogonal_tr_mul ?rotation_sub// mulmx1.
+by rewrite /zp1 -mulmxA orthogonal_tr_mul ?rotation_sub// mulmx1.
 Admitted.
 
 End problem_statementB.
