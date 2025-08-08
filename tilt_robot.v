@@ -25,14 +25,12 @@ Lemma CauchySchwarz_vec {R : realType} {n : nat} (a b : 'rV[R]_n.+1) :
 Proof.
 suffices: 0 <= (b *d b) * (a *d a) - (a *d b) ^+ 2.
   rewrite subr_ge0.
-  rewrite mulrC.
-  exact.
+  by rewrite mulrC.
 rewrite subr_ge0 expr2 mulrC !dotmulvv /= -expr2.
 have [->|hb] := eqVneq b 0.
   rewrite dotmulv0 expr0n.
   rewrite enorm0.
-  rewrite expr0n //=.
-  by rewrite mul0r.
+  by rewrite expr0n //= mul0r.
 pose t := (a *d b) / (`|b|_e ^+ 2).
 have h : 0 <= `|a - t *: b|_e ^+ 2.
   rewrite exprn_ge0 //.

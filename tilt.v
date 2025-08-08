@@ -627,23 +627,18 @@ rewrite -/(x2 t) -/(v t) -/(x1 t) -/(w t).
 rewrite eq12a.
 transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t) - alpha1 *: p1 t).
   transitivity (x2 t *m \S(w t) + (alpha1 / g0) *: (x1 t *m \S(w t) - g0 *: x2 t - (x1_hat t *m \S(w t) - g0 *: x2'hat t))).
-    do 2 f_equal.  
-    rewrite -3![in LHS]addrA -[in RHS]addrA.
-    congr +%R.
-    rewrite opprD.
-    rewrite (addrA (g0 *: x2 t)).
-    rewrite subrr add0r.
-    rewrite opprK.
-    rewrite [in RHS]opprB [in RHS]addrCA [in RHS]addrC.
-    rewrite addrA.
-    congr +%R.
-    rewrite opprD.
-    rewrite (addrC _ (- y_a t)) addrA.
-    congr (_ - _).
-    rewrite /y_a.
-    rewrite opprD.
-    rewrite addrA.
-    by rewrite subrr add0r.
+   congr (_ + _ *: _).
+   rewrite -2![in LHS]addrA -[in RHS]addrA.
+   congr +%R.
+   rewrite opprD [in LHS]addrCA.
+   rewrite opprK.
+   rewrite [in RHS]opprB.
+   rewrite [in RHS]addrCA [in RHS]addrC.
+   rewrite -[in RHS]addrA.
+   congr +%R.
+   rewrite [in LHS]addrA.
+   congr +%R.
+   by rewrite opprD addrCA subrr addr0.
   rewrite (_ : x1 t *m \S(w t) - g0 *: x2 t - (x1_hat t *m \S(w t) - g0 *: x2'hat t) =
                (x1 t - x1_hat t) *m \S(w t) - g0 *: (x2 t - x2'hat t)); last first.
     rewrite mulmxBl scalerDr scalerN opprB addrA [LHS]addrC 2!addrA.
