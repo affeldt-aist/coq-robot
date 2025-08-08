@@ -1258,7 +1258,9 @@ rewrite !sum2E/= ![in leRHS]mxE !sum2E/= ![in leRHS]mxE /=.
 rewrite !mulr1 mulrN mulNr opprK mulrDl mulNr -expr2.
 rewrite [in leLHS] addrCA -!addrA lerD2l mulrDl (mulNr (norm w)).
 rewrite -expr2 !addrA lerD2r !(mulrN , mulNr) opprK -mulrA.
-rewrite [in leRHS](mulrC _ (norm w)) -mulrDr [in leRHS](mulrC (2 ^-1)).
+rewrite [in leRHS](mulrC _ (norm w)).
+rewrite mulrC [norm (zp1 z) * _]mulrC.  
+rewrite -mulrDl [in leRHS](mulrC (2 ^-1)).
 by rewrite -mulrDr -div1r -splitr mulr1.
 Qed.
 
