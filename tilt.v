@@ -340,28 +340,28 @@ Context {K : realType} {n : nat}.
 Let T := 'rV[K]_n.+1.
 
 Variable f : (K -> T) -> K -> T.
-(*Variable y0 : T.*)
 
-Definition solves_equation (z : K -> T) : Prop :=
-  (*z 0 = t0 /\*) (forall t, derivable z t (1:K)%R) /\ forall t, 'D_1 z t = f z t.
+Definition solves_equation (z : K -> T) (A : set T) : Prop :=
+   z 0 \in A  /\ (forall t, derivable z t (1:K)%R) /\ forall t, 'D_1 z t = f z t.
 
 Definition is_equilibrium_point x := solves_equation (cst x).
 
-Definition equilibrium_points := [set p : T | is_equilibrium_point p ].
+Definition equilibrium_points A := [set p : T | is_equilibrium_point p A ].
 
-Definition state_space :=
-  [set p : T | exists y, solves_equation y /\ exists t, p = y t ].
+Definition state_space A :=
+  [set p : T | exists y, solves_equation y A /\ exists t, p = y t ].
 
 End ode_equation.
 
 Definition is_lyapunov_stable_at {K : realType} {n}
   (f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1)
+  (A : set 'rV[K]_n.+1)
   (V : 'rV[K]_n.+1 -> K)
   (x0 : 'rV[K]_n.+1) : Prop :=
-  [/\ is_equilibrium_point f x0 ,
+  [/\ is_equilibrium_point f x0 A,
       is_lyapunov_candidate V x0 &
       forall traj1 traj2 : (K -> 'rV[K]_n.+1),
-        solves_equation f traj1  ->
+        solves_equation f traj1 A ->
         traj1 0 = x0 ->
         locnegsemidef (LieDerivative V traj1) 0].
 
@@ -438,8 +438,8 @@ Record equa_diff (K : realType) := {
 }.
 
 Definition is_invariant_solution_equa_diff {K : realType}
-    (e : equa_diff K) (y1 : K -> 'rV[K]_6) :=
-  solves_equation (fun y t => equa_f e (y t)) y1 /\
+    (e : equa_diff K) (y1 : K -> 'rV[K]_6) A :=
+  solves_equation (fun y t => equa_f e (y t)) y1 A /\
   (y1 (equa_t0 e) \in equa_S0 e ->
     (forall t, t > 0 -> y1  (equa_t0 e + t) \in equa_S0 e)). (*TODO*)
 
@@ -747,25 +747,7 @@ Variable alpha1 : K.
 Variable gamma : K.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
-Variable y0 : K -> 'rV[K]_6.
-Variable R : K -> 'M[K]_3.
-Hypothesis derivableR : forall t, derivable R t 1.
-Let w t := ang_vel R t.
-Variable v : K -> 'rV[K]_3.
-Let x1 t := v t .
-Variable g0 : K.
-Variable x1_hat : K -> 'rV[K]_3.
-Notation x2 := (x2 R).
-Let x2'hat t := -(alpha1 / g0) *: (x1 t - x1_hat t). (* 12b*)
-Let p1 (t : K) := x2 t - x2'hat t . 
-Let zp1 t := p1 t *m (R t)^T.
-Variable x2_hat : K -> 'rV[K]_3.
-Hypothesis x2_hat_S2 : x2_hat 0 \in S2.
-Hypothesis x2_hat_derivable : forall t, derivable x2_hat t 1.
-Hypothesis v_derivable : forall t, derivable v t 1.
-Let x2_tilde t :=  x2 t - x2_hat t.
-Let z2 t := x2_tilde t *m (R t)^T.  
-Variable y1 : K -> 'rV[K]_6.
+Definition state_space33 {K : realType} := [set x : 'rV[K]_6 | norm ('e_2 - Right x) = 1].
 
 Definition eqn33 (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
   let zp1_point := Left \o zp1_z2_point in
@@ -773,16 +755,13 @@ Definition eqn33 (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
   fun t => row_mx (- alpha1 *: zp1_point t)
          (gamma *: (z2_point t - zp1_point t) *m \S('e_2%:R - z2_point t) ^+ 2).
 
-(*Lemma eqn33E t : eqn33 t = eqn33' (y1 t).
-Proof. 
-by rewrite /eqn33 /eqn33' /y row_mxKr row_mxKl.
-Qed.*)
-
 Definition eqn33' (zp1_z2_point : 'rV[K]_6) : 'rV[K]_6 :=
   let zp1_point := Left zp1_z2_point in
   let z2_point := Right zp1_z2_point in
   row_mx (- alpha1 *: zp1_point)
          (gamma *: (z2_point - zp1_point) *m \S('e_2%:R - z2_point) ^+ 2).
+
+(*Lemma eqn33E t : eqn33 y0 t = eqn33' (y0 t). Proof. by []. Qed.*)
 
 Lemma eqn33'_lipschitz : exists k, k.-lipschitz_setT eqn33'.
 Proof.
@@ -821,10 +800,10 @@ gamma1 ⊆ state_space*)
  state_space ⊆ gamma1
 *)
 
-(*Lemma invariant_state_space33 p (p33 : state_space eqn33 p) :
+Lemma invariant_state_space33 p (p33 : state_space eqn33 state_space33 p) :
   let y := sval (cid p33) in
   let t := sval (cid (svalP (cid p33)).2) in
-  forall Delta, Delta >= 0 -> state_space eqn33 (y (t + Delta)).
+  forall Delta, Delta >= 0 -> state_space eqn33 state_space33 (y (t + Delta)).
 Proof.
 case: p33 => /= x0 sol_y Delta Delta_ge0.
 rewrite /state_space/=.
@@ -832,14 +811,12 @@ exists x0; split.
   by case: sol_y.
 case: cid => //= y' y'sol.
 case: cid => t'/= pt'.
-Abort.*)
+Abort.
 
-Definition state_space33 {K : realType} := [set x : 'rV[K]_6 | norm ('e_2 - Right x) = 1].
-
-Lemma thm11a : state_space eqn33 = state_space33.
+Lemma thm11a : state_space eqn33 state_space33 = state_space33 .
 Proof.
 apply/seteqP; split.
-- move=> p [y [[dy y33]]] [t ->].
+- move=> p [y [[y0_init1]] [deri] y33 ] [t ->].
   rewrite /state_space33.
   have : derive1 (fun t=> ('e_2 - Right (y t)) *d (('e_2 - Right (y t)))) = 0.
     transitivity (fun t => -2 * (Right(y^`()%classic t) *d ('e_2 - Right (y t)))).
@@ -853,8 +830,8 @@ apply/seteqP; split.
       rewrite !mxE /= mulr1n.
       under eq_fun do rewrite !mxE /= mulr1n.
       rewrite !derive_dotmul/=; last 2 first.
-        by apply: derivableB => //=; exact: derivable_rsubmx.
-        by apply: derivableB => //=; exact: derivable_rsubmx.
+        by apply: derivableB => //=; exact : derivable_rsubmx => //=.
+        by apply: derivableB => //=; exact: derivable_rsubmx => //=.
       rewrite /dotmul /=.
       rewrite [in RHS]mulr2n [RHS]mulNr [in RHS]mulrDl.
       rewrite !mul1r !dotmulP /= dotmulC [in RHS]dotmulC !linearD /=.
@@ -863,15 +840,15 @@ apply/seteqP; split.
             = - (Right ('D_1 y x)).
         rewrite deriveB /= ; last 2 first.
           exact: derivable_cst.
-          exact: derivable_rsubmx.
+          by apply: derivable_rsubmx.
         rewrite derive_cst /= sub0r.
         congr (-_).
-        by rewrite derive_rsubmx//=.
+        by apply derive_rsubmx.
       rewrite -(_ : 'D_1 y x = (\matrix_(i, j) 'D_1 (fun t0 : K => y t0 i j) x)); last first.
         apply/matrixP => a b; rewrite !mxE.
-        by rewrite derive_mx//= ?mxE//.
+        rewrite derive_mx//= ?mxE//.
       ring.
-have Rsu t0 : (Right (y^`()%classic t0) =
+  have Rsu t0 : (Right (y^`()%classic t0) =
                   (gamma *: (Right (y t0) - Left (y t0)) *m \S('e_2 - Right (y t0)) ^+ 2)).
       rewrite derive1E.
       rewrite y33.
@@ -887,7 +864,8 @@ have Rsu t0 : (Right (y^`()%classic t0) =
     by rewrite !mulmx0 mxE.
   under eq_fun do rewrite dotmulvv /=. (* derivee de la norme est egale a 0 *)
   move => h.
-  have norm_constant : norm ('e_2 - Right (y t))^+2 = norm ('e_2 - Right (y 0))^+2.
+  have norm_constant : forall t, norm ('e_2 - Right (y t))^+2 = norm ('e_2 - Right (y 0))^+2.
+    move => t0.
     have : forall x0, is_derive x0 (1:K) (fun x : K => norm ('e_2 - Right (y x)) ^+ 2) 0.
       move => x0.
       apply: DeriveDef.
@@ -898,30 +876,20 @@ have Rsu t0 : (Right (y^`()%classic t0) =
     move/ (_ _ 0).
     move => s0.
     by apply: s0.
-  rewrite /state_space33/=.
-  simpl in *.
-  (*  move: y0init.
-  rewrite inE /state_space33 /=.
-  move=> Hnorm0. (* reecrire ce charabia *)
-*)
-
-(*  replace y with y0. (* vient de l'unicite des solutions de l'EDO. cauchy lipschitz ... *)
-  replace y with y0 in norm_constant.
-  rewrite Hnorm0 in norm_constant.
-  move: norm_constant.
-  move=> Hsq.
-  apply/eqP.
-  rewrite [RHS]expr2 mulr1 in Hsq.
-  move/eqP in Hsq.
-  rewrite sqrp_eq1 in Hsq ; last first.
-    exact: norm_ge0.
-  exact : Hsq.
-  admit.
-  admit.*)  admit.
+  suff: norm ('e_2 - Right (y t)) ^+ 2 = 1.
+    move => /(congr1 Num.sqrt).
+    rewrite sqrtr1 sqr_sqrtr //.
+    by rewrite dotmulvv sqr_ge0.
+  rewrite norm_constant.
+  move: y0_init1.
+  rewrite inE /state_space33 /= => ->.
+  by rewrite expr2 mulr1.
 - move=> p.
+  rewrite /state_space33 /=.
   move=> p_statespace33.
-  rewrite /state_space.
-  rewrite /=.
+  rewrite /state_space /=.
+  rewrite /solves_equation /=.
+  admit.
 Admitted.
 
 Definition point1 : 'rV[K]_6 := 0.
@@ -929,13 +897,17 @@ Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2).
 
 (* on doit pouvoir noter que z2 est un point quon peut decider ..*)
 
-Lemma equilibrium_point1 : is_equilibrium_point eqn33 point1.
+Lemma equilibrium_point1 : is_equilibrium_point eqn33 point1 state_space33.
 Proof.
 split => //=.
-move=> t; rewrite derive_cst /eqn33 /point1; apply/eqP.
+  rewrite inE /state_space33 /point1.
+  rewrite /=.
+  by rewrite rsubmx_const /= subr0 normeE.
+split => //=.
+move=> t ; rewrite derive_cst /eqn33 /point1; apply/eqP.
 rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP. split.
   rewrite scaler_eq0; apply/orP; right; apply/eqP/rowP; move => i.
-  rewrite /zp1 /p1 /= /x2 /x2'hat /x1.
+  rewrite /=.
   by rewrite lsubmx_const.
 apply/eqP/rowP; move => i; apply/eqP; set N := (X in _ *: X *m _); have : N = 0.
   rewrite /N /=; apply /rowP; move => a. 
@@ -944,10 +916,17 @@ apply/eqP/rowP; move => i; apply/eqP; set N := (X in _ *: X *m _); have : N = 0.
 by move => n; rewrite n scaler0 mul0mx.
 Qed.
 
-Lemma equilibrium_point2 : is_equilibrium_point eqn33 point2.
+Lemma equilibrium_point2 : is_equilibrium_point eqn33 point2 state_space33.
 Proof.
 split => //.
-move => t; rewrite derive_cst; apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
+  rewrite inE /state_space33 /point2 /=.
+  rewrite row_mxKr.
+  rewrite -[X in X - _ ]scale1r.
+  rewrite -scalerBl normZ normeE mulr1 distrC.
+  rewrite [X in _ - X](_:1 = 1%:R) //.
+  by rewrite -natrB //= normr1.
+split => //.
+move => t. rewrite derive_cst; apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
 set N := (X in _ *: X == 0 /\ _).
 have N0 : N = 0.
   apply/rowP; move => i; rewrite !mxE; case: splitP.
@@ -973,7 +952,7 @@ by rewrite (_ : 'e_2 *m _ = 0) ?mul0mx// ; apply: trmx_inj; rewrite trmx_mul trm
 Qed.
 
 (* this lemma asks for lyapunov + lasalle *)
-Lemma tractories_converge (y : K -> 'rV[K]_6) : solves_equation eqn33 y ->
+Lemma tractories_converge (y : K -> 'rV[K]_6) : solves_equation eqn33 y state_space33 ->
   y t @[t --> +oo] --> point1 \/ y t @[t --> +oo] --> point2.
 Proof.
 move=> is_sol_y.
@@ -1098,23 +1077,25 @@ Variable gamma : K.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 Hypothesis gamma_gt0 : 0 < gamma.
 Variable R : K -> 'M[K]_3.
-Variable y0 : K -> 'rV[K]_6.
+(*Variable y0 : K -> 'rV[K]_6.
 Hypothesis y0init: y0 0 \in state_space33.
-Hypothesis y0sol : solves_equation (eqn33 alpha1 gamma) y0.
+Hypothesis y0sol : solves_equation (eqn33 alpha1 gamma) y0 state_space33.*)
 
-Lemma derive_zp1 (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gamma) traj ->
+Lemma derive_zp1 (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
   'D_1 (Left \o traj) z = - alpha1 *: Left (traj z).
 Proof.
-move=> [/= dtraj].
+move=> [/= traj0].
+case.
+move => dtraj.
 move=> /(_ z)/(congr1 Left).
 by rewrite row_mxKl => ?; rewrite derive_lsubmx//=.
 Qed.
 
-Lemma derive_z2  (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gamma) traj ->
+Lemma derive_z2  (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
    'D_1 (Right \o traj) z =
    gamma *: (Right (traj z) - Left (traj z)) *m \S('e_2 - Right (traj z)) ^+ 2.
 Proof.
-move=> [/= dtraj].
+move=> [/= traj0][dtraj].
 by move => /(_ z)/(congr1 Right); rewrite row_mxKr => ?; rewrite derive_rsubmx//=.
 Qed.
 
@@ -1123,7 +1104,7 @@ Let c2 := 2^-1 / gamma.
 
 Lemma derive_V1dot (z : K) (traj : K -> 'rV_6)
   (zp1 := Left \o traj) (z2 := Right \o traj) :
-  solves_equation (eqn33 alpha1 gamma) traj ->
+  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
   c1 *: (2 *: 'D_1 zp1 z *m (Left (traj z))^T) 0 0 +
   c2 *: (2 *: 'D_1 z2 z *m (Right (traj z))^T) 0 0
   = V1dot (traj z).
@@ -1148,7 +1129,8 @@ Lemma differentiable_norm_Left (y : 'rV[K]_6) :
 Proof.
 apply/(@differentiable_comp _ _ _ _ (fun x => norm (Left x)) (fun x => x ^+ 2)) => //=.
 apply/differentiable_comp.
-  (*derivable_lsubmx.*) admit.
+(*derivable_lsubmx.*) 
+admit.
 admit.
 Admitted.
 
@@ -1157,7 +1139,7 @@ Lemma differentiable_norm_Right (y : 'rV[K]_6) :
 Proof.
 Admitted.
 
-Lemma deriveV1 (x : K -> 'rV[K]_6) t : solves_equation (eqn33 alpha1 gamma) x ->
+Lemma deriveV1 (x : K -> 'rV[K]_6) t : solves_equation (eqn33 alpha1 gamma) x state_space33 ->
   LieDerivative (V1 alpha1 gamma) x t = V1dot (x t).
 Proof.
 move=> eqn33x.
@@ -1181,27 +1163,29 @@ Qed.
 
 (* TODO: Section general properties of our system *)
 Lemma Gamma1_traj (y : K -> 'rV_6) t :
-  solves_equation (eqn33 alpha1 gamma) y -> state_space33 (y t).
+  solves_equation (eqn33 alpha1 gamma) y state_space33 -> state_space33 (y t).
 Proof.
 move=> iss.
-Fail rewrite -(@thm11a _ _ _ gamma_gt0 alpha1_gt0 y0 R)//=.
-Fail  exists y; split => //.
-Fail  by exists t.
-Admitted.
+case: iss.
+move=> y033 [dy deriv_y].
+rewrite -(@thm11a _ _ _ gamma_gt0 alpha1_gt0)//=.
+exists y; split => //.
+by exists t.
+Qed.
 
 Lemma norm_u1 (traj : K -> 'rV_6) (z : K) (z2 := Right \o traj)
     (zp1 := Left \o traj)  (u := 'e_2 - z2 z) :
-  solves_equation (eqn33 alpha1 gamma) traj -> norm u = 1.
+  solves_equation (eqn33 alpha1 gamma) traj state_space33 -> norm u = 1.
 Proof.
 move=> dtraj.
 suff: state_space33 (row_mx (zp1 z) (z2 z)) by rewrite /state_space33/= row_mxKr.
 rewrite /zp1 /z2 hsubmxK /=.
-exact/Gamma1_traj.
+by apply:Gamma1_traj.
 Qed.
 
 Lemma Hsq (traj : K -> 'rV_6) (z : K)  (z2 := fun r : K => Right (traj r) : 'rV_3)
   (w := (z2 z) *m \S('e_2)) (u := 'e_2 - z2 z) :
-  solves_equation (eqn33 alpha1 gamma) traj ->
+  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
 move=> dtraj.
@@ -1224,7 +1208,7 @@ by rewrite 2!mulNmx mulmx1 mxE.
 Qed.
 
 Lemma neg_spin (traj : K -> 'rV_6) (z : K) :
-  solves_equation (eqn33 alpha1 gamma) traj ->
+  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
   norm (Right (traj z) *m \S('e_2) *m - \S('e_2 - Right (traj z))) =
   norm (Right (traj z) *m \S('e_2)).
 Proof.
@@ -1249,7 +1233,7 @@ Qed.
 Lemma V1dot_ub (traj : K -> 'rV_6) (z : K) (zp1 := Left \o traj) (z2 := Right \o traj)
   (w := z2 z *m \S('e_2))
   (u1 : 'rV[K]_2 := \row_(i < 2) [eta (fun=> 0) with 0 |-> norm (zp1 z), 1 |-> norm w] i) :
-  solves_equation (eqn33 alpha1 gamma) traj ->
+  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
   V1dot (traj z) <= (- u1 *m u2 *m u1^T) 0 0.
 Proof.
 move=> dtrak.
@@ -1280,7 +1264,7 @@ Qed.
 
 (* TODO: rework of this proof is needed *)
 Lemma near0_le0 (traj : K -> 'rV_6) :
-  solves_equation (eqn33 alpha1 gamma) traj ->
+  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
   traj 0 = point1 ->
   \forall z \near 0^',
     (LieDerivative (fun x => norm (Left x) ^+ 2 / (2 * alpha1)) traj +
@@ -1310,11 +1294,11 @@ by rewrite -oppr_gt0 mulNmx !mulNmx mxE opprK Hpos.
 Unshelve. all: try by end_near. Qed.
 
 Lemma V1_point_is_lnsd (y : K -> 'rV_6) :
-  solves_equation (eqn33 alpha1 gamma) y ->
+  solves_equation (eqn33 alpha1 gamma) y state_space33->
   y 0 = point1 ->
   locnegsemidef (LieDerivative (V1 alpha1 gamma) y) 0.
 Proof.
-move=> [dy dtraj] traj0.
+move=> [y033] [dy dtraj] traj0.
 have Gamma1_traj t : state_space33 (y t).
   apply/Gamma1_traj.
   by split => //.
@@ -1332,17 +1316,17 @@ under [X in _ + LieDerivative X _ _]eq_fun do rewrite mulrC.
 rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Left.
 rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Right.
 rewrite /= !fctE !derivative_LieDerivative_eq0; last 4 first.
-  admit.
+  by [].
   rewrite [LHS]dtraj /eqn33/= traj0 /point1.
   by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
-  admit.
+  by [].
   rewrite [LHS]dtraj /eqn33/= traj0 /point1.
   by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
 by rewrite scaler0 scaler0 add0r.
 Admitted.
 
 Lemma V1_is_lyapunov_stable :
-  is_lyapunov_stable_at (eqn33 alpha1 gamma) (V1 alpha1 gamma) point1.
+  is_lyapunov_stable_at (eqn33 alpha1 gamma) state_space33 (V1 alpha1 gamma) point1.
 Proof.
 split.
 - by apply: equilibrium_point1 => //.
