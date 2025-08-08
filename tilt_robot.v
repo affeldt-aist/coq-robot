@@ -26,13 +26,13 @@ Proof.
 suffices: 0 <= (b *d b) * (a *d a) - (a *d b) ^+ 2.
   rewrite -subr_ge0.
   rewrite mulrC.
-  exact.
+  rewrite subr0.
+  by rewrite subr_ge0 //.
 rewrite subr_ge0 expr2 mulrC !dotmulvv /= -expr2.
 have [->|hb] := eqVneq b 0.
   rewrite dotmulv0 expr0n.
   rewrite norm0.
-  rewrite expr0n //=.
-  by rewrite mul0r.
+  rewrite expr0n mul0r //=.
 pose t := (a *d b) / (norm b ^+ 2).
 have h : 0 <= norm (a - t *: b) ^+ 2.
   rewrite exprn_ge0 //.

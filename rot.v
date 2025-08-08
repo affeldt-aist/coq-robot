@@ -1649,10 +1649,11 @@ have pi2B : - pi < (pi : T) / 2%:R <= pi.
   by rewrite mulr_natr mulr2n addr_gt0 // pi_gt0.
 have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
   rewrite ltrNl opprK lter_pdivrMr ?ltr0n // lerNl.
-  rewrite ler_pdivlMr ?ltr0n // -subr_gte0 mulNr opprK.
-  rewrite mulr_natr mulr2n addr_ge0 ?pi_ge0 //.
-    by rewrite -subr_gte0 addrK pi_gt0.
-  by rewrite addr_ge0 ?pi_ge0.
+  rewrite ler_pdivlMr ?ltr0n // -subr_gte0 mulNr.
+  rewrite mulr_natr mulr2n addrAC subrr add0r ?pi_gt0 //.
+    rewrite -subr_gte0 opprK.
+    rewrite addr_ge0 ?pi_ge0 //.
+    by rewrite addr_ge0 ?pi_ge0 //.
 case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
   have {u2}[/eqP u2|/eqP u2] : {u *d F|,2%:R == 1} + {u *d F|,2%:R == -1}.
     move: normu => /(congr1 (fun x => x ^+ 2)).
