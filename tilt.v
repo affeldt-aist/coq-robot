@@ -161,6 +161,10 @@ Lemma derive1mx_row_mx  {R : realFieldType} {n : nat}  {m : nat} :
 forall (f : R -> 'rV[R]_(n.+1 + m.+1)) (g : R -> 'rV[R]_(n.+1 + m.+1)) (t : R),
   'D_1 (fun x => row_mx (f x) (g x)) t =
                 row_mx ('D_1 f t) ('D_1 g t).
+rewrite /=.
+move => f g t.
+rewrite deriveE /=; last first.
+  admit.
 Abort.
 
 End derive_help.
@@ -170,8 +174,8 @@ Section gradient.
 Definition jacobian1 {R : numFieldType} n (f : 'rV[R]_n.+1 -> R)
     : 'rV_n.+1 -> 'cV_n.+1 :=
   jacobian (scalar_mx \o f).
-
-Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) i :=
+(* not used*)
+(*Definition partial {R : realType} {n : nat} (f : 'rV[R]_n.+1 -> R) (a : 'rV[R]_n.+1) i :=
   lim (h^-1 * (f (a + h *: 'e_i) - f a) @[h --> 0^'])%classic.
 
 Lemma partial_diff {R : realType} n (f : 'rV[R]_n.+1 -> R)  (a : 'rV[R]_n.+1)
@@ -185,10 +189,10 @@ rewrite derive_mx ?mxE//=; last first.
 rewrite /partial.
 under eq_fun do rewrite (addrC a).
 by under [in RHS]eq_fun do rewrite !mxE/= !mulr1n.
-Qed.
+Qed.*)
 
 (* NB: not used *)
-Definition err_vec {R : ringType} n (i : 'I_n.+1) : 'rV[R]_n.+1 :=
+(*Definition err_vec {R : ringType} n (i : 'I_n.+1) : 'rV[R]_n.+1 :=
   \row_(j < n.+1) (i == j)%:R.
 
 Lemma err_vecE {R : ringType} n (i : 'I_n.+1) :
@@ -218,12 +222,13 @@ rewrite /gradient_partial mxE mxE /jacobian mxE -deriveE; last first.
   exact: differentiable_scalar_mx.
 rewrite partial_diff//.
 exact/diff_derivable.
-Qed.
+Qed.*)
 
 End gradient.
 
 Section LieDerivative.
 
+(* TODO isnt it just a directional derivative?*)
 Definition LieDerivative {R : realFieldType} n (V : 'rV[R]_n.+1 -> R)
     (x : R -> 'rV[R]_n.+1) (t : R) : R :=
   (jacobian1 V (x t))^T *d 'D_1 x t.
@@ -291,49 +296,135 @@ rewrite /LieDerivative /jacobian1 /dotmul dotmulP /dotmul -trmx_mul.
 by rewrite dtraj mul0mx !mxE.
 Qed.
 
+Local Notation Left := (@lsubmx _ 1 3 3).
+Local Notation Right := (@rsubmx _ 1 3 3).
+
+Lemma differentiable_norm_Left {K : realType} (y : 'rV[K]_6) :
+  differentiable (fun x : 'rV_6 => norm (Left x) ^+ 2 : K) y.
+Proof.
+apply/(@differentiable_comp _ _ _ _ (fun x => norm (Left x)) (fun x => x ^+ 2)) => //=.
+apply/differentiable_comp.
+(*derivable_lsubmx.*) 
+admit.
+admit.
+Admitted.
+
+Lemma differentiable_norm_Right  {K : realType} (y : 'rV[K]_6) :
+  differentiable (fun x : 'rV_6 => norm (Right x) ^+ 2 : K) y.
+Proof.
+apply/(@differentiable_comp _ _ _ _ (fun x => norm (Right x)) (fun x => x ^+ 2)) => //=.
+apply/differentiable_comp.
+admit.
+admit.
+Admitted.
+
+(* TODO norm is not differentiable at 0*)
+Lemma  differentiable_norm {K : realType} n (f : 'rV[K]_n.+1 -> 'rV_3)
+  (x : K -> 'rV[K]_n.+1) (t : K) : 
+differentiable (fun x0 : 'rV_n.+1 => norm (f x0)) (x t).
+Proof.
+Admitted. 
+
+Lemma differentiable_rsubmx  {K : realType} (x : K -> 'rV[K]_6)  (t : K) : differentiable x t -> differentiable Right (x t).
+Proof.
+rewrite /Right; move => difx.
+Admitted.
+
+Lemma differentiable_lsubmx  {K : realType} (x : K -> 'rV[K]_6)  (t : K) : differentiable x t -> differentiable Left (x t).
+Proof.
+Admitted.
+
 Lemma LieDerivative_norm {K : realType} (f : 'rV[K]_6 -> 'rV_3)
   (x : K -> 'rV[K]_6) (t : K) :
-  LieDerivative (fun y => (norm (f y)) ^+ 2) x t =
+   (f \o x) t != 0 ->
+    differentiable x t ->   differentiable f (x t) -> LieDerivative (fun y => (norm (f y)) ^+ 2) x t =
     (2%:R *: 'D_1 (f \o x) t *m (f (x t))^T) 0 0.
 Proof.
 rewrite /LieDerivative.
 rewrite /jacobian1.
 rewrite /dotmul.
 rewrite -trmx_mul.
+move => f0 difx diff1.
 rewrite -derivemxE; last first.
-  admit.
+  apply/differentiable_comp; last first.
+    apply differentiable_scalar_mx.
+  rewrite -fctE /=.
+  apply: differentiableM; last 2 first.
+    apply: differentiable_norm.
+    apply: differentiable_norm.
 have := derive_norm.
+rewrite //=.
 (*move=> /( congr1 (fun z => z t)).*)
 rewrite -scalemxAl [X in _ -> _ = X]mxE.
-move => <-.
-rewrite derive1Ml; last first.
-  admit.
-rewrite mul1r.
-rewrite !mxE.
-rewrite derive1E.
-transitivity ( ('D_('D_1 x t) (fun y : 'rV_6 => (norm (f y) ^+ 2)) (x t)) ).
-  admit.
-rewrite deriveE ; last first.
-  admit.
-rewrite derive_mx//=; last first.
-  admit.
-rewrite deriveE ; last first.
-  admit.
-transitivity(('d (fun y : 'rV_6 => norm (f y) ^+ 2) (x t ) \o ('d x t)) 1).
-  (*by [].*) admit.
-rewrite -diff_comp; last 2 first.
-  admit.
-  admit.
-(*rewrite deriveE //.*)
-admit.
+move => <-; last 2 first.
+  by [].
+  apply: diff_derivable.
+  apply: differentiable_comp; last 2 first.
+    by [].
+    by [].
+rewrite derive1Ml; last 2 first.
+  rewrite fctE /=. 
+  rewrite mul1r.
+  rewrite !mxE.
+  rewrite derive1E.
+  transitivity ( ('D_('D_1 x t) (fun y : 'rV_6 => (norm (f y) ^+ 2)) (x t)) ).
+    under eq_fun do rewrite scalar_mxM.
+    admit.
+  rewrite deriveE ; last first.
+    apply: differentiableM; last 2 first.
+      apply: differentiable_norm.  
+      apply: differentiable_norm.
+  rewrite derive_mx//=; last first.
+    by apply: diff_derivable.
+  rewrite deriveE ; last first.
+     apply: differentiableM; last 2 first.
+      rewrite /=.
+      rewrite -fctE.
+      apply: differentiable_comp; last 2 first.
+        rewrite -fctE.
+        apply: differentiable_comp; last 2 first.
+          by [].
+          by [].
+        admit.
+        rewrite /=.
+        apply: differentiable_comp; last 2 first.
+          rewrite /=.
+          apply: differentiable_comp; last 2 first.
+            by [].
+            by [].
+          (*apply: differentiable_norm.*)
+            admit.
+  transitivity(('d (fun y : 'rV_6 => norm (f y) ^+ 2) (x t ) \o ('d x t)) 1).
+    rewrite -derive_mx //=; last by apply: diff_derivable.
+    by rewrite deriveE.
+  rewrite -diff_comp //=.
+  rewrite -fctE /=.
+  apply: differentiableM; last 2 first. 
+   apply: differentiable_norm.
+   apply: differentiable_norm.
+   apply: diff_derivable.
+  rewrite -fctE /=.
+  apply: differentiableM; last 2 first.
+    apply: differentiable_comp; last 2 first.
+      rewrite /=.
+      apply: differentiable_comp; last 2 first.
+        by [].
+        by [].
+      admit.
+      apply: differentiable_comp; last 2 first.
+        apply: differentiable_comp; last 2 first.
+        by [].
+        by [].
+    (*apply differentiable_norm*)
+    admit.
 Admitted.
 
 End LieDerivative.
 
 (* not used, can be shown to be equivalent to LieDerivative *)
-Definition LieDerivative_partial {R : realType} n (V : 'rV[R]_n.+1 -> R)
+(*Definition LieDerivative_partial {R : realType} n (V : 'rV[R]_n.+1 -> R)
     (a : R -> 'rV[R]_n.+1) (t : R) : R :=
-  \sum_(i < n.+1) (partial V (a t) i * ('D_1 a t) ``_ i).
+  \sum_(i < n.+1) (partial V (a t) i * ('D_1 a t) ``_ i).*)
 
 Section ode_equation.
 Context {K : realType} {n : nat}.
@@ -446,13 +537,13 @@ Definition is_invariant_solution_equa_diff {K : realType}
 Section ya.
 (* mesure de l'accelerometre *)
 Variable K : realType.
-Variable v : K -> 'rV[K]_3.
-Variable R : K -> 'M[K]_3.
-Variable g0 : K.
-Let w t := ang_vel R t.
-Let x1 t :=  v t.
-Definition x2 t : 'rV_3 := 'e_2 *m R t.
-Definition y_a t := - x1 t  *m \S( w t) + 'D_1 x1 t + g0 *: x2 t.
+Variable v : K -> 'rV[K]_3. (* local frame of the sensor *)
+Variable R : K -> 'M[K]_3. (*L -> W*)
+Variable g0 : K. (*standard gravity constant*)
+Let w t := ang_vel R t. (* local frame of the sensor (gyroscope) *)
+Let x1 t :=  v t. (* local frame*)
+Definition x2 t : 'rV_3 := 'e_2 *m R t. (* tilt in local frame, e2 is in global frame but R brings it back*)
+Definition y_a t := - x1 t  *m \S( w t) + 'D_1 x1 t + g0 *: x2 t. (* local frame of the sensor*)
 End ya.
 
 Definition S2 {K : realType} := [set x : 'rV[K]_3 | norm x = 1].
@@ -465,6 +556,7 @@ Variable v : K -> 'rV[K]_3.
 Variable g0 : K.
 Let w t := ang_vel R t.
 
+(* needs a different v,should be a different lemma..*)
 Lemma ya_E t : ('D_1 v t + g0 *: 'e_2) *m R t = y_a v R g0 t.
 Proof.
 rewrite mulmxDl /y_a/= /x2.
@@ -508,7 +600,8 @@ rewrite inE /= orth_preserves_norm.
 by rewrite rotation_sub // rotationV.
 Qed.
 
-Lemma dRu t (u : K -> 'rV[K]_3) (T : K -> 'M[K]_3) (w' := ang_vel T)
+(* not used but could be interesting *)
+(*Lemma dRu t (u : K -> 'rV[K]_3) (T : K -> 'M[K]_3) (w' := ang_vel T)
   : 'D_1 (fun t => u t *m T t) t = u t *m T t *m \S(w' t) + 'D_1 u t *m T t. 
 Proof.
 rewrite derive_mulmx; last 2 first.
@@ -525,7 +618,7 @@ rewrite -derive1mx_ang_vel; last 2 first.
   admit.
   admit.
 by [].
-Admitted.
+Admitted.*)
 
 (* eqn 10*)
 Notation y_a := (y_a v R g0).
@@ -674,11 +767,7 @@ Qed.
 
 Lemma Rx2 t : x2_hat t *m (R t)^T = 'e_2 - z2 t.
 Proof.
-rewrite /z2.
-rewrite /x2_tilde.
-rewrite mulmxBl.
-rewrite opprB.
-rewrite addrCA.
+rewrite /z2 /x2_tilde mulmxBl opprB addrCA.
 rewrite [X in _ + X](_ : _ = 0) ?addr0//.
 rewrite /x2 -mulmxA.
 by rewrite orthogonal_mul_tr ?rotation_sub// mulmx1 subrr.
@@ -689,21 +778,14 @@ Proof.
 rewrite /zp1.
 rewrite derive_mulmx//=; last by rewrite derivable_trmx.
 rewrite derive_p1.
-rewrite mulmxBl.
-rewrite addrAC.
+rewrite mulmxBl addrAC.
 apply/eqP.
 rewrite subr_eq.
-rewrite [in eqbRHS]addrC.
-rewrite scaleNr.
-rewrite scalemxAl subrr /=.
+rewrite [in eqbRHS]addrC scaleNr scalemxAl subrr /=.
 rewrite derive_trmx//.
 rewrite derive1mx_ang_vel //; last by move => t0; rewrite rotation_sub.
 rewrite ang_vel_mxE //; last by move => t1 ; rewrite rotation_sub.
-rewrite -/(w t).
-rewrite -mulmxA.
-rewrite -mulmxDr.
-rewrite trmx_mul.
-rewrite tr_spin.
+rewrite -/(w t) -mulmxA -mulmxDr trmx_mul tr_spin.
 by rewrite mulNmx subrr mulmx0.
 Qed.
 
@@ -747,9 +829,9 @@ Variable alpha1 : K.
 Variable gamma : K.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
-Definition state_space33 {K : realType} := [set x : 'rV[K]_6 | norm ('e_2 - Right x) = 1].
+Definition state_space_tilt {K : realType} := [set x : 'rV[K]_6 | norm ('e_2 - Right x) = 1].
 
-Definition eqn33 (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
+Definition tilt_eqn (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
   let zp1_point := Left \o zp1_z2_point in
   let z2_point := Right \o zp1_z2_point in
   fun t => row_mx (- alpha1 *: zp1_point t)
@@ -800,10 +882,10 @@ gamma1 ⊆ state_space*)
  state_space ⊆ gamma1
 *)
 
-Lemma invariant_state_space33 p (p33 : state_space eqn33 state_space33 p) :
+Lemma invariant_state_space_tilt p (p33 : state_space tilt_eqn state_space_tilt p) :
   let y := sval (cid p33) in
   let t := sval (cid (svalP (cid p33)).2) in
-  forall Delta, Delta >= 0 -> state_space eqn33 state_space33 (y (t + Delta)).
+  forall Delta, Delta >= 0 -> state_space tilt_eqn state_space_tilt (y (t + Delta)).
 Proof.
 case: p33 => /= x0 sol_y Delta Delta_ge0.
 rewrite /state_space/=.
@@ -813,11 +895,11 @@ case: cid => //= y' y'sol.
 case: cid => t'/= pt'.
 Abort.
 
-Lemma thm11a : state_space eqn33 state_space33 = state_space33 .
+Lemma thm11a : state_space tilt_eqn state_space_tilt = state_space_tilt .
 Proof.
 apply/seteqP; split.
 - move=> p [y [[y0_init1]] [deri] y33 ] [t ->].
-  rewrite /state_space33.
+  rewrite /state_space_tilt.
   have : derive1 (fun t=> ('e_2 - Right (y t)) *d (('e_2 - Right (y t)))) = 0.
     transitivity (fun t => -2 * (Right(y^`()%classic t) *d ('e_2 - Right (y t)))).
       apply/funext => x.
@@ -882,29 +964,46 @@ apply/seteqP; split.
     by rewrite dotmulvv sqr_ge0.
   rewrite norm_constant.
   move: y0_init1.
-  rewrite inE /state_space33 /= => ->.
+  rewrite inE /state_space_tilt /= => ->.
   by rewrite expr2 mulr1.
 - move=> p.
-  rewrite /state_space33 /=.
+  rewrite /state_space_tilt /=.
   move=> p_statespace33.
   rewrite /state_space /=.
   rewrite /solves_equation /=.
+  exists (fun _ : K => 0).
+  split.
+  split.
+  by rewrite inE /= rsubmx_const subr0 normeE.
+  split.
+  apply: derivable_cst => //.
+  move => t.
+  rewrite /tilt_eqn /= derive_cst.
+  apply /eqP; rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
+  split.
+  apply/eqP.
+  have alpha1_neq0 : alpha1 != 0 by rewrite gt_eqF.
+  apply/eqP.
+  rewrite scaler_eq0 //.
+  rewrite eqr_oppLR oppr0.
+  move/negbTE: alpha1_neq0 => alpha1_nz.
+  rewrite alpha1_nz // Bool.orb_false_l.
+  by rewrite lsubmx_const.
+  by rewrite lsubmx_const rsubmx_const subr0 scaler0 mul0mx.
   admit.
 Admitted.
 
 Definition point1 : 'rV[K]_6 := 0.
 Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2).
 
-(* on doit pouvoir noter que z2 est un point quon peut decider ..*)
-
-Lemma equilibrium_point1 : is_equilibrium_point eqn33 point1 state_space33.
+Lemma equilibrium_point1 : is_equilibrium_point tilt_eqn point1 state_space_tilt.
 Proof.
 split => //=.
-  rewrite inE /state_space33 /point1.
+  rewrite inE /state_space_tilt /point1.
   rewrite /=.
   by rewrite rsubmx_const /= subr0 normeE.
 split => //=.
-move=> t ; rewrite derive_cst /eqn33 /point1; apply/eqP.
+move=> t ; rewrite derive_cst /tilt_eqn /point1; apply/eqP.
 rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP. split.
   rewrite scaler_eq0; apply/orP; right; apply/eqP/rowP; move => i.
   rewrite /=.
@@ -916,10 +1015,10 @@ apply/eqP/rowP; move => i; apply/eqP; set N := (X in _ *: X *m _); have : N = 0.
 by move => n; rewrite n scaler0 mul0mx.
 Qed.
 
-Lemma equilibrium_point2 : is_equilibrium_point eqn33 point2 state_space33.
+Lemma equilibrium_point2 : is_equilibrium_point tilt_eqn point2 state_space_tilt.
 Proof.
 split => //.
-  rewrite inE /state_space33 /point2 /=.
+  rewrite inE /state_space_tilt /point2 /=.
   rewrite row_mxKr.
   rewrite -[X in X - _ ]scale1r.
   rewrite -scalerBl normZ normeE mulr1 distrC.
@@ -952,7 +1051,7 @@ by rewrite (_ : 'e_2 *m _ = 0) ?mul0mx// ; apply: trmx_inj; rewrite trmx_mul trm
 Qed.
 
 (* this lemma asks for lyapunov + lasalle *)
-Lemma tractories_converge (y : K -> 'rV[K]_6) : solves_equation eqn33 y state_space33 ->
+Lemma tractories_converge (y : K -> 'rV[K]_6) : solves_equation tilt_eqn y state_space_tilt ->
   y t @[t --> +oo] --> point1 \/ y t @[t --> +oo] --> point2.
 Proof.
 move=> is_sol_y.
@@ -1078,10 +1177,10 @@ Hypothesis alpha1_gt0 : 0 < alpha1.
 Hypothesis gamma_gt0 : 0 < gamma.
 Variable R : K -> 'M[K]_3.
 (*Variable y0 : K -> 'rV[K]_6.
-Hypothesis y0init: y0 0 \in state_space33.
-Hypothesis y0sol : solves_equation (eqn33 alpha1 gamma) y0 state_space33.*)
+Hypothesis y0init: y0 0 \in state_space_tilt.
+Hypothesis y0sol : solves_equation (tilt_eqn alpha1 gamma) y0 state_space_tilt.*)
 
-Lemma derive_zp1 (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
+Lemma derive_zp1 (z : K) (traj : K -> 'rV_6) : solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt ->
   'D_1 (Left \o traj) z = - alpha1 *: Left (traj z).
 Proof.
 move=> [/= traj0].
@@ -1091,7 +1190,7 @@ move=> /(_ z)/(congr1 Left).
 by rewrite row_mxKl => ?; rewrite derive_lsubmx//=.
 Qed.
 
-Lemma derive_z2  (z : K) (traj : K -> 'rV_6) : solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
+Lemma derive_z2  (z : K) (traj : K -> 'rV_6) : solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt ->
    'D_1 (Right \o traj) z =
    gamma *: (Right (traj z) - Left (traj z)) *m \S('e_2 - Right (traj z)) ^+ 2.
 Proof.
@@ -1104,7 +1203,7 @@ Let c2 := 2^-1 / gamma.
 
 Lemma derive_V1dot (z : K) (traj : K -> 'rV_6)
   (zp1 := Left \o traj) (z2 := Right \o traj) :
-  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
+  solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt ->
   c1 *: (2 *: 'D_1 zp1 z *m (Left (traj z))^T) 0 0 +
   c2 *: (2 *: 'D_1 z2 z *m (Right (traj z))^T) 0 0
   = V1dot (traj z).
@@ -1124,25 +1223,10 @@ rewrite tr_sqr_spin.
 by rewrite mulmxA.
 Qed.
 
-Lemma differentiable_norm_Left (y : 'rV[K]_6) :
-  differentiable (fun x : 'rV_6 => norm (Left x) ^+ 2 : K) y.
-Proof.
-apply/(@differentiable_comp _ _ _ _ (fun x => norm (Left x)) (fun x => x ^+ 2)) => //=.
-apply/differentiable_comp.
-(*derivable_lsubmx.*) 
-admit.
-admit.
-Admitted.
-
-Lemma differentiable_norm_Right (y : 'rV[K]_6) :
-  differentiable (fun x : 'rV_6 => norm (Right x) ^+ 2 : K) y.
-Proof.
-Admitted.
-
-Lemma deriveV1 (x : K -> 'rV[K]_6) t : solves_equation (eqn33 alpha1 gamma) x state_space33 ->
+Lemma deriveV1 (x : K -> 'rV[K]_6) t : solves_equation (tilt_eqn alpha1 gamma) x state_space_tilt ->  differentiable x t ->
   LieDerivative (V1 alpha1 gamma) x t = V1dot (x t).
 Proof.
-move=> eqn33x.
+move=> tilt_eqnx dif1.
 rewrite /V1.
 rewrite LieDerivativeD; last 2 first.
   move=> t0.
@@ -1157,13 +1241,19 @@ under [X in LieDerivative X _ _ + _]eq_fun do rewrite mulrC.
 under [X in _ + LieDerivative X _ _]eq_fun do rewrite mulrC.
 rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Left.
 rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Right.
-rewrite !fctE !LieDerivative_norm /=.
+rewrite !fctE !LieDerivative_norm /=; last 6 first.
+  admit.
+  by [].
+  apply: differentiable_rsubmx; last by [].
+  admit.
+  by [].
+  apply: differentiable_lsubmx; last by [].
 by rewrite derive_V1dot.
-Qed.
+Admitted.
 
 (* TODO: Section general properties of our system *)
 Lemma Gamma1_traj (y : K -> 'rV_6) t :
-  solves_equation (eqn33 alpha1 gamma) y state_space33 -> state_space33 (y t).
+  solves_equation (tilt_eqn alpha1 gamma) y state_space_tilt -> state_space_tilt (y t).
 Proof.
 move=> iss.
 case: iss.
@@ -1175,17 +1265,17 @@ Qed.
 
 Lemma norm_u1 (traj : K -> 'rV_6) (z : K) (z2 := Right \o traj)
     (zp1 := Left \o traj)  (u := 'e_2 - z2 z) :
-  solves_equation (eqn33 alpha1 gamma) traj state_space33 -> norm u = 1.
+  solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt -> norm u = 1.
 Proof.
 move=> dtraj.
-suff: state_space33 (row_mx (zp1 z) (z2 z)) by rewrite /state_space33/= row_mxKr.
+suff: state_space_tilt (row_mx (zp1 z) (z2 z)) by rewrite /state_space_tilt/= row_mxKr.
 rewrite /zp1 /z2 hsubmxK /=.
 by apply:Gamma1_traj.
 Qed.
 
-Lemma Hsq (traj : K -> 'rV_6) (z : K)  (z2 := fun r : K => Right (traj r) : 'rV_3)
+Lemma angvel_sqr (traj : K -> 'rV_6) (z : K)  (z2 := fun r : K => Right (traj r) : 'rV_3)
   (w := (z2 z) *m \S('e_2)) (u := 'e_2 - z2 z) :
-  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
+  solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt ->
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
 move=> dtraj.
@@ -1208,7 +1298,7 @@ by rewrite 2!mulNmx mulmx1 mxE.
 Qed.
 
 Lemma neg_spin (traj : K -> 'rV_6) (z : K) :
-  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
+  solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt ->
   norm (Right (traj z) *m \S('e_2) *m - \S('e_2 - Right (traj z))) =
   norm (Right (traj z) *m \S('e_2)).
 Proof.
@@ -1217,11 +1307,11 @@ rewrite mulmxN normN.
 pose zp1 := fun r => Left (traj r).
 pose z2 := fun r => Right (traj r).
 set w := (z2 z) *m \S('e_2).
-have Gamma1_traj t : state_space33 (traj t) by apply/Gamma1_traj.
+have Gamma1_traj t : state_space_tilt (traj t) by apply/Gamma1_traj.
 rewrite /norm.
 rewrite !dotmulvv [RHS]sqrtr_sqr sqrtr_sqr.
 have Hnorm_sq : norm (w *m \S('e_2 - Right (traj z))) ^+ 2 = norm w ^+ 2.
-  rewrite -!dotmulvv Hsq // !dotmulvv norm_u1 /= //.
+  rewrite -!dotmulvv angvel_sqr // !dotmulvv norm_u1 /= //.
   rewrite -!dotmulvv expr2 !mul1r mulr1.
   have -> : w *d ('e_2 - Right (traj z)) = 0.
     by rewrite dotmulC ortho_spin.
@@ -1233,10 +1323,10 @@ Qed.
 Lemma V1dot_ub (traj : K -> 'rV_6) (z : K) (zp1 := Left \o traj) (z2 := Right \o traj)
   (w := z2 z *m \S('e_2))
   (u1 : 'rV[K]_2 := \row_(i < 2) [eta (fun=> 0) with 0 |-> norm (zp1 z), 1 |-> norm w] i) :
-  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
+  solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt ->
   V1dot (traj z) <= (- u1 *m u2 *m u1^T) 0 0.
 Proof.
-move=> dtrak.
+move=> dtraj.
 rewrite mxE.
 rewrite /V1dot.
 rewrite mxE norm_spin mxE addrA expr2 mulmxA.
@@ -1264,20 +1354,27 @@ Qed.
 
 (* TODO: rework of this proof is needed *)
 Lemma near0_le0 (traj : K -> 'rV_6) :
-  solves_equation (eqn33 alpha1 gamma) traj state_space33 ->
+  solves_equation (tilt_eqn alpha1 gamma) traj state_space_tilt ->
   traj 0 = point1 ->
   \forall z \near 0^',
     (LieDerivative (fun x => norm (Left x) ^+ 2 / (2 * alpha1)) traj +
      LieDerivative (fun x => norm (Right x) ^+ 2 / (2 * gamma)) traj) z <= 0.
 Proof.
 move=> dtraj traj0.
-near=> z.
 rewrite !fctE !invfM /=.
+near=> z.
 under [X in LieDerivative X _ _ + _]eq_fun do rewrite mulrC.
 under [X in _ + LieDerivative X _ _]eq_fun do rewrite mulrC.
 rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Left.
 rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Right.
-rewrite /= !fctE !LieDerivative_norm derive_V1dot //.
+rewrite /= !fctE !LieDerivative_norm; last 6 first.
+  admit.
+  admit.
+  admit.
+  admit.
+  admit.
+  admit.
+rewrite derive_V1dot //.
 pose zp1 := Left \o traj.
 pose z2 := Right \o traj.
 set w := (z2 z) *m \S('e_2).
@@ -1291,21 +1388,35 @@ have [->|H] := eqVneq u1 0.
 have Hpos := def u1 H.
 rewrite -oppr_ge0 -oppr_le0 opprK ltW//.
 by rewrite -oppr_gt0 mulNmx !mulNmx mxE opprK Hpos.
-Unshelve. all: try by end_near. Qed.
+Unshelve. all: try by end_near. 
+Admitted.
 
 Lemma V1_point_is_lnsd (y : K -> 'rV_6) :
-  solves_equation (eqn33 alpha1 gamma) y state_space33->
+  solves_equation (tilt_eqn alpha1 gamma) y state_space_tilt->
   y 0 = point1 ->
   locnegsemidef (LieDerivative (V1 alpha1 gamma) y) 0.
 Proof.
 move=> [y033] [dy dtraj] traj0.
-have Gamma1_traj t : state_space33 (y t).
+have Gamma1_traj t : state_space_tilt (y t).
   apply/Gamma1_traj.
   by split => //.
 rewrite /locnegsemidef /V1.
 rewrite LieDerivativeD /=; last 2 first.
-  admit.
-  admit.
+  move => t.
+  apply: differentiableM; last 2 first.
+    rewrite /=.
+    apply: differentiableM; last 2 first.
+      apply: differentiable_norm.
+      apply: differentiable_norm.
+    rewrite -fctE.
+    apply: differentiable_cst; last first.
+    move => t.
+    apply: differentiableM; last 2 first.
+      apply: differentiableM; last 2 first.
+      apply: differentiable_norm.
+      apply: differentiable_norm.
+    rewrite -fctE.
+    apply: differentiable_cst.
 split; last first.
   apply/near0_le0; last by [].
   by split => //.
@@ -1317,16 +1428,16 @@ rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Left.
 rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Right.
 rewrite /= !fctE !derivative_LieDerivative_eq0; last 4 first.
   by [].
-  rewrite [LHS]dtraj /eqn33/= traj0 /point1.
+  rewrite [LHS]dtraj /tilt_eqn/= traj0 /point1.
   by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
   by [].
-  rewrite [LHS]dtraj /eqn33/= traj0 /point1.
+  rewrite [LHS]dtraj /tilt_eqn/= traj0 /point1.
   by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
 by rewrite scaler0 scaler0 add0r.
-Admitted.
+Qed.
 
 Lemma V1_is_lyapunov_stable :
-  is_lyapunov_stable_at (eqn33 alpha1 gamma) state_space33 (V1 alpha1 gamma) point1.
+  is_lyapunov_stable_at (tilt_eqn alpha1 gamma) state_space_tilt (V1 alpha1 gamma) point1.
 Proof.
 split.
 - by apply: equilibrium_point1 => //.
