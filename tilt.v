@@ -272,31 +272,37 @@ Qed.
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
+(* sqrt est l'inverse de la fonction carree..*)
 Lemma derivable_sqrt {K: realType} (u : K) : u > 0 -> derivable Num.sqrt (u) 1.
 Proof.
 move => gt0.
-Search (derivable _ _).
-Admitted.
+apply: ex_derive.
+apply: (is_derive1_sqrt gt0).
+Qed.
+
+Lemma differentiable_sqrt {K: realType} (u : K) : u > 0 ->
+  differentiable Num.sqrt u.
+Proof. move=> u0; exact/derivable1_diffP/derivable_sqrt. Qed.
 
 Lemma differentiable_norm {K : realType} n (f : 'rV[K]_n.+1 -> 'rV_3)
-  (x : K -> 'rV[K]_n.+1) (t : K) :
-  (forall x0, f x0 != 0) ->
-  derivable (f \o x) t 1 ->
-  differentiable (fun x0 : 'rV_n.+1 => norm (f x0)) (x t).
+    y :
+  f y != 0 ->
+  (forall y, differentiable f y) ->
+  differentiable (fun x0 : 'rV_n.+1 => norm (f x0)) y.
 Proof.
-move => fx0 dif1.
+move => fxt0 dif1.
 rewrite /norm -fctE.
 apply: differentiable_comp; last first.
   apply/derivable1_diffP.
   apply/derivable_sqrt.
   by rewrite dotmulvv expr2 mulr_gt0 //= !norm_gt0 //.
-apply: differentiable_dotmul => //.
-Admitted.
+exact: differentiable_dotmul.
+Qed.
 
 Lemma LieDerivative_norm {K : realType} (f : 'rV[K]_6 -> 'rV_3)
   (x : K -> 'rV[K]_6) (t : K) :
    (f \o x) t != 0 ->
-    differentiable x t -> derivable (f \o x) t 1 ->
+    differentiable x t -> (forall t, differentiable f t) ->
     LieDerivative (fun y => (norm (f y)) ^+ 2) x t =
     (2%:R *: 'D_1 (f \o x) t *m (f (x t))^T) 0 0.
 Proof.
@@ -309,91 +315,63 @@ rewrite -derivemxE; last first.
   apply/differentiable_comp; last first.
     exact: differentiable_scalar_mx.
   rewrite -fctE /=.
-  apply: differentiableM; last 2 first.
-    apply/differentiable_norm; last 2 first.
-      admit.
-      by [].
-    apply/differentiable_norm; last first.
-      by [].
-      move => x0.
-      admit.
+  by apply: differentiableM; apply/differentiable_norm => //=.
 have := derive_norm.
 rewrite //=.
 (*move=> /( congr1 (fun z => z t)).*)
 rewrite -scalemxAl [X in _ -> _ = X]mxE.
-move => <-; last 2 first.
-  by [].
-  by [].
-(*  apply: diff_derivable.
-  apply: differentiable_comp; last 2 first.
-    by [].
-    by [].*)
-rewrite derive1Ml; last 2 first.
-  rewrite fctE /=. 
-  rewrite mul1r.
-  rewrite !mxE.
-  rewrite derive1E.
-  transitivity ( ('D_('D_1 x t) (fun y : 'rV_6 => (norm (f y) ^+ 2)) (x t)) ).
-    under eq_fun do rewrite scalar_mxM.
-    admit.
-  rewrite deriveE ; last first.
-    apply: differentiableM; last 2 first.
-      apply: differentiable_norm; last 2 first.
-        admit.
-        by [].
-      apply: differentiable_norm.
-        admit.
-        by [].
-  rewrite derive_mx//=; last first.
-    by apply: diff_derivable.
-  rewrite deriveE ; last first.
-    apply: differentiableM => /=.
-      rewrite /norm.
-      (* differentiable norm needs to be generalized*)
-      apply: differentiable_comp; last first.
-        apply/derivable1_diffP.
-        apply/derivable_sqrt.
-        by rewrite dotmulvv expr2 mulr_gt0 // norm_gt0 //.
-      apply/derivable1_diffP.
-      by apply/derivable_dotmul.
+move => <-//; last first.
+  apply/diff_derivable.
+  by apply: differentiable_comp.
+rewrite derive1Ml; last 1 first.
+  apply/diff_derivable.
+  under eq_fun do rewrite expr2.
+  apply: differentiableM => /=;
+  apply: (@differentiable_comp _ _ _ _ x (norm \o f)) => //;
+  by apply: differentiable_norm.
+rewrite fctE /=.
+rewrite mul1r.
+rewrite !mxE.
+rewrite derive1E.
+transitivity ( ('D_('D_1 x t) (fun y : 'rV_6 => (norm (f y) ^+ 2)) (x t)) ).
+  under eq_fun do rewrite scalar_mxM.
+  rewrite derive_mx ?mxE; last first.
+    apply: derivable_mulmx => //=; apply: derivable_scalar_mx;
+    by apply/diff_derivable; apply: differentiable_norm.
+  rewrite /=.
+  under [in RHS]eq_fun do rewrite expr2.
+  under eq_fun do rewrite -scalar_mxM.
+  by under eq_fun do rewrite mxE eqxx mulr1n.
+rewrite deriveE ; last first.
+  by apply: differentiableM; apply: differentiable_norm => //.
+rewrite derive_mx//=; last first.
+  by apply: diff_derivable.
+rewrite deriveE ; last first.
+  apply: differentiableM => /=.
     rewrite /norm.
+    (* differentiable norm needs to be generalized*)
     apply: differentiable_comp; last first.
       apply/derivable1_diffP.
       apply/derivable_sqrt.
       by rewrite dotmulvv expr2 mulr_gt0 // norm_gt0 //.
     apply/derivable1_diffP.
-    by apply/derivable_dotmul.
-  transitivity(('d (fun y : 'rV_6 => norm (f y) ^+ 2) (x t ) \o ('d x t)) 1).
-    rewrite -derive_mx //=; last by apply: diff_derivable.
-    by rewrite deriveE.
-  rewrite -diff_comp //=.
-  rewrite -fctE /=.
-  apply: differentiableM; last first. 
-    apply: differentiable_norm; last 2 first.
-      admit.
-      by [].
-  apply: differentiable_norm.
-    admit.
-    by [].
-apply: diff_derivable.
-rewrite -fctE /=.
-apply: differentiableM; last 2 first.
-  apply/differentiable_comp; last first.
+    by apply/derivable_dotmul => //=;
+      apply/derivable1_diffP; apply: differentiable_comp.
   rewrite /norm.
-  admit.
-  rewrite /=.
-  rewrite -fctE //.
-  by apply/derivable1_diffP.
-apply/differentiable_comp; last 2 first.
-  rewrite /= -fctE.
-  by apply/derivable1_diffP.
-  apply/differentiable_comp; last 2 first.
-    rewrite /=.
-    admit.
-   apply/derivable1_diffP.
-  apply/derivable_sqrt.
-  by rewrite dotmulvv expr2 mulr_gt0 // norm_gt0 //.
-Admitted.
+  apply: differentiable_comp; last first.
+    apply/derivable1_diffP.
+    apply/derivable_sqrt.
+    by rewrite dotmulvv expr2 mulr_gt0 // norm_gt0 //.
+  apply/derivable1_diffP.
+  by apply/derivable_dotmul => //=;
+    apply/derivable1_diffP; apply: differentiable_comp.
+transitivity(('d (fun y : 'rV_6 => norm (f y) ^+ 2) (x t ) \o ('d x t)) 1).
+  rewrite -derive_mx //=; last by apply: diff_derivable.
+  by rewrite deriveE.
+rewrite -diff_comp //=.
+rewrite -fctE /=.
+by apply: differentiableM; by apply: differentiable_norm.
+Qed.
 
 End LieDerivative.
 
@@ -813,6 +791,7 @@ Definition tilt_eqn (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
   fun t => row_mx (- alpha1 *: zp1_point t)
          (gamma *: (z2_point t - zp1_point t) *m \S('e_2%:R - z2_point t) ^+ 2).
 
+(* TODO: use tilt_eqn *)
 Definition eqn33' (zp1_z2_point : 'rV[K]_6) : 'rV[K]_6 :=
   let zp1_point := Left zp1_z2_point in
   let z2_point := Right zp1_z2_point in
@@ -849,7 +828,7 @@ rewrite /=.
 apply: (@le_trans _ _ (`|(maxr alpha1 gamma *: fx - maxr alpha1 gamma *: fy) a b|)).
   admit.
 apply: (@le_trans _ _ (`|maxr alpha1 gamma *: x a b - maxr alpha1 gamma *: x0 a b|)); last first.
-Admitted.
+Abort.
 
 (* cauchy lipschitz par F1 qui definit un champ de vecteur lisse :
 il existe une solution depuis tout point:
@@ -965,7 +944,7 @@ apply/seteqP; split.
   rewrite alpha1_nz // Bool.orb_false_l.
   by rewrite lsubmx_const.
   by rewrite lsubmx_const rsubmx_const subr0 scaler0 mul0mx.
-  admit.
+  admit. (* NG *)
 Admitted.
 
 Definition point1 : 'rV[K]_6 := 0.
