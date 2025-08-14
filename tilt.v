@@ -140,34 +140,6 @@ rewrite dotmulC.
 by field.
 Qed.
 
-Lemma derivable_scalar_mx {R : realFieldType} n (f : 'rV[R]_n.+1 -> R)
-    (a : 'rV[R]_n.+1) v :
-  derivable f a v ->
-  derivable (@scalar_mx _ 1 \o f) a v.
-Proof.
-move=> /cvg_ex[/= l fav].
-apply/cvg_ex => /=.
-exists (\col_(i < 1) l).
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : fav => /(_ _ e0).
-apply: filterS => x.
-apply: le_trans.
-rewrite [in leLHS]/Num.Def.normr/= !mx_normrE/=.
-apply: bigmax_le => //= -[i j] _.
-rewrite !mxE/=.
-by rewrite !ord1 eqxx !mulr1n.
-Qed.
-
-Lemma derive_row_mx  {R : realFieldType} {n : nat}  {m : nat} :
-forall (f : R -> 'rV[R]_(n.+1 + m.+1)) (g : R -> 'rV[R]_(n.+1 + m.+1)) (t : R),
-  'D_1 (fun x => row_mx (f x) (g x)) t =
-                row_mx ('D_1 f t) ('D_1 g t).
-rewrite /=.
-move => f g t.
-rewrite deriveE /=; last first.
-  admit.
-Abort.
-
 End derive_help.
 
 Section gradient.
@@ -925,9 +897,8 @@ apply/seteqP; split.
         rewrite deriveB /= ; last 2 first.
           exact: derivable_cst.
           by apply: derivable_rsubmx.
-        rewrite derive_cst /= sub0r.
-        congr (-_).
-        by apply derive_rsubmx.
+        rewrite derive_cst /= sub0r; congr (-_).
+        exact: derive_rsubmx.
       rewrite -(_ : 'D_1 y x = (\matrix_(i, j) 'D_1 (fun t0 : K => y t0 i j) x)); last first.
         apply/matrixP => a b; rewrite !mxE.
         rewrite derive_mx//= ?mxE//.
