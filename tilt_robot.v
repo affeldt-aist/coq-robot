@@ -132,6 +132,16 @@ apply: le_trans; last first.
 by rewrite !mxE.
 Qed.
 
+Lemma differentiable_rsubmx {R : realType} (f : R -> 'rV[R]_(3 + 3)) t :
+  (forall x, differentiable f x) ->
+  differentiable (fun x => rsubmx (f x)) t.
+Proof.
+move=> /= => df1.
+apply/derivable1_diffP.
+apply/derivable_rsubmx => x.
+exact/derivable1_diffP.
+Qed.
+
 Lemma derive_rsubmx {R : realType} {V : normedModType R} (f : V -> 'rV[R]_(3 + 3)) t v:
   (forall x, derivable f x v) ->
   'D_v (fun x => rsubmx (f x)) t = @rsubmx R _ 3 3 ('D_v f t).
@@ -160,6 +170,16 @@ rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
 apply: le_trans; last first.
   exact: (le_bigmax _ _ (ord0, lshift 3 j)).
 by rewrite !mxE.
+Qed.
+
+Lemma differentiable_lsubmx {R : realType} (f : R -> 'rV[R]_(3 + 3)) t :
+  (forall x, differentiable f x) ->
+  differentiable (fun x => lsubmx (f x)) t.
+Proof.
+move=> /= => df1.
+apply/derivable1_diffP.
+apply/derivable_lsubmx => x.
+exact/derivable1_diffP.
 Qed.
 
 Lemma derive_lsubmx {R : realType} {V : normedModType R} (f : V -> 'rV[R]_(3 + 3)) t v :
