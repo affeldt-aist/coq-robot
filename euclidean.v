@@ -199,8 +199,8 @@ Section dotmul_bilinear.
 Variables (R : comRingType) (n : nat).
 
 Definition dotmul_rev (v u : 'rV[R]_n) := u *d v.
-Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
-  (fun _ _ => erefl).
+(*Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
+  (fun _ _ => erefl).*)
 
 Lemma dotmul_is_linear u : linear (dotmul u : 'rV[R]_n -> R^o).
 Proof. move=> /= k v w; by rewrite dotmulDr dotmulvZ. Qed.
@@ -247,17 +247,40 @@ move/allP => H; apply/eqP/rowP => i.
 apply/eqP; by rewrite mxE -sqrf_eq0 expr2 -(implyTb ( _ == _)) H.
 Qed.
 
+Lemma dotmul_is_hermitian x y :
+  (@dotmul T n) x y = (-1) ^+ false * idfun ((@dotmul T n) y x).
+Proof.
+by rewrite /= expr0 mul1r dotmulC.
+Qed.
+
+HB.instance Definition _ :=
+  @isHermitianSesquilinear.Build _ _ _ _ _ dotmul_is_hermitian.
+
+Check @dotmul _ _ : {symmetric 'rV[T]_n}.
+
+Let neq0_norm_gt0 (u : 'rV[T]_n) : u != 0 -> 0 < dotmul u u.
+Proof.
+move=> u0.
+by rewrite lt_neqAle eq_sym dotmulvv0 u0 le0dotmul.
+Qed.
+
+HB.instance Definition _ := isDotProduct.Build _ _ (@dotmul T n) neq0_norm_gt0.
+
 End dot_product.
 
 Section norm.
-
-Variables (T : rcfType) (n : nat).
+Context {T : rcfType} {n : nat}.
 Implicit Types u v : 'rV[T]_n.
 
-Definition norm u := Num.sqrt (u *d u).
+Local Notation "''[' u , v ]" := (dotmul u v) : ring_scope.
+Local Notation "''[' u ]" := '[u, u]%R : ring_scope.
+
+Definition norm u : T := Num.sqrt '[u].
 
 Lemma normN u : norm (- u) = norm u.
-Proof. by rewrite /norm dotmulNv dotmulvN opprK. Qed.
+Proof.
+by rewrite /norm (@hnormN T false idfun).
+Qed.
 
 Lemma norm0 : norm 0 = 0.
 Proof. by rewrite /norm dotmul0v sqrtr0. Qed.
