@@ -279,8 +279,10 @@ Search (derivable _ _).
 Admitted.
 
 Lemma differentiable_norm {K : realType} n (f : 'rV[K]_n.+1 -> 'rV_3)
-  (x : K -> 'rV[K]_n.+1) (t : K) : (forall x0, f x0 != 0) ->   derivable (f \o x) t 1 ->
-differentiable (fun x0 : 'rV_n.+1 => norm (f x0)) (x t).
+  (x : K -> 'rV[K]_n.+1) (t : K) :
+  (forall x0, f x0 != 0) ->
+  derivable (f \o x) t 1 ->
+  differentiable (fun x0 : 'rV_n.+1 => norm (f x0)) (x t).
 Proof.
 move => fx0 dif1.
 rewrite /norm -fctE.
@@ -288,7 +290,7 @@ apply: differentiable_comp; last first.
   apply/derivable1_diffP.
   apply/derivable_sqrt.
   by rewrite dotmulvv expr2 mulr_gt0 //= !norm_gt0 //.
-  admit.
+apply: differentiable_dotmul => //.
 Admitted.
 
 Lemma LieDerivative_norm {K : realType} (f : 'rV[K]_6 -> 'rV_3)

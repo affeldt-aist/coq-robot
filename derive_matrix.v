@@ -1,4 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import interval_inference.
@@ -450,45 +451,86 @@ End row_belast.
 (* TODO: could be derived from more generic lemmas about bilinearity in derive.v? *)
 Section product_rules.
 
+Global Instance is_diff_sum {R : numFieldType} {V W : normedModType R}
+  n (h : 'I_n -> V -> W) (x : V)
+  (dh : 'I_n -> V -> W) : (forall i, is_diff x (h i) (dh i)) ->
+  is_diff x (\sum_(i < n) h i) (\sum_(i < n) dh i).
+Proof.
+by elim/big_ind2 : _ => // [|] *; [exact: is_diff_cst|exact: is_diffD].
+Qed.
+
 Lemma derive_dotmul {R : realFieldType} {V : normedModType R} n
     (u v : V -> 'rV[R]_n.+1) (t : V) (w : V) :
     derivable u t w -> derivable v t w ->
-  'D_w (fun x => u x *d v x) t =
-  'D_w u t *d v t + u t *d 'D_w v t.
+  'D_w (fun x => u x *d v x) t = 'D_w u t *d v t + u t *d 'D_w v t.
 Proof.
 move=> /derivable_mxP utw /derivable_mxP vtw.
-evar (f : V -> R); rewrite (_ : (fun x : V => u x *d v x : R^o) = f); last first.
-  by rewrite funeqE => x /=; exact: dotmulE.
-rewrite {}/f.
-set f := fun i : 'I__ => fun x => ((u x) ``_ i * (v x) ``_ i).
+under eq_fun do rewrite dotmulE.
+set f := fun i : 'I__ => fun x => (u x) ``_ i * (v x) ``_ i.
 rewrite (_ : (fun _ : V => _) = \sum_(k < _) f k); last first.
   by rewrite funeqE => x; rewrite /f /= fct_sumE.
-rewrite derive_sum; last by move=> ?; exact: derivableM (utw _ _) (vtw _ _).
-rewrite {}/f.
-elim: n u v => [|n IH] u v in utw vtw *.
-  rewrite big_ord_recl/= big_ord0 addr0.
-  rewrite /dotmul !mxE !sum1E !mxE.
-  rewrite deriveM//=.
-  rewrite addrC.
-  rewrite mulrC//.
-  rewrite derive_mx//; last exact/derivable_mxP.
-  rewrite !mxE.
-  rewrite derive_mx//; last exact/derivable_mxP.
-  by rewrite !mxE.
-rewrite [LHS]big_ord_recr /=.
-set u' := fun x => row_belast (u x). set v' := fun x => row_belast (v x).
-transitivity ('D_w u' t *d v' t + u' t *d 'D_w v' t +
-    derive (fun x => (u x)``_ord_max * (v x)``_ord_max) t w).
-  rewrite -(IH _ _ (derivable_row_belast utw) (derivable_row_belast vtw)).
-  apply: f_equal2; last by [].
-  apply eq_bigr => i _; congr (derive _ t w).
-  by rewrite funeqE => x; rewrite !mxE.
-rewrite (deriveM (utw _ _) (vtw _ _)) /= -!addrA addrC addrA.
-rewrite -(addrA (_ + _)) [in RHS]addrC derive1mx_dotmul_belast; last first.
-  exact/derivable_mxP.
-congr (_ + _).
-rewrite [in RHS]dotmulC -derive1mx_dotmul_belast; last exact/derivable_mxP.
-by rewrite addrC dotmulC.
+rewrite derive_sum; last by move=> i; exact: derivableM.
+rewrite !dotmulE -big_split/=; apply: eq_bigr => i _.
+by rewrite {}/f deriveM// mulrC addrC; congr (_ * _ + _ * _);
+  rewrite derive_mx ?mxE//=; exact/derivable_mxP.
+Qed.
+
+(* NB: from Damien's LaSalle *)
+Notation "p ..[ i ]" := (p 0 i) (at level 10).
+
+Global Instance is_diff_component {R : realFieldType} n i (p : 'rV[R]_n.+1) :
+  is_diff p (fun q => q..[i] : R^o) (fun q => q..[i]).
+Proof.
+have comp_lin : linear (fun q : 'rV[R]_n.+1 => q..[i] : R^o).
+  by move=> ???; rewrite !mxE.
+have comp_cont : continuous (fun q : 'rV[R]_n.+1 => q..[i] : R^o).
+  move=> q A [_/posnumP[e] Ae] /=; apply/nbhs_ballP; exists e%:num => //=.
+  by move=> r /(_ ord0) /(_ i) /Ae.
+pose glM := GRing.isLinear.Build _ _ _ _ _ comp_lin.
+pose gL : {linear 'rV_n.+1 -> R^o} := HB.pack (fun q : 'rV_n.+1 => q ..[ i]) glM.
+apply: DiffDef; first exact: (@linear_differentiable _ _ _ gL).
+by rewrite (@diff_lin _ _ _ gL).
+Qed.
+
+Global Instance is_diff_component_comp {R : realFieldType} (V : normedModType R) n
+  (f : V -> 'rV[R]_n.+1) i p df : is_diff p f df ->
+  is_diff p (fun q => (f q)..[i] : R^o) (fun q => (df q)..[i]).
+Proof.
+move=> dfp.
+have -> : (fun q => (f q)..[i]) = (fun v => v..[i]) \o f by rewrite funeqE.
+(* This should work *)
+(* apply: is_diff_eq. *)
+exact: is_diff_comp.
+Qed.
+(* /NB: from Damien's LaSalle *)
+
+Global Instance is_diff_dotmul {R : realFieldType} m n (V := 'rV[R]_m.+1)
+    (u v du dv : V -> 'rV[R]_n.+1) (t : V) :
+  is_diff t u du -> is_diff t v dv ->
+  is_diff t (fun x => u x *d v x)
+            (fun x => u t *d dv x + v t *d du x).
+Proof.
+move=> udu vdv/=.
+under eq_fun do rewrite dotmulE.
+set f := fun i : 'I__ => (fun x => (u x) ``_ i) * (fun x => (v x) ``_ i).
+rewrite [X in is_diff _ X _](_ : _ = \sum_(k < _) f k); last first.
+  by rewrite funeqE => x; rewrite /f /= fct_sumE.
+rewrite [X in is_diff _ _ X](_ : _ = \sum_(i < n.+1)
+    ((u t)``_i *: (fun x => (dv x)``_i) + (v t)``_i *: (fun x => (du x)``_i))); last first.
+  by apply/funext => x; rewrite 2!dotmulE -big_split/= fct_sumE.
+apply: is_diff_sum => i.
+rewrite {}/f /=.
+exact: is_diffM.
+Qed.
+
+Lemma differentiable_dotmul {R : realFieldType} m n (V := 'rV[R]_m.+1)
+    (u v : V -> 'rV[R]_n.+1) (t : V) :
+  differentiable u t ->
+  differentiable v t ->
+  differentiable (fun x => u x *d v x) t.
+Proof.
+move=> /differentiableP udu /differentiableP vdv/=.
+by have [/=] := is_diff_dotmul udu vdv.
 Qed.
 
 Lemma derive_mulmx {R : realFieldType} {V : normedModType R} n m p
