@@ -1,6 +1,7 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra ring.
 From mathcomp Require Import boolp classical_sets functions reals.
-From mathcomp Require Import topology normedtype derive realfun.
+From mathcomp Require Import topology normedtype landau derive realfun.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
 (*Require Import lasalle pendulum.*)
@@ -157,7 +158,7 @@ rewrite !mxE/=.
 by rewrite !ord1 eqxx !mulr1n.
 Qed.
 
-Lemma derive1mx_row_mx  {R : realFieldType} {n : nat}  {m : nat} :
+Lemma derive_row_mx  {R : realFieldType} {n : nat}  {m : nat} :
 forall (f : R -> 'rV[R]_(n.+1 + m.+1)) (g : R -> 'rV[R]_(n.+1 + m.+1)) (t : R),
   'D_1 (fun x => row_mx (f x) (g x)) t =
                 row_mx ('D_1 f t) ('D_1 g t).
@@ -299,45 +300,30 @@ Qed.
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
-Lemma differentiable_norm_Left {K : realType} (y : 'rV[K]_6) :
-  differentiable (fun x : 'rV_6 => norm (Left x) ^+ 2 : K) y.
+Lemma derivable_sqrt {K: realType} (u : K) : u > 0 -> derivable Num.sqrt (u) 1.
 Proof.
-apply/(@differentiable_comp _ _ _ _ (fun x => norm (Left x)) (fun x => x ^+ 2)) => //=.
-apply/differentiable_comp.
-(*derivable_lsubmx.*) 
-admit.
-admit.
+move => gt0.
+Search (derivable _ _).
 Admitted.
 
-Lemma differentiable_norm_Right  {K : realType} (y : 'rV[K]_6) :
-  differentiable (fun x : 'rV_6 => norm (Right x) ^+ 2 : K) y.
-Proof.
-apply/(@differentiable_comp _ _ _ _ (fun x => norm (Right x)) (fun x => x ^+ 2)) => //=.
-apply/differentiable_comp.
-admit.
-admit.
-Admitted.
-
-(* TODO norm is not differentiable at 0*)
-Lemma  differentiable_norm {K : realType} n (f : 'rV[K]_n.+1 -> 'rV_3)
-  (x : K -> 'rV[K]_n.+1) (t : K) : 
+Lemma differentiable_norm {K : realType} n (f : 'rV[K]_n.+1 -> 'rV_3)
+  (x : K -> 'rV[K]_n.+1) (t : K) : (forall x0, f x0 != 0) ->   derivable (f \o x) t 1 ->
 differentiable (fun x0 : 'rV_n.+1 => norm (f x0)) (x t).
 Proof.
-Admitted. 
-
-Lemma differentiable_rsubmx  {K : realType} (x : K -> 'rV[K]_6)  (t : K) : differentiable x t -> differentiable Right (x t).
-Proof.
-rewrite /Right; move => difx.
-Admitted.
-
-Lemma differentiable_lsubmx  {K : realType} (x : K -> 'rV[K]_6)  (t : K) : differentiable x t -> differentiable Left (x t).
-Proof.
+move => fx0 dif1.
+rewrite /norm -fctE.
+apply: differentiable_comp; last first.
+  apply/derivable1_diffP.
+  apply/derivable_sqrt.
+  by rewrite dotmulvv expr2 mulr_gt0 //= !norm_gt0 //.
+  admit.
 Admitted.
 
 Lemma LieDerivative_norm {K : realType} (f : 'rV[K]_6 -> 'rV_3)
   (x : K -> 'rV[K]_6) (t : K) :
    (f \o x) t != 0 ->
-    differentiable x t ->   differentiable f (x t) -> LieDerivative (fun y => (norm (f y)) ^+ 2) x t =
+    differentiable x t -> derivable (f \o x) t 1 ->
+    LieDerivative (fun y => (norm (f y)) ^+ 2) x t =
     (2%:R *: 'D_1 (f \o x) t *m (f (x t))^T) 0 0.
 Proof.
 rewrite /LieDerivative.
@@ -347,21 +333,27 @@ rewrite -trmx_mul.
 move => f0 difx diff1.
 rewrite -derivemxE; last first.
   apply/differentiable_comp; last first.
-    apply differentiable_scalar_mx.
+    exact: differentiable_scalar_mx.
   rewrite -fctE /=.
   apply: differentiableM; last 2 first.
-    apply: differentiable_norm.
-    apply: differentiable_norm.
+    apply/differentiable_norm; last 2 first.
+      admit.
+      by [].
+    apply/differentiable_norm; last first.
+      by [].
+      move => x0.
+      admit.
 have := derive_norm.
 rewrite //=.
 (*move=> /( congr1 (fun z => z t)).*)
 rewrite -scalemxAl [X in _ -> _ = X]mxE.
 move => <-; last 2 first.
   by [].
-  apply: diff_derivable.
+  by [].
+(*  apply: diff_derivable.
   apply: differentiable_comp; last 2 first.
     by [].
-    by [].
+    by [].*)
 rewrite derive1Ml; last 2 first.
   rewrite fctE /=. 
   rewrite mul1r.
@@ -372,51 +364,61 @@ rewrite derive1Ml; last 2 first.
     admit.
   rewrite deriveE ; last first.
     apply: differentiableM; last 2 first.
-      apply: differentiable_norm.  
+      apply: differentiable_norm; last 2 first.
+        admit.
+        by [].
       apply: differentiable_norm.
+        admit.
+        by [].
   rewrite derive_mx//=; last first.
     by apply: diff_derivable.
   rewrite deriveE ; last first.
-     apply: differentiableM; last 2 first.
-      rewrite /=.
-      rewrite -fctE.
-      apply: differentiable_comp; last 2 first.
-        rewrite -fctE.
-        apply: differentiable_comp; last 2 first.
-          by [].
-          by [].
-        admit.
-        rewrite /=.
-        apply: differentiable_comp; last 2 first.
-          rewrite /=.
-          apply: differentiable_comp; last 2 first.
-            by [].
-            by [].
-          (*apply: differentiable_norm.*)
-            admit.
+    apply: differentiableM => /=.
+      rewrite /norm.
+      (* differentiable norm needs to be generalized*)
+      apply: differentiable_comp; last first.
+        apply/derivable1_diffP.
+        apply/derivable_sqrt.
+        by rewrite dotmulvv expr2 mulr_gt0 // norm_gt0 //.
+      apply/derivable1_diffP.
+      by apply/derivable_dotmul.
+    rewrite /norm.
+    apply: differentiable_comp; last first.
+      apply/derivable1_diffP.
+      apply/derivable_sqrt.
+      by rewrite dotmulvv expr2 mulr_gt0 // norm_gt0 //.
+    apply/derivable1_diffP.
+    by apply/derivable_dotmul.
   transitivity(('d (fun y : 'rV_6 => norm (f y) ^+ 2) (x t ) \o ('d x t)) 1).
     rewrite -derive_mx //=; last by apply: diff_derivable.
     by rewrite deriveE.
   rewrite -diff_comp //=.
   rewrite -fctE /=.
-  apply: differentiableM; last 2 first. 
-   apply: differentiable_norm.
-   apply: differentiable_norm.
-   apply: diff_derivable.
-  rewrite -fctE /=.
-  apply: differentiableM; last 2 first.
-    apply: differentiable_comp; last 2 first.
-      rewrite /=.
-      apply: differentiable_comp; last 2 first.
-        by [].
-        by [].
+  apply: differentiableM; last first. 
+    apply: differentiable_norm; last 2 first.
       admit.
-      apply: differentiable_comp; last 2 first.
-        apply: differentiable_comp; last 2 first.
-        by [].
-        by [].
-    (*apply differentiable_norm*)
+      by [].
+  apply: differentiable_norm.
     admit.
+    by [].
+apply: diff_derivable.
+rewrite -fctE /=.
+apply: differentiableM; last 2 first.
+  apply/differentiable_comp; last first.
+  rewrite /norm.
+  admit.
+  rewrite /=.
+  rewrite -fctE //.
+  by apply/derivable1_diffP.
+apply/differentiable_comp; last 2 first.
+  rewrite /= -fctE.
+  by apply/derivable1_diffP.
+  apply/differentiable_comp; last 2 first.
+    rewrite /=.
+    admit.
+   apply/derivable1_diffP.
+  apply/derivable_sqrt.
+  by rewrite dotmulvv expr2 mulr_gt0 // norm_gt0 //.
 Admitted.
 
 End LieDerivative.
@@ -1223,7 +1225,7 @@ rewrite tr_sqr_spin.
 by rewrite mulmxA.
 Qed.
 
-Lemma deriveV1 (x : K -> 'rV[K]_6) t : solves_equation (tilt_eqn alpha1 gamma) x state_space_tilt ->  differentiable x t ->
+Lemma deriveV1 (x : K -> 'rV[K]_6) t : solves_equation (tilt_eqn alpha1 gamma) x state_space_tilt -> (forall t, differentiable x t) ->
   LieDerivative (V1 alpha1 gamma) x t = V1dot (x t).
 Proof.
 move=> tilt_eqnx dif1.
@@ -1231,23 +1233,39 @@ rewrite /V1.
 rewrite LieDerivativeD; last 2 first.
   move=> t0.
   apply: differentiableM => //=.
-  exact: differentiable_norm_Left.
+  apply: differentiableM => //=.
+    admit.
+    admit.
   move=> t0.
   apply: differentiableM => //=.
-  exact: differentiable_norm_Right.
+  apply: differentiableM => //=.
+    admit.
+    admit.
 rewrite !invfM /=.
 rewrite fctE.
 under [X in LieDerivative X _ _ + _]eq_fun do rewrite mulrC.
 under [X in _ + LieDerivative X _ _]eq_fun do rewrite mulrC.
-rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Left.
-rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Right.
+rewrite LieDerivativeMl; last first.
+  move => t0.
+  apply: differentiableM => //=.
+    admit.
+    admit.
+rewrite LieDerivativeMl; last first.
+  move => t0.
+   apply: differentiableM => //=.
+    admit.
+    admit.
 rewrite !fctE !LieDerivative_norm /=; last 6 first.
   admit.
   by [].
-  apply: differentiable_rsubmx; last by [].
+  apply/derivable1_diffP.
+  apply: differentiable_rsubmx => /= x0.
+  by [].
   admit.
   by [].
-  apply: differentiable_lsubmx; last by [].
+  apply/derivable1_diffP.
+  apply: differentiable_lsubmx => /= x0.
+  by [].
 by rewrite derive_V1dot.
 Admitted.
 
@@ -1367,8 +1385,10 @@ rewrite !fctE !invfM /=.
 near=> z.
 under [X in LieDerivative X _ _ + _]eq_fun do rewrite mulrC.
 under [X in _ + LieDerivative X _ _]eq_fun do rewrite mulrC.
-rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Left.
-rewrite LieDerivativeMl; last by move=> y; exact: differentiable_norm_Right.
+rewrite LieDerivativeMl; last first.
+  admit.
+rewrite LieDerivativeMl; last first.
+  admit.
 rewrite /= !fctE !LieDerivative_norm; last 6 first.
   admit.
   admit.
@@ -1409,14 +1429,22 @@ rewrite LieDerivativeD /=; last 2 first.
     rewrite /=.
     apply: differentiableM; last 2 first.
       apply: differentiable_norm.
+        admit.
+        admit.
       apply: differentiable_norm.
+        admit.
+        admit.
     rewrite -fctE.
     apply: differentiable_cst; last first.
     move => t.
     apply: differentiableM; last 2 first.
       apply: differentiableM; last 2 first.
       apply: differentiable_norm.
+        admit.
+        admit.
       apply: differentiable_norm.
+        admit.
+        admit.
     rewrite -fctE.
     apply: differentiable_cst.
 split; last first.
@@ -1426,8 +1454,10 @@ rewrite !invfM /=.
 rewrite !fctE.
 under [X in LieDerivative X _ _ + _]eq_fun do rewrite mulrC.
 under [X in _ + LieDerivative X _ _]eq_fun do rewrite mulrC.
-rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Left.
-rewrite LieDerivativeMl; last by move=> z; exact: differentiable_norm_Right.
+rewrite LieDerivativeMl; last first.
+  admit.
+rewrite LieDerivativeMl; last first.
+  admit.
 rewrite /= !fctE !derivative_LieDerivative_eq0; last 4 first.
   by [].
   rewrite [LHS]dtraj /tilt_eqn/= traj0 /point1.
@@ -1436,7 +1466,7 @@ rewrite /= !fctE !derivative_LieDerivative_eq0; last 4 first.
   rewrite [LHS]dtraj /tilt_eqn/= traj0 /point1.
   by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.
 by rewrite scaler0 scaler0 add0r.
-Qed.
+Admitted.
 
 Lemma V1_is_lyapunov_stable :
   is_lyapunov_stable_at (tilt_eqn alpha1 gamma) state_space_tilt (V1 alpha1 gamma) point1.
