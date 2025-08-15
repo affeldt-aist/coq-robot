@@ -576,6 +576,24 @@ congr ('D_w _ t).
 by apply/funext => y; rewrite !mxE.
 Qed.
 
+Lemma derivable_dotmul {R : realFieldType} {n}
+    (u v : R -> 'rV[R]_n.+1) t :
+  derivable u t 1 -> derivable v t 1 ->
+  derivable (fun x => u x *d v x) t 1.
+Proof.
+move=> ut1 vt1/=.
+rewrite /dotmul.
+rewrite (_ : (fun x : R => _) =
+    \sum_k (fun x : R => (u x)``_k * (v x) 0 k)); last first.
+  apply/funext => x.
+   rewrite !mxE.
+   under eq_bigr do rewrite !mxE.
+   elim/big_ind2 : _ => //= f a g b -> ->.
+   by rewrite fctE.
+apply: derivable_sum => i.
+by apply: derivableM => //=; exact: derivable_coord.
+Qed.
+
 Lemma derive_crossmul {R : realFieldType} {V : normedModType R}
     (u v : V -> 'rV[R]_3) t w :
   derivable u t w -> derivable v t w ->
