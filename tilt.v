@@ -4,7 +4,7 @@ From mathcomp Require Import boolp classical_sets functions reals order.
 From mathcomp Require Import topology normedtype landau derive realfun.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
-Require Import lasalle pendulum.
+(*Require Import lasalle pendulum.*)
 
 (**md**************************************************************************)
 (* # tentative formalization of [1]                                           *)
@@ -438,8 +438,8 @@ Definition LieDerivative_at {K : realType} {n}
   LieDerivative V (traj_lin f x) 0.
 
 Lemma LieDerivative_traj1 {K : realType} {n}
-  (f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1) 
-  (traj1 : K -> 'rV[K]_n.+1) 
+  (f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1)
+  (traj1 : K -> 'rV[K]_n.+1)
   (D : set 'rV[K]_n.+1)
   (V : 'rV[K]_n.+1 -> K) :
   solves_equation f traj1 D ->
@@ -447,30 +447,40 @@ Lemma LieDerivative_traj1 {K : realType} {n}
     LieDerivative V traj1 t0 = LieDerivative_at f V (traj1 t0).
 Admitted.
 
-Lemma closed_ballAE {K : realType} n (e : K) (x : 'rV[K]_n.+1) : 
-  closed_ball x e = [set y | `|y - x| <= e].
+From mathcomp Require Import normedtype.
+From mathcomp Require Import matrix_normedtype.
+
+Lemma ball0_le0 (R : realDomainType) (V : pseudoMetricNormedZmodType R) (a : V) (r : R) :
+  ball a r = set0 -> r <= 0.
 Proof.
-have [e0|s0] := leP e 0.
-  admit.
-rewrite /closed_ball.
-apply/seteqP; split => /= y.
-  rewrite /closure/= => H.
-  near (0:K)^'+ => f.
-  have [/= z []] : ball x e `&` ball y f !=set0.
-    admit.
-  rewrite mx_norm_ball /ball_/=.
-  move=> xze yzf.
-  rewrite -(subrK z y).
-  rewrite -addrA (le_trans (ler_normD _ _))//.
-  rewrite (@le_trans _ _ (f + `|z - x|))//.
-    admit.
-  rewrite distrC.
-  rewrite -lerBrDr.
-Admitted.
+rewrite -subset0 => ar0; rewrite leNgt; apply/negP => r0.
+by have /(_ (ballxx _ r0)) := ar0 a.
+Qed.
+
+Lemma le0_ball0 (R : realDomainType) (V : pseudoMetricNormedZmodType R) (a : V) (r : R) :
+  r <= 0 -> ball a r = set0.
+Proof.
+move=> r0; rewrite -subset0 => y.
+rewrite -ball_normE /ball_/= ltNge => /negP; apply.
+by rewrite (le_trans r0).
+Qed.
+
+Lemma closed_ball0 (R : realDomainType) (V : pseudoMetricNormedZmodType R) (a : V) (r : R) :
+  r <= 0 -> closed_ball a r = set0.
+Proof.
+move=> r0; rewrite -subset0 => v.
+by rewrite /closed_ball le0_ball0// closure0.
+Qed.
+
+Lemma closed_ballAE {K : realType} n (e : K) (x : 'rV[K]_n.+1) :
+  0 < e -> closed_ball x e = closed_ball_ (@mx_norm _ _ _) x e.
+Proof.
+by move=> e0; rewrite closed_ballE.
+Qed.
 
 Theorem Lyapunov_stability0 {K : realType} {n}
-  (f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1) 
-  (traj1 : K -> 'rV[K]_n.+1) 
+  (f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1)
+  (traj1 : K -> 'rV[K]_n.+1)
   (D : set 'rV[K]_n.+1)
   (V : 'rV[K]_n.+1 -> K)
   (fdtraj : solves_equation f traj1 D)
@@ -479,7 +489,6 @@ Theorem Lyapunov_stability0 {K : realType} {n}
   (V'le_0 : forall x, x \in D -> LieDerivative_at f V x <= 0) :
   is_equilibrium_point f 0 D ->
   is_stable_equilibrium_at 0 fdtraj.
-
 (* todo: systeme autonome, trajectoire pointwise *)
 Proof.
 move => eq.
@@ -490,63 +499,40 @@ rewrite /is_lyapunov_candidate in Vx0.
 move: Vx0 => [/= Vloc Vdiff].
 rewrite /locposdef in Vloc.
 move: Vloc => [/= inD [V0 [openD z]]].
-have : exists r : K, 0 < r /\ r <= eps /\ closed_ball (0:'rV[K]_n.+1) r `<=` D.
+have : exists r : K, 0 < r /\ r <= eps /\ closed_ball_ (fun x => `|x|) (0:'rV[K]_n.+1) r `<=` D.
   rewrite inE in inD.
   have [r0 /= Hr0D] := open_subball openD inD.
-  pose r := Num.min (r0/2) eps.
+  pose r := Num.min (r0 / 2) eps.
+  have r_gt0 : 0 < r.
+    rewrite /r /minr.
+    case: ifPn => // _.
+    by rewrite divr_gt0.
   move=> q.
-  exists (r/2).
+  exists (r / 2).
+  split.
+    by rewrite divr_gt0.
   split.
     rewrite /r.
-    case: (lerP (r0/2) eps) => H. 
-     rewrite divr_gt0 =>//.
-      by rewrite divr_gt0.
-      by rewrite divr_gt0.
-  rewrite /r.
-  split.
-  rewrite /minr.
-  rewrite /r; case: ifPn => H.
+    rewrite /minr.
+    case: ifPn.
+      move/ltW; apply: le_trans.
+      rewrite ler_pdivrMr//.
+      by rewrite ler_peMr ?ler1n// divr_ge0// ltW.
+    move=> _.
     rewrite ler_pdivrMr//.
-    rewrite (le_trans (ltW H))//.
     by rewrite ler_peMr ?ler1n// ltW.
-  rewrite /=.
-  rewrite ler_pdivrMr//.
-  by rewrite ler_peMr ?ler1n// ltW.
-  move=> B rB.
-  apply (q (r)); last first.
-    rewrite -/r in rB.
-    move : rB.
-    Search closed_ball ball.
-    apply: subset_closure_half => //.
-    
-    case: (lerP (r0/2) eps) => H. 
-    rewrite /r /minr; case: ifPn => H1.
-      by rewrite divr_gt0.
-      by exact: eps0.
-    rewrite /r /minr; case: ifPn => H1.
-      by rewrite divr_gt0.
-      by exact: eps0.
-    rewrite /r /minr; case: ifPn => H1.
-      by rewrite divr_gt0.
-      by exact: eps0.
-  rewrite ball_normE.
-  rewrite /ball /=.
-  rewrite sub0r normrN.
-  rewrite /r.
-  rewrite gtr0_norm.
-    case: (lerP (r0/2) eps) => H. 
-      rewrite ltr_pdivrMr.
-      rewrite mulr2n mulrDr mulr1.
-      by rewrite ltrDl.
-      by [].
-  apply: (lt_trans H _).
-  rewrite ltr_pdivrMr.
-    rewrite mulr2n mulrDr mulr1.
-    by rewrite ltrDl.
+  move=> v rv.
+  apply (q r); last 2 first.
     by [].
-  case: (lerP (r0/2) eps) => H. 
-    by rewrite divr_gt0.
-    by exact: eps0.
+    move: rv.
+    rewrite -closed_ballE//; last first.
+      by rewrite divr_gt0.
+    by apply: subset_closure_half => //.
+  rewrite /ball/=.
+  rewrite sub0r normrN gtr0_norm// /r.
+  rewrite gt_min.
+  rewrite ltr_pdivrMr//.
+  by rewrite ltr_pMr// ltr1n.
 have Hcont := differentiable_continuous Vdiff.
 move=> [r [r_pos [r_le_eps Br_sub_D]]].
 pose sphere_r := [set x : 'rV[K]_n.+1 | `|x| = r].
@@ -557,31 +543,18 @@ pose alpha := V (sval Halpha).
 have alpha_gt0 : 0 < alpha.
   have sphere_pos: forall y, y \in sphere_r -> 0 < V y.
     move=> y hy.
-    apply: z.
-    move : hy.
-    rewrite /sphere_r.
-    move : Br_sub_D.
-    rewrite closed_ballAE.
-    move => Br_sub_D.
-    rewrite inE.
-    move => yr.
-    rewrite inE.
+    apply: z; last first.
+      rewrite gtr0_norm_neq0 //.
+      move: hy.
+      by rewrite inE /sphere_r/= => ->.
+    apply/mem_set.
     apply: Br_sub_D.
-    (* TODO*)
-    admit.
-    rewrite gtr0_norm_neq0 => //.
+    rewrite /closed_ball_/= sub0r.
     move : hy.
-    rewrite /sphere_r.
-    rewrite inE.
-    move => hy.
-    have :`|y| = r.
-    by apply: hy.
-    move => yr.
-    by rewrite yr.
+    by rewrite inE /sphere_r/= normrN => ->.
   rewrite /alpha.
   rewrite sphere_pos => //.
-  rewrite /sphere_r inE.
-  
+  rewrite /sphere_r inE/=.
   admit.
 have: exists beta, 0 < beta < alpha.
   rewrite /=.
