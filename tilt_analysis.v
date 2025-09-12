@@ -62,7 +62,7 @@ apply: derive_val.
 exact: is_derive1_sqrt.
 Qed.
 
-Lemma differentiable_scalar_mx {R : realType} n (r : R) :
+Lemma differentiable_scalar_mx {R : realFieldType} n (r : R) :
   differentiable (@scalar_mx _ n.+1) r.
 Proof.
 apply/derivable1_diffP/cvg_ex => /=.

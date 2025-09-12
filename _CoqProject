@@ -20,6 +20,9 @@ extra_trigo.v
 tilt_mathcomp.v
 tilt_analysis.v
 tilt_robot.v
+lasalle.v
+pendulum.v
 tilt.v
+
 
 -R . robot
