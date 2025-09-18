@@ -172,8 +172,8 @@ by rewrite /RO' cos_norm_angle sin_norm_angle.
 Qed.
 
 Lemma rot2d' M :
-  M \is 'O[T]_2 -> 
-    {a : T & { - pi < a <= pi /\ M = RO a} + 
+  M \is 'O[T]_2 ->
+    {a : T & { - pi < a <= pi /\ M = RO a} +
              { - pi < a <= pi /\ M = RO' a}}.
 Proof.
 move=> MO.
@@ -1648,11 +1648,8 @@ have pi2B : - pi < (pi : T) / 2%:R <= pi.
     by rewrite -subr_gte0 mulr_natr mulr2n addrK pi_ge0.
   by rewrite mulr_natr mulr2n addr_gt0 // pi_gt0.
 have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
-  rewrite ltrNl opprK lter_pdivrMr ?ltr0n // lerNl.
-  rewrite ler_pdivlMr ?ltr0n // -subr_gte0 mulNr opprK.
-  rewrite mulr_natr mulr2n addr_ge0 ?pi_ge0 //.
-    by rewrite -subr_gte0 addrK pi_gt0.
-  by rewrite addr_ge0 ?pi_ge0.
+  rewrite ltrN2 ltr_pdivrMr// ltr_pMr ?pi_gt0// ltr1n/=.
+  by rewrite (le_trans _ (pi_ge0 T))// lerNl oppr0 divr_ge0// pi_ge0.
 case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
   have {u2}[/eqP u2|/eqP u2] : {u *d F|,2%:R == 1} + {u *d F|,2%:R == -1}.
     move: normu => /(congr1 (fun x => x ^+ 2)).
@@ -2058,7 +2055,7 @@ apply: Rzyz_reduced_constraints => //.
   have [/eqP M02|M02] := boolP (M 0 2%:R == 0).
     rewrite M02 oppr0 sin_atan2_0.
     rewrite /yarc -sqr_M2jE // M02 expr0n add0r sqrtr_sqr.
-    by rewrite mulrC mulr_sg_norm.
+    by rewrite mulrC -numEsg.
   rewrite sin_atan2 ?oppr_eq0// sqrrN sqr_M2jE // -/(yarc _).
   by rewrite mulrCA divff ?mulr1// yarc_neq0.
 - rewrite /zyz_a /zyz_b sqr_Mi2E // -/(yarc _) sin_atan2_yarcx //.
@@ -2075,8 +2072,7 @@ apply: Rzyz_reduced_constraints => //.
   rewrite sin_atan2_yarcx //.
   have [/eqP M20|M20] := boolP (M 2%:R 0 == 0).
     rewrite M20 sin_atan2_0.
-    rewrite /yarc -sqr_Mi2E // M20 expr0n add0r sqrtr_sqr.
-    by rewrite mulr_sg_norm.
+    by rewrite /yarc -sqr_Mi2E // M20 expr0n add0r sqrtr_sqr -numEsg.
   rewrite sin_atan2// sqr_Mi2E // -/(yarc _).
   by rewrite -mulrA mulVf ?mulr1// yarc_neq0.
 - rewrite /zyz_b.
@@ -2193,8 +2189,7 @@ apply: RxyzE_M02D1 => //.
   rewrite -/(yarc _) cos_atan2_xyarc //.
   have [/eqP M00|M00] := boolP (M 0 0 == 0).
     rewrite M00 sin_atan2_0.
-    rewrite /yarc -sqr_Mi2E // M00 expr0n add0r sqrtr_sqr.
-    by rewrite mulr_sg_norm.
+    by rewrite /yarc -sqr_Mi2E // M00 expr0n add0r sqrtr_sqr -numEsg.
   rewrite sin_atan2 // sqr_Mi2E // -/(yarc _).
   by rewrite -mulrA mulVr ?mulr1 // unitfE yarc_neq0.
 - rewrite /rpy_b sqr_M0jE // -/(yarc _) -sinN.
@@ -2203,10 +2198,9 @@ apply: RxyzE_M02D1 => //.
   rewrite atan2N // opprK.
   by rewrite sin_atan2_xyarc.
 - rewrite /rpy_b /rpy_c sqr_M0jE // -/(yarc _) cos_atan2_xyarc //.
-  have [/eqP M22|M22] := boolP (M 2%:R 2%:R == 0).
+  have [M22|M22] := eqVneq (M 2%:R 2%:R) 0.
     rewrite M22 sin_atan2_0 /yarc -sqr_M0jE //.
-    rewrite M22 expr0n addr0 sqrtr_sqr mulrC.
-    by rewrite mulr_sg_norm.
+    by rewrite M22 expr0n addr0 sqrtr_sqr mulrC -numEsg.
   rewrite sin_atan2 // addrC sqr_M0jE // -/(yarc _).
   by rewrite mulrCA mulfV ?mulr1 // yarc_neq0.
 rewrite /rpy_b /rpy_c sqr_M0jE // -/(yarc _).
@@ -2277,9 +2271,9 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
     rewrite 2!expr_div_n -mulrDl sqr_Mi2E // sqr_yarc //.
     by rewrite divrr ?sqrtr1 ?divr1 // unitfE subr_eq0 eq_sym sqr_norm_eq1 lt_eqF.
   - rewrite /euler_a /euler_b NM02D1 // cosN cos_asin //.
-    have [/eqP M00|M00] := boolP (M 0 0 == 0).
+    have [M00|M00] := eqVneq (M 0 0) 0.
       rewrite M00 mul0r sin_atan2_0 sgrM sgrV -mulrA -normrEsg.
-      by rewrite -sqr_Mi2E // M00 expr0n add0r sqrtr_sqr normr_id mulr_sg_norm.
+      by rewrite -sqr_Mi2E // M00 expr0n add0r sqrtr_sqr normr_id -numEsg.
     rewrite sin_atan2; last first.
       by rewrite mulf_neq0 // -/(yarc _) invr_eq0 yarc_neq0.
     rewrite -/(yarc _).
@@ -2289,10 +2283,10 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
     by rewrite divrr ?sqrtr1 ?divr1 // unitfE subr_eq0 eq_sym sqr_norm_eq1 lt_eqF.
   - by rewrite /euler_b NM02D1 sinN opprK asinK // -ler_norml ltW.
   - rewrite /euler_c /euler_b NM02D1 cosN cos_asin //.
-    have [/eqP M22|M22] := boolP (M 2%:R 2%:R == 0).
+    have [M22|M22] := eqVneq (M 2%:R 2%:R) 0.
       rewrite M22 mul0r sin_atan2_0 sgrM sgrV mulrCA -[_ * Num.sg _]mulrC.
       rewrite -normrEsg -sqr_M0jE //.
-      by rewrite M22 expr0n addr0 sqrtr_sqr normr_id mulr_sg_norm.
+      by rewrite M22 expr0n addr0 sqrtr_sqr normr_id -numEsg.
     rewrite sin_atan2; last first.
       by rewrite mulf_neq0 // -/(yarc _) invr_eq0 yarc_neq0.
     rewrite -/(yarc _).
