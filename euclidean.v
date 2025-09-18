@@ -1,9 +1,10 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-From mathcomp Require Import reals forms.
+From mathcomp Require Import reals.
 Require Import ssr_ext.
 
 (******************************************************************************)
@@ -94,9 +95,7 @@ Qed.
 End liealgebra.
 
 Section dot_product0.
-
 Variables (R : ringType) (n : nat).
-
 Implicit Types u v w : 'rV[R]_n.
 
 Definition dotmul u v : R := (u *m v^T) ``_ 0.
@@ -166,7 +165,6 @@ Lemma mxE_dotmul (M : 'M[R]_n) i j : M i j = 'e_j *d row i M.
 Proof. by rewrite mxE_col_row /dotmul colE. Qed.
 
 End dot_product0.
-
 Notation "*d%R" := (@dotmul _ _) : ring_scope.
 Notation "u *d w" := (dotmul u w) : ring_scope.
 
@@ -1663,7 +1661,9 @@ rewrite [X in _ + _ + X](_ : _ = - M 0 2%:R * M 2%:R 0); last first.
   rewrite [in X in X * _]/=.
   rewrite coefD coefM sum2E subn0 coefC coefC mulr0 add0r.
   rewrite coefC mul0r add0r coefM sum2E subn0 subnn coefC [in X in X * _`_1]/=.
-  by rewrite coefD coefX coefN coefC subr0 mulr1 coefC mul0r addr0 coefC mul0r addr0 mulNr.
+  rewrite !coefD !coefX !coefN !coefC/=.
+  rewrite !mul0r !addr0/= subr0 mulr1.
+  by rewrite mulNr.
 rewrite /Z.
 apply/(@mulrI _ 2%:R); first exact: pnatf_unit.
 rewrite mulrA div1r divrr ?pnatf_unit // mul1r.

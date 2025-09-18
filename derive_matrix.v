@@ -3,8 +3,9 @@ From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import interval_inference.
 From mathcomp Require Import realalg complex fingroup perm.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import boolp reals classical_sets.
-From mathcomp Require Import topology normedtype landau forms derive.
+From mathcomp Require Import topology normedtype landau derive.
 From mathcomp Require Import functions.
 Require Import ssr_ext euclidean rigid skew.
 

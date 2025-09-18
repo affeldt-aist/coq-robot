@@ -4,16 +4,14 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 --->
 # Formal Foundations for Modeling Robot Manipulators
 
+
 [![Docker CI][docker-action-shield]][docker-action-link]
 
-[docker-action-shield]: https://github.com/affeldt-aist/robot/workflows/Docker%20CI/badge.svg?branch=master
-[docker-action-link]: https://github.com/affeldt-aist/robot/actions?query=workflow:"Docker%20CI"
-
-
-
+[docker-action-shield]: https://github.com/affeldt-aist/coq-robot/actions/workflows/docker-action.yml/badge.svg?branch=master
+[docker-action-link]: https://github.com/affeldt-aist/coq-robot/actions?query=branch%3Amaster+event%3Apush
 
 This repository contains an experimental library for the mathematics
-of rigid body transformations using the Coq proof-assistant and the
+of rigid body transformations using the Rocq proof-assistant and the
 Mathematical Components library.
 
 ## Meta
@@ -23,7 +21,7 @@ Mathematical Components library.
   - Cyril Cohen, Inria (initial)
   - Laurent Théry, Inria
 - License: [LGPL-2.1-or-later](LICENSE)
-- Compatible Coq versions: Coq 8.20
+- Compatible Coq versions: Coq 8.20--Rocq 9.0
 - Additional dependencies:
   - [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
   - [MathComp ssreflect](https://math-comp.github.io)

@@ -1,9 +1,9 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex fingroup perm reals interval trigo.
 Require Import ssr_ext euclidean extra_trigo.
-From mathcomp.analysis Require Import forms.
 
 (******************************************************************************)
 (*                          Vector angles and lines                           *)
@@ -43,9 +43,6 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
-
-(* TODO: overrides forms.v *)
-Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
 
 Local Open Scope ring_scope.
 
@@ -374,7 +371,7 @@ Lemma colinear_sym : symmetric colinear.
 Proof. by move=> u v; rewrite /colinear (@lieC _ (vec3 R)) -eqr_opp opprK oppr0. Qed.
 
 Lemma colinear0v u : colinear 0 u.
-Proof. by rewrite /colinear linear0l. Qed.
+Proof. by rewrite /colinear (linear0l _ u). Qed.
 
 Lemma colinearv0 u : colinear u 0.
 Proof. by rewrite colinear_sym colinear0v. Qed.
@@ -382,13 +379,13 @@ Proof. by rewrite colinear_sym colinear0v. Qed.
 Definition colinear0 := (colinear0v, colinearv0).
 
 Lemma colinearNv u v : colinear (- u) v = colinear u v.
-Proof. by rewrite /colinear linearNl eqr_oppLR oppr0. Qed.
+Proof. by rewrite /colinear (linearNl _ v) eqr_oppLR oppr0. Qed.
 
 Lemma colinearvN u v : colinear u (- v) = colinear u v.
 Proof. by rewrite colinear_sym colinearNv colinear_sym. Qed.
 
 Lemma colinearD u v w : colinear u w -> colinear v w -> colinear (u + v) w.
-Proof. by rewrite /colinear linearDl /= => /eqP-> /eqP->; rewrite addr0. Qed.
+Proof. by rewrite /colinear (linearDl _ w)/= => /eqP-> /eqP->; rewrite addr0. Qed.
 
 End colinear.
 
@@ -437,11 +434,11 @@ Qed.
 
 Lemma colinearZv (T : fieldType) (u v : 'rV[T]_3) k :
   colinear (k *: u) v = (k == 0) || colinear u v.
-Proof. by rewrite /colinear linearZl_LR scaler_eq0. Qed.
+Proof. by rewrite /colinear (linearZl_LR _ v)/= scaler_eq0. Qed.
 
 Lemma colinearvZ (T : fieldType) (u v : 'rV[T]_3) k :
   colinear u (k *: v) = (k == 0) || colinear u v.
-Proof. by rewrite /colinear linearZr_LR scaler_eq0. Qed.
+Proof. by rewrite /colinear (linearZr_LR _ u) scaler_eq0. Qed.
 
 Lemma colinearP (T : fieldType) (u v : 'rV[T]_3) :
   reflect (v == 0 \/ (v != 0 /\ exists k, u = k *: v)) (colinear u v).
@@ -547,7 +544,8 @@ Qed.
 
 Lemma crossmul_axialcomp v e : e *v axialcomp v e = 0.
 Proof.
-by apply/eqP; rewrite /axialcomp linearZ /= linearZr_LR /= (@liexx _ (vec3 T)) 2!scaler0.
+apply/eqP; rewrite /axialcomp linearZ /=.
+by rewrite (linearZr_LR _ e)/= (@liexx _ (vec3 T)) 2!scaler0.
 Qed.
 
 (* NB: not used *)
@@ -556,8 +554,9 @@ Proof. by rewrite /colinear crossmul_axialcomp. Qed.
 
 Lemma axialcomp_crossmul v e : axialcomp (e *v v) e == 0.
 Proof.
-rewrite /axialcomp -dotmul_crossmul2 /normalize !linearZl_LR /= linearZr_LR /=.
-by rewrite (@liexx _ (vec3 T)) linear0l 2!scaler0.
+rewrite /axialcomp -dotmul_crossmul2 /normalize.
+rewrite (linearZl_LR _ e)/= (@liexx _ (vec3 T)).
+by rewrite scaler0 (linear0l _ (_ *v v)).
 Qed.
 
 Lemma norm_axialcomp v e : e *d v < 0 ->
@@ -639,7 +638,8 @@ Qed.
 
 Lemma crossmul_normalcomp v e : e *v normalcomp v e = e *v v.
 Proof.
-by rewrite /normalcomp linearD /= linearNr /= crossmul_axialcomp subr0.
+rewrite /normalcomp linearD /=.
+by rewrite (linearNr _ e)/= crossmul_axialcomp subr0.
 Qed.
 
 Lemma dotmul_normalcomp v e : normalcomp v e *d e = 0.
@@ -706,15 +706,48 @@ Definition tricolinear a b c := colinear (b - a) (c - a).
 
 Lemma tricolinear_rot a b c : tricolinear a b c = tricolinear b c a.
 Proof.
-rewrite /tricolinear /colinear !linearD /= !linearDl /= !(linearNl,linearNr) /=.
-by rewrite !opprK !(@liexx _ (vec3 T)) !addr0 -addrA addrC (@lieC _ (vec3 T) a c) opprK (@lieC _ (vec3 T) b c).
+rewrite /tricolinear.
+rewrite /colinear.
+rewrite 2!linearD/=.
+rewrite (linearDl _ c)/=.
+rewrite (linearDl _ (- a))/=.
+rewrite (linearDl _ a)/=.
+rewrite (linearDl _ (- b))/=.
+rewrite (linearNr _ b)/=.
+rewrite (linearNr _ c)/=.
+rewrite (linearNr _ (- a))/= (linearNl _ a)/= opprK.
+rewrite (linearNr _ (- b))/= (linearNl _ b)/= opprK.
+rewrite !(@liexx _ (vec3 T)) !addr0.
+rewrite [in RHS]addrC addrA.
+rewrite (@lieC _ (vec3 T) b c)/= -!addrA; congr (_ + _ == _).
+rewrite (@lieC _ (vec3 T) (- a) c)/=.
+rewrite (linearNr _ c)/= opprK.
+by rewrite (linearNl _ a)/=.
 Qed.
 
 Lemma tricolinear_perm a b c : tricolinear a b c = tricolinear b a c.
 Proof.
-rewrite /tricolinear /colinear !linearD /= !linearDl /= !(linearNl,linearNr) /=.
-rewrite !(opprK,(@liexx _ (vec3 T)),addr0) -{1}oppr0 -eqr_oppLR 2!opprB addrC (@lieC _ (vec3 T) a b).
-by rewrite opprK.
+rewrite tricolinear_rot.
+rewrite /tricolinear.
+rewrite /colinear.
+rewrite 2!linearD/=.
+rewrite (linearDl _ c)/=.
+rewrite (linearDl _ (- b))/=.
+rewrite (linearDl _ a)/=.
+rewrite (linearDl _ (- b))/=.
+rewrite (linearNr _ (- b))/= (linearNl _ b)/= opprK.
+rewrite !(@liexx _ (vec3 T)) !addr0.
+rewrite -{1}oppr0.
+rewrite -eqr_oppLR.
+rewrite !opprD.
+rewrite (linearNr _ c)/=.
+rewrite (linearNr _ a)/=.
+rewrite (linearNl _ a)/=.
+rewrite !opprK.
+rewrite (@lieC _ (vec3 T) c a)/= opprK -!addrA; congr (_ + _ == _).
+rewrite (@lieC _ (vec3 T) c b)/= addrC.
+rewrite (linearNl _ c)/=; congr (_ + _).
+by rewrite (@lieC _ (vec3 T) b a)/=.
 Qed.
 
 End law_of_sines.
@@ -987,7 +1020,7 @@ have H (a b va vb : 'rV[T]_3) (k l : T) :
   clear.
   move=> /(congr1 (fun x => x - a)).
   rewrite addrAC subrr add0r addrAC => /(congr1 (fun x => x *v vb)).
-  rewrite (linearZl_LR _ vb) /= linearDl /=.
+  rewrite (linearZl_LR _ vb) /= (linearDl _ vb)/=.
   by rewrite (linearZl_LR _ _ l) /= (@liexx _ (vec3 T)) scaler0 addr0.
 have Ht' : t' = interpoint_t l1 l2.
   have : t' *: (v1 *v v2) = (\pt( l2 ) - \pt( l1 )) *v v2.
@@ -1001,7 +1034,8 @@ have Hs' : s' = interpoint_s l1 l2.
   have : s' *: (v1 *v v2) = (\pt( l2) - \pt( l1 )) *v v1.
     move: (H \pt( l2 ) \pt( l1 ) v2 v1 s' t').
     rewrite -Hs -Ht => /(_ erefl).
-    by rewrite (@lieC _ (vec3 T) v1 v2) /= scalerN -opprB => ->; rewrite linearNl opprK.
+    rewrite (@lieC _ (vec3 T) v1 v2) /= scalerN -opprB => ->.
+    by rewrite (linearNl _ v1) opprK.
   move/(congr1 (fun x => x *d (v1 *v v2))).
   rewrite dotmulZv.
   move/(congr1 (fun x => x / ((v1 *v v2) *d (v1 *v v2)))).

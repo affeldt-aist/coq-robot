@@ -83,7 +83,7 @@ Ltac r := rewrite ?(Monoid.simpm,
                     mulr0,mul0r,mul1r,mulr1,addr0,add0r,
                     mulr1n,mulNr,mulrN,opprK,oppr0,
                     scale0r, scaler0, scaleN1r, scale1r,
-                    eqxx).
+                    eqxx)/=.
 
 End Simp.
 

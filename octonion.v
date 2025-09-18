@@ -3,7 +3,7 @@ From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
-From mathcomp.analysis Require Import forms.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import interval reals.
 
 Require Import ssr_ext euclidean vec_angle frame rot quaternion.

@@ -2,8 +2,9 @@
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
+From mathcomp Require Import sesquilinear.
 From mathcomp Require Import boolp reals classical_sets signed.
-From mathcomp Require Import topology normedtype landau forms derive.
+From mathcomp Require Import topology normedtype landau derive.
 From mathcomp Require Import functions.
 Require Import ssr_ext derive_matrix euclidean frame rot skew rigid.
 
@@ -33,6 +34,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
+Import numFieldNormedType.Exports.
 
 Local Open Scope ring_scope.
 Local Open Scope frame_scope.
@@ -762,15 +764,22 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     rewrite /scara_joint_velocities /scara_joint_variables derive1mxE /geo_jac_lin /=.
     apply/rowP => i; rewrite 3![in RHS]mxE [in LHS]mxE sum4E;
           (repeat apply: f_equal2).
-    - by rewrite 2!mxE /= linearZl_LR [in RHS]mxE.
-    - by rewrite 2!mxE /= linearZl_LR [in RHS]mxE.
+    - rewrite 2!mxE /=.
+      rewrite (linearZl_LR _ (\o{Fmax t} - \o{Fim1``_t}))/=.
+      by rewrite [in RHS]mxE.
+    - rewrite 2!mxE /=.
+      rewrite (linearZl_LR _ (\o{Fmax t} - \o{Fim1 1 t}))/=.
+      by rewrite [in RHS]mxE.
     - by rewrite 2!mxE [in RHS]mxE.
-    - by rewrite 2!mxE /= linearZl_LR [in RHS]mxE.
+    - rewrite 2!mxE /=.
+      by rewrite (linearZl_LR _ (\o{Fmax t} - \o{Fim1 3 t}))/= [in RHS]mxE.
   rewrite o0E subr0.
   rewrite {1}o4E.
-  rewrite linearDr /=.
-  rewrite (linearZr_LR _ _ _ 'e_2)
-   /= {2}Hzvec (linearZl_LR _ _ _ 'e_2) /= (@liexx _ (vec3 R)) 2!{1}scaler0 addr0.
+  rewrite (linearDr _ (_ *: Fim1``_t|,2)) /=.
+  rewrite (linearZr_LR _ _ d4)/=.
+  rewrite {2}Hzvec.
+  rewrite (linearZl_LR _ _ (_ t) 'e_2) /=.
+  rewrite (@liexx _ (vec3 R)) 2!{1}scaler0 addr0.
   rewrite (_ : \o{Fmax t} - \o{Fim1 1 t} =
     (a2 * cos (theta1 t + theta2 t) *: 'e_0 +
     (a1 * sin (theta1 t) + a2 * sin (theta1 t + theta2 t) - a1 * sin (theta1 t)) *: 'e_1 +
@@ -781,17 +790,23 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
     rewrite -3!addrA addrC 3!addrA subrK.
     rewrite addrC -[in RHS]addrA; congr (_ + _).
     by rewrite -addrA -scalerDl.
-  rewrite linearDr /=.
-  rewrite (linearZr_LR _ _ _ 'e_2) /= (linearZl_LR crossmul 'e_2)
-          {2}(Hzvec t 1) /= (@liexx _ (vec3 R)) 2!{1}scaler0 addr0.
+  rewrite (linearDr _ ((theta2^`())%classic t *: (Fim1 1 t)|,2))/=.
+  rewrite (linearZr_LR _ _ (d3 t + d4))/=.
+  rewrite (linearZl_LR _ _ _ (Fim1 1 t)|,2)/=.
+  rewrite (linearZl_LR _ _ _ (Fim1 1 t)|,2)/=.
+  rewrite {2}(Hzvec t 1)/=.
+  rewrite (@liexx _ (vec3 R))/= 2!{1}scaler0 addr0.
   rewrite (addrC (a1 * sin _)) addrK.
   rewrite (_ : \o{Fmax t} - \o{Fim1 3%:R t} = d4 *: 'e_2%:R); last first.
     by rewrite o4E -addrA addrC subrK.
-  rewrite (linearZr_LR _ _ _ 'e_2) /= (linearZl_LR crossmul 'e_2)
-          {1}(Hzvec t 3%:R) /= (@liexx _ (vec3 R)) 2!scaler0 addr0.
+  rewrite (linearZr_LR _ _ d4 'e_2) /=.
+  rewrite (linearZl_LR _ _ _ (Fim1 3 t)|,2)/=.
+  rewrite {1}(Hzvec t 3%:R) /= (@liexx _ (vec3 R)) 2!scaler0 addr0.
   rewrite o3E.
-  rewrite linearDr /= (linearZr_LR _ _ _ 'e_2) (linearZl_LR _ 'e_2)
-          {2}(Hzvec t 0) /= (@liexx _ (vec3 R)) 2!scaler0 addr0.
+  rewrite (linearDr _ ((theta1^`())%classic t *: Fim1``_t|,2)) /=.
+  rewrite (linearZr_LR _ _ (d3 t) 'e_2)/=.
+  rewrite [in X in _ + X + _ + _ ](linearZl_LR _ _ ((theta1^`())%classic t) Fim1``_t|,2)/=.
+  rewrite {2}(Hzvec t 0) /= (@liexx _ (vec3 R)) 2!scaler0 addr0.
   rewrite {1}o2E {1}o1E.
   rewrite (_ : (fun _ => _) =
                 (a2 \*: (cos \o (theta2 + theta1) : R^o -> R^o)) +
@@ -804,9 +819,18 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
       exact: ex_derive.
       exact: H3.
     by rewrite deriveE // diff_cst add0r derive1E.
-  - rewrite !linearDr /= !(linearZr_LR crossmul)
-            !(linearZl_LR crossmul) /= !Hzvec veckj vecki
-            !{1}scalerN.
+  - rewrite 3!(linearDr _ ((theta1^`())%classic t *: Fim1``_t|,2))/=.
+    rewrite (linearDr _ (Fim1 1 t)|,2)/=.
+    rewrite (linearZr_LR _ _ (a1 * cos (theta1 t)))/=.
+    rewrite (linearZr_LR _ _ (a1 * sin (theta1 t)))/=.
+    rewrite (linearZr_LR _ _ (a2 * cos (theta1 t + theta2 t)))/=.
+    rewrite (linearZr_LR _ _ (a2 * sin (theta1 t + theta2 t)))/=.
+    rewrite 2!(linearZl_LR _ _ ((theta1^`())%classic t))/=.
+    rewrite (linearZr_LR _ _ (a2 * cos (theta1 t + theta2 t)))/=.
+    rewrite (linearZr_LR _ _ (a2 * sin (theta1 t + theta2 t)))/=.
+    rewrite !Hzvec veckj vecki.
+    rewrite !{1}scalerN.
+    rewrite scalerBr.
     rewrite -!addrA addrCA addrC -!addrA (addrCA (- _)) !addrA.
     rewrite -2!addrA [in RHS]addrC; congr (_ + _).
     - rewrite !scalerA -2!scalerDl row3e1; congr (_ *: _).
@@ -823,14 +847,17 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
       rewrite -derive1E [in RHS]derive1_comp; last 2 first.
       - exact: H1.
       - exact: derivable_sin.
-      rewrite derive1_sin -addrA addrC; congr (_ + _); last first.
+      rewrite derive1_sin -addrA addrC; congr +%R; last first.
         by rewrite -mulrA.
-      rewrite -mulrDr [in RHS]derive1E deriveD; last 2 first.
+      rewrite[in RHS]derive1E deriveD; last 2 first.
         exact: H2.
         exact: H1.
-      rewrite -mulrA scale_realType; apply: f_equal2; first by [].
-      rewrite addrC; apply: f_equal2; first by [].
-      by rewrite addrC !derive1E.
+      rewrite -mulrA scale_realType.
+      rewrite !mulrDr [LHS]addrC; congr +%R.
+        rewrite mulrC -mulrA.
+        rewrite derive1E.
+        by rewrite addrC.
+      by rewrite derive1E addrC.
     - rewrite !{1}scalerA !addrA -3!{1}scaleNr -2!scalerDl row3e0.
       congr (_ *: _).
       rewrite [in RHS]derive1E deriveD; last 2 first.
@@ -852,9 +879,8 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
       rewrite [in RHS]derive1E deriveD; last 2 first.
         exact: H2.
         exact: H1.
-      rewrite -mulrDr -!derive1E.
-      rewrite addrC (addrC (_^`() _)%classic).
-      by rewrite !scalerAl.
+      rewrite [X in _ + X = _]mulrC -mulrDr !derive1E -mulrA.
+      by rewrite addrC (addrC ('D__ _ _)).
 - rewrite /scara_ang_vel (_ : @rot_of_hom R \o _ = rot); last first.
     rewrite funeqE => x /=; exact: rot_of_hom_hom.
   rewrite /rot /ang_vel /scara_rot.
