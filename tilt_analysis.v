@@ -111,7 +111,7 @@ move => dif1.
 apply/diff_derivable.
 rewrite /=.
 under eq_fun do rewrite -dotmulvv dotmulE.
-have -> : (fun x : K => \sum_k (f x)``_k * (f x)``_k) = 
+have -> : (fun x : K => \sum_k (f x)``_k * (f x)``_k) =
         \sum_k (fun x => (f x)``_k * (f x)``_k ).
   apply/funext => x => //=.
   by rewrite fct_sumE.
@@ -173,5 +173,3 @@ under eq_fun do rewrite -dotmulvv.
 rewrite /=.
 by apply: differentiable_dotmul => //.
 Qed.
-
-

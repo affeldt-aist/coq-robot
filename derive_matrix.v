@@ -10,8 +10,8 @@ From mathcomp Require Import topology normedtype landau derive trigo.
 From mathcomp Require Import functions.
 Require Import ssr_ext euclidean rigid skew.
 
-(******************************************************************************)
-(*                  Derivatives of time-varying matrices                      *)
+(**md**************************************************************************)
+(* # Derivatives of time-varying matrices                                     *)
 (*                                                                            *)
 (*      ang_vel_mx M == angular velocity matrix of M(t)                       *)
 (*                                                                            *)
@@ -20,20 +20,15 @@ Require Import ssr_ext euclidean rigid skew.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldNormedType.Exports.
 
 Local Open Scope ring_scope.
 
-Lemma mx_lin1N (R : ringType) n (M : 'M[R]_n) :
+Lemma mx_lin1N (R : nzRingType) n (M : 'M[R]_n) :
   mx_lin1 (- M) = -1 \*: mx_lin1 M :> ( _ -> _).
 Proof. by rewrite funeqE => v /=; rewrite scaleN1r mulmxN. Qed.
-
-Lemma mxE_funeqE (R : realFieldType) (V W : normedModType R)
-    n m (f : V -> 'I_n -> 'I_m -> W) i j :
-  (fun x => (\matrix_(i < n, j < m) (f x i j)) i j) =
-  (fun x => f x i j).
-Proof. by rewrite funeqE => ?; rewrite mxE. Qed.
 
 Lemma norm_trmx (R : realFieldType) m n
   (M : 'M[R]_(m.+1, n.+1)) : `|M^T| = `|M|.
@@ -376,11 +371,11 @@ End derive_SE.
 Section row_belast.
 
 (* TODO: move? *)
-Definition row_belast {R : ringType} n (v : 'rV[R]_n.+1) : 'rV[R]_n :=
+Definition row_belast {R : pzRingType} n (v : 'rV[R]_n.+1) : 'rV[R]_n :=
   \row_(i < n) (v ``_ (widen_ord (leqnSn n) i)).
 
 (* TODO: move? *)
-Lemma row_belast_last (R : ringType) n (r : 'rV[R]_n.+1) H :
+Lemma row_belast_last (R : pzRingType) n (r : 'rV[R]_n.+1) H :
   r = castmx (erefl, H) (row_mx (row_belast r) (r ``_ ord_max)%:M).
 Proof.
 apply/rowP => i; rewrite castmxE mxE.
@@ -474,9 +469,6 @@ rewrite !dotmulE -big_split/=; apply: eq_bigr => i _.
 by rewrite {}/f deriveM// mulrC addrC; congr (_ * _ + _ * _);
   rewrite derive_mx ?mxE//=; exact/derivable_mxP.
 Qed.
-
-(* NB: from Damien's LaSalle *)
-Notation "p ..[ i ]" := (p 0 i) (at level 10).
 
 Global Instance is_diff_component {R : realFieldType} n i (p : 'rV[R]_n.+1) :
   is_diff p (fun q => q..[i] : R^o) (fun q => q..[i]).
@@ -608,7 +600,7 @@ rewrite derive_mx/=; last first.
    apply: derivableB => //=;
       by apply: derivableM => //=; exact: derivable_coord.
 rewrite !mxE/=.
-rewrite (mxE_funeqE (fun x : V => _))/=.
+under eq_fun do rewrite !mxE/=.
 rewrite 2!crossmulE !{1}[in RHS]mxE /=.
 case: ifPn => [/eqP _|/ifnot0P/orP[]/eqP -> /=].
 - rewrite deriveB//=; [ |

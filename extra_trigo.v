@@ -1,9 +1,9 @@
 From mathcomp Require Import all_ssreflect ssralg ssrnum.
-From mathcomp Require Import interval reals trigo.
+From mathcomp Require Import boolp interval reals trigo.
 Require Import ssr_ext.
 
-(******************************************************************************)
-(*    Extra material for trigo                                                *)
+(**md**************************************************************************)
+(* # Extra material for trigo                                                 *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -120,78 +120,6 @@ have : sin a == 0 by rewrite -norm_cos_eq1 caE normrN normr1.
 rewrite sin_eq0_Npipi //; case: eqP => /= [aE _|_ /eqP //].
 by move/eqP: caE; rewrite aE cos0 -eqr_oppLR eqrNxx oner_eq0.
 Qed.
-
-(* NB: PR to analysis in progress *)
-Lemma acos1 : acos (1 : R) = 0.
-Proof.
-have := @cosK R 0; rewrite cos0 => -> //.
-by rewrite in_itv //= lexx pi_ge0.
-Qed.
-
-Lemma acos0 : acos (0 : R) = pi / 2%:R.
-Proof.
-have := @cosK R (pi / 2%:R).
-rewrite cos_pihalf => -> //.
-rewrite in_itv //= divr_ge0 ?ler0n ?pi_ge0 //=.
-rewrite ler_pdivrMr ?ltr0n //.
-by rewrite mulr_natr mulr2n -lerBlDr subrr pi_ge0.
-Qed.
-
-Lemma acosN1 : acos (- 1) = (pi : R).
-Proof.
-have oneB : -1 <= (-1 : R) <= 1 by rewrite lexx ge0_cp ?(ler0n _ 1).
-apply: cos_inj; rewrite ?in_itv//= ?pi_ge0 ?lexx //.
-  by rewrite acos_ge0 // acos_lepi.
-by rewrite acosK ?in_itv//= cospi.
-Qed.
-
-Lemma acosN a : -1 <= a <= 1 -> acos (- a) = pi - acos a.
-Proof.
-move=> aB.
-have aBN : -1 <= - a <= 1 by rewrite lerNl opprK lerNl andbC.
-apply: cos_inj; first by rewrite in_itv/= acos_ge0 // acos_lepi.
-  rewrite in_itv/= subr_ge0 acos_lepi // -subr_le0 addrAC subrr sub0r.
-  by rewrite oppr_cp0 acos_ge0.
-by rewrite addrC cosDpi cosN !acosK.
-Qed.
-
-Lemma cosKN a : - pi <= a <= 0 -> acos (cos a) = - a.
-Proof.
-move=> Hs.
-rewrite -(cosN a) cosK // ?in_itv/=.
-by rewrite lerNr oppr0 lerNl andbC.
-Qed.
-
-Lemma atan0 : atan 0 = 0 :> R.
-Proof.
-apply: tan_inj; first 2 last.
-- by rewrite atanK tan0.
-- by rewrite in_itv/= atan_gtNpi2 atan_ltpi2.
-by rewrite in_itv/= oppr_cp0 divr_gt0 ?pi_gt0 // ltr0n.
-Qed.
-
-Lemma atan1 : atan 1 = pi / 4%:R :> R.
-Proof.
-apply: tan_inj; first 2 last.
-- by rewrite atanK tan_piquarter.
-- by rewrite in_itv/= atan_gtNpi2 atan_ltpi2.
-have v2_ge0 : 0 <= 2%:R :> R by rewrite ler0n.
-have v2_gt0 : 0 < 2%:R :> R by rewrite ltr0n.
-rewrite in_itv/= -mulNr (lt_trans _ (_ : 0 < _ )) /=; last 2 first.
-- by rewrite mulNr oppr_cp0 divr_gt0 // pi_gt0.
-- by rewrite divr_gt0 ?pi_gt0 // ltr0n.
-rewrite (natrM _ 2 2) invfM mulrA lter_pdivrMr // divfK ?natr_eq0 //.
-  by rewrite ltr_pdivrMr // mulr_natr mulr2n -subr_gte0 addrK ?pi_gt0.
-by case: ltgtP v2_gt0.
-Qed.
-
-Lemma atanN (x : R) : atan (- x) = - atan x.
-Proof.
-apply: tan_inj; first by rewrite in_itv/= atan_ltpi2 atan_gtNpi2.
-  by rewrite in_itv/= ltrNl opprK ltrNl andbC atan_ltpi2 atan_gtNpi2.
-by rewrite tanN !atanK.
-Qed.
-(* /NB: PR to analysis in progress *)
 
 Lemma sin_half_angle a : `| sin (a / 2%:R) | = Num.sqrt ((1 - cos a) / 2%:R).
 Proof.
