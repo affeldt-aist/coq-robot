@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import sesquilinear.
@@ -7,8 +7,8 @@ From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import reals.
 Require Import ssr_ext.
 
-(******************************************************************************)
-(*                     Elements of Euclidean geometry                         *)
+(**md**************************************************************************)
+(* # Elements of Euclidean geometry                                           *)
 (*                                                                            *)
 (* This file provides elements of Euclidean geometry, with specializations to *)
 (* the 3D case. It develops the theory of the dot-product and of the          *)
@@ -17,10 +17,13 @@ Require Import ssr_ext.
 (* preservation of the dot-product by orthogonal matrices or a closed formula *)
 (* for the characteristic polynomial of a 3x3 matrix.                         *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*  jacobi_identity == Jacobi identity                                        *)
 (* lieAlgebraType R == the type of Lie algebra over R                         *)
 (*        lie[x, y] == Lie brackets                                           *)
+(* ```                                                                        *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*        u *d w == the dot-product of the vectors u and v, i.e., the only    *)
 (*                  component of the 1x1-matrix u * v^T                       *)
 (*        norm u == the norm of vector u, i.e., the square root of u *d u     *)
@@ -29,8 +32,10 @@ Require Import ssr_ext.
 (*       'O[T]_n == the type of orthogonal matrices of size n                 *)
 (*      'SO[T]_n == the type of rotation matrices of size n                   *)
 (*       cross M == generalized cross-product                                 *)
+(* ```                                                                        *)
 (*                                                                            *)
 (* Specializations to the 3D case:                                            *)
+(* ```                                                                        *)
 (*      row2 a b == the row vector [a,b]                                      *)
 (*    row3 a b c == the row vector [a,b,c]                                    *)
 (*   col_mx2 u v == specialization of col_mx two row vectors of size 2        *)
@@ -41,6 +46,7 @@ Require Import ssr_ext.
 (*                  algebra                                                   *)
 (* vaxis_euler M == the vector-axis of the rotation matrix M of Euler's       *)
 (*                  theorem                                                   *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 

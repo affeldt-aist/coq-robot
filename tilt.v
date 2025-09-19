@@ -9,7 +9,8 @@ Require Import tilt_mathcomp tilt_analysis tilt_robot.
 (**md**************************************************************************)
 (* # tentative formalization of [1]                                           *)
 (*                                                                            *)
-(*                defposmx M == M is definite positive                        *)
+(* ```                                                                        *)
+(*                posdefmx M == M is definite positive                        *)
 (*             locposdef V x == V is locally positive definite at x           *)
 (*   is_lyapunov_candidate V := locposdef V                                   *)
 (*         locnegsemidef V x == V is locally negative semidefinite            *)
@@ -19,6 +20,7 @@ Require Import tilt_mathcomp tilt_analysis tilt_robot.
 (*             state_space f == the set points attainable by a solution       *)
 (*                              (in the sense of `solves_equation`)           *)
 (*  is_lyapunov_stable_at f V x == Lyapunov stability                         *)
+(* ```                                                                        *)
 (*                                                                            *)
 (* References:                                                                *)
 (* - [1]                                                                      *)
@@ -35,13 +37,13 @@ Local Open Scope ring_scope.
 
 (* spin and matrix/norm properties*)
 
-Lemma norm_spin {R : realType} (u : 'rV[R]_3) (v : 'rV[R]_3) :
+Lemma norm_spin {R : rcfType} (u : 'rV[R]_3) (v : 'rV[R]_3) :
   (u *m \S(v - u) ^+ 2 *m (u)^T) 0 0 = - norm (u *m \S(v)) ^+ 2.
 Proof.
 rewrite spinD spinN -tr_spin mulmxA !mulmxDr mulmxDl !mul_tr_spin !addr0.
 rewrite -dotmulvv /dotmul trmx_mul.
 rewrite mxE [X in _ + X = _](_ : _ = 0) ?addr0; last first.
-by rewrite tr_spin -mulmxA mulNmx spin_mul_tr mulmxN mulmx0 oppr0 mxE.
+  by rewrite tr_spin -mulmxA mulNmx spin_mul_tr mulmxN mulmx0 oppr0 mxE.
 by rewrite tr_spin mulNmx mulmxN [in RHS]mxE opprK mulmxA.
 Qed.
 
@@ -56,25 +58,26 @@ rewrite mulmxE sqrspin.
   by rewrite [in RHS]mxE [in RHS]mxE /= -mulNrn mxE -mulNrn.
 Qed.
 
-Definition defposmx {R : realType} m (M : 'M[R]_m) : Prop :=
+Definition posdefmx {R : realType} m (M : 'M[R]_m) : Prop :=
   M \is sym m R /\ forall a, eigenvalue M a -> a > 0.
 
-Lemma defposmxP {R : realType} m (M : 'M[R]_m) :
-  defposmx M <-> (forall v : 'rV[R]_m, v != 0 -> (v *m M *m v^T) 0 0 > 0).
+Lemma posdefmxP {R : realType} m (M : 'M[R]_m) :
+  posdefmx M <-> (forall v : 'rV[R]_m, v != 0 -> (v *m M *m v^T) 0 0 > 0).
 Proof.
 split.
-  move => [matsym eigen] x xneq0.
-  apply/eigen/eigenvalueP; exists x => //=.
-  apply/matrixP => i j.
-  (* theoreme spectral? *)
+  move => [Msym eigenM] x x_neq0.
+  apply/eigenM/eigenvalueP.
+  exists x => //=.
+  (* spectral theorem? *)
 Admitted.
 
 Local Open Scope classical_set_scope.
 
-Definition locposdef {R : realType} (T : normedModType R) (V : T -> R) (D : set T) (x : T) : Prop :=
+Definition locposdef {R : realType} (T : normedModType R) (V : T -> R)
+    (D : set T) (x : T) : Prop :=
   x \in D /\ V x = 0 /\ open D /\ forall z, z \in D -> z != x -> V z > 0.
 
-(* add continuously diff*)
+(* add continuously diff *)
 Definition is_lyapunov_candidate {K : realType} {n} (V : 'rV[K]_n.+1 -> K) (D : set  'rV[K]_n.+1)
  (x0 : 'rV[K]_n.+1) := locposdef V D x0 /\ differentiable V x0.
 
@@ -1161,13 +1164,15 @@ Qed.
 
 End problem_statementB.
 
+Definition state_space_tilt {K : realType} :=
+  [set x : 'rV[K]_6 | norm ('e_2 - Right x) = 1].
+
 Section eqn33.
 Variable K : realType.
 Variable alpha1 : K.
 Variable gamma : K.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
-Definition state_space_tilt {K : realType} := [set x : 'rV[K]_6 | norm ('e_2 - Right x) = 1].
 
 Definition tilt_eqn (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
   let zp1_point := Left \o zp1_z2_point in
@@ -1257,12 +1262,11 @@ apply/seteqP; split.
       rewrite [in RHS]mulr2n [RHS]mulNr [in RHS]mulrDl.
       rewrite !mul1r !dotmulP /= dotmulC [in RHS]dotmulC !linearD /=.
       rewrite !mxE /= !mulr1n.
-      have -> : ('D_1 (fun x2 : K => 'e_2 - Right (y x2)) x)
-            = - (Right ('D_1 y x)).
+      have -> : 'D_1 (fun x2 : K => 'e_2 - Right (y x2)) x = - Right ('D_1 y x).
         rewrite deriveB /= ; last 2 first.
           exact: derivable_cst.
-          by apply: derivable_rsubmx.
-        rewrite derive_cst /= sub0r; congr (-_).
+          exact: derivable_rsubmx.
+        rewrite derive_cst /= sub0r; congr (- _).
         exact: derive_rsubmx.
       rewrite -(_ : 'D_1 y x = (\matrix_(i, j) 'D_1 (fun t0 : K => y t0 i j) x)); last first.
         apply/matrixP => a b; rewrite !mxE.
@@ -1442,7 +1446,7 @@ Proof. by rewrite /u2/= /mxtrace /= sum2E/= !mxE/=. Qed.
 Lemma det_u2 : \det u2 = 3/4.
 Proof. by rewrite /u2 det_mx22 /= !mxE /=; field. Qed.
 
-Lemma defposmxu2 : defposmx u2.
+Lemma posdefmxu2 : posdefmx u2.
 Proof.
 split; first exact: u2_sym.
 move=> a.
@@ -1479,14 +1483,14 @@ Hypothesis alpha1_gt0 : 0 < alpha1.
 Hypothesis gamma_gt0 : 0 < gamma.
 
 Definition V1 (zp1_z2 : 'rV[K]_6) : K :=
-  let zp1 := Left zp1_z2 in 
+  let zp1 := Left zp1_z2 in
   let z2 := Right zp1_z2 in
   (norm zp1)^+2 / (2 * alpha1) + (norm z2)^+2 / (2 * gamma).
 
 Lemma V1_is_lyapunov_candidate : is_lyapunov_candidate V1 setT point1.
 Proof.
 rewrite /locposdef; split.
-- rewrite /V1 /point1 /locposdef; split. 
+- rewrite /V1 /point1 /locposdef; split.
   by rewrite inE.
   rewrite lsubmx_const rsubmx_const norm0 expr0n/= !mul0r add0r.
   split.
@@ -1774,8 +1778,8 @@ set w := (z2 z) *m \S('e_2).
 pose u1 : 'rV[K]_2 := \row_(i < 2) [eta (fun=> 0) with 0 |-> norm (zp1 z), 1 |-> norm w] i.
 apply: (@le_trans _ _ ((- u1 *m u2 *m u1^T) ``_ 0)).
   by rewrite V1dot_ub.
-have := @defposmxu2 K.
-rewrite defposmxP => def.
+have := @posdefmxu2 K.
+rewrite posdefmxP => def.
 have [->|H] := eqVneq u1 0.
   by rewrite mulNmx mul0mx mulNmx mul0mx mxE mxE oppr0.
 have Hpos := def u1 H.
@@ -1856,8 +1860,8 @@ near=> z0.
 rewrite deriveV1.
 have Hle : V1dot (y z) <= (- u1 *m u2 *m u1^T) 0 0.
   by apply: V1dot_ub.
-have := @defposmxu2 K.
-rewrite defposmxP => def.
+have := @posdefmxu2 K.
+rewrite posdefmxP => def.
 have Hpos : 0 <  (u1 *m u2 *m u1^T) 0 0  by apply: def.
 have Hneg : -  (u1 *m u2 *m u1^T) 0 0 < 0. by rewrite oppr_lt0.
 rewrite lt_neqAle.
@@ -1961,7 +1965,7 @@ move => a.
 move/eigenvalueP => [u] /[swap] u0 H.
 have a_eigen : eigenvalue (jacobian (eqn33' alpha1 gamma) point1) a.
   apply/eigenvalueP.
-  exists u. 
+  exists u.
     exact: H.
   exact: u0.
 have : root (char_poly (jacobian (eqn33' alpha1 gamma) point1)) a.
