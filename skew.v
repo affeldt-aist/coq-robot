@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -7,12 +7,13 @@ From mathcomp Require Import realalg complex finset fingroup perm ring.
 Require Import ssr_ext euclidean vec_angle.
 From mathcomp Require Import reals.
 
-(******************************************************************************)
-(*                         Skew-symmetric matrices                            *)
+(**md**************************************************************************)
+(* # Skew-symmetric matrices                                                  *)
 (*                                                                            *)
 (* This file develops the theory of skew-symmetric matrices to be used in     *)
 (* particular to represent the exponential coordinates of rotation matrices.  *)
 (*                                                                            *)
+(* ```                                                                        *)
 (* 'so[R]_n == the type of skew-symmetric matrices, i.e., matrices M such     *)
 (*              that M = -M^T                                                 *)
 (*    \S(w) == the spin of vector w, i.e., the (row-vector convention)        *)
@@ -20,10 +21,13 @@ From mathcomp Require Import reals.
 (*   symp A == symmetric part of matrix A                                     *)
 (*  antip A == antisymmetric part of matrix A                                 *)
 (*  spin_eigenvalues u == eigenvalues of \S(u)                                *)
+(* ```                                                                        *)
 (*                                                                            *)
 (* Cayley transform:                                                          *)
+(* ```                                                                        *)
 (*    cayley M == (1 - M)^-1 * (1 + M)                                        *)
 (*  uncayley M == (M - 1) * (M + 1)^-1                                        *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 

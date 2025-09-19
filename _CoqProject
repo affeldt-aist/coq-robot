@@ -17,5 +17,10 @@ scara.v
 derive_matrix.v
 differential_kinematics.v
 extra_trigo.v
+tilt_mathcomp.v
+tilt_analysis.v
+tilt_robot.v
+tilt.v
+
 
 -R . robot

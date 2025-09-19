@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -6,8 +6,8 @@ From mathcomp Require Import realalg complex finset fingroup perm.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle rot frame extra_trigo.
 
-(******************************************************************************)
-(*                        Rigid Body Transformations                          *)
+(**md**************************************************************************)
+(* # Rigid Body Transformations                                               *)
 (*                                                                            *)
 (* This file develops the theory of isometries, proving basic properties such *)
 (* as the preservation of the cross-product by derivative maps, the facts     *)
@@ -16,6 +16,7 @@ Require Import ssr_ext euclidean skew vec_angle rot frame extra_trigo.
 (* body transformations are represented by elements of the special Euclidean  *)
 (* group and are shown to preserve norms.                                     *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*      'Iso[T]_n == the type of isometries                                   *)
 (*     'CIso[T]_n == the type of central isometries, i.e., isometries f such  *)
 (*                   that f 0 = 0                                             *)
@@ -38,6 +39,7 @@ Require Import ssr_ext euclidean skew vec_angle rot frame extra_trigo.
 (*                   homogeneous representation                               *)
 (*      Adjoint g == adjoint transformation associated with the homogeneous   *)
 (*                   matrix g                                                 *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 

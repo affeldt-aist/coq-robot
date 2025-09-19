@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -7,8 +7,8 @@ From mathcomp Require Import sesquilinear.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
 
-(******************************************************************************)
-(*                             Screw Motions                                  *)
+(**md**************************************************************************)
+(* # Screw Motions                                                            *)
 (*                                                                            *)
 (* This file develops the theory of screws and twists. It establishes in      *)
 (* particular Chasles' theorem (given a rigid body motion, it shows           *)
@@ -16,6 +16,7 @@ Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
 (* rigid body motion), Mozzi-Chasles' theorem (it shows the existence of a    *)
 (* set of points that undergo just a translation---this is the screw axis).   *)
 (*                                                                            *)
+(* ```                                                                        *)
 (* Module sqLieAlgebra == square matrices form a Lie algebra                  *)
 (*   'se3[R] == the set of twists                                             *)
 (*   wedge t == form a twist in 'se3[R] given twist (coordinates)             *)
@@ -35,6 +36,7 @@ Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
 (* `e$(a, t) == the exponential of a twist t with angle a                     *)
 (* rjoint_twist w p == twist of a revolute joint                              *)
 (* pjoint_twist v == twist of a prismatic joint                               *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
