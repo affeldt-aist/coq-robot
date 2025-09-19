@@ -1,19 +1,21 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From Stdlib Require Import NsatzTactic.
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
+Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import perm path fingroup complex.
 
-(******************************************************************************)
-(*                    Minor additions to MathComp libraries                   *)
+(**md**************************************************************************)
+(* # Minor additions to MathComp libraries                                    *)
 (*                                                                            *)
 (* This file contains minor additions ssrbool, ssralg, ssrnum, and complex    *)
 (* and more.                                                                  *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*                 u``_i == the ith component of the row vector u             *)
 (*      'e_0, 'e_1, 'e_2 == the canonical vectors                             *)
 (* Section Nsatz_rcfType == type classes for the Coq nsatz tactic             *)
 (*                          (https://coq.inria.fr/refman/addendum/nsatz.html) *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -21,8 +23,10 @@ Reserved Notation "''e_' i" (format "''e_' i", at level 8, i at level 2).
 Reserved Notation "u '``_' i" (at level 3, i at level 2,
   left associativity, format "u '``_' i").
 
-(* TODO: overrides forms.v *)
 Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
+
+(* NB: like Damien's LaSalle *)
+Notation "p ..[ i ]" := (p (@GRing.zero _) i) (at level 10, only parsing).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
