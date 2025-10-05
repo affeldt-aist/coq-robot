@@ -360,6 +360,12 @@ Theorem Lyapunov_stability {K : realType} {n}
   (sol :  'rV_n.+1 -> K -> 'rV[K]_n.+1)
   (x : 'rV[K]_n.+1 := 0)
   (fsolD : forall z, z \in D -> solves_equation f (sol z) D)
+  (sol0x : forall x, sol x 0 = x)
+  (uniqueness_of_solution : forall (phi1 phi2 : K -> 'rV_n.+1) (x0 : 'rV_n.+1),
+    solves_equation f phi1 D ->
+    solves_equation f phi2 D ->
+    phi1 0 = x0 -> phi2 0 = x0 ->
+    phi1 = phi2)
   (V : 'rV[K]_n.+1 -> K)
   (VDx : is_lyapunov_candidate V D x) (*contient l'hypothese x in D*)
   (V'le_0 : forall phi, solves_equation f phi D -> forall t, t >= 0 -> LieDerivative V sol (phi 0) t <= 0) 
@@ -372,8 +378,6 @@ move => eps eps0.
 rewrite /is_lyapunov_candidate in VDx.
 move: VDx => [/= Vloc Vdiff].
 move: Vloc => [/= inD [V0 [openD z1]]].
-have init : forall x, sol x 0 = x. 
-  by admit.
 have : exists r : K, 0 < r /\ r <= eps /\ closed_ball_ (fun x => `|x|) (0:'rV[K]_n.+1) r `<=` D.
   rewrite inE in inD.
   have [r0 /= Hr0D] := open_subball openD inD.
@@ -479,11 +483,6 @@ have HOmega_beta : Omega_beta `<=` interior (closed_ball_ [eta normr])``_r.
       have Hbb : beta < beta by apply: (lt_le_trans Hbeta_lt Hle_alpha_beta).
       by move : Hbb; rewrite ltxx.
     by exact: r_pos.
-have uniqueness_of_solution : forall (phi1 phi2 : K -> 'rV_n.+1) (x0 : 'rV_n.+1),
-    solves_equation f phi1 D ->
-    solves_equation f phi2 D ->
-    phi1 0 = x0 -> phi2 0 = x0 ->
-    phi1 = phi2 by admit.
 have H1 : forall phi , solves_equation f phi D -> phi 0 \in Omega_beta -> forall t, 0 <= t -> phi t \in Omega_beta.
   move => phi solves xOmega t t0.
 have H2 : forall t, 0 <= t -> forall u, 0 <= u <= t -> LieDerivative V sol (phi 0) u <= 0 ->
@@ -498,34 +497,51 @@ have H2 : forall t, 0 <= t -> forall u, 0 <= u <= t -> LieDerivative V sol (phi 
     move : xOmega.
     rewrite inE /Omega_beta.
     by move => [H1 H2].
-    rewrite !init /=.
+    rewrite !sol0x /=.
     have Vneg_incr: forall s1 s2, 0 <= s1 <= s2 -> forall x, x \in D -> V (sol x s2) <= V (sol x s1).
-      move=> s1 s2 Hs1_pos x2 xinD .
-      apply: (@ler0_derive1_nincr _ (fun s => V (sol x2 s)) 0 s2) => //.
+      move=> s1 s2 Hs1_pos x0 xinD .
+      apply: (@ler0_derive1_nincr _ (fun s => V (sol x0 s)) 0 s2) => //.
       - rewrite -fctE.
-        move => x3 x1in.
+        move => x1 x1in.
         apply: diff_derivable.
         apply: differentiable_comp; last first.
         apply: differentiable_comp => //.
-        
-      (* continuity*)
-          admit.
+        have solx0 := fsolD _ xinD.
+        case: solx0 => _ [diff_sol _].
+        rewrite -derivable1_diffP.
+        by apply: diff_sol.
       - move=> s Hs_in.
-    (* TODO *)
-    (* LEMMA*)
         move :  (V'le_0 phi solves t t0).
         rewrite LieDerivative_derive => //=; last first.
-           admit.
+        rewrite inE in xOmega.
+        have Hsol := fsolD (phi 0) _.
+        have Heq := uniqueness_of_solution phi (sol (phi 0)) (phi 0) solves _ _ _ => //.
+        rewrite -Heq => //=.
+        rewrite /solves_equation in solves.
+        rewrite -derivable1_diffP.
+        by case: solves => _ [].
+        apply: Hsol.
+        rewrite inE.
+        apply: Br_sub_D.
+        by case: xOmega.
         rewrite derive1E.
         rewrite fctE.
-        pose phi2 := (fun t => sol x2 t).
-        have solves_phi2 : solves_equation f phi2 D by admit.
-           have s_pos : 0 <= s. 
-           by move: Hs_in; case/andP => /ltW.
-        have deriv_le0 := V'le_0 phi2 solves_phi2 s s_pos.
-        move => H.
-        rewrite LieDerivative_derive /phi2 init in deriv_le0 => //.
-          admit. 
+        move=> _.
+        have H := V'le_0 (sol x0) (fsolD x0 xinD) s _.
+        rewrite LieDerivative_derive sol0x in H.
+        rewrite -fctE.
+        apply: H.
+        move : Hs_in.
+        rewrite inE.
+        move=> /itvP [] [Hs Hs1 Hs2].
+        rewrite ltW => //.
+        by rewrite Hs.
+        exact : Vderiv.
+        move: (fsolD x0 xinD) => solx0.
+        rewrite /solves_equation in solx0.
+        move: solx0 => [_ [Hdiff _]].
+        rewrite -derivable1_diffP.
+        exact: Hdiff.
           admit.
       - move: Hs1_pos => /andP [H0s1 Hs1s2].
         by apply: H0s1.
@@ -540,7 +556,7 @@ have H2 : forall t, 0 <= t -> forall u, 0 <= u <= t -> LieDerivative V sol (phi 
     rewrite inE /Omega_beta.
     move=> [clo Vxb].
     have Hdec := Vneg_incr 0 t1 _ (phi 0) _.
-    rewrite init in Hdec.
+    rewrite sol0x in Hdec.
     apply: Hdec => //=.
       by apply/andP; split => //.
     rewrite inE /Omega_beta.
@@ -559,7 +575,7 @@ have H2 : forall t, 0 <= t -> forall u, 0 <= u <= t -> LieDerivative V sol (phi 
     - exact t0.
   have V_bound := H2 t t0 t t00 H_lie.
   move : V_bound.
-  rewrite !init.
+  rewrite !sol0x.
   have -> : sol (phi 0) = phi.
   apply: uniqueness_of_solution => //.
   apply: fsolD => //.
@@ -728,7 +744,7 @@ have Hlast : `|sol x 0| < delta -> forall t : K , t >=0 -> `|sol x t| < r <= eps
       split => //=.
         rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
         exact: Hball_solt. 
-        have x00 : sol x 0 = x by rewrite init => //=.
+        have x00 : sol x 0 = x by rewrite sol0x => //=.
         have z0_in_ball : (closed_ball_ [eta normr])``_delta (sol x 0).
           rewrite /closed_ball_; apply: ltW. 
           rewrite sub0r normrN.
@@ -755,12 +771,12 @@ have Htraj0 : `|sol x t0| < r.
     rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
     apply: ltW.
     rewrite /x.
-    rewrite init in x0_lt_delta.
+    rewrite sol0x in x0_lt_delta.
     by apply: x0_lt_delta.
   have sol_in_Omega : sol x t0 \in Omega_beta.
     apply: H1 => //=.
     by apply: fsolD => //.
-    rewrite init.
+    rewrite sol0x.
     exact: x0_in_Omega; exact: t0_ge0.
   rewrite /Omega_beta inE in sol_in_Omega.
   case: sol_in_Omega => Hnorm _.
@@ -770,7 +786,7 @@ have Htraj0 : `|sol x t0| < r.
   have traj_in_Omega : sol x t0 \in Omega_beta.
     apply: H1 => //.
     apply: fsolD => //.
-    by rewrite init.
+    by rewrite sol0x.
   have in_interior: ((closed_ball_ [eta normr])``_r)° (sol x t0).
     apply: HOmega_beta. 
     rewrite -inE.
@@ -781,7 +797,7 @@ have Htraj0 : `|sol x t0| < r.
   rewrite mx_norm_ball /ball_; under eq_fun do rewrite sub0r normrN.
   apply => //=.
   exact : r_pos.
-rewrite init in x0_lt_delta.
+rewrite sol0x in x0_lt_delta.
 by apply: (lt_le_trans Htraj0 r_le_eps).
 
 Admitted.
