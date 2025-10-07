@@ -904,15 +904,18 @@ Variable R : K -> 'M[K]_3. (*L -> W*)
 Variable g0 : K. (*standard gravity constant*)
 Let w t := ang_vel R t. (* local frame of the sensor (gyroscope) *)
 Let x1 t :=  v t. (* local frame*)
-Definition x2 t : 'rV_3 := 'e_2 *m R t. (* tilt in local frame, e2 is in global frame but R brings it back*)
-Definition y_a t := - x1 t *m \S( w t) + 'D_1 x1 t + g0 *: x2 t. (* local frame of the sensor*)
+Definition x2 t : 'rV_3 := 'e_2 *m R t. (**)
+Definition y_a t := - x1 t *m \S( w t) + 'D_1 x1 t + g0 *: x2 t. (*worlf frame ?*)
 Variable p : K -> 'rV[K]_3.
 Let v1 := fun t : K => 'D_1 p t *m R t.
 Definition y_a1 t := - v1 t *m \S( w t)+ 'D_1 v1 t + g0 *: x2 t.
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 
-
-Lemma y_aE t : ('D_1 ('D_1 p) t + g0 *: 'e_2) *m R t= y_a1 t .
+Lemma y_aE t
+  ( derivableR : forall t, derivable R t 1)
+  ( derivablep : forall t, derivable p t 1)
+  ( derivableDp : forall t, derivable ('D_1 p) t 1)
+  : ('D_1 ('D_1 p) t + g0 *: 'e_2) *m R t= y_a1 t .
 Proof.
 rewrite mulmxDl.
 rewrite /y_a1/= /v1 /= /x2.
@@ -920,17 +923,21 @@ congr +%R; last by rewrite scalemxAl.
 rewrite -ang_vel_mxE/=; last 2 first.
    move=> t0.
    rewrite rotation_sub //.
-   admit.
-rewrite [in RHS]derive_mulmx; [|admit|admit].
-rewrite derive1mx_ang_vel//; [|admit|admit].
-rewrite ang_vel_mxE//; [|admit|admit].
+   exact : derivableR.
+   rewrite [in RHS]derive_mulmx => //.
+   rewrite derive1mx_ang_vel => //; last first.
+     move => t0.
+     by rewrite rotation_sub => //.
+   rewrite ang_vel_mxE// => //; last first.
+     move => t0.
+     by rewrite rotation_sub => //.
 rewrite addrCA.
 rewrite -mulmxE.
 rewrite -mulNmx.
 rewrite [X in _ = _ X]addrC.
 rewrite !mulNmx.
 by rewrite -mulmxA /= addrN addr0.
-Admitted.
+Qed.
 
 End ya.
 
@@ -944,7 +951,7 @@ Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 Hypothesis derivableR : forall t, derivable R t 1.
 Variable v : K -> 'rV[K]_3.
 Let x1 t := v t.
-Let x2 t : 'rV_3 := ('e_2) *m R t (* eqn (8) *).
+Let x2 t : 'rV_3 := ('e_2) *m R t (* eqn (8) *). (* local frame ez ? *)
 Let x1_point t := 'D_1 x1 t.
 Let x2_point t := 'D_1 x2 t.
 Let w t := ang_vel R t.
@@ -1032,25 +1039,25 @@ Hypothesis x2_hat_S2 : x2_hat 0 \in S2.
 Hypothesis x2_hat_derivable : forall t, derivable x2_hat t 1.
 Hypothesis v_derivable : forall t, derivable v t 1.
 Notation x2 := (x2 R).
-Let p1 t := x2 t - x2'hat t. 
-Let x2_tilde t :=  x2 t - x2_hat t.
-Let p1_point t := 'D_1 p1 t.
-Let x2_tilde_point t := 'D_1 x2_tilde t.
+Let erreur1 t := x2 t - x2'hat t. 
+Let erreur2 t :=  x2 t - x2_hat t.
+Let erreur1_point t := 'D_1 erreur1 t.
+Let errur2_point t := 'D_1 erreur2 t.
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
-Let zp1 t := p1 t *m (R t)^T.
-Let z2 t := x2_tilde t *m (R t)^T.  
+Let erreur1_p t := erreur1 t *m (R t)^T.
+Let erreur2_p t := erreur2 t *m (R t)^T.  
 Hypothesis norm_x2_hat : forall t, norm (x2_hat t) = 1.
 
-Let p1E : p1 = fun t => x2 t + (alpha1 / g0) *: (x1 t - x1_hat t).
+Let p1E : erreur1 = fun t => x2 t + (alpha1 / g0) *: (x1 t - x1_hat t).
 Proof.
 apply/funext => ?.
-rewrite /p1 /x2; congr +%R.
+rewrite /erreur1 /x2; congr +%R.
 by rewrite /x2'hat scaleNr opprK.
 Qed.
 
-Let x2_tildeE t : x2_tilde t = z2 t *m R t.
+Let x2_tildeE t : erreur2 t = erreur2_p t *m R t.
 Proof.
-rewrite /z2 -mulmxA.
+rewrite /erreur2 -mulmxA.
 by rewrite orthogonal_tr_mul ?rotation_sub// mulmx1.
 Qed.
 
@@ -1059,11 +1066,11 @@ Let derivable_x2 t : derivable x2 t 1. Proof. exact: derivable_mulmx. Qed.
 Let derivable_x2'hat t : derivable x2'hat t 1.
 Proof. by apply: derivableZ => /=; exact: derivableB. Qed.
 
-Let derivable_p1 t : derivable p1 t 1. Proof. exact: derivableB. Qed.
+Let derivable_erreur1 t : derivable erreur1 t 1. Proof. exact: derivableB. Qed.
 
-Let derivable_x2_tilde t : derivable x2_tilde t 1. Proof. exact: derivableB. Qed.
+Let derivable_x2_tilde t : derivable erreur2 t 1. Proof. exact: derivableB. Qed.
 
-Lemma derive_p1 t : 'D_1 p1 t = p1 t *m \S(w t) - alpha1 *: p1 t.
+Lemma derive_p1 t : 'D_1 erreur1 t = erreur1 t *m \S(w t) - alpha1 *: erreur1 t.
 Proof.
 simpl in *.
 rewrite p1E.
@@ -1075,7 +1082,7 @@ rewrite !(derive_x2) // -/(x2 t) /=.
 rewrite (derive_x1  g0 R) //.
 rewrite -/(x2 t) -/(v t) -/(x1 t) -/(w t).
 rewrite eq12a.
-transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t) - alpha1 *: p1 t).
+transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t) - alpha1 *: erreur1 t).
   transitivity (x2 t *m \S(w t) + (alpha1 / g0) *: (x1 t *m \S(w t) - g0 *: x2 t - (x1_hat t *m \S(w t) - g0 *: x2'hat t))).
     do 2 f_equal.  
     rewrite -3![in LHS]addrA -[in RHS]addrA.
@@ -1090,26 +1097,26 @@ transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t) - alpha1 *:
     rewrite -addrA; congr +%R.
       by rewrite addrC.
     by rewrite opprB addrC.
-  rewrite -/(p1 t).
+  rewrite -/(erreur1 t).
   rewrite scalerDr addrA scalemxAl -mulmxDl scalerN scalerA.
   by rewrite divfK.
 by rewrite p1E.
 Qed.
 
-Lemma derive_x2tilde t : 'D_1 x2_tilde t = x2_tilde t *m \S( w t) - gamma *: (x2_tilde t - p1 t) *m \S( x2_hat t ) ^+ 2 .
+Lemma derive_x2tilde t : 'D_1 erreur2 t = erreur2 t *m \S( w t) - gamma *: (erreur2 t - erreur1 t) *m \S( x2_hat t ) ^+ 2 .
 Proof.
-rewrite /x2_tilde.
+rewrite /erreur2.
 rewrite [in LHS]deriveB//.
 rewrite derive_x2//.
-rewrite -/(x2 t) -/(w t) -/(x2_tilde t).
+rewrite -/(x2 t) -/(w t) -/(erreur2 t).
 rewrite eq12c.
 rewrite spinD spinN -scalemxAl (spinZ gamma).
 rewrite mulmxBr opprB [LHS]addrA [in LHS]addrC addrA (addrC _ (x2 t *m \S(w t))).
-rewrite -mulmxBl -/(x2_tilde t).
+rewrite -mulmxBl -/(erreur2 t).
 congr +%R.
 rewrite -scalemxAr -mulNmx -scalerN -[RHS]scalemxAl.
 congr (_ *: _).
-rewrite /x2_tilde /p1.
+rewrite /erreur2 /erreur1.
 rewrite (opprB _ (x2'hat t)) -addrA (addrC (x2 t)) addrA subrK opprD opprK mulmxBl.
 rewrite [X in _ = X + _](_ : _ = 0) ?add0r; last first.
   rewrite mulmxA.
@@ -1122,17 +1129,17 @@ rewrite [in RHS]mulmxA [in RHS]spinE spinE spinE.
 by rewrite [LHS](@lieC _ (vec3 K))/=.
 Qed.
 
-Lemma Rx2 t : x2_hat t *m (R t)^T = 'e_2 - z2 t.
+Lemma Rx2 t : x2_hat t *m (R t)^T = 'e_2 - erreur2_p t.
 Proof.
-rewrite /z2 /x2_tilde mulmxBl opprB addrCA.
+rewrite /erreur2_p /erreur2 mulmxBl opprB addrCA.
 rewrite [X in _ + X](_ : _ = 0) ?addr0//.
 rewrite /x2 -mulmxA.
 by rewrite orthogonal_mul_tr ?rotation_sub// mulmx1 subrr.
 Qed.
 
-Lemma derive_zp1t t : 'D_1 zp1 t = -alpha1 *: zp1 t.
+Lemma derive_zp1t t : 'D_1 erreur1_p t = -alpha1 *: erreur1_p t.
 Proof.
-rewrite /zp1.
+rewrite /erreur1.
 rewrite derive_mulmx//=; last by rewrite derivable_trmx.
 rewrite derive_p1.
 rewrite mulmxBl addrAC.
@@ -1146,7 +1153,7 @@ rewrite -/(w t) -mulmxA -mulmxDr trmx_mul tr_spin.
 by rewrite mulNmx subrr mulmx0.
 Qed.
 
-Lemma derive_z2t t : 'D_1 z2 t = gamma *: (z2 t - zp1 t) *m - \S('e_2 -z2 t)^+2.
+Lemma derive_z2t t : 'D_1 erreur2_p t = gamma *: (erreur2_p t - erreur1_p t) *m - \S('e_2 - erreur2_p t)^+2.
 Proof.
 rewrite [LHS]derive_mulmx//=; last first.
   by rewrite derivable_trmx.
@@ -1172,7 +1179,7 @@ rewrite orthogonal_tr_mul ?rotation_sub// mulmx1.
 congr (_ *m _).
 rewrite x2_tildeE.
 rewrite mulmxBl; congr (_ - _)%R.
-by rewrite /zp1 -mulmxA orthogonal_tr_mul ?rotation_sub// mulmx1.
+by rewrite /erreur1 -mulmxA orthogonal_tr_mul ?rotation_sub// mulmx1.
 Qed.
 
 (* TODO relier derivezp1 et derivez2 a eqn33?*)
