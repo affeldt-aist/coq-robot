@@ -1070,7 +1070,7 @@ Let derivable_erreur1 t : derivable erreur1 t 1. Proof. exact: derivableB. Qed.
 
 Let derivable_x2_tilde t : derivable erreur2 t 1. Proof. exact: derivableB. Qed.
 
-Lemma derive_p1 t : 'D_1 erreur1 t = erreur1 t *m \S(w t) - alpha1 *: erreur1 t.
+Lemma derive_erreur1 t : 'D_1 erreur1 t = erreur1 t *m \S(w t) - alpha1 *: erreur1 t.
 Proof.
 simpl in *.
 rewrite p1E.
@@ -1103,7 +1103,7 @@ transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t) - alpha1 *:
 by rewrite p1E.
 Qed.
 
-Lemma derive_x2tilde t : 'D_1 erreur2 t = erreur2 t *m \S( w t) - gamma *: (erreur2 t - erreur1 t) *m \S( x2_hat t ) ^+ 2 .
+Lemma derive_erreur2 t : 'D_1 erreur2 t = erreur2 t *m \S( w t) - gamma *: (erreur2 t - erreur1 t) *m \S( x2_hat t ) ^+ 2 .
 Proof.
 rewrite /erreur2.
 rewrite [in LHS]deriveB//.
@@ -1137,11 +1137,11 @@ rewrite /x2 -mulmxA.
 by rewrite orthogonal_mul_tr ?rotation_sub// mulmx1 subrr.
 Qed.
 
-Lemma derive_zp1t t : 'D_1 erreur1_p t = -alpha1 *: erreur1_p t.
+Lemma derive_erreur1_p t : 'D_1 erreur1_p t = -alpha1 *: erreur1_p t.
 Proof.
 rewrite /erreur1.
 rewrite derive_mulmx//=; last by rewrite derivable_trmx.
-rewrite derive_p1.
+rewrite derive_erreur1.
 rewrite mulmxBl addrAC.
 apply/eqP.
 rewrite subr_eq.
@@ -1153,7 +1153,7 @@ rewrite -/(w t) -mulmxA -mulmxDr trmx_mul tr_spin.
 by rewrite mulNmx subrr mulmx0.
 Qed.
 
-Lemma derive_z2t t : 'D_1 erreur2_p t = gamma *: (erreur2_p t - erreur1_p t) *m - \S('e_2 - erreur2_p t)^+2.
+Lemma derive_erreur2_p t : 'D_1 erreur2_p t = gamma *: (erreur2_p t - erreur1_p t) *m - \S('e_2 - erreur2_p t)^+2.
 Proof.
 rewrite [LHS]derive_mulmx//=; last first.
   by rewrite derivable_trmx.
@@ -1164,7 +1164,7 @@ rewrite derive1mx_ang_vel//=; last first.
 rewrite !ang_vel_mxE//; last first.
   by move => t0; rewrite rotation_sub.
 rewrite trmx_mul mulmxA -mulmxDl.
-rewrite derive_x2tilde /=.
+rewrite derive_erreur2 /=.
 rewrite addrAC -/(w t) tr_spin mulmxN subrr sub0r.
 rewrite -scalemxAl -scaleNr -scalemxAl.
 rewrite mulmxN -scalemxAl -[in RHS]scaleNr.
