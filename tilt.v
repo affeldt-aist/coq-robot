@@ -2048,4 +2048,29 @@ have : root (char_poly (jacobian (eqn33' alpha1 gamma) point1)) a.
 rewrite /eqn33' /jacobian.
 Admitted.
 
+Lemma equilibrium_zero_stable :
+  forall zp1_z2_point : K -> 'rV_6,
+   solves_equation (tilt_eqn alpha1 gamma) zp1_z2_point state_space_tilt ->
+  equilibrium_is_stable_at state_space_tilt point1 zp1_z2_point.
+Proof.
+move => y solves.
+apply: Lyapunov_stability => //.
+move => z.
+rewrite inE.
+move => statez.
+by apply:  solves.
+admit.
+admit.
+rewrite -/point1.
+have Hsubset : state_space_tilt = [set: 'rV_6]. 
+  rewrite /state_space_tilt.
+  
+  admit.
+rewrite Hsubset.
+apply: V1_is_lyapunov_candidate => //.
+Search V1.
+have:= V1_point_is_lnsd.
+move => y0 y1 solves1.
+rewrite /locnegsemidef in y0.
+Abort.
 End Lyapunov.
