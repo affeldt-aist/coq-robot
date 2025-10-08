@@ -345,8 +345,8 @@ Lemma RzE a : Rz a = (frame_of_SO (Rz_is_SO a)) _R^ (can_frame T).
 Proof. rewrite FromTo_to_can; by apply/matrix3P/and9P; split; rewrite !mxE. Qed.
 
 Lemma rmap_Rz_e0 a :
-  rmap (can_tframe T) `[ 'e_0 $ frame_of_SO (Rz_is_SO a) ] =
-                      `[ row 0 (Rz a) $ can_tframe T ].
+  rmap (can_tframe T) '[ 'e_0 $ frame_of_SO (Rz_is_SO a) ] =
+                      '[ row 0 (Rz a) $ can_tframe T ].
 Proof. by rewrite rmapE_to_can rowE [in RHS]RzE FromTo_to_can. Qed.
 
 Definition Rzy a b := col_mx3

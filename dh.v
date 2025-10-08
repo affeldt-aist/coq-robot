@@ -196,7 +196,7 @@ Variables F0 F1 : tframe T.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[T]_3 := (\o{F1} - \o{F0}) *m (can_tframe T) _R^ F0.
 
-Goal `[ p1_in_0 $ F0 ] = rmap F0 `[ \o{F1} - \o{F0} $ can_tframe T ].
+Goal '[ p1_in_0 $ F0 ] = rmap F0 '[ \o{F1} - \o{F0} $ can_tframe T ].
 Proof.
 rewrite /p1_in_0.
 by rewrite /rmap.

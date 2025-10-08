@@ -95,7 +95,7 @@ Section about_bound_vectors.
 
 Variables (T : pzRingType) (F : tframe T).
 
-Definition FramedVect_of_Bound (p : bvec F) : fvec F := `[ BoundVect.endp p $ F ].
+Definition FramedVect_of_Bound (p : bvec F) : fvec F := '[ BoundVect.endp p $ F ].
 
 Definition BoundVect_add (a b : bvec F) : bvec F :=
   BoundVect.mk F (BoundVect.endp a + BoundVect.endp b).
@@ -110,7 +110,7 @@ Lemma BoundFramed_addA (a : bvec F) (b c : fvec F) :
 Proof. by rewrite /BoundFramed_add /= addrA. Qed.
 
 Definition BoundVect_sub (F : tframe T) (a b : bvec F) : fvec F :=
-  `[ BoundVect.endp a - BoundVect.endp b $ F ].
+  '[ BoundVect.endp a - BoundVect.endp b $ F ].
 
 Local Notation "a \-b b" := (BoundVect_sub a b).
 
@@ -195,7 +195,7 @@ Proof.
 move=> HF HG a b.
 have @G' : forall t0, rframe (F t0).
   move=> t0.
-  exact: (@RFrame.mk _ _ (@BoundVect.mk _ _ \o{F t0}) `[(F t0)~i $ F t0] `[(F t0)~j $ F t0] `[(F t0)~k $ F t0] (F t0)).
+  exact: (@RFrame.mk _ _ (@BoundVect.mk _ _ \o{F t0}) '[(F t0)~i $ F t0] '[(F t0)~j $ F t0] '[(F t0)~k $ F t0] (F t0)).
 apply: (@derivable_mx_FromTo' R F G' G).
 by [].
 by [].
@@ -511,7 +511,7 @@ Let o2 t : bvec F := RFrame.o (F2 t).
 
 Let r12 : forall t : R, bvec (F1 t) := fun t =>
   BoundVect.mk (F1 t)
-    (FramedVect.v (rmap (F1 t) `[ \o{F2 t} - \o{F1 t} $ F ])).
+    (FramedVect.v (rmap (F1 t) '[ \o{F2 t} - \o{F1 t} $ F ])).
 
 Hypothesis derivable_F1 : forall t, derivable_mx F1 t 1.
 Hypothesis derivable_F1o : forall t, derivable_mx (@TFrame.o R^o \o F1) t 1.
@@ -527,13 +527,13 @@ Qed.
 
 Definition w1 := ang_vel (fun t => (F1 t) _R^ F).
 
-Lemma eqn314_helper t : FramedVect.v (rmap F `[r12 t $ F1 t]) = \o{F2 t} - \o{F1 t}.
+Lemma eqn314_helper t : FramedVect.v (rmap F '[r12 t $ F1 t]) = \o{F2 t} - \o{F1 t}.
 Proof. by rewrite /= -mulmxA FromTo_comp FromToI mulmx1. Qed.
 
 (* lin. vel. of Link i as a function of
    the translational and rotational velocities of Link i-1 *)
 Lemma eqn314 t : 'D_1 (fun x => o2 x : 'M__) t = 'D_1 (fun x => o1 x : 'M__) t +
-  FramedVect.v (rmap F `['D_1 (fun x => r12 x : 'M__) t $ F1 t])
+  FramedVect.v (rmap F '['D_1 (fun x => r12 x : 'M__) t $ F1 t])
     (* velocity of the origin of Frame i w.r.t. the origin of Frame i-1 *) +
   w1 t *v (\o{F2 t} - \o{F1 t}).
 Proof.
