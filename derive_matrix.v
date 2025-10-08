@@ -470,16 +470,16 @@ by rewrite {}/f deriveM// mulrC addrC; congr (_ * _ + _ * _);
   rewrite derive_mx ?mxE//=; exact/derivable_mxP.
 Qed.
 
-Global Instance is_diff_component {R : realFieldType} n i (p : 'rV[R]_n.+1) :
+Global Instance is_diff_component {R : realFieldType} n i (p : 'rV[R]_n) :
   is_diff p (fun q => q..[i] : R^o) (fun q => q..[i]).
 Proof.
-have comp_lin : linear (fun q : 'rV[R]_n.+1 => q..[i] : R^o).
+have comp_lin : linear (fun q : 'rV[R]_n => q..[i] : R^o).
   by move=> ???; rewrite !mxE.
-have comp_cont : continuous (fun q : 'rV[R]_n.+1 => q..[i] : R^o).
+have comp_cont : continuous (fun q : 'rV[R]_n=> q..[i] : R^o).
   move=> q A [_/posnumP[e] Ae] /=; apply/nbhs_ballP; exists e%:num => //=.
   by move=> r [e0] /(_ ord0) /(_ i) /Ae.
 pose glM := GRing.isLinear.Build _ _ _ _ _ comp_lin.
-pose gL : {linear 'rV_n.+1 -> R^o} := HB.pack (fun q : 'rV_n.+1 => q ..[ i]) glM.
+pose gL : {linear 'rV_n -> R^o} := HB.pack (fun q : 'rV_n => q ..[ i]) glM.
 apply: DiffDef; first exact: (@linear_differentiable _ _ _ gL).
 by rewrite (@diff_lin _ _ _ gL).
 Qed.
