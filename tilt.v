@@ -977,8 +977,8 @@ Hypothesis derivableR : forall t, derivable R t 1.
 Variable v : K -> 'rV[K]_3.
 Let x1 t := v t.
 Let x2 t : 'rV_3 := ('e_2) *m R t (* eqn (8) *). (* local frame ez ? *)
-Let x1_point t := 'D_1 x1 t.
-Let x2_point t := 'D_1 x2 t.
+Let x1_dot t := 'D_1 x1 t.
+Let x2_dot t := 'D_1 x2 t.
 Let w t := ang_vel R t.
 
 Lemma x2_S2 (t0 : K) : x2 t0 \in S2.
@@ -1020,13 +1020,13 @@ by rewrite (addrC(-_)) subrr add0r.
 Qed.
 
  (* eqn 11b *)
-Lemma derive_x2 (t : K) : x2_point t = x2 t *m \S( w t ).
+Lemma derive_x2 (t : K) : x2_dot t = x2 t *m \S( w t ).
 Proof.
 rewrite /w.
 rewrite -ang_vel_mxE; last 2 first.
   by move=> ?; rewrite rotation_sub.
   by [].
-rewrite /x2_point.
+rewrite /x2_dot.
 rewrite /x2.
 have ->: 'D_1 (fun t0 : K => 'e_2 *m (R t0)) t = ('e_2 *m 'D_1 (fun t => (R t)) t).
   move => n.
@@ -1225,11 +1225,11 @@ Variable gamma : K.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 
-Definition tilt_eqn (zp1_z2_point : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
-  let zp1_point := Left \o zp1_z2_point in
-  let z2_point := Right \o zp1_z2_point in
-  fun t => row_mx (- alpha1 *: zp1_point t)
-         (gamma *: (z2_point t - zp1_point t) *m \S('e_2%:R - z2_point t) ^+ 2).
+Definition tilt_eqn (error1_p_error2_dot : K -> 'rV[K]_6) : K ->'rV[K]_6 :=
+  let error1_p_dot := Left \o error1_p_error2_dot in
+  let error2_dot := Right \o error1_p_error2_dot in
+  fun t => row_mx (- alpha1 *: error1_p_dot t)
+         (gamma *: (error2_dot t - error1_p_dot t) *m \S('e_2%:R - error2_dot t) ^+ 2).
 
 Definition tilt_eqn_wip (zp1_z2_point : 'rV[K]_6) : 'rV[K]_6 :=
   let zp1_point := Left zp1_z2_point in
@@ -1833,7 +1833,7 @@ have [->|H] := eqVneq u1 0.
 have Hpos := def u1 H.
 rewrite -oppr_ge0 -oppr_le0 opprK ltW//.
 by rewrite -oppr_gt0 mulNmx !mulNmx mxE opprK Hpos.
-Unshelve. all: try by end_near. 
+Unshelve. all: try by end_near.
 Qed.
 
 Lemma V1_point_is_lnsd (y : K -> 'rV_6) :
@@ -1860,6 +1860,7 @@ rewrite LieDerivativeD /=; last 3 first.
     apply: differentiable_cst.
     by apply derivable1_diffP.
 split; last first.
+  near=> z.
   admit.
 under [X in LieDerivative X _ _ _ + _]eq_fun do rewrite mulrC.
 under [X in _ + LieDerivative X _ _ _]eq_fun do rewrite mulrC.
