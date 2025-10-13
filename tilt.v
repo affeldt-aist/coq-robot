@@ -2042,23 +2042,25 @@ by rewrite !mulNmx mxE opprK Hquad.
 Qed.
 
 Hypothesis H : solutions_unique state_space_tilt (tilt_eqn alpha1 gamma).
-Variable y0 : K -> 'rV[K]_6.
+Variable y0 :  K -> 'rV[K]_6.
 Hypothesis y0init: y0 0 \in state_space_tilt.
 Hypothesis y0sol : is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt.
-Hypothesis y0init_sol : forall y0, y0 0 \in state_space_tilt -> is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt -> (tilt_eqn alpha1 gamma (y0)) = y0.
+Hypothesis y0init_sol : forall y0, y0 0 \in state_space_tilt -> is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt .
+Variable sol : 'rV[K]_6 ->  K -> 'rV[K]_6.
 
+Hypothesis solP :
+  forall y : K -> 'rV[K]_6,
+    y 0 \in state_space_tilt ->
+    is_sol (tilt_eqn alpha1 gamma) y state_space_tilt <->
+    sol (y 0) = y.
 
 Lemma equilibrium_zero_stable :
     equilibrium_is_stable_at state_space_tilt point1 y0.
 Proof.
-apply : (@lyapunov_stability _ _ state_space_tilt (tilt_eqn alpha1 gamma) _ _ _ _  (V1 alpha1 gamma) ).
+apply : (@lyapunov_stability K 5 state_space_tilt (tilt_eqn alpha1 gamma) _ _ solP _  (V1 alpha1 gamma) ).
 - admit.
-- move => y _.
-  admit.
-  split.
-  admit.
-  admit.
-  admit.
+- move => y y0in.
+  exact y0sol.
 -  have := V1_is_lyapunov_candidate alpha1_gt0 gamma_gt0.
   move => HV1.
   case: HV1 => [Hpos Hdif].
@@ -2081,6 +2083,7 @@ apply : (@lyapunov_stability _ _ state_space_tilt (tilt_eqn alpha1 gamma) _ _ _ 
   move => t0.
   rewrite -derivable1_diffP.
   admit.
+  rewrite /point1.
   admit.
   move =>t.
   admit.
