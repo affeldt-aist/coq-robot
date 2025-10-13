@@ -564,6 +564,7 @@ have Df_Omega_beta phi : is_sol f phi D -> phi 0 \in Omega_beta ->
           by rewrite Hs.
         set y := sol x0.
         apply : V'le_0 => //.
+        apply: Vderiv => //.
         admit.
         rewrite -derivable1_diffP.
         by case: (solves xinD) => //.
@@ -2041,13 +2042,10 @@ rewrite -oppr_ge0.
 by rewrite !mulNmx mxE opprK Hquad.
 Qed.
 
-Hypothesis H : solutions_unique state_space_tilt (tilt_eqn alpha1 gamma).
 Variable y0 :  K -> 'rV[K]_6.
 Hypothesis y0init: y0 0 \in state_space_tilt.
-Hypothesis y0sol : is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt.
-Hypothesis y0init_sol : forall y0, y0 0 \in state_space_tilt -> is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt .
+Hypothesis y0init_sol : is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt .
 Variable sol : 'rV[K]_6 ->  K -> 'rV[K]_6.
-
 Hypothesis solP :
   forall y : K -> 'rV[K]_6,
     y 0 \in state_space_tilt ->
@@ -2060,7 +2058,7 @@ Proof.
 apply : (@lyapunov_stability K 5 state_space_tilt (tilt_eqn alpha1 gamma) _ _ solP _  (V1 alpha1 gamma) ).
 - admit.
 - move => y y0in.
-  exact y0sol.
+  apply: y0init_sol => //.
 -  have := V1_is_lyapunov_candidate alpha1_gt0 gamma_gt0.
   move => HV1.
   case: HV1 => [Hpos Hdif].
@@ -2082,13 +2080,19 @@ apply : (@lyapunov_stability K 5 state_space_tilt (tilt_eqn alpha1 gamma) _ _ so
   apply: V1_dot_le0 => //.
   move => t0.
   rewrite -derivable1_diffP.
-  admit.
-  rewrite /point1.
+  by case : y0init_sol.
   admit.
   move =>t.
-  admit.
-  apply: equilibrium_point1 => //.
-
+  rewrite /V1.
+  apply/differentiableD => //.
+  apply/differentiableM => //.
+  apply/differentiable_norm_squared => //.
+  apply/differentiable_lsubmx => //.
+  apply/differentiableM => //.
+  apply/differentiable_norm_squared => //.
+  apply/differentiable_rsubmx => //.
+ - apply: equilibrium_point1 => //.
+  
 Abort.
 
 End tilt_eqn_Lyapunov.
