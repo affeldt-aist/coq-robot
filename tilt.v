@@ -1,5 +1,6 @@
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra ring.
+From mathcomp Require Import interval_inference.
 From mathcomp Require Import boolp classical_sets functions reals order.
 From mathcomp Require Import topology normedtype landau derive realfun.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
@@ -34,6 +35,61 @@ Unset Printing Implicit Defensive.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
+
+Local Open Scope classical_set_scope.
+(* NB: we are just mimicking the proofs for the real line already available in derive.v *)
+Lemma EVT_max_rV (R : realType) n (f : 'rV[R]_n.+1 -> R) (A : set 'rV[R]_n.+1) :
+  A !=set0 ->
+  compact A ->
+  {within A, continuous f} -> exists2 c, c \in A &
+  forall t, t \in A -> f t <= f c.
+Proof.
+move=> A0 compactA fcont; set imf := f @` A.
+have imf_sup : has_sup imf.
+  split.
+    case: A0 => a Aa.
+    by exists (f a); apply/imageP.
+  have [M [Mreal imfltM]] : bounded_set (f @` A).
+    exact/compact_bounded/continuous_compact.
+  exists (M + 1) => y /imfltM yleM.
+  by rewrite (le_trans _ (yleM _ _)) ?ler_norm ?ltrDl.
+have [|imf_ltsup] := pselect (exists2 c, c \in A & f c = sup imf).
+  move=> [c cab fceqsup]; exists c => // t tab; rewrite fceqsup.
+  apply/sup_upper_bound => //.
+  exact/imageP/set_mem.
+have {}imf_ltsup t : t \in A -> f t < sup imf.
+  move=> tab; case: (ltrP (f t) (sup imf)) => // supleft.
+  rewrite falseE; apply: imf_ltsup; exists t => //; apply/eqP.
+  rewrite eq_le supleft andbT sup_upper_bound//.
+  exact/imageP/set_mem.
+pose g t : R := (sup imf - f t)^-1.
+have invf_continuous : {within A, continuous g}.
+  rewrite continuous_subspace_in => t tab; apply: cvgV => //=.
+    by rewrite subr_eq0 gt_eqF // imf_ltsup //; rewrite inE in tab.
+  by apply: cvgD; [exact: cst_continuous | apply: cvgN; exact: (fcont t)].
+have /ex_strict_bound_gt0 [k k_gt0 /= imVfltk] : bounded_set (g @` A).
+  by apply/compact_bounded/continuous_compact.
+have [_ [t tab <-]] : exists2 y, imf y & sup imf - k^-1 < y.
+  by apply: sup_adherent => //; rewrite invr_gt0.
+rewrite ltrBlDr -ltrBlDl.
+suff : sup imf - f t > k^-1 by move=> /ltW; rewrite leNgt => /negbTE ->.
+rewrite -[ltRHS]invrK ltf_pV2// ?qualifE/= ?invr_gt0 ?subr_gt0 ?imf_ltsup//; last first.
+  exact/mem_set.
+by rewrite (le_lt_trans (ler_norm _) _) ?imVfltk//; exact: imageP.
+Qed.
+
+Lemma EVT_min_rV (R : realType) n (f : 'rV[R]_n.+1 -> R) (A : set 'rV[R]_n.+1) :
+  A !=set0 ->
+  compact A ->
+  {within A, continuous f} -> exists2 c, c \in A &
+  forall t, t \in A -> f c <= f t.
+Proof.
+move=> A0 cA fcont.
+have /(EVT_max_rV A0 cA) [c clr fcmax] : {within A, continuous (- f)}.
+  by move=> ?; apply: continuousN => ?; exact: fcont.
+by exists c => // ? /fcmax; rewrite lerN2.
+Qed.
+Local Close Scope classical_set_scope.
 
 (* spin and matrix/norm properties*)
 
@@ -396,6 +452,34 @@ Qed.
 (* TODO continuously differentiable*)
 (* TODO: prove the same theorem with equilibrium_is_asymptotically_stable_at *)
 
+Import Order.Def.
+
+(* NB: added to be able to produce the following instance to be able to use bigop lemmas *)
+Lemma nng_max0r : left_id ((0:K)%:nng) (@maxr {nonneg K}).
+Proof.
+move=> x.
+rewrite /max; case: ifPn => //.
+rewrite -leNgt => x0.
+apply/eqP; rewrite eq_le; apply/andP; split; last first.
+  exact: x0.
+by have : 0 <= x%:nngnum by []. (* NB: this should be automatic *)
+Qed.
+
+HB.instance Definition _ :=
+  Monoid.isComLaw.Build {nonneg K} 0%:nng max maxA maxC nng_max0r.
+
+Lemma maxE (x y : {nonneg K}) : (max x%:num y%:num) = (max x y)%:num.
+Proof.
+rewrite /max; apply/esym.
+case: ifPn => // xy.
+  case: ifPn => //.
+  rewrite -leNgt => yx.
+  by apply/eqP; rewrite eq_le yx/= ltW.
+case: ifPn => // yx.
+apply/eqP; rewrite eq_le (ltW yx)/=.
+by rewrite -leNgt in xy.
+Qed.
+
 Theorem lyapunov_stability
   (x : 'rV[K]_n.+1 := 0)
 (*  (fsolD : forall z, z \in D -> is_sol f (sol z) D /\
@@ -455,10 +539,50 @@ have : exists r : K, 0 < r /\ r <= eps /\ closed_ball_ (fun x => `|x|) (0:'rV[K]
 have Hcont := differentiable_continuous Vdiff.
 move=> [r [r_pos [r_le_eps Br_sub_D]]].
 pose sphere_r := [set x : 'rV[K]_n.+1 | `|x| = r].
-have Halpha : {x : 'rV[K]_n.+1 | x \in sphere_r /\ forall y, y \in sphere_r -> V(x) <= V(y)}.
-(* extreme value theorem?*)
-(* sphere must be compact*)
-  admit.
+have Halpha : {x : 'rV[K]_n.+1 | x \in sphere_r /\ forall y, y \in sphere_r -> V x <= V y}.
+  have sphere_r0 : sphere_r !=set0.
+    exists (const_mx r).
+    rewrite /sphere_r/= /normr/=.
+    (* TODO: need lemma *)
+    rewrite mx_normrE/=.
+    apply/eqP; rewrite eq_le; apply/andP; split.
+      apply: bigmax_le => //.
+        exact: ltW.
+      by move=> i _; rewrite mxE gtr0_norm.
+    under eq_bigr do rewrite mxE gtr0_norm//.
+    apply/le_bigmax => /=.
+    exact: (ord0, ord0).
+  have compact_sphere_r : compact sphere_r.
+    apply: bounded_closed_compact.
+      suff : \forall M \near +oo, forall p, sphere_r p -> forall i, `|p ord0 i| < M.
+        rewrite /bounded_set; apply: filter_app; near=> M0.
+        move=> Kbnd /= p /Kbnd ltpM0.
+        rewrite /normr/= mx_normrE.
+        apply/bigmax_leP; split => //= i _.
+        by rewrite ord1; exact/ltW/ltpM0.
+      near=> M => v.
+      rewrite /sphere_r/= => vr i.
+      rewrite (@le_lt_trans _ _ r)//.
+        rewrite -vr [leRHS]/normr/= mx_normE.
+        under eq_bigr do rewrite ord1.
+        rewrite -(pair_big xpredT xpredT (fun _ j => `|v ord0 j|%:nng))//=.
+        rewrite big_ord_recr/= big_ord0.
+        rewrite max_r; last exact/bigmax_ge_id.
+        rewrite (bigD1 i)//= -maxE le_max.
+        by apply/orP; left.
+      clear v vr i.
+      by near: M; apply: nbhs_pinfty_gt; rewrite num_real.
+    pose d := fun x : 'rV[K]_n.+1  => `|x| : K.
+    have contd : continuous d by move=> /= z; exact: norm_continuous.
+    rewrite [X in closed X](_ : _ = d @^-1` [set r]); last first.
+      by apply/seteqP; split.
+    by apply continuous_closedP.
+  have contV : {within sphere_r, continuous V}.
+    apply: continuous_subspaceT => /= v.
+    apply/differentiable_continuous.
+    exact/Vderiv.
+  have := @EVT_min_rV _ _ V sphere_r sphere_r0 compact_sphere_r contV.
+  by move=> /cid2[c sphere_r_c sphere_r_V]; exists c; split.
 pose alpha := V (sval Halpha).
 have alpha_gt0 : 0 < alpha.
   have sphere_pos: forall y, y \in sphere_r -> 0 < V y.
@@ -557,7 +681,7 @@ have Df_Omega_beta phi : is_sol f phi D -> phi 0 \in Omega_beta ->
         have Hsol: forall x1, x1 \in D -> is_sol f (sol x1) D.
           move=> x1 x1inD => //.
           by apply : solves => //.
-        have Hs0 : 0 <= s. 
+        have Hs0 : 0 <= s.
           move : Hs_in.
           rewrite inE; move=> /itvP [] [Hs Hs1 Hs2].
           rewrite ltW => //.
