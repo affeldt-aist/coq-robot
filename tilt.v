@@ -689,7 +689,6 @@ have Df_Omega_beta phi : is_sol f phi D -> phi 0 \in Omega_beta ->
         set y := sol x0.
         apply : V'le_0 => //.
         apply: Vderiv => //.
-        admit.
         rewrite -derivable1_diffP.
         by case: (solves xinD) => //.
       - apply: continuous_subspaceT.
