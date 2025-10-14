@@ -63,7 +63,7 @@ exact: is_derive1_sqrt.
 Qed.
 
 Lemma differentiable_scalar_mx {R : realFieldType} n (r : R) :
-  differentiable (@scalar_mx _ n.+1) r.
+  differentiable (@scalar_mx _ n) r.
 Proof.
 apply/derivable1_diffP/cvg_ex => /=.
 exists 1; apply/cvgrPdist_le => /= e e0.
@@ -73,7 +73,7 @@ rewrite scaler1 -raddfB/= addrK (scale_scalar_mx _ t^-1) mulVf.
 by near: t; exact: nbhs_dnbhs_neq.
 Unshelve. all: by end_near. Qed.
 
-Lemma derivable_enorm_squared  {K : rcfType} n (f : K -> 'rV[K]_n.+1) (x0 : K) :
+Lemma derivable_enorm_squared  {K : rcfType} n (f : K -> 'rV[K]_n) (x0 : K) :
   derivable f x0 1 ->
   derivable (fun x => `|f x|_e ^+ 2) x0 1.
 Proof.
@@ -93,13 +93,14 @@ apply/derivable1_diffP.
 by apply/derivable_coord => //.
 Qed.
 
-Lemma derive_enorm_squared {K : realType} n (u : K -> 'rV[K]_n.+1) (t : K) :
+Lemma derive_enorm_squared {K : realType} n (u : K -> 'rV[K]_n) (t : K) :
   derivable u t 1 ->
-  (fun x => `|u x|_e ^+ 2)^`()%classic t = 2 * ('D_1 u t *m (u t)^T)``_0 :> K.
+  'D_1 (fun x => `|u x|_e ^+ 2) t =
+  2 * ('D_1 u t *m (u t)^T)``_0.
 Proof.
 move=> ut1.
 under eq_fun do rewrite -dotmulvv.
-rewrite dotmulP mxE /= mulr1n derive1E derive_dotmul// dotmulC.
+rewrite dotmulP mxE /= mulr1n derive_dotmul// dotmulC.
 by field.
 Qed.
 
@@ -110,24 +111,22 @@ apply: ex_derive.
 by apply: (is_derive1_sqrt gt0).
 Qed.
 
-Lemma differentiable_enorm {K : realType} n m (f : 'rV[K]_n.+1 -> 'rV_m.+1)
-  (x : K -> 'rV[K]_n.+1) (t : K) :
-  differentiable f (x t) -> f (x t) != 0 ->
-  differentiable (fun x0 => `|f x0|_e) (x t) .
+Lemma differentiable_enorm {K : realType} m n (f : 'rV[K]_m -> 'rV_n)
+  (g : K -> 'rV[K]_m) t :
+  differentiable f (g t) -> f (g t) != 0 ->
+  differentiable (fun x => `|f x|_e) (g t) .
 Proof.
-move => fx0 dif1.
-rewrite /enorm -fctE.
-apply: differentiable_comp; last first.
-  apply/derivable1_diffP.
-  apply/derivable_sqrt.
-  by rewrite dotmulvv expr2 mulr_gt0 //= !enorm_gt0 //.
-by apply: differentiable_dotmul => //.
+move=> fgt fgt0; rewrite /enorm -fctE.
+apply: differentiable_comp.
+  exact: differentiable_dotmul.
+apply/derivable1_diffP/derivable_sqrt.
+by rewrite dotmulvv expr2 mulr_gt0 //= !enorm_gt0.
 Qed.
 
-Lemma differentiable_enorm_squared {R : rcfType} m n (V := 'rV[R]_m.+1)
-    (u : V -> 'rV[R]_n.+1) (t : V) :
-  differentiable u t ->
-  differentiable (fun x => `|u x|_e ^+ 2 ) t .
+Lemma differentiable_enorm_squared {R : rcfType} m n
+    (f : 'rV[R]_m -> 'rV[R]_n) (v : 'rV[R]_m)  :
+  differentiable f v ->
+  differentiable (fun x => `|f x|_e ^+ 2) v.
 Proof.
 move=> dif1.
 under eq_fun do rewrite -dotmulvv.

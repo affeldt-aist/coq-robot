@@ -22,7 +22,7 @@ Proof. by apply/esym/eqP; rewrite -symE; exact: sqr_spin_is_sym. Qed.
 Lemma mul_tr_spin {R : comNzRingType} (u : 'rV[R]_3) : u *m \S(u)^T = 0.
 Proof. by apply: trmx_inj; rewrite trmx_mul trmxK spin_mul_tr trmx0. Qed.
 
-Lemma CauchySchwarz_vec {R : rcfType} {n : nat} (a b : 'rV[R]_n.+1) :
+Lemma CauchySchwarz_vec {R : rcfType} {n : nat} (a b : 'rV[R]_n) :
   (a *d b)^+2 <= (a *d a) * (b *d b).
 Proof.
 suffices: 0 <= (b *d b) * (a *d a) - (a *d b) ^+ 2.
@@ -66,7 +66,7 @@ by rewrite dotmulvv mulrC in h2.
 Qed.
 
 (* not used *)
-Lemma young_inequality_vec {R : rcfType} {n : nat} (a b : 'rV[R]_n.+1) :
+Lemma young_inequality_vec {R : rcfType} {n : nat} (a b : 'rV[R]_n) :
   (a *d b) <= (2^-1 * `|a|_e ^+ 2) + (2^-1 * `|b|_e ^+ 2).
 Proof.
 have normage0 : 0 <= `|a|_e ^+ 2.
@@ -115,30 +115,29 @@ Lemma enorm_squared {R : rcfType} n (u : 'rV[R]_n) :
   (u *m (u)^T) 0 0 = `|u|_e ^+2.
 Proof. by rewrite -dotmulvv /dotmul. Qed.
 
-
 Lemma derivable_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1.+1 + n2.+1)) t v :
+    (f : V -> 'rV[R]_(n1 + n2)) t v :
   (forall x, derivable f x v) -> derivable (fun x => rsubmx (f x)) t v.
 Proof.
 move=> /= => df1.
 apply/derivable_mxP => i j/=.
 rewrite (ord1 i).
 have /cvg_ex[/= r Hr]:= df1 t.
-apply/cvg_ex => /=; exists (r``_(rshift n1.+1 j)).
+apply/cvg_ex => /=; exists (r``_(rshift n1 j)).
 apply/cvgrPdist_le => /= e e0.
 move/cvgrPdist_le : Hr => /(_ _ e0).
 apply: filterS => x.
 apply: le_trans.
 rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
 apply: le_trans; last first.
-  exact: (le_bigmax _ _ (ord0, rshift n1.+1 j)).
+  exact: (le_bigmax _ _ (ord0, rshift n1 j)).
 by rewrite !mxE.
 Qed.
 
 Lemma derive_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1.+1 + n2.+1)) t v :
+    (f : V -> 'rV[R]_(n1 + n2)) t v :
   (forall x, derivable f x v) ->
-  'D_v (fun x => rsubmx (f x)) t = @rsubmx _ _ n1.+1 _ ('D_v f t).
+  'D_v (fun x => rsubmx (f x)) t = @rsubmx _ _ n1 _ ('D_v f t).
 Proof.
 move=> df1; apply/matrixP => i j; rewrite !mxE /=.
 rewrite derive_mx ?mxE//=; last exact: derivable_rsubmx.
@@ -147,27 +146,26 @@ by apply/funext => x; rewrite !mxE.
 Qed.
 
 Lemma differentiable_rsubmx0 {R : realFieldType} {V : normedModType R} {n1 n2} t :
-  differentiable (@rsubmx R 1 n1.+1 n2.+1) t.
+  differentiable (@rsubmx R 1 n1 n2) t.
 Proof.
-have lin_rsubmx : linear (@rsubmx R 1 n1.+1 n2.+1).
+have lin_rsubmx : linear (@rsubmx R 1 n1 n2).
   move=> a b c.
   by rewrite linearD//= linearZ.
 pose build_lin_rsubmx := GRing.isLinear.Build _ _ _ _ _ lin_rsubmx.
-pose Rsubmx : {linear 'rV[R^o]_(n1.+1 + n2.+1) -> 'rV[R^o]_n2.+1} := HB.pack (@rsubmx R _ _ _) build_lin_rsubmx.
+pose Rsubmx : {linear 'rV[R^o]_(n1 + n2) -> 'rV[R^o]_n2} := HB.pack (@rsubmx R _ _ _) build_lin_rsubmx.
 apply: (@linear_differentiable _ _ _ Rsubmx).
 move=> /= u A /=.
 move/nbhs_ballP=> [e /= e0 eA].
-apply/nbhs_ballP; exists e => //= v uv.
-apply: eA.
-split; first exact: e0.
+apply/nbhs_ballP; exists e => //= v [? uv].
+apply: eA; split => //.
 (* TODO: lemma *)
-move: uv => [_]; rewrite /ball/= /mx_ball/ball /= => uv i j.
-apply: (le_lt_trans _ (uv i (rshift n1.+1 j))).
+move: uv; rewrite /ball/= /mx_ball/ball /= => uv i j.
+apply: (le_lt_trans _ (uv i (rshift n1 j))).
 by rewrite !mxE.
 Qed.
 
 Global Instance is_diff_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f df : V -> 'rV[R]_(n1.+1 + n2.+1)) t :
+    (f df : V -> 'rV[R]_(n1 + n2)) t :
   is_diff t f df ->
   is_diff t (fun x => rsubmx (f x)) (fun x => rsubmx (df x)).
 Proof.
@@ -184,7 +182,7 @@ rewrite derive_rsubmx//.
 Abort.
 
 Lemma differentiable_rsubmx {R : realFieldType} (V : normedModType R) {n1 n2}
-    (f : V -> 'rV[R]_(n1.+1 + n2.+2)) t :
+    (f : V -> 'rV[R]_(n1 + n2)) t :
   (forall x, differentiable f x) ->
   differentiable (fun x => rsubmx (f x)) t.
 Proof.
@@ -194,28 +192,28 @@ exact: differentiable_rsubmx0.
 Qed.
 
 Lemma derivable_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1.+1 + n2.+1)) t v :
+    (f : V -> 'rV[R]_(n1 + n2)) t v :
   (forall x, derivable f x v) -> derivable (fun x => lsubmx (f x)) t v.
 Proof.
 move=> /= => df1.
 apply/derivable_mxP => i j/=.
 rewrite (ord1 i).
 have /cvg_ex[/= l Hl]:= df1 t.
-apply/cvg_ex => /=; exists (l``_(lshift n2.+1 j)).
+apply/cvg_ex => /=; exists (l``_(lshift n2 j)).
 apply/cvgrPdist_le => /= e e0.
 move/cvgrPdist_le : Hl => /(_ _ e0).
 apply: filterS => x.
 apply: le_trans.
 rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
 apply: le_trans; last first.
-  exact: (le_bigmax _ _ (ord0, lshift n2.+1 j)).
+  exact: (le_bigmax _ _ (ord0, lshift n2 j)).
 by rewrite !mxE.
 Qed.
 
 Lemma derive_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1.+1 + n2.+1)) t v :
+    (f : V -> 'rV[R]_(n1 + n2)) t v :
   (forall x, derivable f x v) ->
-  'D_v (fun x => lsubmx (f x)) t = @lsubmx _ _ n1.+1 _ ('D_v f t).
+  'D_v (fun x => lsubmx (f x)) t = @lsubmx _ _ n1 _ ('D_v f t).
 Proof.
 move=> df1; apply/matrixP => i j; rewrite !mxE /=.
 rewrite derive_mx ?mxE//=; last exact: derivable_lsubmx.
@@ -224,27 +222,27 @@ by apply/funext => x; rewrite !mxE.
 Qed.
 
 Lemma differentiable_lsubmx0 {R : realFieldType} {V : normedModType R} {n1 n2} t :
-  differentiable (@lsubmx R 1 n1.+1 n2.+1) t.
+  differentiable (@lsubmx R 1 n1 n2) t.
 Proof.
-have lin_lsubmx : linear (@lsubmx R 1 n1.+1 n2.+1).
+have lin_lsubmx : linear (@lsubmx R 1 n1 n2).
   move=> a b c.
   by rewrite linearD//= linearZ.
 pose build_lin_lsubmx := GRing.isLinear.Build _ _ _ _ _ lin_lsubmx.
-pose Lsubmx : {linear 'rV[R^o]_(n1.+1 + n2.+1) -> 'rV[R^o]_n1.+1} := HB.pack (@lsubmx R _ _ _) build_lin_lsubmx.
+pose Lsubmx : {linear 'rV[R^o]_(n1 + n2) -> 'rV[R^o]_n1} :=
+  HB.pack (@lsubmx R _ _ _) build_lin_lsubmx.
 apply: (@linear_differentiable _ _ _ Lsubmx).
 move=> /= u A /=.
 move/nbhs_ballP=> [e /= e0 eA].
-apply/nbhs_ballP; exists e => //= v uv.
-apply: eA.
-split; first exact: e0.
+apply/nbhs_ballP; exists e => //= v [? uv].
+apply: eA; split => //.
 (* TODO: lemma *)
-move: uv => -[_]; rewrite /ball/= /mx_ball/ball /= => uv i j.
-apply: (le_lt_trans _ (uv i (lshift n2.+1 j))).
+move: uv; rewrite /ball/= /mx_ball/ball /= => uv i j.
+apply: (le_lt_trans _ (uv i (lshift n2 j))).
 by rewrite !mxE.
 Qed.
 
 Global Instance is_diff_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f df : V -> 'rV[R]_(n1.+1 + n2.+1)) t :
+    (f df : V -> 'rV[R]_(n1 + n2)) t :
   is_diff t f df ->
   is_diff t (fun x => lsubmx (f x)) (fun x => lsubmx (df x)).
 Proof.
@@ -261,7 +259,7 @@ rewrite derive_lsubmx//.
 Abort.
 
 Lemma differentiable_lsubmx {R : realFieldType} (V : normedModType R) {n1 n2}
-    (f : V -> 'rV[R]_(n1.+1 + n2.+2)) t :
+    (f : V -> 'rV[R]_(n1 + n2)) t :
   (forall x, differentiable f x) ->
   differentiable (fun x => lsubmx (f x)) t.
 Proof.
@@ -271,7 +269,7 @@ exact: differentiable_lsubmx0.
 Qed.
 
 Lemma derivable_row_mx {R : realFieldType} {n1 n2 : nat}
-    (f : R -> 'rV[R]_n1.+1) (g : R -> 'rV[R]_n2.+1) t v :
+    (f : R -> 'rV[R]_n1) (g : R -> 'rV[R]_n2) t v :
   (forall x, derivable f x v) -> (forall x, derivable g x v) ->
   derivable (fun x : R => row_mx (f x) (g x)) t v.
 Proof.
@@ -299,7 +297,7 @@ by rewrite !mxE/=.
 Qed.
 
 Lemma derive_row_mx {R : realFieldType} {n1 n2 : nat}
-     (f : R -> 'rV[R]_n1.+1) (g : R -> 'rV[R]_n2.+1) t v :
+     (f : R -> 'rV[R]_n1) (g : R -> 'rV[R]_n2) t v :
   (forall x : R, derivable f x v) ->
   (forall x : R, derivable g x v) ->
   'D_v (fun x => row_mx (f x) (g x)) t = row_mx ('D_v f t) ('D_v g t).
@@ -317,21 +315,21 @@ rewrite [in LHS]derive_mx 2?mxE//=; last first.
   move: jE.
   rewrite jj1 => /(congr1 val)/=.
   have /[swap] -> := ltn_ord j1.
-  by rewrite ltnNge/= addSn ltnS leq_addr.
+  by rewrite ltnNge/= leq_addr.
 apply/funext => x; rewrite !mxE.
 case: fintype.split_ordP => k jE.
   move: jE.
   rewrite jj1 => /(congr1 val)/=.
   have /[swap] <- := ltn_ord k.
-  by rewrite ltnNge/= addSn ltnS leq_addr.
+  by rewrite ltnNge/= leq_addr.
 congr (g x i _).
 move: jE.
 rewrite jj1 => /(congr1 val) => /= /eqP.
 by rewrite eqn_add2l => /eqP /val_inj.
 Qed.*) Admitted. (* FIXME *)
 
-Lemma derivable_scalar_mx {R : realFieldType} n (f : 'rV[R]_n.+1 -> R)
-    (a : 'rV[R]_n.+1) v :
+Lemma derivable_scalar_mx {R : realFieldType} n (f : 'rV[R]_n -> R)
+    (a : 'rV[R]_n) v :
   derivable f a v ->
   derivable (@scalar_mx _ 1 \o f) a v.
 Proof.

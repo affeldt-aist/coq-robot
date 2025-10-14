@@ -30,23 +30,34 @@ Lemma mx_lin1N (R : pzRingType) n (M : 'M[R]_n) :
   mx_lin1 (- M) = -1 \*: mx_lin1 M :> ( _ -> _).
 Proof. by rewrite funeqE => v /=; rewrite scaleN1r mulmxN. Qed.
 
-Lemma norm_trmx (R : realFieldType) m n
-  (M : 'M[R]_(m.+1, n.+1)) : `|M^T| = `|M|.
+Import Order.Def.
+
+(* NB: added to be able to produce the following instance to be able to use bigop lemmas *)
+Lemma nng_max0r {K : realFieldType} : left_id ((0:K)%:nng) (@maxr {nonneg K}).
 Proof.
-rewrite /Num.Def.normr/= !mx_normrE.
+move=> x.
+rewrite /max; case: ifPn => //.
+rewrite -leNgt => x0.
+apply/eqP; rewrite eq_le; apply/andP; split; last first.
+  exact: x0.
+by have : 0 <= x%:nngnum by []. (* NB: this should be automatic *)
+Qed.
+
+(* TODO: backport to MCA *)
+HB.instance Definition _ {K : realFieldType} :=
+  Monoid.isComLaw.Build {nonneg K} 0%:nng max maxA maxC nng_max0r.
+
+Lemma norm_trmx (R : realFieldType) m n (M : 'M[R]_(m, n)) : `|M^T| = `|M|.
+Proof.
+rewrite [LHS]mx_normE/=.
 under eq_bigr do rewrite mxE.
-apply/eqP; rewrite eq_le; apply/andP; split.
-- apply: bigmax_le => //=.
-    exact: le_trans (le_bigmax _ _ (ord0, ord0)).
-  by move=> i _; apply/bigmax_geP; right => /=; exists (i.2, i.1).
-- apply: bigmax_le => //=.
-    exact: le_trans (le_bigmax _ _ (ord0, ord0)).
-  by move=> i _; apply/bigmax_geP; right => /=; exists (i.2, i.1).
+rewrite -(pair_big xpredT xpredT (fun i j => `|M j i|%:nng))/=.
+by rewrite exchange_big//= pair_big.
 Qed.
 
 Section pointwise_derivable.
 Context {R : realFieldType} {V W : normedModType R} {m n : nat}.
-Implicit Types M : V -> 'M[R]_(m.+1, n.+1).
+Implicit Types M : V -> 'M[R]_(m, n).
 
 Definition derivable_mx M t v :=
   forall i j, derivable (fun x => M x i j) t v.
@@ -56,7 +67,7 @@ Proof.
 split; rewrite /derivable_mx /derivable.
 - move=> H.
   apply/cvg_ex => /=.
-  pose l := \matrix_(i < m.+1, j < n.+1) sval (cid ((cvg_ex _).1 (H i j))).
+  pose l := \matrix_(i < m, j < n) sval (cid ((cvg_ex _).1 (H i j))).
   exists l.
   apply/cvgrPdist_le => /= e e0.
   near=> x.
@@ -126,6 +137,26 @@ rewrite propeqE; split; rewrite /derivable/=.
   by near: x; exact: nbhs_dnbhs_neq.
 Unshelve. all: by end_near. Qed.
 
+Lemma derivable_coord (a : V -> 'rV[R]_n) t v (i : 'I_n) :
+  derivable a t v ->
+  derivable (fun x : V => (a x)``_i) t v.
+Proof.
+move=> /cvg_ex[/= l Hl].
+apply/cvg_ex; exists (l``_i) => /=.
+apply/cvgrPdist_le => /= e e0.
+move/cvgrPdist_le : Hl => /(_ _ e0) Hl.
+apply: filterS Hl => x.
+rewrite {1}/Num.Def.normr/= mx_normrE.
+move/bigmax_leP => -[_/=] /(_ (ord0, i)).
+by rewrite !mxE/=; exact.
+Qed.
+
+End pointwise_derivable.
+
+Section pointwise_derivable_TODO. (* TODO: generalize n/m+1 -> n/m*)
+Context {R : realFieldType} {V W : normedModType R} {m n : nat}.
+Implicit Types M : V -> 'M[R]_(m.+1, n.+1).
+
 Lemma derivable_row M t v i : derivable M t v -> derivable (row i \o M) t v.
 Proof.
 rewrite /derivable => /cvg_ex[/= l Hl].
@@ -142,7 +173,7 @@ apply: le_trans; last first.
 rewrite /Num.Def.normr/= !mx_normrE.
 apply/bigmax_leP => /=.
 split.
-    exact: le_trans (le_bigmax _ _ (ord0, ord0)).
+  exact: le_trans (le_bigmax _ _ (ord0, ord0)).
 move=> j _.
 rewrite !mxE.
 under eq_bigr do rewrite !mxE.
@@ -219,29 +250,15 @@ apply: ue.
 by near: x; exact: nbhs_dnbhs_neq.
 Unshelve. all: by end_near. Qed.
 
-Lemma derivable_coord (a : V -> 'rV[R]_n.+1) t v (i : 'I_n.+1) :
-  derivable a t v ->
-  derivable (fun x : V => (a x)``_i) t v.
-Proof.
-move=> /cvg_ex[/= l Hl].
-apply/cvg_ex; exists (l``_i) => /=.
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : Hl => /(_ _ e0) Hl.
-apply: filterS Hl => x.
-rewrite {1}/Num.Def.normr/= mx_normrE.
-move/bigmax_leP => -[_/=] /(_ (ord0, i)).
-by rewrite !mxE/=; exact.
-Qed.
-
-End pointwise_derivable.
+End pointwise_derivable_TODO.
 
 Section pointwise_derive.
 Local Open Scope classical_set_scope.
 Context {R : realFieldType} {V W : normedModType R} .
 
-Lemma derive_mx {m n : nat} (M : V -> 'M[R]_(m.+1, n.+1)) t v :
-   derivable M t v ->
-  'D_v M t = \matrix_(i < m.+1, j < n.+1) 'D_v (fun t => M t i j) t.
+Lemma derive_mx {m n : nat} (M : V -> 'M[R]_(m, n)) t v :
+  derivable M t v ->
+  'D_v M t = \matrix_(i < m, j < n) 'D_v (fun t => M t i j) t.
 Proof.
 move=> /cvg_ex[/= l Hl]; apply/cvg_lim => //=.
 apply/cvgrPdist_le => /= e e0.
@@ -276,7 +293,7 @@ rewrite -(addrA (_ - _)) (le_trans (ler_normD _ _))// (splitr e) lerD//.
   by rewrite !mxE.
 Unshelve. all: by end_near. Qed.
 
-Lemma derive_trmx {m n : nat} (M : V -> 'M[R]_(m.+1, n.+1)) t v :
+Lemma derive_trmx {m n : nat} (M : V -> 'M[R]_(m, n)) t v :
   derivable M t v -> 'D_v (trmx \o M) t = ('D_v M t)^T.
 Proof.
 move=> Mt1.
@@ -291,11 +308,11 @@ Section derivable_mulmx.
 Context {R : realFieldType} {V : normedModType R} {m n k : nat}.
 
 Lemma derivable_mulmx
-    (f : V -> 'M[R]_(m.+1, k.+1)) (g : V -> 'M[R]_(k.+1, n.+1)) t v :
+    (f : V -> 'M[R]_(m, k)) (g : V -> 'M[R]_(k, n)) t v :
   derivable f t v -> derivable g t v -> derivable (fun x => f x *m g x) t v.
 Proof.
 move=> /derivable_mxP Hf /derivable_mxP Hg; apply/derivable_mxP => a b.
-evar (f1 : 'I_k.+1 -> V -> R).
+evar (f1 : 'I_k -> V -> R).
 rewrite (_ : (fun x => _) = \sum_i f1 i); last first.
   rewrite funeqE => t'; rewrite mxE fct_sumE; apply: eq_bigr => k0 _.
   by rewrite /f1; reflexivity.
@@ -385,15 +402,15 @@ rewrite mulr1n; congr (_ ``_ _); apply val_inj; by rewrite /= ni addn0.
 Qed.
 
 Lemma derivable_row_belast (R : realFieldType) {V : normedModType R}
-    n (u : V -> 'rV[R]_n.+2) (t : V) (v : V):
+    n (u : V -> 'rV[R]_n.+1) (t : V) (v : V):
   derivable_mx u t v -> derivable_mx (fun x => row_belast (u x)) t v.
 Proof.
-move=> H i j; move: (H ord0 (widen_ord (leqnSn n.+1) j)) => {H}.
+move=> H i j; move: (H ord0 (widen_ord (leqnSn n) j)) => {H}.
 set f := fun _ => _. set g := fun _ => _.
 by rewrite (_ : f = g) // funeqE => x; rewrite /f /g mxE.
 Qed.
 
-Lemma dotmul_belast {R : realFieldType} n (u : 'rV[R]_n.+2) (v1 : 'rV[R]_n.+1) v2 H :
+Lemma dotmul_belast {R : realFieldType} n (u : 'rV[R]_n.+1) (v1 : 'rV[R]_n) v2 H :
   u *d castmx (erefl 1%nat, H) (row_mx v1 v2) =
     u *d castmx (erefl 1%nat, H) (row_mx v1 0%:M) +
     u *d castmx (erefl 1%nat, H) (row_mx 0 v2).
@@ -403,7 +420,7 @@ case: fintype.splitP => [k /= jk|[] [] // ? /= jn]; by rewrite !(mxE,addr0,add0r
 Qed.
 
 Lemma derive1mx_dotmul_belast {R : realFieldType} {V : normedModType R} n
-    (u v : V -> 'rV[R]_n.+2) t w :
+    (u v : V -> 'rV[R]_n.+1) t w :
   derivable v t w ->
   let u' x := row_belast (u x) in let v' x := row_belast (v x) in
   u' t *d 'D_w v' t + (u t)``_ord_max *: derive (fun x => (v x)``_ord_max) t w =
@@ -455,7 +472,7 @@ by elim/big_ind2 : _ => // [|] *; [exact: is_diff_cst|exact: is_diffD].
 Qed.
 
 Lemma derive_dotmul {R : realFieldType} {V : normedModType R} n
-    (u v : V -> 'rV[R]_n.+1) (t : V) (w : V) :
+    (u v : V -> 'rV[R]_n) (t : V) (w : V) :
     derivable u t w -> derivable v t w ->
   'D_w (fun x => u x *d v x) t = 'D_w u t *d v t + u t *d 'D_w v t.
 Proof.
@@ -470,12 +487,13 @@ by rewrite {}/f deriveM// mulrC addrC; congr (_ * _ + _ * _);
   rewrite derive_mx ?mxE//=; exact/derivable_mxP.
 Qed.
 
+(* NB: from Damien's LaSalle *)
 Global Instance is_diff_component {R : realFieldType} n i (p : 'rV[R]_n) :
   is_diff p (fun q => q..[i] : R^o) (fun q => q..[i]).
 Proof.
 have comp_lin : linear (fun q : 'rV[R]_n => q..[i] : R^o).
   by move=> ???; rewrite !mxE.
-have comp_cont : continuous (fun q : 'rV[R]_n=> q..[i] : R^o).
+have comp_cont : continuous (fun q : 'rV[R]_n => q..[i] : R^o).
   move=> q A [_/posnumP[e] Ae] /=; apply/nbhs_ballP; exists e%:num => //=.
   by move=> r [e0] /(_ ord0) /(_ i) /Ae.
 pose glM := GRing.isLinear.Build _ _ _ _ _ comp_lin.
@@ -485,7 +503,7 @@ by rewrite (@diff_lin _ _ _ gL).
 Qed.
 
 Global Instance is_diff_component_comp {R : realFieldType} (V : normedModType R) n
-  (f : V -> 'rV[R]_n.+1) i p df : is_diff p f df ->
+  (f : V -> 'rV[R]_n) i p df : is_diff p f df ->
   is_diff p (fun q => (f q)..[i] : R^o) (fun q => (df q)..[i]).
 Proof.
 move=> dfp.
@@ -496,8 +514,8 @@ exact: is_diff_comp.
 Qed.
 (* /NB: from Damien's LaSalle *)
 
-Global Instance is_diff_dotmul {R : realFieldType} m n (V := 'rV[R]_m.+1)
-    (u v du dv : V -> 'rV[R]_n.+1) (t : V) :
+Global Instance is_diff_dotmul {R : realFieldType} m n (V := 'rV[R]_m)
+    (u v du dv : V -> 'rV[R]_n) (t : V) :
   is_diff t u du -> is_diff t v dv ->
   is_diff t (fun x => u x *d v x)
             (fun x => u t *d dv x + v t *d du x).
@@ -507,7 +525,7 @@ under eq_fun do rewrite dotmulE.
 set f := fun i : 'I__ => (fun x => (u x) ``_ i) * (fun x => (v x) ``_ i).
 rewrite [X in is_diff _ X _](_ : _ = \sum_(k < _) f k); last first.
   by rewrite funeqE => x; rewrite /f /= fct_sumE.
-rewrite [X in is_diff _ _ X](_ : _ = \sum_(i < n.+1)
+rewrite [X in is_diff _ _ X](_ : _ = \sum_(i < n)
     ((u t)``_i *: (fun x => (dv x)``_i) + (v t)``_i *: (fun x => (du x)``_i))); last first.
   by apply/funext => x; rewrite 2!dotmulE -big_split/= fct_sumE.
 apply: is_diff_sum => i.
@@ -515,8 +533,8 @@ rewrite {}/f /=.
 exact: is_diffM.
 Qed.
 
-Lemma differentiable_dotmul {R : realFieldType} m n (V := 'rV[R]_m.+1)
-    (u v : V -> 'rV[R]_n.+1) (t : V) :
+Lemma differentiable_dotmul {R : realFieldType} m n (V := 'rV[R]_m)
+    (u v : V -> 'rV[R]_n) (t : V) :
   differentiable u t ->
   differentiable v t ->
   differentiable (fun x => u x *d v x) t.
@@ -569,7 +587,7 @@ by apply/funext => y; rewrite !mxE.
 Qed.
 
 Lemma derivable_dotmul {R : realFieldType} {n}
-    (u v : R -> 'rV[R]_n.+1) t :
+    (u v : R -> 'rV[R]_n) t :
   derivable u t 1 -> derivable v t 1 ->
   derivable (fun x => u x *d v x) t 1.
 Proof.
