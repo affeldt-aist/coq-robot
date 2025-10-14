@@ -1810,6 +1810,7 @@ Lemma norm_u1 (traj : K -> 'rV_6) (z : K) (z2 := Right \o traj)
   is_sol (tilt_eqn alpha1 gamma) traj state_space_tilt -> norm u = 1.
 Proof.
 move=> dtraj.
+
 suff: state_space_tilt (row_mx (zp1 z) (z2 z)) by rewrite /state_space_tilt/= row_mxKr.
 rewrite /zp1 /z2 hsubmxK /=.
 by apply:Gamma1_traj.
@@ -2166,57 +2167,96 @@ rewrite -oppr_ge0.
 by rewrite !mulNmx mxE opprK Hquad.
 Qed.
 
+Variable D : set 'rV[K]_6.
 Variable y0 :  K -> 'rV[K]_6.
-Hypothesis y0init: y0 0 \in state_space_tilt.
-Hypothesis y0init_sol : is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt .
+Hypothesis y0init: y0 0 \in D.
+Hypothesis y0init_sol : is_sol (tilt_eqn alpha1 gamma) y0 D.
 Variable sol : 'rV[K]_6 ->  K -> 'rV[K]_6.
 Hypothesis solP :
   forall y : K -> 'rV[K]_6,
-    y 0 \in state_space_tilt ->
-    is_sol (tilt_eqn alpha1 gamma) y state_space_tilt <->
+    y 0 \in D ->
+    is_sol (tilt_eqn alpha1 gamma) y D <->
     sol (y 0) = y.
+Hypothesis y0origin : y0 0 = 0.
 
-Lemma equilibrium_zero_stable :
-    equilibrium_is_stable_at state_space_tilt point1 y0.
+
+Lemma is_sol_subset (D_in_state : D `<=` state_space_tilt) : is_sol (tilt_eqn alpha1 gamma) y0 D -> is_sol (tilt_eqn alpha1 gamma) y0 state_space_tilt.
 Proof.
-apply : (@lyapunov_stability K 5 state_space_tilt (tilt_eqn alpha1 gamma) _ _ solP _  (V1 alpha1 gamma) ).
-- admit.
-- move => y y0in.
-  apply: y0init_sol => //.
--  have := V1_is_lyapunov_candidate alpha1_gt0 gamma_gt0.
+rewrite /is_sol inE.
+move => [inD0 deriv tilt].
+rewrite inE.
+split.
+by apply D_in_state => //.
+exact : deriv.
+exact : tilt.
+Qed.
+
+Lemma is_equilibrium_subset :  (is_equilibrium_point (tilt_eqn alpha1 gamma))``_state_space_tilt -> (is_equilibrium_point (tilt_eqn alpha1 gamma))``_D.
+Proof.
+rewrite /is_equilibrium_point.
+rewrite /is_sol inE.
+move => [inD0 deriv tilt].
+rewrite inE.
+split.
+rewrite /= -y0origin => //.
+move : y0init.
+rewrite inE.
+apply.
+exact : deriv.
+exact : tilt.
+Qed.
+
+
+Lemma equilibrium_zero_stable (openD : open D) (D0 : 0 \in D) (D_in_state : D `<=` state_space_tilt) : equilibrium_is_stable_at D point1 y0.
+Proof.
+apply : (@lyapunov_stability K 5 D (tilt_eqn alpha1 gamma) _ openD solP _  (V1 alpha1 gamma) ).
+- exact : openD.
+- by move => y y0in => //.
+- have := V1_is_lyapunov_candidate alpha1_gt0 gamma_gt0.
   move => HV1.
   case: HV1 => [Hpos Hdif].
   split.
-  rewrite /point1 in Hpos Hdif.
-  have subset : state_space_tilt `<=` [set : 'rV_6].
-  move => t.
-  by apply: subsetT.
-  case: Hpos => inset [a _].
-  split.
-  rewrite /state_space_tilt inE /=.
-  by rewrite rsubmx_const /= subr0 normeE.
-  split.
-  exact: a.
-  rewrite /state_space_tilt. 
-  admit.
+    rewrite /point1 in Hpos Hdif.
+    rewrite /locposdef.
+    split => //.
+    rewrite -y0origin => //.
+    split => //.
+      rewrite /V1 y0origin.
+      rewrite lsubmx_const rsubmx_const //=.
+      by rewrite !expr2 !norm0 !mulr0 !mul0r add0r.
+    move => z zin z_neq0.
+    rewrite /locposdef in Hpos.
+    case : Hpos => //.
+    move => _.
+    move => [_ Hpos].
+    apply: Hpos => //.
+      move : zin.
+      have subset : D `<=` [set : 'rV_6].
+        move => t.
+        by apply subsetT.
+      rewrite inE.
+      move => Hw.
+      rewrite inE.
+      by apply: subset => //.
+    by rewrite y0origin in z_neq0.
   by rewrite /point1 in Hdif.
-  move => y solvess t t00.
-(*  apply: V1_dot_le0 => //.
+- move => y solvess t t00.
+  apply: V1_dot_le0 => //.
+    by apply is_sol_subset => //.
   move => t0.
   rewrite -derivable1_diffP.
   by case : y0init_sol.
-  admit.
-  move =>t.
+- move =>t.
   rewrite /V1.
   apply/differentiableD => //.
+    apply/differentiableM => //.
+    apply/differentiable_norm_squared => //.
+    by apply/differentiable_lsubmx => //.
   apply/differentiableM => //.
   apply/differentiable_norm_squared => //.
-  apply/differentiable_lsubmx => //.
-  apply/differentiableM => //.
-  apply/differentiable_norm_squared => //.
-  apply/differentiable_rsubmx => //.
- - apply: equilibrium_point1 => //.
-*)
-Abort.
+  by apply/differentiable_rsubmx => //.
+ - apply: is_equilibrium_subset.
+   by apply: equilibrium_point1 => //.
+Qed.
 
 End tilt_eqn_Lyapunov.
