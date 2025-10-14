@@ -1004,7 +1004,7 @@ have Htraj0 : `|sol x t0| < r.
   rewrite mx_norm_ball /ball_; under eq_fun do rewrite sub0r normrN.
   exact.*)
 exact: lt_le_trans r_le_eps.
-Admitted.
+Unshelve. all: by end_near. Qed.
 
 End Lyapunov_stability.
 
@@ -1172,7 +1172,7 @@ rewrite -derive1mx_ang_vel; last 2 first.
   admit.
   admit.
 by [].
-Admitted.
+Abort.
 
 (* eqn 10*)
 Notation y_a := (y_a v R g0).
@@ -1455,9 +1455,9 @@ case: cid => //= y' y'sol.
 case: cid => t'/= pt'.
 Abort.
 
-Lemma thm11a : state_space tilt_eqn state_space_tilt = state_space_tilt .
+Lemma thm11a : state_space tilt_eqn state_space_tilt `<=` state_space_tilt.
 Proof.
-apply/seteqP; split.
+(*apply/seteqP; split.*)
 - move=> p [y [[y0_init1]] deri y33 ] [t ->].
   rewrite /state_space_tilt.
   have : derive1 (fun t=> ('e_2 - Right (y t)) *d (('e_2 - Right (y t)))) = 0.
@@ -1526,7 +1526,7 @@ apply/seteqP; split.
   move: y0_init1.
   rewrite inE /state_space_tilt /= => ->.
   by rewrite expr2 mulr1.
-- move=> p.
+(*- move=> p.
   rewrite /state_space_tilt /=.
   move=> p_statespace33.
   rewrite /state_space /=.
@@ -1550,7 +1550,8 @@ apply/seteqP; split.
         by rewrite lsubmx_const.
       by rewrite lsubmx_const rsubmx_const subr0 scaler0 mul0mx.
   admit. (* NG *)
-Admitted.
+*)
+Qed.
 
 Definition point1 : 'rV[K]_6 := 0.
 Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2).
@@ -1799,7 +1800,7 @@ Proof.
 move=> iss.
 case: iss.
 move=> y033 dy deriv_y.
-rewrite -(@thm11a _ _ _ gamma_gt0 alpha1_gt0)//=.
+apply: (@thm11a _ alpha1 gamma) => //=.
 exists y; split => //.
 by exists t.
 Qed.
@@ -2086,9 +2087,9 @@ apply: differentiableM => //.
  apply/differentiable_norm_squared.
 exact/differentiable_lsubmx.
 Unshelve. all: by end_near.
-Admitted.
+Abort.
 
-Definition is_lyapunov_stable_at {K : realType} {n}
+(*Definition is_lyapunov_stable_at {K : realType} {n}
   (f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1)
   (A : set 'rV[K]_n.+1)
   (V : 'rV[K]_n.+1 -> K)
@@ -2098,16 +2099,16 @@ Definition is_lyapunov_stable_at {K : realType} {n}
       forall traj1 traj2 : (K -> 'rV[K]_n.+1),
         is_sol f traj1 A ->
         traj1 0 = x0 ->
-        locnegsemidef (LieDerivative V (fun a => traj1) 0 ) 0].
+        locnegsemidef (LieDerivative V (fun a => traj1) 0 ) 0].*)
 
-Lemma V1_is_lyapunov_stable :
+(*Lemma V1_is_lyapunov_stable :
   is_lyapunov_stable_at (tilt_eqn alpha1 gamma) state_space_tilt (V1 alpha1 gamma) point1.
 Proof.
 split.
 - exact: equilibrium_point1.
 - exact: V1_is_lyapunov_candidate.
 (*- by move=> traj1 ? ?; exact: V1_point_is_lnsd.
-Qed.*) Abort.
+Qed.*) Abort.*)
 
 (* thm 4.6 p136*)
 Definition hurwitz n (A : 'M[K]_n.+1) : Prop := (forall a, eigenvalue A a -> a < 0).
@@ -2200,7 +2201,7 @@ apply : (@lyapunov_stability K 5 state_space_tilt (tilt_eqn alpha1 gamma) _ _ so
   admit.
   by rewrite /point1 in Hdif.
   move => y solvess t t00.
-  apply: V1_dot_le0 => //.
+(*  apply: V1_dot_le0 => //.
   move => t0.
   rewrite -derivable1_diffP.
   by case : y0init_sol.
@@ -2215,7 +2216,7 @@ apply : (@lyapunov_stability K 5 state_space_tilt (tilt_eqn alpha1 gamma) _ _ so
   apply/differentiable_norm_squared => //.
   apply/differentiable_rsubmx => //.
  - apply: equilibrium_point1 => //.
-  
+*)
 Abort.
 
 End tilt_eqn_Lyapunov.
