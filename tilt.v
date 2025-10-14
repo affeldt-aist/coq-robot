@@ -117,10 +117,18 @@ Qed.
 Definition posdefmx {R : realType} m (M : 'M[R]_m) : Prop :=
   M \is sym m R /\ forall a, eigenvalue M a -> a > 0.
 
+From mathcomp Require Import spectral.
+From mathcomp Require Import complex.
+
 Lemma posdefmxP {R : realType} m (M : 'M[R]_m) :
   posdefmx M <-> (forall v : 'rV[R]_m, v != 0 -> (v *m M *m v^T) 0 0 > 0).
 Proof.
 split.
+(*  rewrite /posdefmx => -[symM eigen_gt0] v v0.
+Local Open Scope complex_scope.
+  pose M' := map_mx (fun r => r%:C) M.
+  have : M' \is normalmx.
+    apply: symmetric_normalmx.*)
   move => [Msym eigenM] x x_neq0.
   apply/eigenM/eigenvalueP.
   exists x => //=.
