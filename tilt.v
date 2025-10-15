@@ -993,7 +993,7 @@ Hypothesis v_derivable : forall t, derivable v t 1.
 Notation x2 := (x2 R).
 (* estimation error *)
 Let error1 t := x2 t - x2'_hat t. (* p_1 in [benallegue2023ieeetac] *)
-Let error2 t :=  x2 t - x2_hat t. (* \tilde{x_2} in [benallegue2023ieeetac] *)
+Let error2 t := x2 t - x2_hat t. (* \tilde{x_2} in [benallegue2023ieeetac] *)
 Let error1_dot t := 'D_1 error1 t.
 Let error2_dot t := 'D_1 error2 t.
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
@@ -1060,7 +1060,7 @@ by rewrite error1E.
 Qed.
 
 Lemma derive_error2 t :
-  'D_1 error2 t = error2 t *m \S( w t)
+  'D_1 error2 t = error2 t *m \S(w t)
                   - gamma *: (error2 t - error1 t) *m \S(x2_hat t) ^+ 2.
 Proof.
 rewrite /error2.
