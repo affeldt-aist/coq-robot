@@ -144,7 +144,7 @@ Definition locposdef {R : realType} (T : normedModType R) (V : T -> R)
 (* add continuously diff *)
 Definition is_lyapunov_candidate {K : realType} {n} (V : 'rV[K]_n.+1 -> K)
     (D : set  'rV[K]_n.+1) (x0 : 'rV[K]_n.+1) :=
-  locposdef V D x0 (*/\ differentiable V x0*).
+  locposdef V D x0.
 
 (* locally positive semi definite (NB* not used yet) *)
 Definition lpsd {R : realType} (T : normedModType R) (V : T -> R) (x : T) : Prop :=
@@ -222,10 +222,10 @@ End gradient.
 Section LieDerivative.
 Context {R : realType} {n : nat}.
 Variable sol : 'rV[R]_n.+1 -> R -> 'rV[R]_n.+1.
+(* sol represents the solutions of a differential equation *)
 
 Definition LieDerivative (V : 'rV[R]_n.+1 -> R) (x : 'rV[R]_n.+1) (t : R) : R :=
   (jacobian1 V (sol x t))^T *d 'D_1 (sol x) t.
-(* we assume that phi is the solution of a diff equa such that phi 0 x = x *)
 
 Lemma LieDerivative_derive (V : 'rV[R]_n.+1 -> R) (x : 'rV[R]_n.+1) (t : R) :
   differentiable V (sol x t) -> differentiable (sol x) t ->
@@ -486,20 +486,10 @@ Proof.
 by move=> e0; rewrite closed_ballE.
 Qed.
 
-Section Lyapunov_stability.
-Context {K : realType} {n : nat}.
-Variable D : set 'rV[K]_n.+1.
-Variable f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1.
-Variable sol : 'rV[K]_n.+1 -> K -> 'rV[K]_n.+1.
-Hypothesis openD : open D. (* D est forcement un ouvert *)
-(* see Cohen Rouhling ITP 2017 Sect 3.2 *)
-Hypothesis solP : existence_uniqueness D f sol.
-Hypothesis sol0 : initial_condition sol.
-
 Import Order.Def.
 
 (* NB: added to be able to produce the following instance to be able to use bigop lemmas *)
-Lemma nng_max0r : left_id ((0:K)%:nng) (@maxr {nonneg K}).
+Lemma nng_max0r {K : realType} : left_id ((0:K)%:nng) (@maxr {nonneg K}).
 Proof.
 move=> x.
 rewrite /max; case: ifPn => //.
@@ -509,10 +499,11 @@ apply/eqP; rewrite eq_le; apply/andP; split; last first.
 by have : 0 <= x%:nngnum by []. (* NB: this should be automatic *)
 Qed.
 
-HB.instance Definition _ :=
+HB.instance Definition _ {K : realType} :=
   Monoid.isComLaw.Build {nonneg K} 0%:nng max maxA maxC nng_max0r.
 
-Lemma maxE (x y : {nonneg K}) : (max x%:num y%:num) = (max x y)%:num.
+Lemma maxE {K : realType} (x y : {nonneg K}) :
+  (max x%:num y%:num) = (max x y)%:num.
 Proof.
 rewrite /max; apply/esym.
 case: ifPn => // xy.
@@ -524,484 +515,257 @@ apply/eqP; rewrite eq_le (ltW yx)/=.
 by rewrite -leNgt in xy.
 Qed.
 
+Section sphere.
+Context {K : realType} {n : nat}.
+
+Definition sphere r := [set x : 'rV[K]_n.+1 | `|x| = r].
+
+Lemma sphere_nonempty r : 0 < r -> sphere r !=set0.
+Proof.
+move=> r_gt0; exists (const_mx r).
+rewrite /sphere /= /normr/=.
+(* TODO: need lemma? *)
+rewrite mx_normrE/=.
+apply/eqP; rewrite eq_le; apply/andP; split.
+  apply: bigmax_le.
+    exact: ltW.
+  by move=> i _; rewrite mxE gtr0_norm.
+under eq_bigr do rewrite mxE gtr0_norm//.
+apply/le_bigmax => /=.
+exact: (ord0, ord0).
+Qed.
+
+Lemma compact_sphere r : compact (sphere r).
+Proof.
+apply: bounded_closed_compact.
+  suff : \forall M \near +oo, forall p, sphere r p -> forall i, `|p ord0 i| < M.
+    rewrite /bounded_set; apply: filter_app; near=> M0.
+    move=> Kbnd /= p /Kbnd ltpM0.
+    rewrite /normr/= mx_normrE.
+    apply/bigmax_leP; split => //= i _.
+    by rewrite ord1; exact/ltW/ltpM0.
+  near=> M => v.
+  rewrite /sphere /= => vr i.
+  rewrite (@le_lt_trans _ _ r)//.
+    rewrite -vr [leRHS]/normr/= mx_normE.
+    under eq_bigr do rewrite ord1.
+    rewrite -(pair_big xpredT xpredT (fun _ j => `|v ord0 j|%:nng))//=.
+    rewrite big_ord_recr/= big_ord0.
+    rewrite max_r; last exact/bigmax_ge_id.
+    rewrite (bigD1 i)//= -maxE le_max.
+    by apply/orP; left.
+  clear v vr i.
+  by near: M; apply: nbhs_pinfty_gt; rewrite num_real.
+pose d := fun x : 'rV[K]_n.+1  => `|x| : K.
+have contd : continuous d by move=> /= z; exact: norm_continuous.
+rewrite [X in closed X](_ : _ = d @^-1` [set r]); last first.
+  by apply/seteqP; split.
+by apply continuous_closedP.
+Unshelve. all: by end_near. Qed.
+
+End sphere.
+
+Section Lyapunov_stability.
+Context {K : realType} {n : nat}.
+Variable D : set 'rV[K]_n.+1.
+Variable f : (K -> 'rV[K]_n.+1) -> K -> 'rV[K]_n.+1.
+Variable sol : 'rV[K]_n.+1 -> K -> 'rV[K]_n.+1.
+Hypothesis openD : open D. (* D est forcement un ouvert *)
+(* see Cohen Rouhling ITP 2017 Sect 3.2 *)
+Hypothesis solP : existence_uniqueness D f sol.
+Hypothesis sol0 : initial_condition sol.
+
+Let B r := closed_ball_ (fun x => `|x|) (0 : 'rV[K]_n.+1) r.
+
+Let BE r : 0 < r -> B r = closed_ball 0 r.
+Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
+
+Variable V : 'rV[K]_n.+1 -> K.
+Hypothesis V'le_0 : forall x0, x0 \in D ->
+    forall t, t >= 0 -> LieDerivative sol V x0 t <= 0.
+Hypothesis Vderiv : forall t : 'rV[K]__, differentiable V t.
+
+Let V_nincr a b : 0 <= a <= b ->
+  forall x, x \in D -> V (sol x b) <= V (sol x a).
+Proof.
+move=> /andP[a_ge0 ab] x xD.
+apply: (@ler0_derive1_le_cc _ (V \o sol x) 0 b) => //=.
+- move=> y yb.
+  apply/diff_derivable/differentiable_comp; last exact: differentiable_comp.
+  rewrite -derivable1_diffP.
+  by have [] : is_sol f (sol x) D by apply solP; rewrite sol0.
+- move=> y yb.
+  rewrite derive1E -LieDerivative_derive//.
+  + apply: V'le_0 => //.
+    by move : yb; rewrite in_itv/= => /andP[/ltW].
+  + rewrite -derivable1_diffP.
+    by have [] : is_sol f (sol x) D by apply solP; rewrite sol0.
+- apply: continuous_subspaceT => z.
+  apply: continuous_comp; last exact: differentiable_continuous.
+  apply: differentiable_continuous => //.
+  rewrite -derivable1_diffP.
+  by have [] : is_sol f (sol x) D by apply solP; rewrite sol0.
+- by rewrite !in_itv/= lexx (le_trans a_ge0).
+- by rewrite in_itv/= ab andbT.
+Qed.
+
+(* khalil theorem 4.1 *)
 Theorem lyapunov_stability (x : 'rV[K]_n.+1 := 0)
-  (V : 'rV[K]_n.+1 -> K)
-  (VDx : is_lyapunov_candidate V D x)
-  (V'le_0 : forall x0, x0 \in D ->
-    forall t, t >= 0 -> LieDerivative sol V x0 t <= 0)
-  (Vderiv : forall t : 'rV[K]__, differentiable V t) :
+  (VDx : is_lyapunov_candidate V D x) :
   is_equilibrium_point f x D ->
   equilibrium_is_stable_at D x (sol x).
 Proof.
-move => eq.
-move => eps eps0.
-rewrite /is_lyapunov_candidate in VDx.
-move: VDx => [/= inD [V0 z1]].
-have : exists r : K, 0 < r /\ r <= eps /\
-    closed_ball_ (fun x => `|x|) (0:'rV[K]_n.+1) r `<=` D.
-  rewrite inE in inD.
-  have [r0 /= Hr0D] := open_subball openD inD.
+move=> eq /= eps eps0.
+move: VDx => [/= xD [Vx0 DxV]].
+have [r [r_gt0 [r_eps BrD]]] : exists2 r : K, 0 < r & r <= eps /\ B r `<=` D.
+  move: xD; rewrite inE => /(open_subball openD)[r0/= r0_gt0] q.
   pose r := Num.min (r0 / 2) eps.
-  have r_gt0 : 0 < r.
-    rewrite /r /minr.
-    case: ifPn => // _.
-    by rewrite divr_gt0.
-  move=> q.
-  exists (r / 2).
-  split.
-    by rewrite divr_gt0.
-  split.
-    rewrite /r.
-    rewrite /minr.
-    case: ifPn.
-      move/ltW; apply: le_trans.
-      rewrite ler_pdivrMr//.
-      by rewrite ler_peMr ?ler1n// divr_ge0// ltW.
-    move=> _.
-    rewrite ler_pdivrMr//.
-    by rewrite ler_peMr ?ler1n// ltW.
-  move=> v rv.
-  apply (q r); last 2 first.
-    by [].
-    move: rv.
-    rewrite -closed_ballE//; last first.
-      by rewrite divr_gt0.
-    by apply: subset_closure_half => //.
-  rewrite /ball/=.
-  rewrite sub0r normrN gtr0_norm// /r.
-  rewrite gt_min.
-  rewrite ltr_pdivrMr//.
-  by rewrite ltr_pMr// ltr1n.
-have Hcont := differentiable_continuous (Vderiv x).
-move=> [r [r_pos [r_le_eps Br_sub_D]]].
-pose sphere_r := [set x : 'rV[K]_n.+1 | `|x| = r].
-have Halpha : {x : 'rV[K]_n.+1 | x \in sphere_r /\ forall y, y \in sphere_r -> V x <= V y}.
-  have sphere_r0 : sphere_r !=set0.
-    exists (const_mx r).
-    rewrite /sphere_r/= /normr/=.
-    (* TODO: need lemma *)
-    rewrite mx_normrE/=.
-    apply/eqP; rewrite eq_le; apply/andP; split.
-      apply: bigmax_le => //.
-        exact: ltW.
-      by move=> i _; rewrite mxE gtr0_norm.
-    under eq_bigr do rewrite mxE gtr0_norm//.
-    apply/le_bigmax => /=.
-    exact: (ord0, ord0).
-  have compact_sphere_r : compact sphere_r.
-    apply: bounded_closed_compact.
-      suff : \forall M \near +oo, forall p, sphere_r p -> forall i, `|p ord0 i| < M.
-        rewrite /bounded_set; apply: filter_app; near=> M0.
-        move=> Kbnd /= p /Kbnd ltpM0.
-        rewrite /normr/= mx_normrE.
-        apply/bigmax_leP; split => //= i _.
-        by rewrite ord1; exact/ltW/ltpM0.
-      near=> M => v.
-      rewrite /sphere_r/= => vr i.
-      rewrite (@le_lt_trans _ _ r)//.
-        rewrite -vr [leRHS]/normr/= mx_normE.
-        under eq_bigr do rewrite ord1.
-        rewrite -(pair_big xpredT xpredT (fun _ j => `|v ord0 j|%:nng))//=.
-        rewrite big_ord_recr/= big_ord0.
-        rewrite max_r; last exact/bigmax_ge_id.
-        rewrite (bigD1 i)//= -maxE le_max.
-        by apply/orP; left.
-      clear v vr i.
-      by near: M; apply: nbhs_pinfty_gt; rewrite num_real.
-    pose d := fun x : 'rV[K]_n.+1  => `|x| : K.
-    have contd : continuous d by move=> /= z; exact: norm_continuous.
-    rewrite [X in closed X](_ : _ = d @^-1` [set r]); last first.
-      by apply/seteqP; split.
-    by apply continuous_closedP.
-  have contV : {within sphere_r, continuous V}.
+  have r_gt0 : 0 < r by rewrite /r lt_min eps0 divr_gt0.
+  exists (r / 2); first by rewrite divr_gt0.
+  split; first by rewrite /r ler_pdivrMr// ge_min ler_pMr// ler1n orbT.
+  move=> v Brv; apply (q r) => //.
+    rewrite /ball/= sub0r normrN gtr0_norm//.
+    by rewrite /r gt_min ltr_pdivrMr// ltr_pMr// ltr1n.
+  by move: Brv; rewrite BE ?divr_gt0//; exact: subset_closure_half.
+have alpha_min : {x : 'rV[K]_n.+1 | x \in sphere r /\
+    forall y, y \in sphere r -> V x <= V y}.
+  have : {within sphere r, continuous V}.
     apply: continuous_subspaceT => /= v.
-    apply/differentiable_continuous.
-    exact/Vderiv.
-  have := @EVT_min_rV _ _ V sphere_r sphere_r0 compact_sphere_r contV.
-  by move=> /cid2[c sphere_r_c sphere_r_V]; exists c; split.
-pose alpha := V (sval Halpha).
+    by apply/differentiable_continuous; exact/Vderiv.
+  move/(EVT_min_rV (sphere_nonempty r_gt0) (@compact_sphere _ _ r)).
+  by move=> /cid2[c sphere_r_c sphere_r_V]; exists c.
+pose alpha := V (sval alpha_min).
 have alpha_gt0 : 0 < alpha.
-  have sphere_pos: forall y, y \in sphere_r -> 0 < V y.
-    move=> y hy.
-    apply: z1; last first.
-      rewrite gtr0_norm_neq0 //.
-      move: hy.
-      by rewrite inE /sphere_r/= => ->.
-    apply/mem_set.
-    apply: Br_sub_D.
-    rewrite /closed_ball_/= sub0r.
-    move : hy.
-    by rewrite inE /sphere_r/= normrN => ->.
-  rewrite /alpha sphere_pos => //.
-  rewrite /sphere_r inE/=.
-  have Hsval := svalP Halpha.
-  move: Hsval => [/= Hsphere _].
-  move : Hsphere.
-  rewrite inE.
-  move => Hsphere.
-  exact: Hsphere.
-have: exists beta, 0 < beta < alpha.
-  rewrite /=.
-  exists (alpha / 2).
-  rewrite divr_gt0 //=.
-  rewrite ltr_pdivrMr => //=.
-  rewrite mulr2n mulrDr mulr1.
-  by rewrite ltrDl.
-move=> [beta Hbeta].
-set Omega_beta := [set x : 'rV[K]_n.+1 | (closed_ball_ [eta normr])``_r x /\ V x <= beta].
-have HOmega_beta : Omega_beta `<=` interior (closed_ball_ [eta normr])``_r.
-  rewrite /Omega_beta.
-  move=> x1 [Hx mini].
-  rewrite -closed_ballAE /=.
-  rewrite interior_closed_ballE => //=.
-  rewrite /Omega_beta /=.
-  have Hnorm_le : `|x1| <= r.
-    move : Hx.
-    rewrite /closed_ball_ /ball.
-    under eq_fun do rewrite sub0r normrN.
-    move => Hx.
-    by apply: Hx.
-  case: (ltgtP (`|x1|) r) => [Hlt | Heq | Hgt].
-    by rewrite mx_norm_ball /ball_; under eq_fun do rewrite sub0r normrN; apply Hlt.
-    exfalso.
-    have Hrr : r < r by apply: (lt_le_trans Heq Hnorm_le).
-      by move: Hrr; rewrite ltxx.
-    have xin_sphere : x1 \in sphere_r.
-      rewrite /sphere_r inE.
-      by apply: Hgt.
-    have Vx_ge_alpha : alpha <= V x1.
-      rewrite /alpha.
-      case: (svalP Halpha) => [Hy_sphere Hy_min].
-      apply: Hy_min.
-      exact: xin_sphere.
-    exfalso.
-    move: mini Hbeta => HleVx [/andP [Hbeta_pos Hbeta_lt]].
-    have : alpha <= V x1 <= beta.
-      by apply/andP; split.
-    have : alpha <= beta by apply: (le_trans Vx_ge_alpha HleVx).
-      move=> Hle_alpha_beta alphavxbeta.
-      have Hbb : beta < beta by apply: (lt_le_trans Hbeta_lt Hle_alpha_beta).
-      by move : Hbb; rewrite ltxx.
-    by exact: r_pos.
-have Df_Omega_beta phi : is_sol f phi D -> phi 0 \in Omega_beta ->
-    forall t, 0 <= t -> phi t \in Omega_beta.
-  move=> solves_phi xOmega t t0.
-  have H2 : forall t, 0 <= t -> forall u, 0 <= u <= t ->
+  have sphere_pos y : y \in sphere r -> 0 < V y.
+    move=> yr; apply: DxV; last first.
+      rewrite gtr0_norm_neq0//.
+      by move: yr; rewrite inE /sphere/= => ->.
+    apply/mem_set/BrD.
+    move : yr; rewrite inE /sphere/= => <-.
+    by rewrite /B /closed_ball_/= sub0r normrN.
+  rewrite /alpha sphere_pos// /sphere inE/=.
+  by have [+ _] := svalP alpha_min; rewrite inE.
+have [beta /andP[beta_gt0 beta_alpha]] : exists beta, 0 < beta < alpha.
+  by exists (alpha / 2); rewrite divr_gt0//= ltr_pdivrMr//= ltr_pMr// ltr1n.
+set Omega_beta := [set x : 'rV[K]_n.+1 | B r x /\ V x <= beta].
+have Omega_beta_Br : Omega_beta `<=` (B r)°.
+  move=> y [Bry Vybeta].
+  rewrite BE// interior_closed_ballE => //=.
+  have yr : `|y| <= r by move: Bry; rewrite /B /closed_ball_/= sub0r normrN.
+  have [{}yr | ry | {}yr] := ltgtP (`|y|) r.
+  - by rewrite mx_norm_ball /ball_/= sub0r normrN.
+  - by have := le_lt_trans yr ry; rewrite ltxx.
+  - have alphaVy : alpha <= V y.
+      by rewrite /alpha; case: (svalP alpha_min) => [_]; apply; rewrite inE.
+    by have := lt_le_trans beta_alpha (le_trans alphaVy Vybeta); rewrite ltxx.
+(* any trajectory starting in Omega_beta at t = 0
+   stays in Omega_beta for all t >= 0 *)
+have Df_Omega_beta phi : is_sol f phi D ->
+    phi 0 \in Omega_beta -> forall t, 0 <= t -> phi t \in Omega_beta.
+  move=> sol_phi phi_Omega.
+  have /= V_nincr_consequence : forall t, 0 <= t -> forall u, 0 <= u <= t ->
       LieDerivative sol V (phi 0) u <= 0 ->
       V (sol (phi 0) t) <= V (sol (phi 0) 0) <= beta.
-    move => t1 t10 u u10.
-    have phi0 : phi = sol (phi 0).
-    apply/eqP; rewrite eq_sym; apply/eqP.
-    apply solP => //.
-    by case : solves_phi => //.
-    have Vneg_incr: forall s1 s2, 0 <= s1 <= s2 -> forall x, x \in D -> V (sol x s2) <= V (sol x s1).
-      move=> s1 s2 Hs1_pos x0 xinD .
-      apply: (@ler0_derive1_le_cc _ (fun s => V (sol x0 s)) 0 s2) => //.
-      - rewrite -fctE.
-        move => x1 x1in.
-        apply: diff_derivable.
-        apply: differentiable_comp; last exact: differentiable_comp.
-          rewrite -derivable1_diffP.
-          move: sol0.
-          by have [] : is_sol f (sol x0) D by apply solP; rewrite sol0.
-      - move=> s Hs_in.
-        (*move : (V'le_0 phi solves_phi t t0).
-        rewrite -LieDerivative_derive => //=; last first.
-          rewrite inE in xOmega.
-          rewrite -phi0.
-          rewrite -derivable1_diffP.
-          by case : solves_phi.*)
-        rewrite derive1E.
-        rewrite -fctE.
-        rewrite -LieDerivative_derive.
-        have Hs0 : 0 <= s.
-          move : Hs_in.
-          rewrite inE; move=> /itvP [] [Hs Hs1 Hs2].
-          rewrite ltW => //.
-          by rewrite Hs.
-        set y := sol x0.
-        apply : V'le_0 => //.
-        apply: Vderiv => //.
-        rewrite -derivable1_diffP.
-        by have [] : is_sol f (sol x0) D by apply solP; rewrite sol0.
-      - apply: continuous_subspaceT.
-        move => x1.
-        apply: continuous_comp.
-          apply: differentiable_continuous => //.
-          rewrite -derivable1_diffP.
-          by have [] : is_sol f (sol x0) D by apply solP; rewrite sol0.
-        exact: differentiable_continuous.
-      - move: Hs1_pos => /andP[H0s1 Hs1s2].
-        by rewrite !in_itv/= lexx (le_trans H0s1).
-      - by case/andP: Hs1_pos.
-    have H3 : V (sol x t1) <= V (sol x 0).
-      by rewrite Vneg_incr//= t10 andbT.
-    move => bla.
-    apply/andP; split => //=.
-      move : xOmega.
-      rewrite inE /Omega_beta.
-      move=> [clo Vxb].
-      have Hdec := Vneg_incr 0 t1 _ (phi 0) _.
-      apply: Hdec => //.
-        by apply/andP; split => //.
-      rewrite inE /Omega_beta.
-      by apply: Br_sub_D.
-    rewrite inE in xOmega.
-    rewrite -phi0.
-    by move: xOmega; rewrite /Omega_beta; case.
+    move=> /= t1 t10 u ut1 Vle0.
+    apply/andP; split.
+      move : phi_Omega; rewrite inE /Omega_beta/= => -[Brphi0 Vphi0beta].
+      by apply: V_nincr; [rewrite lexx t10|rewrite inE; exact: BrD].
+    by rewrite sol0; move: phi_Omega; rewrite inE => -[].
+  move=> t t0.
   rewrite inE; split; last first.
-    have t00 : 0 <= t <= t by rewrite lexx t0.
-    have H_lie : LieDerivative sol V (phi 0) t <= 0.
-      apply V'le_0 => //.
-      by case: solves_phi.
-    have := H2 t t0 t t00 H_lie.
-    have -> : sol (phi 0) = phi; last first.
-      case/andP => h1 h2.
-      exact: (le_trans h1 h2).
-    apply solP => //.
-    by case : solves_phi.
-   (* by rewrite inE /Omega_beta => -[].
-    apply/eqP.
-    rewrite eq_sym.
-    apply/eqP.
-    have Hsol_phi : sol (phi 0) = phi.
-      - apply solP.
-        + by case: solves_phi => //.
-        + apply solves; by case : solves_phi => //.
-          by rewrite Hsol_phi.
-   rewrite inE.
-    apply: Br_sub_D => //.
-    move : xOmega.
-    by rewrite inE /Omega_beta => -[].
-    apply: solves.
-    rewrite inE.
-    apply: Br_sub_D => //.
-    move : xOmega.
-    by rewrite inE /Omega_beta => -[].*)
-  move: xOmega.
-  rewrite inE /Omega_beta/=.
-  rewrite /closed_ball_/=.
-  rewrite !sub0r !normrN => -[] + Vxbeta.
-  (* axiomatiser thm 3.3 *)
-  move=> x0r.
-  move : HOmega_beta.
-  rewrite -closed_ballE /= => //.
-  rewrite interior_closed_ballE => //.
-  rewrite /Omega_beta.
-  rewrite /closed_ball_.
-  rewrite mx_norm_ball /ball_.
-  rewrite /= => /(_ (sol x t)).
-  under eq_fun do rewrite !sub0r normrN.
-  move => a.
-  rewrite leNgt.
-  apply/negP.
-  have : `|phi t| > r -> exists t0, t0 >=0 /\ `|phi t0 | = r.
-    move : x0r.
-    move=> phi0_le_r r_lt_phit.
-    have bounds : minr `|phi 0| `|phi t| <= r <= maxr `|phi 0| `|phi t|.
-      rewrite /minr /maxr.
-      have r_le_phit : r <= `|phi t| by apply: ltW.
-      apply/andP; split.
-        case : ifPn => // .
-        rewrite -real_leNgt ?normr_real//.
-        move=> phi_t_le_phi0.
-        exact: le_trans phi_t_le_phi0 phi0_le_r.
-      case: ltrP => Hcase.
-        exact: r_le_phit.
-      exact: le_trans Hcase.
-    have /IVT : 0 <= t by [].
-    move=> IVT.
-    have norm_phi_cont : {within `[0, t]%classic, continuous (fun u : K => `|phi u|)}.
-      apply: continuous_subspaceT.
-      rewrite -fctE.
-      move => x1.
-      apply: continuous_comp => //.
-        apply: differentiable_continuous => //.
-        case : (solves_phi) => _ + _ => /(_ x1).
-        by rewrite derivable1_diffP.
-      by apply: norm_continuous.
-    have [c cI norm_phi_c] := IVT (fun u => `|phi u|) r norm_phi_cont bounds.
-    exists c; split => //.
-    move : cI.
-    move=> /itvP [c0 _].
-    by case: c0 => [[c_ge0 _] _].
-  move => cont solxr.
-  have [t1 [t1_ge0 xt1r]] := cont solxr.
-  have : alpha <= V (phi t1).
-    rewrite {}/alpha in alpha_gt0 Hbeta *.
-    move: Halpha alpha_gt0 Hbeta.
-    case => alpha /= [alpha_gt0 +] Valpha_gt0 beta_alpha.
-    apply.
-    by rewrite inE /sphere_r/=.
-  move=> alphaVphit1.
+    have : LieDerivative sol V (phi 0) t <= 0.
+      by apply: V'le_0 => //; case: sol_phi.
+    move/V_nincr_consequence => /(_ t).
+    rewrite lexx t0/= => /(_ isT isT).
+    have -> : sol (phi 0) = phi by apply solP => //; case: sol_phi.
+    by case/andP; exact: le_trans.
+  move: phi_Omega; rewrite inE /Omega_beta/= /B /closed_ball_/=.
+  rewrite !sub0r !normrN => -[phi0r Vphi0beta].
+  rewrite leNgt; apply/negP => phi_t_r.
+  have [t1 [t1_ge0 phit1r]] : exists t0, t0 >= 0 /\ `|phi t0| = r.
+    have norm_phi_cont : {within `[0, t]%classic, continuous (normr \o phi)}.
+      apply: continuous_subspaceT => /= y.
+      apply: continuous_comp; last exact: norm_continuous.
+      apply: differentiable_continuous => //.
+      case : (sol_phi) => _ + _ => /(_ y).
+      by rewrite derivable1_diffP.
+    have : min `|phi 0| `|phi t| <= r <= max `|phi 0| `|phi t|.
+      by rewrite ge_min phi0r/= le_max (ltW phi_t_r) orbT.
+    move=> /(IVT t0 norm_phi_cont)[c cI norm_phi_c].
+    by exists c; split => //; move/itvP: cI => ->.
+  have alphaVphit1 : alpha <= V (phi t1).
+    rewrite {alpha_gt0 beta_alpha} /alpha; case: alpha_min => /=.
+    by move=> y [_ +]; apply; rewrite inE.
   have : beta < V (phi t1).
-    rewrite (lt_le_trans _ alphaVphit1)//.
-    by case/andP : Hbeta.
+    by rewrite (lt_le_trans _ alphaVphit1)//; case/andP : beta_alpha.
   apply/negP; rewrite -leNgt.
-   have Heq_sol_phi : sol (phi 0) = phi.
-     apply solP => //.
-     rewrite inE.
-     apply: Br_sub_D => //.
-     rewrite /closed_ball_; under eq_fun do rewrite !sub0r normrN.
-     by apply: x0r.
-  have : forall u, u >= 0 -> LieDerivative sol V (phi 0) u <= 0.
-    move => u u0.
-    apply: V'le_0 => //.
-    by case :solves_phi => //.
-    move : (H2 t1 t1_ge0).
-  move=> Ht1 Hderiv.
-  rewrite Heq_sol_phi in Ht1.
-  have Vphi_le := Ht1 t1 _  _.
-  have t1_chain : 0 <= t1 <= t1.
-    by apply/andP ; split; [exact: t1_ge0 | exact: lexx].
-  move: (Vphi_le t1_chain (Hderiv t1 t1_ge0)) => [/andP [Vt1_le V0_le_beta]].
-  exact: (le_trans Vt1_le).
+  have := V_nincr_consequence t1 t1_ge0 t1.
+  rewrite lexx t1_ge0 => /(_ isT).
+  have : LieDerivative sol V (phi 0) t1 <= 0.
+    by apply: V'le_0 => //; case: sol_phi.
+  move=> /[swap] /[apply].
+  have -> : sol (phi 0) = phi.
+    apply solP => //;rewrite inE; apply: BrD => //.
+    by rewrite /B /closed_ball_/= sub0r normrN.
+  by move=> /andP[]; exact: le_trans.
 have _ : compact Omega_beta.
-  rewrite /Omega_beta.
-  (* use compact_closedI? *)
-  apply: bounded_closed_compact.
+  apply: bounded_closed_compact; rewrite /Omega_beta.
   - rewrite /bounded_set /= /globally.
-    exists r => //=.
-    split => //= => x1 rx x2.
-    rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
-    move=> [/= x0_le_r ?].
-    apply: le_trans x0_le_r _.
-    exact: ltW rx.
-  - apply: closedI.
-      rewrite -closed_ballAE=> //=.
-      exact: closed_ball_closed.
-    rewrite /=.
-    rewrite [X in closed X](_ : _ = V @^-1` [set x : K | x <= beta]); last first.
+    exists r; split => //= t rt v.
+    rewrite /B /closed_ball_/= sub0r normrN.
+    by move=> [/le_trans vr _]; rewrite vr// ltW.
+  - apply: closedI => /=.
+      by rewrite BE//; exact: closed_ball_closed.
+    rewrite [X in closed X](_ : _ = V @^-1` [set x | x <= beta]); last first.
       by apply/seteqP; split.
-    apply: closed_comp => //= x1 _.
-    apply: continuous_comp => //=.
+    apply: closed_comp => //= v _.
+    apply: continuous_comp; first by [].
     exact: differentiable_continuous.
-have [d0 Vbeta] : exists d, d > 0 /\ forall x, `|x| <= d -> V x < beta.
-  rewrite /=.
-  have [d [d_pos Hd]] : exists d : K, 0 < d /\
+have [d0 d0_gt0 Vbeta] : exists2 d, d > 0 & forall x, `|x| <= d -> V x < beta.
+  have [d d_gt0 xdV] : exists2 d : K, 0 < d &
       forall y, `|y - x| < d -> `|V y - V x| < beta.
-    have : V x @[x --> nbhs x] --> V x by exact: Hcont.
-    move : Hbeta.
-    move=> Hbeta_alpha /cvgrPdist_lt.
-    have beta_pos : 0 < beta by case/andP: Hbeta_alpha.
-    move=> /(_ beta beta_pos).
-    rewrite nearE /=.
-    move=> /nbhs_ballP [d d_pos Hd].
-    exists d; split => // y Hy.
-    move: Hd; rewrite mx_norm_ball /ball_ /=.
-    move=> Hsub.
-    have Hy' : `|x - y| < d by rewrite distrC.
-    move: (Hsub y) => /= /(_ Hy').
+    have /cvgrPdist_lt /(_ _ beta_gt0) : V x @[x --> nbhs x] --> V x.
+      exact/differentiable_continuous/Vderiv.
+    rewrite nearE /= => /nbhs_ballP[d /= d_pos xdV].
+    exists d => // y.
+    move: xdV; rewrite mx_norm_ball /ball_ /= distrC => /[apply].
     by rewrite distrC.
-  exists (d / 2); split; first exact: divr_gt0.
-  move=> x0 Hx0.
-  have /(Hd x0) : `|x0 - x| < d.
-    by rewrite subr0 (le_lt_trans Hx0)// ltr_pdivrMr // ltr_pMr // ltr1n.
-  rewrite V0 subr0.
-  exact: ltr_normlW.
+  exists (d / 2); first exact: divr_gt0.
+  move=> v vd;  have /(xdV v) : `|v - x| < d.
+    by rewrite subr0 (le_lt_trans vd)// ltr_pdivrMr // ltr_pMr // ltr1n.
+  by rewrite Vx0 subr0; apply: le_lt_trans; rewrite ler_normlW.
 pose delta := Num.min d0 r.
-have Hdelta : 0 < delta /\ (forall x, `|x| <= delta -> V x < beta).
-  split.
-    rewrite /delta /minr.
-    case: (d0 < r) => //=.
-    by case: Vbeta.
-  rewrite /=.
-  move => x1 xdel.
-  move: Vbeta => [Hdelta0_pos Hdelta0_prop].
-  have delta_le_delta0 : delta <= d0.
-    rewrite /delta.
-    rewrite /minr.
-    case: ifPn => //.
-    rewrite -real_leNgt => //.
-    by rewrite realE => //; rewrite ltW.
-    by rewrite realE => //; rewrite ltW.
-  have: `|x1| <= d0 by apply: (le_trans xdel delta_le_delta0).
-  by apply: Hdelta0_prop.
-have inclusion : (closed_ball_ [eta normr])``_delta  `<=` Omega_beta /\
-                 Omega_beta `<=` (closed_ball_ [eta normr])``_r .
-  split; last first => //=.
-    apply: subset_trans HOmega_beta _.
-    rewrite -closed_ballAE /=.
-    rewrite interior_closed_ballE => //=.
-    by apply: subset_closed_ball.
-    by apply: r_pos.
-  rewrite /Omega_beta.
-  apply/subsetP => x1 Hx.
-  rewrite inE.
-  split; last first => //=.
-    have [/= Hdelta_Le_Rpos Hdelta_bound] := Hdelta.
-    move: Hx.
-    rewrite inE.
-    rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
-    move => Hx.
-    apply: ltW.
-    by have Vx_lt_beta := Hdelta_bound _ Hx.
-  rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
-  have delta_le_r: delta <= r.
-    rewrite /delta.
-    rewrite /minr.
-    case: ifP => Hlt => //.
-    by rewrite ltW.
-  rewrite inE in Hx.
-  move : Hx.
-  rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
-  move => Hball.
-  move: Hball delta_le_r => /= Hx_lt_delta Hdelta_le_r.
-  by apply: (le_trans (Hx_lt_delta) Hdelta_le_r).
-have inclusion2 : ((closed_ball_ [eta normr])``_delta) (sol x  0) -> sol x 0 \in Omega_beta -> forall t, t >= 0 -> sol x t \in 
-                   Omega_beta -> ((closed_ball_ [eta normr])``_r) (sol x t).
-  move => ball0 sol0in t1 t2 soltin.
-  by move: soltin; rewrite /Omega_beta inE => [] [Hball _].
+have delta_gt0 : 0 < delta by rewrite /delta lt_min d0_gt0 r_gt0.
+have deltaV y : `|y| <= delta -> V y < beta.
+  move=> /= ydelta.
+  have : `|y| <= d0 by rewrite (le_trans ydelta)// /delta ge_min lexx.
+  exact: Vbeta.
+have B_delta_Omega_beta : B delta `<=` Omega_beta.
+  rewrite /Omega_beta => /= v.
+  rewrite /B /closed_ball_/= sub0r normrN => vdelta.
+  split; last exact/ltW/deltaV.
+  by rewrite (le_trans vdelta)// /delta ge_min lexx orbT.
+have _ : (B delta) (sol x 0) ->
+    forall t, t >= 0 -> sol x t \in Omega_beta -> (B r) (sol x t).
+  by move => ball0 t1 t1_ge0; rewrite /Omega_beta inE => -[].
 rewrite /x !subr0.
-have Hlast : `|sol x 0| < delta -> forall t : K , t >=0 -> `|sol x t| < r <= eps.
-  move => sol0delta t1 t2.
-  case: inclusion => [Hin_ball_delta _]. 
-  have sol_in_Omega : sol x 0 \in Omega_beta. 
-    rewrite inE.
-    apply: Hin_ball_delta.
-    rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN; apply/ltW; exact: sol0delta.
-  rewrite /Omega_beta inE in sol_in_Omega.
-  case: sol_in_Omega => [Hball_solt _].
-  move : Hball_solt.
-  rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
-  move =>  Hball_solt.
-  have : ((closed_ball_ [eta normr])``_r)° (sol x t1).
-    apply: ( HOmega_beta).
-    rewrite -inE.
-    have xinO : sol x 0 \in Omega_beta.
-      rewrite inE.
-      rewrite /Omega_beta.
-      split => //=.
-        rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
-        exact: Hball_solt.         
-        have z0_in_ball : (closed_ball_ [eta normr])``_delta (sol x 0).
-          rewrite /closed_ball_; apply: ltW. 
-          rewrite sub0r normrN.
-          by apply: sol0delta.
-        move : (Hin_ball_delta _ z0_in_ball).
-        by move => [clo Vxb].
-    apply: Df_Omega_beta => //.
+exists delta => // sol0_delta t0 t0_ge0.
+rewrite subr0.
+have : sol x 0 \in Omega_beta.
+  rewrite inE; apply: B_delta_Omega_beta.
+  by rewrite /B /closed_ball_/= sub0r normrN; apply/ltW; exact: sol0_delta.
+rewrite inE => -[+ _].
+rewrite /B /closed_ball_/= sub0r normrN => solx0r.
+have : (B r)° (sol x t0).
+  apply: Omega_beta_Br; apply/set_mem.
+  apply: Df_Omega_beta => //.
     by have [] : is_sol f (sol x) D by apply solP; rewrite sol0.
-  rewrite -closed_ballAE => //=.
-  rewrite interior_closed_ballE => //=.
-  rewrite mx_norm_ball /ball_; under eq_fun do rewrite sub0r normrN.
-  by move=> /= ->/=.
-exists delta.
-  by case: Hdelta.
-move=> x0_lt_delta t0 t0_ge0.
-rewrite /x subr0.
-have Htraj0 : `|sol x t0| < r.
-  rewrite /Omega_beta.
-  have x0_in_Omega : x \in Omega_beta.
-    rewrite inE.
-    apply: inclusion.1.
-    rewrite /closed_ball_; under eq_fun do rewrite sub0r normrN.
-    apply: ltW.
-    rewrite /x.
-    move: x0_lt_delta.
-    rewrite normr0; by case : Hdelta.
-  by have /andP []:= Hlast x0_lt_delta _ t0_ge0.
-exact: lt_le_trans r_le_eps.
+  rewrite inE; split; first by rewrite /B /closed_ball_/= sub0r normrN.
+  have : B delta (sol x 0).
+    by rewrite /closed_ball_; apply: ltW; rewrite sub0r normrN.
+  by move/B_delta_Omega_beta => [].
+rewrite BE//= interior_closed_ballE//=.
+rewrite mx_norm_ball /ball_/= sub0r normrN => /lt_le_trans; exact.
 Unshelve. all: by end_near. Qed.
 
 End Lyapunov_stability.
@@ -2199,6 +1963,27 @@ Proof.
 apply: (@lyapunov_stability K 5 D (tilt_eqn alpha1 gamma)
   sol openD solP _ (V1 alpha1 gamma)).
 - assumption.
+- move => z zD t t0.
+  apply: V1_dot_le0.
+  + by [].
+  + by [].
+  + apply: (is_sol_subset D_in_state).
+    by apply solP; rewrite sol0.
+  + move => t1.
+    rewrite -derivable1_diffP.
+    have : is_sol (tilt_eqn alpha1 gamma) (sol z) D.
+      by apply solP; rewrite sol0.
+    by case.
+  + by [].
+- move=> t.
+  rewrite /V1.
+  apply/differentiableD => //.
+    apply/differentiableM => //.
+    apply/differentiable_norm_squared => //.
+    by apply/differentiable_lsubmx => //.
+  apply/differentiableM => //.
+  apply/differentiable_norm_squared => //.
+  by apply/differentiable_rsubmx => //.
 - have := V1_is_lyapunov_candidate alpha1_gt0 gamma_gt0.
   move => Hpos.
   rewrite /is_lyapunov_candidate in Hpos *.
@@ -2224,29 +2009,8 @@ apply: (@lyapunov_stability K 5 D (tilt_eqn alpha1 gamma)
   move => Hw.
   rewrite inE.
   by apply: subset => //.
-- move => z zD t t0.
-  apply: V1_dot_le0.
-  + by [].
-  + by [].
-  + apply: (is_sol_subset D_in_state).
-    by apply solP; rewrite sol0.
-  + move => t1.
-    rewrite -derivable1_diffP.
-    have : is_sol (tilt_eqn alpha1 gamma) (sol z) D.
-      by apply solP; rewrite sol0.
-    by case.
-  + by [].
-- move=> t.
-  rewrite /V1.
-  apply/differentiableD => //.
-    apply/differentiableM => //.
-    apply/differentiable_norm_squared => //.
-    by apply/differentiable_lsubmx => //.
-  apply/differentiableM => //.
-  apply/differentiable_norm_squared => //.
-  by apply/differentiable_rsubmx => //.
 - apply: is_equilibrium_subset.
-- exact: equilibrium_point1.
+  exact: equilibrium_point1.
 Qed.
 
-End tilt_eqn_Lyapunov.
+End equilibrium_zero_stable.
