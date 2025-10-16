@@ -240,7 +240,7 @@ Local Open Scope classical_set_scope.
 Context {R : realFieldType} {V W : normedModType R} .
 
 Lemma derive_mx {m n : nat} (M : V -> 'M[R]_(m.+1, n.+1)) t v :
-   derivable M t v ->
+  derivable M t v ->
   'D_v M t = \matrix_(i < m.+1, j < n.+1) 'D_v (fun t => M t i j) t.
 Proof.
 move=> /cvg_ex[/= l Hl]; apply/cvg_lim => //=.
@@ -470,6 +470,7 @@ by rewrite {}/f deriveM// mulrC addrC; congr (_ * _ + _ * _);
   rewrite derive_mx ?mxE//=; exact/derivable_mxP.
 Qed.
 
+(* NB: from Damien's LaSalle *)
 Global Instance is_diff_component {R : realFieldType} n i (p : 'rV[R]_n.+1) :
   is_diff p (fun q => q..[i] : R^o) (fun q => q..[i]).
 Proof.
