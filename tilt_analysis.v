@@ -95,11 +95,12 @@ Qed.
 
 Lemma derive_norm_squared {K : realType} n (u : K -> 'rV[K]_n.+1) (t : K) :
   derivable u t 1 ->
-  (fun x => norm (u x) ^+ 2)^`()%classic t = 2 * ('D_1 u t *m (u t)^T)``_0 :> K.
+  'D_1 (fun x => norm (u x) ^+ 2) t =
+  2 * ('D_1 u t *m (u t)^T)``_0.
 Proof.
 move=> ut1.
 under eq_fun do rewrite -dotmulvv.
-rewrite dotmulP mxE /= mulr1n derive1E derive_dotmul// dotmulC.
+rewrite dotmulP mxE /= mulr1n derive_dotmul// dotmulC.
 by field.
 Qed.
 
@@ -110,24 +111,22 @@ apply: ex_derive.
 by apply: (is_derive1_sqrt gt0).
 Qed.
 
-Lemma differentiable_norm {K : realType} n m (f : 'rV[K]_n.+1 -> 'rV_m.+1)
-  (x : K -> 'rV[K]_n.+1) (t : K) :
-  differentiable f (x t) -> f (x t) != 0 ->
-  differentiable (fun x0 => norm (f x0)) (x t) .
+Lemma differentiable_norm {K : realType} m n (f : 'rV[K]_m.+1 -> 'rV_n.+1)
+  (g : K -> 'rV[K]_m.+1) t :
+  differentiable f (g t) -> f (g t) != 0 ->
+  differentiable (fun x => norm (f x)) (g t) .
 Proof.
-move => fx0 dif1.
-rewrite /norm -fctE.
-apply: differentiable_comp; last first.
-  apply/derivable1_diffP.
-  apply/derivable_sqrt.
-  by rewrite dotmulvv expr2 mulr_gt0 //= !norm_gt0 //.
-by apply: differentiable_dotmul => //.
+move=> fgt fgt0; rewrite /norm -fctE.
+apply: differentiable_comp.
+  exact: differentiable_dotmul.
+apply/derivable1_diffP/derivable_sqrt.
+by rewrite dotmulvv expr2 mulr_gt0 //= !norm_gt0.
 Qed.
 
-Lemma differentiable_norm_squared {R : rcfType} m n (V := 'rV[R]_m.+1)
-    (u : V -> 'rV[R]_n.+1) (t : V) :
-  differentiable u t ->
-  differentiable (fun x => norm (u x) ^+ 2) t.
+Lemma differentiable_norm_squared {R : rcfType} m n
+    (f : 'rV[R]_m.+1 -> 'rV[R]_n.+1) (v : 'rV[R]_m.+1)  :
+  differentiable f v ->
+  differentiable (fun x => norm (f x) ^+ 2) v.
 Proof.
 move=> dif1.
 under eq_fun do rewrite -dotmulvv.

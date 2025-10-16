@@ -366,9 +366,6 @@ rewrite /derive_along /jacobian1 /dotmul dotmulP /dotmul -trmx_mul.
 by rewrite dtraj mul0mx !mxE.
 Qed.
 
-Local Notation Left := (@lsubmx _ 1 3 3).
-Local Notation Right := (@rsubmx _ 1 3 3).
-
 Lemma derive_along_norm_squared m (f : 'rV[R]_n.+1 -> 'rV_m.+1)
   (x : 'rV[R]_n.+1) (t : R) :
   differentiable f (sol x t) ->
@@ -378,7 +375,7 @@ Lemma derive_along_norm_squared m (f : 'rV[R]_n.+1 -> 'rV_m.+1)
 Proof.
 move=> difff diffphi.
 rewrite derive_along_derive => //=; last exact: differentiable_norm_squared.
-rewrite -derive1E /= fctE derive_norm_squared //=; last first.
+rewrite fctE derive_norm_squared //=; last first.
   by apply: diff_derivable=> //=; exact: differentiable_comp.
 by rewrite mulrDl mul1r scalerDl scale1r mulmxDl [in RHS]mxE.
 Qed.
@@ -1499,7 +1496,7 @@ exists sol; split => //.
 by exists t.
 Qed.
 
-Lemma norm_u1 (sol : K -> 'rV_6) (z : K)
+Lemma norm_e2z2 (sol : K -> 'rV_6) (z : K)
     (z2 := Right \o sol) (zp1 := Left \o sol) (u := 'e_2 - z2 z) :
   is_sol (tilt_eqn alpha1 gamma) sol state_space_tilt -> norm u = 1.
 Proof.
@@ -1524,12 +1521,11 @@ rewrite [in RHS]mxE.
 rewrite [X in _ =  - (w *m (\S('e_2) *m (z2 z)^T)) 0 0 * (u *d u)%:M 0 0 - 0%:M 0 0 * X]mxE mulr1n mulr0 subr0/=.
 rewrite /u -/w /dotmul.
 have Hw_ortho : (w *d u) = 0 by rewrite /u dotmulC ortho_spin.
-rewrite !mulmxA dotmulP dotmulvv norm_u1 // expr2 mulr1.
+rewrite !mulmxA dotmulP dotmulvv norm_e2z2 // expr2 mulr1.
 rewrite [X in _ =  - (w *m \S('e_2) *m (z2 z)^T) 0 0 * X]mxE /= mulr1n /=.
 rewrite [X in _ =   - (w *m \S('e_2) *m (z2 z)^T) 0 0 * X]mxE /= mulr1.
 have wu0 : w *m u^T *m u = 0 by rewrite dotmulP Hw_ortho mul_scalar_mx scale0r.
-rewrite -[in LHS](mulmxA w) sqr_spin; last first.
-  by rewrite -/u norm_u1.
+rewrite -[in LHS](mulmxA w) sqr_spin; last by rewrite -/u norm_e2z2.
 rewrite [in LHS]mulmxBr mulmxA wu0 sub0r.
 by rewrite 2!mulNmx mulmx1 mxE.
 Qed.
@@ -1548,13 +1544,12 @@ have Gamma1_traj t : state_space_tilt (traj t) by apply/is_sol_state_space_tilt.
 rewrite /norm.
 rewrite !dotmulvv [RHS]sqrtr_sqr sqrtr_sqr.
 have Hnorm_sq : norm (w *m \S('e_2 - Right (traj z))) ^+ 2 = norm w ^+ 2.
-  rewrite -!dotmulvv angvel_sqr // !dotmulvv norm_u1 /= //.
+  rewrite -!dotmulvv angvel_sqr// !dotmulvv norm_e2z2//=.
   rewrite -!dotmulvv expr2 !mul1r mulr1.
-  have -> : w *d ('e_2 - Right (traj z)) = 0.
-    by rewrite dotmulC ortho_spin.
+  have -> : w *d ('e_2 - Right (traj z)) = 0 by rewrite dotmulC ortho_spin.
   by rewrite expr2 mul0r subr0.
- rewrite !normr_norm.
-  by move/sqr_inj : Hnorm_sq => ->//; rewrite ?nnegrE ?norm_ge0.
+rewrite !normr_norm.
+by move/sqr_inj : Hnorm_sq => ->//; rewrite ?nnegrE ?norm_ge0.
 Qed.
 
 Let c1 := 2^-1 / alpha1.
@@ -1613,17 +1608,18 @@ rewrite -fctE /= !derive_along_norm_squared//=.
 - exact/differentiable_rsubmx.
 Qed.
 
+Definition u1 (sol : K -> 'rV_6) t
+  (zp1 := Left \o sol) (z2 := Right \o sol)
+  (w := z2 t *m \S('e_2)) : 'rV[K]_2 :=
+  \row_(i < 2) [eta (fun=> 0) with 0 |-> norm (zp1 t), 1 |-> norm w] i.
+
 Lemma V1dot_ub (sol : K -> 'rV_6) (zp1 := Left \o sol) (z2 := Right \o sol) :
   is_sol (tilt_eqn alpha1 gamma) sol state_space_tilt ->
-  forall z,
-  let w := z2 z *m \S('e_2) in
-  let u1 : 'rV[K]_2 :=
-    \row_(i < 2) [eta (fun=> 0) with 0 |-> norm (zp1 z), 1 |-> norm w] i in
-  V1dot (sol z) <= (- u1 *m u2 *m u1^T) 0 0.
+  forall t,
+    V1dot (sol t) <= (- (u1 sol t) *m u2 *m (u1 sol t)^T) 0 0.
 Proof.
 move=> dtraj z.
 set w := z2 z *m \S('e_2).
-pose u1 := \row_i [eta fun=> 0 with 0 |-> norm (zp1 z), 1 |-> norm w] i.
 rewrite /V1dot.
 rewrite mxE norm_spin mxE addrA expr2 mulmxA.
 have -> : z2 z *m \S('e_2 - z2 z) = z2 z *m \S('e_2).
