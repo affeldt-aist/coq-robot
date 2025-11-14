@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import sesquilinear.
@@ -7,8 +7,8 @@ From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import reals.
 Require Import ssr_ext.
 
-(******************************************************************************)
-(*                     Elements of Euclidean geometry                         *)
+(**md**************************************************************************)
+(* # Elements of Euclidean geometry                                           *)
 (*                                                                            *)
 (* This file provides elements of Euclidean geometry, with specializations to *)
 (* the 3D case. It develops the theory of the dot-product and of the          *)
@@ -17,10 +17,13 @@ Require Import ssr_ext.
 (* preservation of the dot-product by orthogonal matrices or a closed formula *)
 (* for the characteristic polynomial of a 3x3 matrix.                         *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*  jacobi_identity == Jacobi identity                                        *)
 (* lieAlgebraType R == the type of Lie algebra over R                         *)
 (*        lie[x, y] == Lie brackets                                           *)
+(* ```                                                                        *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*        u *d w == the dot-product of the vectors u and v, i.e., the only    *)
 (*                  component of the 1x1-matrix u * v^T                       *)
 (*        norm u == the norm of vector u, i.e., the square root of u *d u     *)
@@ -29,8 +32,10 @@ Require Import ssr_ext.
 (*       'O[T]_n == the type of orthogonal matrices of size n                 *)
 (*      'SO[T]_n == the type of rotation matrices of size n                   *)
 (*       cross M == generalized cross-product                                 *)
+(* ```                                                                        *)
 (*                                                                            *)
 (* Specializations to the 3D case:                                            *)
+(* ```                                                                        *)
 (*      row2 a b == the row vector [a,b]                                      *)
 (*    row3 a b c == the row vector [a,b,c]                                    *)
 (*   col_mx2 u v == specialization of col_mx two row vectors of size 2        *)
@@ -41,6 +46,7 @@ Require Import ssr_ext.
 (*                  algebra                                                   *)
 (* vaxis_euler M == the vector-axis of the rotation matrix M of Euler's       *)
 (*                  theorem                                                   *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -199,8 +205,8 @@ Section dotmul_bilinear_Pz.
 Variables (R : comPzRingType) (n : nat).
 
 Definition dotmul_rev (v u : 'rV[R]_n) := u *d v.
-Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
-  (fun _ _ => erefl).
+(*Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
+  (fun _ _ => erefl).*)
 
 Lemma dotmul_is_linear u : linear (dotmul u : 'rV[R]_n -> R^o).
 Proof. move=> /= k v w; by rewrite dotmulDr dotmulvZ. Qed.
@@ -252,17 +258,40 @@ move/allP => H; apply/eqP/rowP => i.
 apply/eqP; by rewrite mxE -sqrf_eq0 expr2 -(implyTb ( _ == _)) H.
 Qed.
 
+Lemma dotmul_is_hermitian x y :
+  (@dotmul T n) x y = (-1) ^+ false * idfun ((@dotmul T n) y x).
+Proof.
+by rewrite /= expr0 mul1r dotmulC.
+Qed.
+
+HB.instance Definition _ :=
+  @isHermitianSesquilinear.Build _ _ _ _ _ dotmul_is_hermitian.
+
+Check @dotmul _ _ : {symmetric 'rV[T]_n}.
+
+Let neq0_norm_gt0 (u : 'rV[T]_n) : u != 0 -> 0 < dotmul u u.
+Proof.
+move=> u0.
+by rewrite lt_neqAle eq_sym dotmulvv0 u0 le0dotmul.
+Qed.
+
+HB.instance Definition _ := isDotProduct.Build _ _ (@dotmul T n) neq0_norm_gt0.
+
 End dot_product.
 
 Section norm.
-
-Variables (T : rcfType) (n : nat).
+Context {T : rcfType} {n : nat}.
 Implicit Types u v : 'rV[T]_n.
 
-Definition norm u := Num.sqrt (u *d u).
+Local Notation "''[' u , v ]" := (dotmul u v) : ring_scope.
+Local Notation "''[' u ]" := '[u, u]%R : ring_scope.
+
+Definition norm u : T := Num.sqrt '[u].
 
 Lemma normN u : norm (- u) = norm u.
-Proof. by rewrite /norm dotmulNv dotmulvN opprK. Qed.
+Proof.
+by rewrite /norm (@hnormN T false idfun).
+Qed.
 
 Lemma norm0 : norm 0 = 0.
 Proof. by rewrite /norm dotmul0v sqrtr0. Qed.
@@ -1672,9 +1701,8 @@ rewrite [X in _ + _ + X](_ : _ = - M 0 2%:R * M 2%:R 0); last first.
   rewrite [in X in X * _]/=.
   rewrite coefD coefM sum2E subn0 coefC coefC mulr0 add0r.
   rewrite coefC mul0r add0r coefM sum2E subn0 subnn coefC [in X in X * _`_1]/=.
-  rewrite !coefD !coefX !coefN !coefC/=.
-  rewrite !mul0r !addr0/= subr0 mulr1.
-  by rewrite mulNr.
+  rewrite coefD coefX coefN !coefC/= !(subr0,mul0r,mulr0,mulr1,addr0).
+  by rewrite coefB coefC/= subr0 coefX eqxx mulr1 mulNr.
 rewrite /Z.
 apply/(@mulrI _ 2%:R); first exact: pnatf_unit.
 rewrite mulrA div1r divrr ?pnatf_unit // mul1r.

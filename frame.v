@@ -855,27 +855,29 @@ End framed_vector.
 End FramedVect.
 Notation fvec := FramedVect.t.
 
-Notation "`[ v $ F ]" := (FramedVect.mk F v)
-  (at level 5, v, F at next level, format "`[ v  $  F ]").
+Notation "''[' v $ F ]" := (FramedVect.mk F v)
+  (at level 5, v, F at next level, format "''[' v  $  F ]") : frame_scope.
 
 Definition FramedVect_add (T : pzRingType) (F : tframe T) (a b : fvec F) : fvec F :=
-  `[ FramedVect.v a + FramedVect.v b $ F ].
+  '[ FramedVect.v a + FramedVect.v b $ F ].
 
 Notation "a \+f b" := (FramedVect_add a b) (at level 39).
 
-Lemma fv_eq (T : pzRingType) a b : a = b -> forall F : frame T, `[ a $ F ] = `[ b $ F ].
+Lemma fv_eq (T : pzRingType) a b : a = b -> forall F : frame T, '[ a $ F ] = '[ b $ F ].
 Proof. by move=> ->. Qed.
+
+Notation "a \+f b" := (FramedVect_add a b) (at level 39).
 
 Section change_of_coordinate_by_rotation.
 
 Variable T : realType.
 Implicit Types A B : frame T.
 
-Lemma FramedVectvK A (x : fvec A) : `[FramedVect.v x $ A] = x.
+Lemma FramedVectvK A (x : fvec A) : '[FramedVect.v x $ A] = x.
 Proof. by case: x. Qed.
 
 (* change of coordinates: "rotation mapping" from frame A to frame B *)
-Definition rmap A B (x : fvec A) : fvec B := `[FramedVect.v x *m (A _R^ B) $ B].
+Definition rmap A B (x : fvec A) : fvec B := '[FramedVect.v x *m (A _R^ B) $ B].
 
 Lemma rmapK A B (x : fvec A) : rmap A (rmap B x) = x.
 Proof.
@@ -885,15 +887,15 @@ by rewrite divrr ?noframe_is_unit // mulmx1 /= FramedVectvK.
 Qed.
 
 Lemma rmapE A B (x : 'rV[T]_3) :
-  rmap B `[x $ A] = `[x *m A (*A->can*) *m B^T(*can->B*) $ B].
+  rmap B '[x $ A] = '[x *m A (*A->can*) *m B^T(*can->B*) $ B].
 Proof. by rewrite /rmap FromToE noframe_inv mulmxA. Qed.
 
 Lemma rmapE_from_can A (x : 'rV[T]_3) :
-  rmap A `[x $ can_tframe T] = `[x *m A^T $ A].
+  rmap A '[x $ can_tframe T] = '[x *m A^T $ A].
 Proof. by rewrite rmapE can_frame_1 mulmx1. Qed.
 
 Lemma rmapE_to_can A (x : 'rV[T]_3) :
-  rmap (can_tframe T) `[x $ A] = `[x *m A $ can_tframe T].
+  rmap (can_tframe T) '[x $ A] = '[x *m A $ can_tframe T].
 Proof. by rewrite rmapE can_frame_1 trmx1 mulmx1. Qed.
 
 End change_of_coordinate_by_rotation.

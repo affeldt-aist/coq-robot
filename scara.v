@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
@@ -8,18 +8,20 @@ Require Import ssr_ext euclidean skew vec_angle rot frame rigid screw.
 From mathcomp Require Import reals.
 Require Import extra_trigo.
 
-(******************************************************************************)
-(*                        SCARA Robot Manipulator                             *)
+(**md**************************************************************************)
+(* # SCARA Robot Manipulator                                                  *)
 (*                                                                            *)
 (* This file addresses the forward kinematics problem for the SCARA robot     *)
 (* manipulator in two ways: (1) it first provides the DH parameters,          *)
 (* (2) using screw motions.                                                   *)
 (*                                                                            *)
+(* ```                                                                        *)
 (* B10,B21,B32,B43 == relative positions of the consecutive frames of the     *)
 (*                    SCARA robot manipulator using DH parameters             *)
 (*     t1,t2,t3,t4 == twists of the SCARA robot manipulator                   *)
 (*              g0 == position of the end-effector using twists               *)
 (*               g == orientation of the end-effector using twists            *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
