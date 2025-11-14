@@ -32,7 +32,7 @@ Local Open Scope ring_scope.
 (* [ angeles 2014: p.102-203] *)
 Module Plucker.
 Section plucker.
-Variable T : ringType.
+Variable T : pzRingType.
 Let vector := 'rV[T]_3.
 
 Record array := mkArray {
@@ -44,7 +44,7 @@ Record array := mkArray {
 End plucker.
 End Plucker.
 
-Coercion plucker_array_mx (T : ringType) (p : Plucker.array T) :=
+Coercion plucker_array_mx (T : pzRingType) (p : Plucker.array T) :=
   row_mx (Plucker.e p) (Plucker.n p).
 
 (* wip *)

@@ -76,7 +76,7 @@ Definition idotk := NOFrameInterface.idotk.
 Module NOFrame.
 Section non_oriented_frame_def.
 
-Variable T : ringType.
+Variable T : pzRingType.
 Record t := mk {
   M :> 'M[T]_3 ;
   MO : M \is 'O[T]_3 }.
@@ -85,7 +85,7 @@ Axiom rowframeE : forall f i, rowframe f i = row i (M f).
 End non_oriented_frame_def.
 End NOFrame.
 Notation noframe := NOFrame.t.
-Coercion matrix_of_noframe (T : ringType) (f : noframe T) : 'M[T]_3 :=
+Coercion matrix_of_noframe (T : pzRingType) (f : noframe T) : 'M[T]_3 :=
   NOFrame.M f.
 
 Definition rowframeE := NOFrame.rowframeE.
@@ -315,14 +315,14 @@ Definition icrossj := FrameInterface.icrossj.
 
 Module Frame.
 Section frame.
-Variable T : ringType.
+Variable T : pzRingType.
 Record t := mk {
   noframe_of :> noframe T ;
   MSO : NOFrame.M noframe_of \is 'SO[T]_3}.
 End frame.
 End Frame.
 Notation frame := Frame.t.
-Coercion noframe_of_frame (T : ringType) (f : frame T) : noframe T :=
+Coercion noframe_of_frame (T : pzRingType) (f : frame T) : noframe T :=
   Frame.noframe_of f.
 
 Section oriented_frame_properties.
@@ -381,12 +381,12 @@ Qed.
 
 End oriented_frame_properties.
 
-HB.instance Definition _ (T : ringType) := [isSub for @Frame.noframe_of T].
+HB.instance Definition _ (T : pzRingType) := [isSub for @Frame.noframe_of T].
 
 (* frame with an origin (tangent frame) *)
 Module TFrame.
 Section tframe.
-Variable T : ringType.
+Variable T : pzRingType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Record t := mk {
@@ -396,7 +396,7 @@ Definition trans (f : t) (u : vector) : t := mk (o f + u) f.
 End tframe.
 End TFrame.
 Notation tframe := TFrame.t.
-Coercion frame_of_tframe (T : ringType) (f : tframe T) : frame T :=
+Coercion frame_of_tframe (T : pzRingType) (f : tframe T) : frame T :=
   TFrame.frame_of f.
 
 Notation "'\o{' F '}'" := (TFrame.o F) : frame_scope.
@@ -770,7 +770,7 @@ Coercion Framebasis R (f : Frame.t R) : 'M[R]_3 := Frame.basis f.
 (*Hint Immediate Frame.unit.*)
 
 (* base vectors of A in terms of the basis vectors of B: *)
-Definition FromTo (T : comRingType) (A B : frame T) :=
+Definition FromTo (T : comPzRingType) (A B : frame T) :=
   \matrix_(i, j) (row i A *d row j B).
 (* = the rotation matrix that transforms a vector expressed in coordinate frame B
    to a vector expressed in coordinate frame A *)
@@ -849,7 +849,7 @@ Definition frame_of_FromTo (T : realType) (B A : frame T) : frame T :=
 
 Module FramedVect.
 Section framed_vector.
-Variable T : ringType.
+Variable T : pzRingType.
 Record t (F : frame T) := mk { v : 'rV[T]_3 }.
 End framed_vector.
 End FramedVect.
@@ -858,12 +858,12 @@ Notation fvec := FramedVect.t.
 Notation "`[ v $ F ]" := (FramedVect.mk F v)
   (at level 5, v, F at next level, format "`[ v  $  F ]").
 
-Definition FramedVect_add (T : ringType) (F : tframe T) (a b : fvec F) : fvec F :=
+Definition FramedVect_add (T : pzRingType) (F : tframe T) (a b : fvec F) : fvec F :=
   `[ FramedVect.v a + FramedVect.v b $ F ].
 
 Notation "a \+f b" := (FramedVect_add a b) (at level 39).
 
-Lemma fv_eq (T : ringType) a b : a = b -> forall F : frame T, `[ a $ F ] = `[ b $ F ].
+Lemma fv_eq (T : pzRingType) a b : a = b -> forall F : frame T, `[ a $ F ] = `[ b $ F ].
 Proof. by move=> ->. Qed.
 
 Section change_of_coordinate_by_rotation.

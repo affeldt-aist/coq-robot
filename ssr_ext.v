@@ -1,5 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-Require Import NsatzTactic.
+From Stdlib Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import perm path fingroup complex.
@@ -145,16 +145,16 @@ case/boolP : (P ord0) => P0; rewrite ?(mul1r,mul0r).
 by rewrite big1 // => /= i; rewrite (ord1 i) (negbTE P0).
 Qed.  *)
 
-Lemma sum1E (T : ringType) (f : 'I_1 -> T) : \sum_(i < 1) f i = f 0.
+Lemma sum1E (T : pzRingType) (f : 'I_1 -> T) : \sum_(i < 1) f i = f 0.
 Proof. by rewrite big_ord1. Qed.
 
-Lemma sum2E (T : ringType) (f : 'I_2 -> T) : \sum_(i < 2) f i = f 0 + f 1.
+Lemma sum2E (T : pzRingType) (f : 'I_2 -> T) : \sum_(i < 2) f i = f 0 + f 1.
 Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 
-Lemma sum3E (T : ringType) (f : 'I_3 -> T) : \sum_(i < 3) f i = f 0 + f 1 + f 2%:R.
+Lemma sum3E (T : pzRingType) (f : 'I_3 -> T) : \sum_(i < 3) f i = f 0 + f 1 + f 2%:R.
 Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 
-Lemma sum4E (T : ringType) (f : 'I_4 -> T) : \sum_(i < 4) f i = f 0 + f 1 + f 2%:R + f 3%:R.
+Lemma sum4E (T : pzRingType) (f : 'I_4 -> T) : \sum_(i < 4) f i = f 0 + f 1 + f 2%:R + f 3%:R.
 Proof. by rewrite !(big_ord1, big_ord_recr) /=; Simp.ord. Qed.
 
 End extra_ssreflect.
@@ -258,24 +258,24 @@ case/boolP : (i == 0) => [|/ifnot0P/orP[]]/eqP->;
   by case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
 Qed.
 
-Lemma det_mx11 (T : comRingType) (A : 'M[T]_1) : \det A = A 0 0.
+Lemma det_mx11 (T : comPzRingType) (A : 'M[T]_1) : \det A = A 0 0.
 Proof. by rewrite {1}[A]mx11_scalar det_scalar. Qed.
 
-Lemma cofactor_mx22 (T : comRingType) (A : 'M[T]_2) i j :
+Lemma cofactor_mx22 (T : comPzRingType) (A : 'M[T]_2) i j :
   cofactor A i j = (-1) ^+ (i + j) * A (i + 1) (j + 1).
 Proof.
 rewrite /cofactor det_mx11 !mxE; congr (_ * A _ _);
 by apply/val_inj; move: i j => [[|[|?]]?] [[|[|?]]?].
 Qed.
 
-Lemma det_mx22 (T : comRingType) (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
+Lemma det_mx22 (T : comPzRingType) (A : 'M[T]_2) : \det A = A 0 0 * A 1 1 -  A 0 1 * A 1 0.
 Proof.
 rewrite (expand_det_row _ ord0) !(mxE, big_ord_recl, big_ord0).
 rewrite !(mul0r, mul1r, addr0) !cofactor_mx22 !(mul1r, mulNr, mulrN).
-by rewrite !(lift0E, add0r) /= addrr_char2.
+by rewrite !(lift0E, add0r) /= addrr_pchar2.
 Qed.
 
-Lemma cofactor_mx33 (T : comRingType) (A : 'M[T]_3) i j :
+Lemma cofactor_mx33 (T : comPzRingType) (A : 'M[T]_3) i j :
   cofactor A i j = (-1) ^+ (i + j) *
                    (A (i == 0)%:R (j == 0)%:R * A ((i <= 1).+1%:R) ((j <= 1).+1%:R) -
                     A (i == 0)%:R ((j <= 1).+1%:R) * A ((i <= 1).+1%:R) (j == 0)%:R).
@@ -284,7 +284,7 @@ rewrite /cofactor det_mx22 !mxE; congr (_ * (A _ _ * A _ _ - A _ _ * A _ _));
   by rewrite (liftE0, liftE1).
 Qed.
 
-Lemma det_mx33 (T : comRingType) (M : 'M[T]_3) :
+Lemma det_mx33 (T : comPzRingType) (M : 'M[T]_3) :
   \det M = M 0 0 * (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R) +
            M 0 1 * (M 2%:R 0 * M 1 2%:R - M 1 0 * M 2%:R 2%:R) +
            M 0 2%:R * (M 1 0 * M 2%:R 1 - M 2%:R 0 * M 1 1).
@@ -295,7 +295,7 @@ by rewrite cofactor_mx33 /= expr1 mulN1r opprB mulrC.
 by rewrite cofactor_mx33 expr2 mulN1r opprK mul1r /= [in X in _ - X]mulrC.
 Qed.
 
-Lemma sqr_mxtrace {T : comRingType} (M : 'M[T]_3) : (\tr M) ^+ 2 =
+Lemma sqr_mxtrace {T : comPzRingType} (M : 'M[T]_3) : (\tr M) ^+ 2 =
   \sum_i (M i i ^+2) + M 0 0 * M 1 1 *+ 2 + (M 0 0 + M 1 1) * M 2%:R 2%:R *+ 2.
 Proof.
 rewrite /mxtrace sum3E 2!sqrrD sum3E -!addrA; congr (_ + _).
@@ -329,7 +329,7 @@ Proof. by move=> a0 /scaler_eq1 => /(_ a0) /eqP; rewrite eqr_oppLR => /eqP. Qed.
 Lemma mxE_col_row (T : Type) n (M : 'M[T]_n) i j : M i j = (col j (row i M)) 0 0.
 Proof. by rewrite !mxE. Qed.
 
-Variable R : ringType.
+Variable R : pzRingType.
 
 Lemma col_mx_row_mx m1 n1 (A : 'M[R]_(m1, n1)) n2 m2 :
   col_mx (row_mx A (0 : 'M_(m1, n2))) (0 : 'M_(m2, n1 + n2)) = row_mx (col_mx A 0) 0.

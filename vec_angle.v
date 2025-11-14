@@ -353,7 +353,7 @@ Qed.
 End vec_angle.
 
 Section colinear.
-Variable R : comRingType.
+Variable R : comNzRingType.
 Implicit Types u v : 'rV[R]_3.
 
 Definition colinear u v := u *v v == 0.
@@ -389,7 +389,7 @@ Proof. by rewrite /colinear (linearDl _ w)/= => /eqP-> /eqP->; rewrite addr0. Qe
 
 End colinear.
 
-Lemma col_perm_eq0 (T : ringType) (u : 'rV[T]_3) (s : 'S_3) :
+Lemma col_perm_eq0 (T : pzRingType) (u : 'rV[T]_3) (s : 'S_3) :
   (col_perm s u == 0) = (u == 0).
 Proof.
 apply/eqP/eqP; last by move->; rewrite col_permE mul0mx.
@@ -696,7 +696,7 @@ End axial_normal_decomposition.
 
 Section law_of_sines.
 
-Variable T : comRingType.
+Variable T : comNzRingType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Implicit Types a b c : point.
@@ -850,7 +850,7 @@ Module Line.
 Section line_def.
 (* could be zmodType but then the coercion line_pred does not satisfy the
    uniform inheritance condition *)
-Variable T : comRingType.
+Variable T : comPzRingType.
 Record t := mk {
   point : 'rV[T]_3 ;
   vector :> 'rV[T]_3
@@ -865,11 +865,11 @@ Notation "'\pt(' l ')'" := (Line.point l).
 Notation "'\pt2(' l ')'" := (Line.point2 l).
 Notation "'\vec(' l ')'" := (Line.vector l).
 
-Coercion line_pred (T : comRingType) (l : Line.t T) : pred 'rV[T]_3 :=
+Coercion line_pred (T : comNzRingType) (l : Line.t T) : pred 'rV[T]_3 :=
   [pred p | (p == \pt( l )) ||
     (\vec( l ) != 0) && colinear \vec( l ) (p - \pt( l ))].
 
-Lemma line_point_in (T : comRingType) (l : Line.t T) : \pt(l) \in (l : pred _).
+Lemma line_point_in (T : comNzRingType) (l : Line.t T) : \pt(l) \in (l : pred _).
 Proof. by case: l => p v /=; rewrite inE /= eqxx. Qed.
 
 Section line.
@@ -913,19 +913,19 @@ Qed.
 
 End line.
 
-Definition parallel (T : comRingType) : rel (Line.t T) :=
+Definition parallel (T : comNzRingType) : rel (Line.t T) :=
   [rel l1 l2 | colinear \vec( l1 ) \vec( l2 )].
 
-Definition perpendicular (T : comRingType) : rel (Line.t T) :=
+Definition perpendicular (T : comPzRingType) : rel (Line.t T) :=
   [rel l1 l2 | \vec( l1 ) *d \vec( l2 ) == 0].
 
-Definition coplanar (T : comRingType) (p1 p2 p3 p4 : 'rV[T]_3) : bool :=
+Definition coplanar (T : comPzRingType) (p1 p2 p3 p4 : 'rV[T]_3) : bool :=
   (p1 - p3) *d ((p2 - p1) *v (p4 - p3)) == 0.
 
-Definition skew (T : comRingType) : rel (Line.t T) := [rel l1 l2 |
+Definition skew (T : comPzRingType) : rel (Line.t T) := [rel l1 l2 |
   ~~ coplanar \pt( l1 ) \pt2( l1 ) \pt( l2 ) \pt2( l2) ].
 
-Lemma skewE (T : comRingType) (l1 l2 : Line.t T) :
+Lemma skewE (T : comPzRingType) (l1 l2 : Line.t T) :
   skew l1 l2 = ~~ coplanar \pt( l1 ) \pt2( l1 ) \pt( l2 ) \pt2( l2).
 Proof. by []. Qed.
 
@@ -966,7 +966,10 @@ do 2 rewrite -crossmul_triple (dot_crossmulC (\pt( l2) - \pt( l1 ))).
 apply/eqP; set v1v2 := v1 *v v2.
 rewrite -subr_eq -addrA eq_sym addrC -subr_eq.
 rewrite 2!(mulrC _ _^-1) -2!scalerA -scalerBr.
-rewrite dotmulC dot_crossmulC (dotmulC _ v1v2) (dot_crossmulC).
+rewrite [X in _ == _ *: (X *: _ - _)]dotmulC.
+rewrite [X in _ == _ *: (X *: _ - _)]dot_crossmulC.
+rewrite [X in _ == _ *: (_ - X *: _)]dotmulC.
+rewrite [X in _ == _ *: (_ - X *: _)]dot_crossmulC.
 rewrite -double_crossmul.
 rewrite (@lieC _ (vec3 T) (v1v2 *v _)) /= double_crossmul dotmulC -{2}(opprB _ \pt( l2 )) dotmulNv.
 case/andP: Hinter.

@@ -69,20 +69,20 @@ Definition jacobi_identity (T : zmodType) (op : T -> T -> T) := forall x y z,
 
 Reserved Notation "lie[ t1 , t2 ]" (format "lie[ t1 ,  t2 ]").
 
-HB.mixin Record isLieAlgebra (R : ringType) L of GRing.Lmodule R L := {
+HB.mixin Record isLieAlgebra (R : nzRingType) L of GRing.Lmodule R L := {
   bracket : {bilinear L -> L -> L} ;
   liexx : forall x, bracket x x = 0 ;
   jacobi : jacobi_identity bracket
 }.
 
 #[short(type="lieAlgebraType")]
-HB.structure Definition LieAlgebra (R : ringType) :=
+HB.structure Definition LieAlgebra (R : nzRingType) :=
   {L of isLieAlgebra R L & }.
 
 Notation "lie[ t1 , t2 ]" := (@bracket _ _ t1 t2).
 
 Section liealgebra.
-Variables (R : ringType) (G : lieAlgebraType R).
+Variables (R : nzRingType) (G : lieAlgebraType R).
 
 (* Lie brackets are anticommutative *)
 Lemma lieC (x y : G) : lie[x, y] = - lie[y, x].
@@ -95,7 +95,7 @@ Qed.
 End liealgebra.
 
 Section dot_product0.
-Variables (R : ringType) (n : nat).
+Variables (R : pzRingType) (n : nat).
 Implicit Types u v w : 'rV[R]_n.
 
 Definition dotmul u v : R := (u *m v^T) ``_ 0.
@@ -170,7 +170,7 @@ Notation "u *d w" := (dotmul u w) : ring_scope.
 
 Section com_dot_product.
 
-Variables (R : comRingType) (n : nat).
+Variables (R : comPzRingType) (n : nat).
 
 Implicit Types u v : 'rV[R]_n.
 
@@ -194,9 +194,9 @@ Structure revop X Y Z (f : Y -> X -> Z) := RevOp {
   _ : forall x, f x =1 fun_of_revop^~ x
 }.
 
-Section dotmul_bilinear.
+Section dotmul_bilinear_Pz.
 
-Variables (R : comRingType) (n : nat).
+Variables (R : comPzRingType) (n : nat).
 
 Definition dotmul_rev (v u : 'rV[R]_n) := u *d v.
 Canonical rev_dotmul := @RevOp _ _ _ dotmul_rev (@dotmul R n)
@@ -214,6 +214,11 @@ Proof. move=> /= k u w; by rewrite /dotmul_rev dotmulDl dotmulZv. Qed.
 HB.instance Definition _ v :=
   GRing.isLinear.Build _ _ _ _ (@dotmul_rev v) (dotmul_rev_is_linear v).
 
+End dotmul_bilinear_Pz.
+
+Section dotmul_bilinear_Nz.
+Variables (R : comNzRingType) (n : nat).
+
 Lemma dotmul_is_bilinear : bilinear_for
   (GRing.Scale.Law.clone _ _ *:%R _) (GRing.Scale.Law.clone _ _ *:%R _)
     (@dotmul R n : _ -> _ -> R^o).
@@ -228,7 +233,7 @@ HB.instance Definition _ :=
     [the lmodType R of 'rV[R]_n] [the lmodType R of 'rV[R]_n]
     R^o _ _ (@dotmul R n) dotmul_is_bilinear.
 
-End dotmul_bilinear.
+End dotmul_bilinear_Nz.
 
 Section dot_product.
 
@@ -421,7 +426,7 @@ Notation "u _|_ A , B " := (u _|_ (col_mx A B)).
 
 Section orthogonal_rotation_def.
 
-Variables (n : nat) (T : ringType).
+Variables (n : nat) (T : pzRingType).
 
 Definition orthogonal_pred := fun M : 'M[T]_n => M *m M^T == 1%:M.
 Definition orthogonal := [qualify M : 'M[T]_n | orthogonal_pred M].
@@ -441,7 +446,7 @@ Notation "''SO[' T ]_ n" := (@rotation n T) : ring_scope.
 
 Section orthogonal_rotation_properties0.
 
-Variables (n' : nat) (T : ringType).
+Variables (n' : nat) (T : pzRingType).
 Let n := n'.+1.
 
 Lemma orthogonalE M : (M \is 'O[T]_n) = (M * M^T == 1). Proof. by []. Qed.
@@ -482,7 +487,7 @@ Qed.
 
 End orthogonal_rotation_properties0.
 
-Lemma SOSn_SOn (T : comRingType) n m (P : 'M[T]_n.+1) :
+Lemma SOSn_SOn (T : comPzRingType) n m (P : 'M[T]_n.+1) :
   (block_mx (1%:M : 'M_m) 0 0 P \is 'SO[T]_(m + n.+1)) = (P \is 'SO[T]_n.+1).
 Proof. by rewrite qualifE /rotation_pred OSn_On det_lblock det1 mul1r. Qed.
 
@@ -603,7 +608,7 @@ Qed.
 
 End orthogonal_rotation_properties1.
 
-Lemma orthogonal2P (T : ringType) M : reflect (M \is 'O[T]_2)
+Lemma orthogonal2P (T : pzRingType) M : reflect (M \is 'O[T]_2)
     [&& row 0 M *d row 0 M == 1, row 0 M *d row 1 M == 0,
         row 1 M *d row 0 M == 0 & row 1 M *d row 1 M == 1].
 Proof.
@@ -658,7 +663,7 @@ apply/eqP; rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n; apply/eqP.
 rewrite -dotmulvv; move/orthogonalP : MSO => /(_ i i) ->; by rewrite eqxx.
 Qed.
 
-Lemma dot_row_of_O (T : ringType) n M : M \is 'O[T]_n.+1 -> forall i j,
+Lemma dot_row_of_O (T : pzRingType) n M : M \is 'O[T]_n.+1 -> forall i j,
   row i M *d row j M = (i == j)%:R.
 Proof. by move/orthogonalP. Qed.
 
@@ -670,7 +675,7 @@ rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr1n -dotmulvv tr_col dotmulvv.
 by rewrite norm_row_of_O ?expr1n // orthogonalV.
 Qed.
 
-Lemma orth_preserves_sqr_norm (T : comRingType) n M : M \is 'O[T]_n.+1 ->
+Lemma orth_preserves_sqr_norm (T : comPzRingType) n M : M \is 'O[T]_n.+1 ->
   {mono (fun u => u *m M) : x / x *d x}.
 Proof.
 move=> HM u; rewrite dotmul_trmx -mulmxA (_ : M *m _ = 1%:M) ?mulmx1 //.
@@ -736,7 +741,7 @@ by move/allP => /(_ j (mem_index_enum _)); rewrite eq_sym ij implyTb mxE sqrf_eq
 Qed.
 
 Section Crossproduct.
-Variable (R : comRingType) (n' : nat).
+Variable (R : comPzRingType) (n' : nat).
 Let n := n'.+1.
 
 Definition cross (u : 'M[R]_(n', n)) : 'rV_n :=
@@ -797,7 +802,7 @@ Qed.
 End Crossproduct_fieldType.
 
 Section row2.
-Variable R : ringType.
+Variable R : pzRingType.
 
 Definition row2 (a b : R) : 'rV[R]_2 :=
   \row_p [eta \0 with 0 |-> a, 1 |-> b] p.
@@ -808,7 +813,7 @@ Proof. by apply/rowP=> j; rewrite !mxE /=; case: ifPn=> [|/ifnot01P]/eqP->. Qed.
 End row2.
 
 Section row3.
-Variable R : ringType.
+Variable R : pzRingType.
 Implicit Types a b c : R.
 
 Definition row3 a b c : 'rV[R]_3 :=
@@ -902,7 +907,7 @@ Lemma norm_row3z (T : rcfType) (z : T) : norm (row3 0 0 z) = `|z|.
 Proof. by rewrite /norm dotmulE sum3E !mxE /= ?(mul0r,add0r) sqrtr_sqr. Qed.
 
 Section col_mx2.
-Variable (T : ringType).
+Variable (T : pzRingType).
 Implicit Types (u v : 'rV[T]_2) (M : 'M[T]_2).
 
 Definition col_mx2 u v := \matrix_(i < 2) [eta \0 with 0 |-> u, 1 |-> v] i.
@@ -952,7 +957,7 @@ Qed.
 End col_mx2.
 
 Section col_mx3.
-Variable (T : ringType).
+Variable (T : pzRingType).
 Implicit Types (u v w : 'rV[T]_3) (M : 'M[T]_3).
 
 Definition col_mx3 u v w :=
@@ -1025,14 +1030,14 @@ Qed.
 End col_mx3.
 
 (* extra? *)
-Lemma vec3E (T : ringType) (u : 'rV[T]_3) :
+Lemma vec3E (T : pzRingType) (u : 'rV[T]_3) :
   u = (u``_0) *: 'e_0 + (u``_1) *: 'e_1 + (u``_2%:R) *: 'e_2%:R.
 Proof. rewrite [LHS]row3_proj e0row e1row e2row !row3Z. by Simp.r. Qed.
 
-Lemma mx_lin1K (T : ringType) (Q : 'M[T]_3) : lin1_mx (mx_lin1 Q) = Q.
+Lemma mx_lin1K (T : pzRingType) (Q : 'M[T]_3) : lin1_mx (mx_lin1 Q) = Q.
 Proof. apply/matrix3P; by rewrite !mxE !sum3E !mxE !eqxx /=; Simp.r. Qed.
 
-Lemma mxtrace_sqr (T : comRingType) (M : 'M[T]_3) : \tr (M ^+ 2) =
+Lemma mxtrace_sqr (T : comPzRingType) (M : 'M[T]_3) : \tr (M ^+ 2) =
   \sum_i (M i i ^+2) + M 0 1 * M 1 0 *+ 2 + M 0 2%:R * M 2%:R 0 *+ 2 +
   M 1 2%:R * M 2%:R 1 *+ 2.
 Proof.
@@ -1050,21 +1055,21 @@ by rewrite mulrC.
 Qed.
 (* \extra? *)
 
-Definition crossmul {R : ringType} (u v : 'rV[R]_3) :=
+Definition crossmul {R : pzRingType} (u v : 'rV[R]_3) :=
   locked (\row_(k < 3) \det (col_mx3 'e_k u v)).
 
 Notation "*v%R" := (@crossmul _) : ring_scope.
 Notation "u *v w" := (crossmul u w) : ring_scope.
 
-Lemma cross3E {R : comRingType} (u v : 'rV[R]_3) :
+Lemma cross3E {R : comPzRingType} (u v : 'rV[R]_3) :
   cross (col_mx u v) = u *v v.
 Proof.
 rewrite /crossmul; unlock.
 by apply/rowP => /= i; rewrite !mxE col_mx3E.
 Qed.
 
-Section crossmullie.
-Variable R : comRingType.
+Section crossmullie_Pz.
+Variable R : comPzRingType.
 Implicit Types u v w : 'rV[R]_3.
 
 Lemma crossmulE u v : (u *v v) = row3
@@ -1128,6 +1133,12 @@ Qed.
 
 HB.instance Definition _ u := GRing.isLinear.Build _ _ _ _ (crossmulr u) (crossmulr_linear u).
 
+End crossmullie_Pz.
+
+Section crossmullie_Nz.
+Variable R : comNzRingType.
+Implicit Types u v w : 'rV[R]_3.
+
 Lemma crossmul_is_bilinear : bilinear_for
   (GRing.Scale.Law.clone _ _ *:%R _) (GRing.Scale.Law.clone _ _ *:%R _)
     (crossmul : _ -> _ -> 'rV[R]_3).
@@ -1147,14 +1158,14 @@ HB.instance Definition _ :=
 Canonical crossmulr_is_linear u := AddLinear (crossmulr_linear u).
 Canonical crossmul_bilinear := [bilinear of (@crossmul R)].*)
 
-End crossmullie.
+End crossmullie_Nz.
 
-Definition vec3 (R : comRingType) := 'rV[R]_3.
+Definition vec3 (R : comPzRingType) := 'rV[R]_3.
 
 HB.instance Definition _ R := GRing.Lmodule.on (vec3 R).
 
 Section rv3liealgebra.
-Variable R : comRingType.
+Variable R : comNzRingType.
 
 Let liexx (u : vec3 R) : u *v u = 0.
 Proof.
@@ -1178,7 +1189,7 @@ HB.instance Definition _ :=
 End rv3liealgebra.
 
 Section crossmul_lemmas.
-Variable R : comRingType.
+Variable R : comNzRingType.
 Implicit Types u v w : 'rV[R]_3.
 
 Lemma mulmxl_crossmulr M u v : M *m (u *v v) = u *v (M *m v).
@@ -1512,7 +1523,7 @@ Section properties_of_canonical_vectors.
 Lemma normeE (T : rcfType) i : norm ('e_i : 'rV_3) = 1 :> T.
 Proof. by rewrite norm_delta_mx. Qed.
 
-Variable T : comRingType.
+Variable T : comPzRingType.
 
 Lemma vecij : 'e_0 *v 'e_1 = 'e_2%:R :> 'rV[T]__.
 Proof.
