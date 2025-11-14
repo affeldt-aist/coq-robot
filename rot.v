@@ -1,7 +1,8 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-Require Import NsatzTactic.
+From Stdlib Require Import NsatzTactic.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import ssrAC.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg reals complex.
 From mathcomp Require Import interval trigo fingroup perm.
@@ -809,7 +810,7 @@ Lemma expi0 : expi (0) = 1 :> T[i].
 Proof. by rewrite /expi cos0 sin0. Qed.
 
 Definition eskew_eigenvalues a : seq T[i] := [:: 1; expi a; expi (- a)].
-From mathcomp Require Import ssrAC.
+
 Lemma eigenvalue_ekew a w : norm w = 1 ->
   eigenvalue (map_mx (fun x => x%:C%C) `e^(a, w)) =1
     [pred k | k \in eskew_eigenvalues a].

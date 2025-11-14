@@ -26,7 +26,7 @@ Import numFieldNormedType.Exports.
 
 Local Open Scope ring_scope.
 
-Lemma mx_lin1N (R : ringType) n (M : 'M[R]_n) :
+Lemma mx_lin1N (R : pzRingType) n (M : 'M[R]_n) :
   mx_lin1 (- M) = -1 \*: mx_lin1 M :> ( _ -> _).
 Proof. by rewrite funeqE => v /=; rewrite scaleN1r mulmxN. Qed.
 
@@ -221,11 +221,11 @@ End derive_mx_SE.
 Section row_belast.
 
 (* TODO: move? *)
-Definition row_belast {R : ringType} n (v : 'rV[R]_n.+1) : 'rV[R]_n :=
+Definition row_belast {R : pzRingType} n (v : 'rV[R]_n.+1) : 'rV[R]_n :=
   \row_(i < n) (v ``_ (widen_ord (leqnSn n) i)).
 
 (* TODO: move? *)
-Lemma row_belast_last (R : ringType) n (r : 'rV[R]_n.+1) H :
+Lemma row_belast_last (R : pzRingType) n (r : 'rV[R]_n.+1) H :
   r = castmx (erefl, H) (row_mx (row_belast r) (r ``_ ord_max)%:M).
 Proof.
 apply/rowP => i; rewrite castmxE mxE.

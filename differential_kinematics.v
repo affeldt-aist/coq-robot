@@ -1,9 +1,10 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
+From mathcomp Require Import interval_inference.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import sesquilinear.
-From mathcomp Require Import boolp reals classical_sets signed.
+From mathcomp Require Import boolp reals classical_sets.
 From mathcomp Require Import topology normedtype landau derive.
 From mathcomp Require Import functions.
 Require Import ssr_ext derive_matrix euclidean frame rot skew rigid.
@@ -41,7 +42,7 @@ Local Open Scope frame_scope.
 
 Module BoundVect. (* i.e., point of application prescribed *)
 Section bound_vector.
-Variable T : ringType.
+Variable T : pzRingType.
 Record t (F : tframe T) := mk { endp : 'rV[T]_3 }.
 Definition startp F (v : t F) : 'rV[T]_3 := \o{F}.
 End bound_vector.
@@ -56,7 +57,7 @@ Reserved Notation "a \-b b" (at level 39).
 
 Section about_bound_vectors.
 
-Variables (T : ringType) (F : tframe T).
+Variables (T : pzRingType) (F : tframe T).
 
 Definition FramedVect_of_Bound (p : bvec F) : fvec F := `[ BoundVect.endp p $ F ].
 
@@ -104,7 +105,7 @@ Qed.
 
 Module RFrame.
 Section rframe.
-Variable T : ringType.
+Variable T : pzRingType.
 Record t (F0 : tframe T) := mk {
   o : bvec F0 ;
   i : fvec F0 ;

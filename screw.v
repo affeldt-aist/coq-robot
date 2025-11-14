@@ -154,7 +154,7 @@ Qed.
 End taylor_exponential.
 
 Section sqliealgebra.
-Variables (R : comRingType) (n : nat).
+Variables (R : comNzRingType) (n : nat).
 
 Definition sq (t1 t2 : 'M[R]_n.+1) := t1 * t2 - t2 * t1.
 
@@ -230,7 +230,7 @@ End sqliealgebra.
 
 Module Twist.
 Section twist_coordinates.
-Variable T : ringType.
+Variable T : pzRingType.
 Let vector := 'rV[T]_3.
 Definition t := 'rV[T]_6.
 Definition mk (v w : vector) : t := block_mx v w 0 0.
@@ -250,7 +250,7 @@ Notation "'\w(' t ')'" := (Twist.ang t).
 
 Section twist_coordinates_properties.
 
-Variable R : ringType.
+Variable R : pzRingType.
 Implicit Types t : twist R.
 
 Lemma twist_mkE t : \T(\v( t ), \w( t )) = t.
@@ -551,7 +551,7 @@ End twist_and_adjoint.
 
 Section sample_rigid_transformation.
 
-Variable T : comRingType.
+Variable T : comNzRingType.
 Let vector := 'rV[T]_3.
 Implicit Types v w : vector.
 

@@ -474,7 +474,7 @@ End derivative_map.
 
 Section homogeneous_points_and_vectors.
 
-Variable T : ringType.
+Variable T : pzRingType.
 Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Let homogeneous := 'rV[T]_4.
@@ -563,7 +563,7 @@ Notation "''hV[' T ]" := (hvector T).
 
 Section homogeneous_matrices.
 
-Variable T : ringType.
+Variable T : pzRingType.
 Let homogeneous := 'M[T]_4.
 Implicit Types M : homogeneous.
 Implicit Types r : 'M[T]_3.
@@ -613,7 +613,7 @@ Proof. by rewrite /hom (tr_block_mx r) trmx1 trmx0. Qed.
 
 End homogeneous_matrices.
 
-Lemma det_hom (T : comRingType) (r : 'M[T]_3) t : \det (hom r t) = \det r.
+Lemma det_hom (T : comPzRingType) (r : 'M[T]_3) t : \det (hom r t) = \det r.
 Proof. by rewrite /hom (det_lblock r) det1 mulr1. Qed.
 
 Section homogeneous_transformations.
@@ -655,7 +655,7 @@ Qed.
 End homogeneous_transformations.
 
 Section SE3_qualifier.
-Variable T : ringType.
+Variable T : pzRingType.
 Implicit Types M : 'M[T]_4.
 Definition SE3_pred := fun M =>
   [&& rot_of_hom M \is 'SO[T]_3,
@@ -669,18 +669,18 @@ Notation "''SE3[' T ]" := (SE3 T) : ring_scope.
 
 Section SE3_hom.
 
-Lemma rot_of_hom_is_SO (T : ringType) M :
+Lemma rot_of_hom_is_SO (T : pzRingType) M :
   M \is 'SE3[T] -> rot_of_hom M \is 'SO[T]_3.
 Proof. by case/and3P. Qed.
 
-Lemma hom_is_SE (T : ringType) r t : r \is 'SO[T]_3 -> hom r t \is 'SE3[T].
+Lemma hom_is_SE (T : pzRingType) r t : r \is 'SO[T]_3 -> hom r t \is 'SE3[T].
 Proof.
 move=> Hr; apply/and3P; rewrite rot_of_hom_hom Hr; split => //.
 - by rewrite /hom block_mxKur.
 - by rewrite /hom block_mxKdr.
 Qed.
 
-Lemma SE3E (T : ringType) M :
+Lemma SE3E (T : pzRingType) M :
   M \is 'SE3[T] -> M = hom (rot_of_hom M) (trans_of_hom M).
 Proof.
 case/and3P => T1 /eqP T2 /eqP T3.
@@ -701,11 +701,11 @@ move=> H; rewrite (SE3E H).
 by rewrite unitmxE /= det_hom rotation_det // ?unitr1 // rot_of_hom_is_SO.
 Qed.
 
-Lemma rot_of_homM (T : ringType) M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
+Lemma rot_of_homM (T : pzRingType) M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
   rot_of_hom (M1 * M2) = rot_of_hom M1 * rot_of_hom M2.
 Proof. move/SE3E => -> /SE3E ->; by rewrite homM !rot_of_hom_hom. Qed.
 
-Lemma trans_of_homM (T : ringType) M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
+Lemma trans_of_homM (T : pzRingType) M1 M2 : M1 \is 'SE3[T] -> M2 \is 'SE3[T] ->
   trans_of_hom (M1 * M2) = trans_of_hom M1 *m rot_of_hom M2 + trans_of_hom M2.
 Proof.
 move/SE3E => -> /SE3E tmp; rewrite [in LHS]tmp; by rewrite homM 2!trans_of_hom_hom.
@@ -780,7 +780,7 @@ End SE3_hom.
 
 Section Adjoint.
 
-Variables (T : comRingType).
+Variables (T : comNzRingType).
 Implicit Types g : 'M[T]_4.
 
 Definition Adjoint g : 'M_6 :=

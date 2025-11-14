@@ -86,7 +86,7 @@ Local Open Scope ring_scope.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Section quaternion0.
-Variable R : ringType.
+Variable R : pzRingType.
 
 Record quat := mkQuat {quatl : R ; quatr : 'rV[R]_3 }.
 Implicit Types x y : quat.
@@ -116,7 +116,8 @@ case: x y => [? ?] [? ?] /=.
 apply/idP/idP => [/eqP [ -> ->]|/andP[/eqP -> /eqP -> //]]; by rewrite !eqxx.
 Qed.
 
-Definition addq x y := nosimpl (mkQuat (x.1 + y.1) (x.2 + y.2)).
+Definition addq x y := mkQuat (x.1 + y.1) (x.2 + y.2).
+Arguments addq : simpl never.
 
 Lemma addqC : commutative addq.
 Proof. move=> *; congr mkQuat; by rewrite addrC. Qed.
@@ -127,7 +128,8 @@ Proof. move=> *; congr mkQuat; by rewrite addrA. Qed.
 Lemma add0q : left_id 0%:q addq.
 Proof. case=> *; by rewrite /addq /= 2!add0r. Qed.
 
-Definition oppq x := nosimpl (mkQuat (- x.1) (- x.2)).
+Definition oppq x := mkQuat (- x.1) (- x.2).
+Arguments oppq : simpl never.
 
 Lemma addNq : left_inverse 0%:q oppq addq.
 Proof. move=> *; congr mkQuat; by rewrite addNr. Qed.
@@ -197,11 +199,12 @@ Notation "r *`k" := (mkQuat 0 (r *: 'e_2%:R)) : quat_scope.
 Arguments pureq {R}.
 
 Section quaternion.
-Variable R : comRingType.
+Variable R : comNzRingType.
 Implicit Types x y : quat R.
 
-Definition mulq x y := nosimpl
-  (mkQuat (x.1 * y.1 - x.2 *d y.2) (x.1 *: y.2 + y.1 *: x.2 + x.2 *v y.2)).
+Definition mulq x y :=
+  mkQuat (x.1 * y.1 - x.2 *d y.2) (x.1 *: y.2 + y.1 *: x.2 + x.2 *v y.2).
+Arguments mulq : simpl never.
 
 Lemma mulqA : associative mulq.
 Proof.
@@ -275,7 +278,7 @@ Qed.
 Lemma oneq_neq0 : 1%:q != 0 :> quat R.
 Proof. apply/eqP => -[]; apply/eqP. exact: oner_neq0. Qed.
 
-HB.instance Definition _ := @GRing.Zmodule_isRing.Build (quat R) _ _ mulqA mul1q mulq1 mulqDl mulqDr oneq_neq0.
+HB.instance Definition _ := @GRing.Zmodule_isNzRing.Build (quat R) _ _ mulqA mul1q mulq1 mulqDl mulqDr oneq_neq0.
 
 Lemma mulqE x y : x * y = mulq x y. Proof. by []. Qed.
 
@@ -381,7 +384,8 @@ HB.instance Definition _ := @GRing.Lalgebra_isAlgebra.Build _ (quat R) quatAr.
 Lemma quat_algE r : r%:q = r%:A.
 Proof. by apply/eqP; rewrite eq_quat //=; Simp.r. Qed.
 
-Definition conjq x := nosimpl (mkQuat x.1 (- x.2)).
+Definition conjq x := mkQuat x.1 (- x.2).
+Arguments conjq : simpl never.
 
 Local Notation "x '^*q'" := (conjq x).
 
@@ -522,12 +526,14 @@ apply/eqP; rewrite eq_quat; apply/andP; split; apply/eqP.
           opprK -mulr2n -(mulr_natl x.1) mulrA.
   by rewrite div1r mulVr ?mul1r // unitfE pnatr_eq0.
 rewrite /= !(mul0r,scale0r,add0r,addr0).
-rewrite [_ *v 'e_0](@lieC _ (vec3 R)) /= ['e_0 *v _]linearD /= ['e_0 *v _]linearZ /= (@liexx _ (vec3 R)) .
+rewrite [_ *v 'e_0](@lieC _ (vec3 R)) /= ['e_0 *v _]linearD /=.
+rewrite ['e_0 *v (x.1 *: _)]linearZ /= (@liexx _ (vec3 R)) .
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
-rewrite [_ *v 'e_1](@lieC _ (vec3 R)) /= ['e_1 *v _]linearD /= ['e_1 *v _]linearZ /= (@liexx _ (vec3 R)) .
+rewrite [_ *v 'e_1](@lieC _ (vec3 R)) /= ['e_1 *v _]linearD /=.
+rewrite ['e_1 *v (x.1 *: _)]linearZ /= (@liexx _ (vec3 R)) .
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
-rewrite [_ *v 'e_2%:R](@lieC _ (vec3 R)) /= ['e_2%:R *v _]linearD /=
-        ['e_2%:R *v _]linearZ /= (@liexx _ (vec3 R)).
+rewrite [_ *v 'e_2%:R](@lieC _ (vec3 R)) /= ['e_2%:R *v _]linearD /=.
+rewrite ['e_2%:R *v (x.1 *: _)]linearZ /= (@liexx _ (vec3 R)).
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
 rewrite [X in _ = - _ *: X](_ : _ = 2%:R *:x.2).
   by rewrite scalerA mulNr div1r mulVr ?unitfE ?pnatr_eq0 // scaleN1r.
@@ -605,7 +611,7 @@ move=> a; rewrite !inE negbK => /eqP ->.
 by rewrite /invq /= conjq0 scaler0.
 Qed.
 
-HB.instance Definition _ := @GRing.Ring_hasMulInverse.Build (quat R) _ _ mulVq mulqV unitqP invq0id.
+HB.instance Definition _ := @GRing.NzRing_hasMulInverse.Build (quat R) _ _ mulVq mulqV unitqP invq0id.
 
 Lemma invqE x : x^-1 = invq x. Proof. by done. Qed.
 
@@ -765,11 +771,11 @@ apply/idP/idP.
   case/andP => /eqP<- x0Ly0.
   apply/eqP; congr mkQuat; rewrite ?subrr ?expr0n ?addr0 //=.
   rewrite norm0 expr0n addr0 sqrtr_sqr.
-  by apply/eqP; rewrite eqr_norm_id subr_ge0.
+  by apply/eqP; rewrite -ger0_def subr_ge0.
 case/eqP => /eqP H H1.
 move: (sym_equal H1) H => /subr0_eq->.
 rewrite /lequat /= eqxx /=.
-by rewrite subrr norm0 expr0n addr0 sqrtr_sqr eqr_norm_id subr_ge0.
+by rewrite subrr norm0 expr0n addr0 sqrtr_sqr -ger0_def subr_ge0.
 Qed.
 
 Lemma ltquat_def x y : ltquat x y = (y != x) && lequat x y.
@@ -1096,8 +1102,8 @@ Qed.
 
 End polar_coordinates.
 
-Section dual_number.
-Variable R : ringType.
+Section dual_number_Pz.
+Variable R : pzRingType.
 Implicit Types r : R.
 Record dual := mkDual {ldual : R ; rdual : R}.
 Implicit Types x y : dual.
@@ -1193,10 +1199,21 @@ move=> x y z; rewrite /muld /addd mulrDr; congr mkDual.
 by rewrite mulrDr -!addrA; congr (_ + _); rewrite mulrDr addrCA.
 Qed.
 
-Lemma oned_neq0 : dual1 != 0 :> dual.
+End dual_number_Pz.
+
+Notation "a +ɛ* b" := (mkDual a b) : dual_scope.
+Notation "a -ɛ* b" := (mkDual a (- b)) : dual_scope.
+
+Local Open Scope dual_scope.
+
+Section dual_number_Nz.
+Variable R : nzRingType.
+Implicit Types (r : R) (x y : dual R).
+
+Lemma oned_neq0 : dual1 R != 0 :> dual R.
 Proof. by apply/eqP; case; apply/eqP; exact: oner_neq0. Qed.
 
-HB.instance Definition _ := @GRing.Zmodule_isRing.Build dual _ _ muldA mul1d muld1 muldDl muldDr oned_neq0.
+HB.instance Definition _ := @GRing.Zmodule_isNzRing.Build (dual R) _ _ (@muldA R) (@mul1d R) (@muld1 R) (@muldDl R) (@muldDr R) oned_neq0.
 
 Lemma muld_def x y : x * y = x.1 * y.1 +ɛ* (x.1 * y.2 + x.2 * y.1).
 Proof. by []. Qed.
@@ -1209,13 +1226,13 @@ Proof. by rewrite /scaled /=; congr mkDual; rewrite mulrA. Qed.
 Lemma scaled1 : left_id 1 scaled.
 Proof. by rewrite /left_id /scaled /=; case=> ? ? /=; rewrite !mul1r. Qed.
 
-Lemma scaledDr : @right_distributive R dual scaled +%R.
+Lemma scaledDr : @right_distributive R (dual R) scaled +%R.
 Proof. by move=> r x y; rewrite /scaled /= !mulrDr. Qed.
 
-Lemma scaledDl x : {morph (scaled^~ x : R -> dual) : a b / a + b}.
+Lemma scaledDl x : {morph (scaled^~ x : R -> dual R) : a b / a + b}.
 Proof. by move=> a b; rewrite /scaled !mulrDl. Qed.
 
-HB.instance Definition _ := @GRing.Zmodule_isLmodule.Build _ dual scaled scaledA scaled1 scaledDr scaledDl.
+HB.instance Definition _ := @GRing.Zmodule_isLmodule.Build _ (dual R) scaled scaledA scaled1 scaledDr scaledDl.
 
 Definition conjd x := x.1 -ɛ* x.2.
 Local Notation "x '^*d'" := (conjd x).
@@ -1250,13 +1267,13 @@ rewrite !hornerMXaddC hornerD hornerMX IH; congr mkDual => /=.
 by Simp.r; rewrite addrC.
 Qed.
 
-End dual_number.
+End dual_number_Nz.
 
 Notation "a +ɛ* b" := (mkDual a b) : dual_scope.
 Notation "a -ɛ* b" := (mkDual a (- b)) : dual_scope.
 
 Section dual_comm.
-Variable R : comRingType.
+Variable R : comNzRingType.
 
 Fact muld_comm (p q : dual R) : p * q = q * p.
 Proof.
@@ -1264,7 +1281,7 @@ case: p => p1 p2; case: q => q1 q2; rewrite !muld_def /=.
 by rewrite addrC mulrC [p2 * _]mulrC [q2 * _]mulrC.
 Qed.
 
-HB.instance Definition _ := GRing.Ring_hasCommutativeMul.Build (dual R) muld_comm.
+HB.instance Definition _ := GRing.PzRing_hasCommutativeMul.Build (dual R) muld_comm.
 
 End dual_comm.
 
@@ -1306,7 +1323,7 @@ Proof. by rewrite 2!muld_def => -[[? _] [? _]]; apply/unitrP; exists y.1. Qed.
 Lemma invd0id : {in [predC unitd], invd =1 id}.
 Proof. by move=> x; rewrite inE /= /invd => /negbTE ->. Qed.
 
-HB.instance Definition _ := GRing.Ring_hasMulInverse.Build (dual R) mulVd muldV unitdP invd0id.
+HB.instance Definition _ := GRing.NzRing_hasMulInverse.Build (dual R) mulVd muldV unitdP invd0id.
 
 End dual_number_unit.
 

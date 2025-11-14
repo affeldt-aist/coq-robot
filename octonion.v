@@ -66,7 +66,8 @@ case: a b => [a0 a1] [b0 b1] /=.
 apply/idP/idP => [/eqP [ -> ->]|/andP[/eqP -> /eqP -> //]]; by rewrite !eqxx.
 Qed.
 
-Definition addo (a b : oct) := nosimpl (mkOct (a.1 + b.1) (a.2 + b.2)).
+Definition addo (a b : oct) := (mkOct (a.1 + b.1) (a.2 + b.2)).
+Arguments addo : simpl never.
 
 Lemma addoC : commutative addo.
 Proof. move=> *; congr mkOct; by rewrite addrC. Qed.
@@ -77,7 +78,8 @@ Proof. move=> *; congr mkOct; by rewrite addrA. Qed.
 Lemma add0o : left_id 0%:ol addo.
 Proof. case=> *; by rewrite /addo /= 2!add0r. Qed.
 
-Definition oppo (a : oct) := nosimpl (mkOct (- a.1) (- a.2)).
+Definition oppo (a : oct) := (mkOct (- a.1) (- a.2)).
+Arguments oppo : simpl never.
 
 Lemma addNo : left_inverse 0%:ol oppo addo.
 Proof. move=> *; congr mkOct; by rewrite addNr. Qed.
@@ -122,11 +124,12 @@ Notation "x %:ol" := (mkOct x 0) : oct_scope.
 
 Section octonion.
 
-Variable R : comRingType.
+Variable R : comNzRingType.
 
-Definition mulo (a b : oct R) := nosimpl
-  (mkOct (a.1 * b.1 - ((b.2)^*q)%quat * a.2)
-         (b.2 * a.1 + a.2 * ((b.1)^*q)%quat)).
+Definition mulo (a b : oct R) :=
+  mkOct (a.1 * b.1 - ((b.2)^*q)%quat * a.2)
+        (b.2 * a.1 + a.2 * ((b.1)^*q)%quat).
+Arguments mulo : simpl never.
 
 Lemma mulo1 : right_id 1%:ol mulo.
 Proof.
@@ -560,8 +563,8 @@ Qed.
 
 Local Open Scope quat_scope.
 
-Definition conjo (a : oct R) :=
-  nosimpl (mkOct (a.1 + (a.1)^*q -a.1) (- a.2)).
+Definition conjo (a : oct R) := mkOct (a.1 + (a.1)^*q -a.1) (- a.2).
+Arguments conjo : simpl never.
 
 Local Notation "x '^*o'" := (conjo x).
 

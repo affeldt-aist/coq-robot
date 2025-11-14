@@ -39,7 +39,7 @@ Local Open Scope ring_scope.
 
 Section keyed_qualifiers_anti_sym.
 
-Variables (n : nat) (R : ringType).
+Variables (n : nat) (R : pzRingType).
 
 Definition anti := [qualify M : 'M[R]_n | M == - M^T].
 Fact anti_key : pred_key anti. Proof. by []. Qed.
@@ -55,7 +55,7 @@ Notation "''so[' R ]_ n" := (anti n R).
 
 Section sym_anti.
 
-Variables (R : ringType) (n : nat).
+Variables (R : pzRingType) (n : nat).
 Implicit Types M A B : 'M[R]_n.
 Implicit Types v : 'rV[R]_n.
 
@@ -127,10 +127,10 @@ End anti.
 
 End sym_anti.
 
-Lemma mul_tr_vec_sym (R : comRingType) m (v : 'rV[R]_m) : v^T *m v \is sym m R.
+Lemma mul_tr_vec_sym (R : comPzRingType) m (v : 'rV[R]_m) : v^T *m v \is sym m R.
 Proof. apply/eqP; by rewrite trmx_mul trmxK. Qed.
 
-Lemma conj_so (R : comRingType) n P M :
+Lemma conj_so (R : comPzRingType) n P M :
   M \is 'so[R]_n -> P^T *m M *m P \is 'so[R]_n.
 Proof.
 rewrite !antiE -eqr_oppLR => /eqP HM.
@@ -222,7 +222,7 @@ End sym_anti_numFieldType.
 
 Section axial_vector.
 
-Variable R : ringType.
+Variable R : pzRingType.
 Implicit Types M : 'M[R]_3.
 
 Definition axial M :=
@@ -261,7 +261,7 @@ End axial_vector.
 
 Section spin_matrix.
 
-Variable R : comRingType.
+Variable R : comNzRingType.
 Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
@@ -602,7 +602,7 @@ Qed.
 Definition spin_eigenvalues u : seq R[i] := [:: 0; 0 +i* norm u ; 0 -i* norm u]%C.
 
 Ltac eigenvalue_spin_eval_poly :=
-  rewrite /map_poly horner_poly size_addl; [ |
+  rewrite /map_poly horner_poly size_polyDl; [ |
     by rewrite size_polyXn size_scale ?size_polyX // sqrf_eq0 norm_eq0];
   rewrite size_polyXn sum4E !(coefD,coefXn,coefZ,coefX,expr0,expr1)
                             !(mulr0,mul0r,mul1r,add0r,addr0,mul1r).
