@@ -24,7 +24,8 @@ by move=> x y x0 y0 /(congr1 (@Num.sqrt R)); rewrite !sqrtr_sqr! ger0_norm.
 Qed.
 
 (* PR to MathComp *)
-Lemma char_poly2 (R : numFieldType) (M : 'M[R]_2) : char_poly M = 'X^2 - (\tr M)%:P * 'X + (\det M)%:P.
+(* det_mx22 depend de robot*)
+(*Lemma char_poly2 (R : numFieldType) (M : 'M[R]_2) : char_poly M = 'X^2 - (\tr M)%:P * 'X + (\det M)%:P.
 Proof.
 set P := (RHS).
 apply/polyP => -[|[|[|i]]]; last first.
@@ -43,4 +44,4 @@ apply/polyP => -[|[|[|i]]]; last first.
   by rewrite /P -addrA addrCA !coefD coefN coefCM coefX/= mulr1 coefC/= addr0 coefXn addr0.
 - rewrite char_poly_det sqrrN expr1n mul1r.
   by rewrite /P !coefD coefC/= coefN coefCM coefX mulr0 subr0 coefXn/= add0r.
-Qed.
+Qed.*)

@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect all_algebra ring.
 From mathcomp Require Import interval_inference.
 From mathcomp Require Import boolp classical_sets functions reals.
 From mathcomp Require Import topology normedtype derive.
-Require Import ssr_ext euclidean rigid frame skew derive_matrix.
+Require Import ssr_ext euclidean rigid frame skew derive_matrix tilt_analysis.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -114,7 +114,7 @@ Proof. by rewrite dotmulBl dotmulC dotmulspin1 dotmulC dotmulspin2 subr0. Qed.
 Lemma enorm_squared {R : rcfType} n (u : 'rV[R]_n) :
   (u *m (u)^T) 0 0 = `|u|_e ^+2.
 Proof. by rewrite -dotmulvv /dotmul. Qed.
-
+ (* TODO in tilt_analysis.v *)
 Lemma derivable_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
     (f : V -> 'rV[R]_(n1 + n2)) t v :
   (forall x, derivable f x v) -> derivable (fun x => rsubmx (f x)) t v.
@@ -241,7 +241,7 @@ apply: (le_lt_trans _ (uv i (lshift n2 j))).
 by rewrite !mxE.
 Qed.
 
-Global Instance is_diff_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
+(*Global Instance is_diff_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
     (f df : V -> 'rV[R]_(n1 + n2)) t :
   is_diff t f df ->
   is_diff t (fun x => lsubmx (f x)) (fun x => lsubmx (df x)).
@@ -256,7 +256,7 @@ rewrite -[LHS]deriveE; last first.
 rewrite -[in RHS]deriveE; last first.
   by [].
 rewrite derive_lsubmx//.
-Abort.
+Abort.*)
 
 Lemma differentiable_lsubmx {R : realFieldType} (V : normedModType R) {n1 n2}
     (f : V -> 'rV[R]_(n1 + n2)) t :
@@ -328,20 +328,77 @@ rewrite jj1 => /(congr1 val) => /= /eqP.
 by rewrite eqn_add2l => /eqP /val_inj.
 Qed.*) Admitted. (* FIXME *)
 
-Lemma derivable_scalar_mx {R : realFieldType} n (f : 'rV[R]_n -> R)
-    (a : 'rV[R]_n) v :
-  derivable f a v ->
-  derivable (@scalar_mx _ 1 \o f) a v.
+
+Lemma char_poly2 (R : numFieldType) (M : 'M[R]_2) : char_poly M = 'X^2 - (\tr M)%:P * 'X + (\det M)%:P.
 Proof.
-move=> /cvg_ex[/= l fav].
-apply/cvg_ex => /=.
-exists (\col_(i < 1) l).
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : fav => /(_ _ e0).
-apply: filterS => x.
-apply: le_trans.
-rewrite [in leLHS]/Num.Def.normr/= !mx_normrE/=.
-apply: bigmax_le => //= -[i j] _.
-rewrite !mxE/=.
-by rewrite !ord1 eqxx !mulr1n.
+set P := (RHS).
+apply/polyP => -[|[|[|i]]]; last first.
+- have := (rwP (leq_sizeP (char_poly M) i.+3)).2.
+  rewrite size_char_poly => /(_ erefl) /(_ i.+3) => ->//.
+  rewrite (rwP (leq_sizeP P i.+3)).2//.
+  rewrite /P -addrA size_addl ?size_polyXn//.
+  rewrite -mulNr size_MXaddC; case: ifPn => // _.
+  by rewrite ltnS -polyCN size_polyC; case: (_ == _).
+- rewrite /P -[in RHS]addrA [RHS]coefD coefXn/= coefD -mulrN coefCM coefC/= coefN coefX/= oppr0 mulr0 !addr0.
+  rewrite /char_poly det_mx22//.
+  rewrite /char_poly_mx !mxE/= mulr1n mulr0n sub0r mulNr opprK sub0r mulrN.
+  rewrite coefD coefN coefCM coefC/= mulr0 subr0.
+  by rewrite coefM sum3E !coefE/= !(subr0,mul0r,mulr0,addr0,mulr1,add0r).
+- rewrite char_poly_trace//.
+  by rewrite /P -addrA addrCA !coefD coefN coefCM coefX/= mulr1 coefC/= addr0 coefXn addr0.
+- rewrite char_poly_det sqrrN expr1n mul1r.
+  by rewrite /P !coefD coefC/= coefN coefCM coefX mulr0 subr0 coefXn/= add0r.
+Qed.
+
+Lemma differentiable_enorm {K : realType} m n (f : 'rV[K]_m -> 'rV_n)
+  (g : K -> 'rV[K]_m) t :
+  differentiable f (g t) -> f (g t) != 0 ->
+  differentiable (fun x => `|f x|_e) (g t) .
+Proof.
+move=> fgt fgt0; rewrite /enorm -fctE.
+apply: differentiable_comp.
+  exact: differentiable_dotmul.
+apply/derivable1_diffP/derivable_sqrt.
+by rewrite dotmulvv expr2 mulr_gt0 //= !enorm_gt0.
+Qed.
+
+Lemma derivable_enorm_squared {K : realType} n (f : K -> 'rV[K]_n) (x0 : K) :
+  derivable f x0 1 ->
+  derivable (fun x => `|f x|_e ^+ 2) x0 1.
+Proof.
+move => dif1.
+apply/diff_derivable.
+rewrite /=.
+under eq_fun do rewrite -dotmulvv dotmulE.
+have -> : (fun x : K => \sum_k (f x)``_k * (f x)``_k) =
+        \sum_k (fun x => (f x)``_k * (f x)``_k ).
+  apply/funext => x => //=.
+  by rewrite fct_sumE.
+apply/differentiable_sum => k => //=.
+apply/differentiableM => //=.
+  apply/derivable1_diffP.
+  by apply/derivable_coord => //.
+apply/derivable1_diffP.
+by apply/derivable_coord => //.
+Qed.
+
+Lemma derive_enorm_squared {K : realType} n (u : K -> 'rV[K]_n) (t : K) :
+  derivable u t 1 ->
+  'D_1 (fun x => `|u x|_e ^+ 2) t =
+  2 * ('D_1 u t *m (u t)^T)``_0.
+Proof.
+move=> ut1.
+under eq_fun do rewrite -dotmulvv.
+rewrite dotmulP mxE /= mulr1n derive_dotmul// dotmulC.
+by field.
+Qed.
+
+Lemma differentiable_enorm_squared {R : rcfType} m n
+    (f : 'rV[R]_m -> 'rV[R]_n) (v : 'rV[R]_m)  :
+  differentiable f v ->
+  differentiable (fun x => `|f x|_e ^+ 2) v.
+Proof.
+move=> dif1.
+under eq_fun do rewrite -dotmulvv.
+exact: differentiable_dotmul.
 Qed.
