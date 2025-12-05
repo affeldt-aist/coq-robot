@@ -693,16 +693,20 @@ End cross_product_matrix.
 (* [sciavicco] p.80-81 *)
 Section derivative_of_a_rotation_matrix.
 Context {R : realFieldType}.
-Variable M : R -> 'M[R^o]_3.
+Variable M : R -> 'M[R]_3.
 
 Definition ang_vel_mx t : 'M_3 := (M t)^T * 'D_1 M t.
 
 Definition body_ang_vel_mx t : 'M_3 := 'D_1 M t *m (M t)^T.
 
-(* angular velocity (a free vector) *)
-Definition ang_vel t := unspin (ang_vel_mx t).
-
 Hypothesis MO : forall t, M t \is 'O[ R ]_3.
+
+(* [sciavicco] eqn 3.7 *)
+Lemma derive1mx_ang_vel t : 'D_1 M t = M t * ang_vel_mx t.
+Proof.
+by rewrite /ang_vel_mx mulrA -mulmxE orthogonal_mul_tr// mul1mx.
+Qed.
+
 Hypothesis derivable_M : forall t, derivable M t 1.
 
 Lemma ang_vel_mx_is_so t : ang_vel_mx t \is 'so[ R ]_3.
@@ -716,23 +720,13 @@ move=> /eqP; rewrite addr_eq0 => /eqP H.
 by rewrite antiE /ang_vel_mx trmx_mul trmxK H opprK.
 Qed.
 
+(* angular velocity (a free vector) *)
+Definition ang_vel t := unspin (ang_vel_mx t).
+
 Lemma ang_vel_mxE t : ang_vel_mx t = \S( ang_vel t).
 Proof. by rewrite /ang_vel unspinK // ang_vel_mx_is_so. Qed.
 
-(* [sciavicco] eqn 3.7 *)
-Lemma derive1mx_ang_vel t : 'D_1 M t = M t * ang_vel_mx t.
-Proof.
-move: (ang_vel_mx_is_so t); rewrite antiE -subr_eq0 opprK => /eqP.
-rewrite {1 2}/ang_vel_mx trmx_mul trmxK => /(congr1 (fun x => (M t) * x)).
-rewrite mulr0 mulrDr !mulrA -{1}(orthogonal_inv (MO t)).
-rewrite divrr ?orthogonal_unit // mul1r.
-move=> /eqP; rewrite addr_eq0 => /eqP {1}->.
-rewrite -mulrA -mulrN -mulrA; congr (_ * _).
-move: (ang_vel_mx_is_so t); rewrite antiE -/(ang_vel_mx t) => /eqP ->.
-by rewrite /ang_vel_mx trmx_mul trmxK mulmxE.
-Qed.
-
-Lemma derive1mx_rot (p' : 'rV[R^o]_3 (* constant vector *)) :
+Lemma derive1mx_rot (p' : 'rV[R]_3 (* constant vector *)) :
   let p := fun t => p' *m M t in
   forall t, 'D_1 p t = ang_vel t *v p t.
 Proof.

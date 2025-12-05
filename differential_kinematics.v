@@ -565,16 +565,12 @@ move/(_ t).
 rewrite derive_mulmx; last 2 first.
   exact/derivable_mxP/derivable_mx_FromTo'.
   exact/derivable_mxP/derivable_mx_FromTo.
-rewrite derive1mx_ang_vel; last 2 first.
+rewrite derive1mx_ang_vel; last first.
   by move=> t'; rewrite FromTo_is_O.
-  by move=> t'; apply/derivable_mxP/derivable_mx_FromTo.
-rewrite derive1mx_ang_vel; last 2 first.
+rewrite derive1mx_ang_vel; last first.
   by move=> t'; rewrite FromTo_is_O.
-  by move=> t'; apply/derivable_mxP/derivable_mx_FromTo'.
-rewrite derive1mx_ang_vel; last 2 first.
+rewrite derive1mx_ang_vel; last first.
   by move=> t'; rewrite FromTo_is_O.
-  move=> t'; apply/derivable_mxP.
-  by apply/derivable_mx_FromTo.
 rewrite ang_vel_mxE; last 2 first.
   by move=> t'; rewrite FromTo_is_O.
   move=> t'; apply/derivable_mxP.

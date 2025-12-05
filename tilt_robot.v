@@ -385,11 +385,11 @@ Qed.
 Lemma derive_enorm_squared {K : realType} n (u : K -> 'rV[K]_n) (t : K) :
   derivable u t 1 ->
   'D_1 (fun x => `|u x|_e ^+ 2) t =
-  2 * ('D_1 u t *m (u t)^T)``_0.
+  2 * ('D_1 u t *d u t).
 Proof.
 move=> ut1.
 under eq_fun do rewrite -dotmulvv.
-rewrite dotmulP mxE /= mulr1n derive_dotmul// dotmulC.
+rewrite derive_dotmul// dotmulC.
 by field.
 Qed.
 
