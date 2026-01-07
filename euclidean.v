@@ -300,9 +300,10 @@ Proof.
 apply: (@mulrI _ 4%:R); first exact: pnatf_unit.
 rewrite [in RHS]mulrA div1r divrr ?pnatf_unit // mul1r.
 rewrite -2!dotmulvv dotmulD dotmulD mulr_natl (addrC (v *d v)).
-rewrite (_ : 4 = 2 + 2)%N // mulrnDr -3![in RHS]addrA; congr (_ + _).
-rewrite opprD addrCA [_ + (- _ + _)]addrA subrr add0r.
-by rewrite addrC opprD 2!dotmulvN dotmulNv opprK subrK -mulNrn opprK.
+rewrite (_ : 4 = 2 + 2)%N // mulrnDr -2![RHS]addrA; congr (_ + _).
+rewrite (dotmulvN (- u) u) (dotmulNv u u) opprK.
+rewrite opprD (addrCA (u *d u)) subrr addr0.
+by rewrite opprD addrA subrr add0r dotmulvN -mulNrn opprK.
 Qed.
 
 Lemma sqr_norm u : norm u ^+ 2 = \sum_i u``_i ^+ 2.
@@ -928,28 +929,28 @@ Qed.
 
 Lemma mul_col_mx2 n (c1 c2 : 'cV[T]_n) u v :
   row_mx c1 c2 *m col_mx2 u v =
-  row_mx (c1 *m u``_0%:M + c2 *m v``_0%:M) (c1 *m u``_1%:M + c2 *m v``_1%:M).
+  row_mx (c1 *m (u``_0)%:M + c2 *m (v``_0)%:M) (c1 *m (u``_1)%:M + c2 *m (v``_1)%:M).
 Proof.
-suff -> : col_mx2 u v = @block_mx _ 1 1 1 1 u``_0%:M u``_1%:M v``_0%:M v``_1%:M.
-  by rewrite (mul_row_block c1 c2 u``_0%:M).
+suff -> : col_mx2 u v = @block_mx _ 1 1 1 1 (u``_0)%:M (u``_1)%:M (v``_0)%:M (v``_1)%:M.
+  by rewrite (mul_row_block c1 c2 (u``_0)%:M).
 apply/matrixP => a b; case/boolP : (a == 0) => a0.
 - case/boolP : (b == 0) => b0.
   + rewrite (eqP a0) (eqP b0) !mxE /= split1 unlift_none //=.
     by rewrite !mxE split1 unlift_none /= !mxE eqxx mulr1n.
   + have /eqP b1 : b == 1 by rewrite -ifnot01.
     rewrite b1 (eqP a0) [in LHS]mxE /=.
-    transitivity ((block_mx u``_0%:M u``_1%:M v``_0%:M v``_1%:M)
+    transitivity ((block_mx (u``_0)%:M (u``_1)%:M (v``_0)%:M (v``_1)%:M)
                     (lshift 1 0) (rshift 1 0)); last by f_equal; exact/val_inj.
     by rewrite block_mxEur mxE eqxx mulr1n.
 - have a1 : a == 1 by rewrite -ifnot01.
   case/boolP : (b == 0) => b0.
   + rewrite (eqP a1) (eqP b0) [in LHS]mxE /=.
-    transitivity ((block_mx u``_0%:M u``_1%:M v``_0%:M v``_1%:M)
+    transitivity ((block_mx (u``_0)%:M (u``_1)%:M (v``_0)%:M (v``_1)%:M)
                     (rshift 1 0) (lshift 1 0)); last by f_equal; exact/val_inj.
     by rewrite block_mxEdl mxE eqxx mulr1n.
   + have /eqP b1 : b == 1 by rewrite -ifnot01.
     rewrite (eqP a1) b1 [in LHS]mxE /=.
-    transitivity ((block_mx u``_0%:M u``_1%:M v``_0%:M v``_1%:M)
+    transitivity ((block_mx (u``_0)%:M (u``_1)%:M (v``_0)%:M (v``_1)%:M)
       (rshift 1 0) (rshift 1 0)); last by f_equal; exact/val_inj.
     by rewrite block_mxEdr mxE eqxx mulr1n.
 Qed.
@@ -1455,8 +1456,8 @@ transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
   rewrite [in RHS](addrAC (U0 * V0)) [in RHS](addrA (U0 * V0)) subrr add0r.
   (* U1 * V1 *)
   rewrite -(addrC (- (U1 * V1))) -(addrC (U1 * V1)) (addrCA (U1 * V0 + _)).
-  rewrite -3!(addrA (- (U1 * V1))) -![X in _ = _ + (_ + (X + _))](addrA (U1 * V1)) addrCA.
-  rewrite 2![in RHS](addrA (- (U1 * V1))) [in RHS](addrC (- (U1 * V1))) subrr add0r.
+  rewrite -2!(addrA (U1 * V1)) (addrCA _ (U1 * V1)).
+  rewrite -3!(addrA (- (U1 * V1))) (addrA (U1 * V1)) subrr add0r.
   (* U2 * V2 *)
   rewrite -(addrC (- (U2 * V2))) -(addrC (U2 * V2)) -(addrC (U2 * V2 + _)).
   rewrite [in RHS](addrAC (- (U2 * V2))) 2!(addrA (- (U2 * V2))) -(addrC (U2 * V2)) subrr add0r.
@@ -1485,9 +1486,7 @@ transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
   rewrite -(addrC (A' ^+ 2)) -!addrA; congr (_ + _).
   rewrite -!mulNrn !mulr2n !opprD.
   rewrite addrC -!addrA; congr (_ + _).
-  rewrite addrA.
-  rewrite addrC -!addrA; congr (_ + _).
-  by rewrite addrC.
+  by rewrite addrCA.
 rewrite exprMn -(sum3E (fun i => u``_i ^+ 2)) -(sum3E (fun i => v``_i ^+ 2)) -2!sqr_norm; congr (_ - _ ^+ 2).
 by rewrite dotmulE sum3E.
 Qed.
@@ -1680,16 +1679,22 @@ apply/(@mulrI _ 2%:R); first exact: pnatf_unit.
 rewrite mulrA div1r divrr ?pnatf_unit // mul1r.
 rewrite sqr_mxtrace.
 rewrite mxtrace_sqr.
-rewrite -4![in RHS]addrA [in RHS]addrCA [in RHS]opprD [in RHS](addrA (\sum__ M _ _ ^+ 2)) subrr add0r.
-rewrite -3!mulrnDl -mulrnBl -[in RHS](mulr_natr _ 2) [in RHS](mulrC _ 2%:R).
-rewrite -[RHS]mulr_natl; congr (_ * _).
-rewrite mulrDr.
-rewrite (addrC _ (M 0 0 * _)); rewrite -!addrA; congr (_ + _).
-rewrite !mulr1.
-rewrite !addrA -mulrDl -!addrA; congr (_ + _).
-rewrite addrCA opprD mulNr; congr (_ + _).
-rewrite opprD addrC mulNr; congr (_ + _).
-by rewrite mulrC.
+rewrite 3!opprD.
+rewrite -2!(addrA (- \sum_i M i i ^+ 2)).
+rewrite (addrCA _ (- \sum_i M i i ^+ 2)).
+rewrite -2!(addrA (\sum_i M i i ^+ 2)).
+rewrite [RHS]addrCA [RHS]addrA subrr add0r.
+rewrite -mulNrn -mulrnDl -2!mulrnBl -mulrnDl.
+rewrite mulr_natl.
+congr (_ *+ 2).
+rewrite [RHS]addrA [RHS]addrC 2![RHS]addrA.
+rewrite (mulNr (M ord0 2)); congr (_ - _).
+rewrite (mulNr (M ord0 1)); congr (_ - _).
+rewrite [LHS]addrCA [RHS]addrC !addrA (mulrC _ (M 2 1)); congr (_ - _).
+rewrite mulrDl mulrDr.
+rewrite (addrC (M ord0 ord0 * _)).
+rewrite addrCA.
+by rewrite -(addrC (M ord0 ord0 * _)).
 Qed.
 
 Lemma char_poly3 (M : 'M[T]_3) :

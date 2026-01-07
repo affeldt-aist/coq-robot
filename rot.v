@@ -1,7 +1,7 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From Stdlib Require Import NsatzTactic.
-From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import all_boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import ssrAC.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg reals complex.
@@ -716,7 +716,7 @@ Proof.
 move=> w1.
 rewrite 2!mxtraceD !mxtraceZ /= mxtrace1.
 rewrite (trace_anti (spin_is_so w)) mulr0 addr0 mxtrace_sqr_spin w1.
-rewrite (_ : - _ = - 2%:R); last by rewrite expr1n mulr1.
+rewrite (_ : - (_ * _) = - 2%:R); last by rewrite expr1n mulr1.
 by rewrite mulrDl addrA mul1r -natrB // mulrC mulrN -mulNr opprK.
 Qed.
 
@@ -826,15 +826,18 @@ rewrite (_ : _ - _ = (1 + cos a *+ 2) *+ 2); last first.
     by rewrite addrC; apply/eqP; rewrite subr_eq.
   rewrite -addrA mulr_natl; apply/eqP.
   rewrite eq_sym [eqbRHS]addrC -subr_eq.
-  rewrite expr2 mulr2n -[in X in X - _ == _](mulr1 (1 + cos a *+ 2)).
+  rewrite expr2 (mulr2n (1 + _)) -[in X in X - _ == _](mulr1 (1 + cos a *+ 2)).
   rewrite -mulrDr -mulrBr opprD [in X in _ * X == _]addrA addrK.
   rewrite mulrC -subr_sqr expr1n; apply/eqP; congr (1 - _).
   by rewrite mulr_natl -mulrnA exprMn_n.
 rewrite -[(_ + _) *+ _]mulr_natl mulrA divfK ?(eqr_nat _ 2 0) // mul1r.
 rewrite linearB /= map_polyC /= !(linearB, linearD, linearZ) /=.
 rewrite !map_polyXn map_polyX.
-  rewrite (_ : _ - _ = ('X - 1) * ('X - (expi a)%:P) * ('X - (expi (-a))%:P)).
-  by rewrite !rootM !root_XsubC orbA.
+rewrite (_ : _ - _ = ('X - 1) * ('X - (expi a)%:P) * ('X - (expi (-a))%:P)).
+  rewrite 2!rootM orbA; congr (_ || _ || _).
+  by rewrite root_XsubC.
+  by rewrite root_XsubC.
+  by rewrite root_XsubC.
 have expiDexpiN  : expi a + expi (-a) = (cos a + cos a)%:C%C.
   rewrite /expi cosN sinN.
   by apply/eqP; rewrite eq_complex /= subrr !eqxx.
@@ -1966,7 +1969,6 @@ apply/matrix3P/and9P; split;
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
-by apply/eqP; nsatz.
 by apply/eqP; nsatz.
 Qed.
 

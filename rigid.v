@@ -479,7 +479,7 @@ Let point := 'rV[T]_3.
 Let vector := 'rV[T]_3.
 Let homogeneous := 'rV[T]_4.
 
-Lemma rsubmx_coor3 (x : homogeneous) : @rsubmx _ 1 3 1 x = x``_3%:R%:M.
+Lemma rsubmx_coor3 (x : homogeneous) : @rsubmx _ 1 3 1 x = (x``_3%:R)%:M.
 Proof.
 apply/rowP => i; rewrite {i}(ord1 i) !mxE eqxx.
 rewrite (_ : (rshift _ _) = 3%:R :> 'I_(3 + 1) ) //; by apply val_inj.
