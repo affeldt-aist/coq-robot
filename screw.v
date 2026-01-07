@@ -1,6 +1,6 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import all_boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import sesquilinear.
@@ -883,9 +883,8 @@ rewrite (scalerN (2%:R^-1 * _)) opprK (scalerA (2%:R^-1 * _)).
 rewrite -!mulrA mulVf ?mulr1; last first.
   rewrite subr_eq0 eq_sym; apply: contra saD0 => /eqP caE.
   by rewrite cos1sin0 // caE normr1.
-rewrite (addrC (- _)) addrC !addrA.
-rewrite scalerA mulrC subrr add0r.
-
+rewrite -!addrA addrCA addrC !addrA.
+rewrite scalerA (mulrC (2^-1) (sin a)) -!addrA subrr addr0 !addrA.
 rewrite (mulrC 2%:R^-1).
 rewrite -scalerA.
 rewrite scalerBl scale1r opprB.
@@ -1454,8 +1453,9 @@ rewrite -/Q => ->; rewrite linearD /=.
 rewrite [in X in _ *m (_ + X)]linearN /= trmx1.
 rewrite mulmxBr mulmx1 /eskew_unit.
 rewrite -addrA linearD /= mulmxDr trmx_mul trmxK.
-rewrite mulmxE -expr2 (mulmx_tr_uvect w1) //.
-rewrite addrC addrA (addrC (- _)) subrr add0r.
+rewrite mulmxE -expr2.
+rewrite (mulmx_tr_uvect w1) //.
+rewrite -!addrA addrC subrK.
 rewrite linearD /= [w]lock 2!linearZ /= tr_spin scalerN -lock.
 rewrite mulrDr -scalerAr linearD /= trmx1 linearN /= trmx_mul trmxK mulrBr.
 rewrite mulr1 -expr2 (mulmx_tr_uvect w1) // subrr scaler0 add0r.
@@ -1611,7 +1611,7 @@ have step3 : b *m A^T = (q *m (Q - 1) - displacement f q) *m (Q - 1)^T.
   rewrite /A tr_row_mx trmxK.
   rewrite /b (mul_row_col (q *m (Q - 1) - _)) mul0mx addr0.
   rewrite (mulmxBr (displacement f q)) mulmx1 opprB addrA addrAC.
-  rewrite mulmxDl -mulmxA.
+  rewrite [in LHS]mulmxDl -mulmxA.
   rewrite wTwQN1.
   by rewrite mulmx0 addr0.
 have {step2} : p0 *m A = b.

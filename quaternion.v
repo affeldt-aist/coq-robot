@@ -1,6 +1,6 @@
 (* coq-robot (c) 2025 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import all_boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
 From mathcomp Require Import ring.
@@ -217,8 +217,7 @@ move=> [a a'] [b b'] [c c']; congr mkQuat => /=.
   by rewrite dotmulvZ dotmulZv.
 - rewrite 2![in LHS]scalerDr 1![in RHS]scalerDl scalerA.
   rewrite -4![in LHS]addrA -3![in RHS]addrA; congr (_ + _).
-  rewrite [in RHS]scalerDr [in RHS]addrCA
-         -[in RHS]addrA -[in LHS]addrA; congr (_ + _).
+  rewrite [in RHS]scalerDr [in RHS]addrCA -[in RHS]addrA; congr (_ + _).
     by rewrite scalerA mulrC -scalerA.
   rewrite [in RHS]scalerDr [in LHS]scalerDl [in LHS]addrCA
          -[in RHS]addrA -addrA; congr (_ + _).
@@ -537,26 +536,26 @@ rewrite ['e_2%:R *v (x.1 *: _)]linearZ /= (@liexx _ (vec3 R)).
 rewrite scaler0 add0r double_crossmul dotmulvv normeE expr1n scale1r.
 rewrite [X in _ = - _ *: X](_ : _ = 2%:R *:x.2).
   by rewrite scalerA mulNr div1r mulVr ?unitfE ?pnatr_eq0 // scaleN1r.
-rewrite !opprB (addrCA _ x.2) addrA -mulr2n scaler_nat -[RHS]addr0 -3!addrA;
-    congr (_ + _).
-do 3 rewrite (addrCA _ x.2).
-do 2 rewrite addrC -!addrA.
-rewrite -opprB (scaleNr _ 'e_0) opprK -mulr2n addrA -mulr2n.
-rewrite addrC addrA -opprB scaleNr opprK -mulr2n.
-rewrite opprD.
-rewrite (addrCA (- _ *: 'e_2%:R)).
-rewrite -opprB scaleNr opprK -mulr2n.
-rewrite -!mulNrn.
-rewrite addrA.
-rewrite -opprD.
-rewrite -mulr2n.
-rewrite -mulNrn.
-rewrite -3!mulrnDl -scaler_nat.
-apply/eqP; rewrite scalemx_eq0 pnatr_eq0 /=.
-rewrite addrA addrC eq_sym -subr_eq add0r opprB opprD 2!opprK.
+rewrite !opprB (addrCA _ x.2).
+rewrite (addrA x.2 x.2) [in RHS]scaler_nat -[RHS]addr0.
+rewrite -2!(addrA (x.2 + x.2)) [in RHS]mulr2n; congr (_ + _).
+rewrite -(opprB (_ *: 'e_0)) scaleNr opprK -mulr2n -mulNrn.
+rewrite (addrCA _ x.2).
+rewrite -(opprB (_ *: 'e_1)) scaleNr opprK -mulr2n.
+rewrite (addrCA _ x.2).
+rewrite (addrCA _ x.2).
+rewrite -(opprB (_ *: 'e_2)) scaleNr opprK -mulr2n.
+rewrite (addrCA _ x.2).
 rewrite !['e__ *d _]dotmulC !dotmul_delta_mx /=.
-rewrite addrA.
-by rewrite -vec3E.
+rewrite -mulrnBl.
+rewrite -opprD.
+rewrite -addrA.
+rewrite -opprB.
+rewrite -mulNrn.
+rewrite opprK.
+rewrite -mulrnDl.
+rewrite (addrC (_ *: 'e_2)).
+by rewrite -vec3E addrA -mulr2n subrr.
 Qed.
 
 Lemma conjq_scalar x : x.1%:q = (1 / 2%:R) *: (x + x^*q).
@@ -990,14 +989,19 @@ Qed.
 
 Lemma quat_rot_is_linear x : linear (quat_rot x).
 Proof.
-move=> k u v; rewrite /quat_rot !conjugationE.
+move=> k u v; rewrite /quat_rot !conjugationE/=.
 rewrite scalerDr scalerA (mulrC _ k) -scalerA.
 rewrite 2![in RHS]scalerDr -2![in LHS]addrA -3![in RHS]addrA; congr (_ + _).
-rewrite [in RHS]addrA [in RHS]addrCA -[in RHS]addrA; congr (_ + _).
+do 2 rewrite (addrCA _ (_ *: v)); congr (_ + _).
+do 2 rewrite (addrCA _ (_ *: x.2 *+ 2)).
 rewrite dotmulDr scalerDl mulrnDl -addrA addrCA; congr (_ + _).
-rewrite dotmulvZ -scalerA scalerMnr -addrA; congr (_ + _).
-rewrite linearD /= scalerDr mulrnDl; congr (_ + _).
-by rewrite linearZ /= scalerA mulrC -scalerA -scalerMnr.
+rewrite dotmulvZ -scalerA scalerMnr.
+rewrite -(scalerMnr k); congr (_ + _).
+rewrite scalerMnr scalerA (mulrC _ x.1) -scalerA.
+rewrite scalerMnr -scalerDr; congr (_ *: _).
+rewrite -scalerMnr -mulrnDl.
+congr (_ *+ _).
+by rewrite linearD/= linearZ/=.
 Qed.
 
 HB.instance Definition _ x := @GRing.isLinear.Build _ _ _ _ _ (quat_rot_is_linear x).

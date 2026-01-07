@@ -920,7 +920,8 @@ case: ifPn => a0 /=.
   rewrite (@sqrtrM _ (1 - complex.Re a)); last by rewrite subr_ge0 Im_half_anglec // normr_expi.
   rewrite (@sqrtrM _ (1 + complex.Re a)); last by rewrite Re_half_anglec // normr_expi.
   rewrite mulrCA -mulrA -(sqrtrM 2^-1) ?invr_ge0//.
-  rewrite -expr2 sqrtr_sqr normfV ger0_norm// -mulr_natr -2!mulrA mulVf ?pnatr_eq0// mulr1.
+  rewrite -expr2 sqrtr_sqr normfV ger0_norm// -[eqbLHS](mulr_natr _ 2).
+  rewrite -2!mulrA mulVf ?pnatr_eq0// mulr1.
   rewrite mulrC -sqrtrM; last by rewrite subr_ge0 Im_half_anglec // normr_expi.
   rewrite -subr_sqr expr1n.
   rewrite -(@eqrXn2 _ 2%N) //; last by rewrite sqrtr_ge0.
@@ -975,7 +976,7 @@ Proof.
 move: (cosD (half_angle a) (half_angle a)).
 rewrite halfP -2!expr2 sin2cos2 opprB addrA -mulr2n => /eqP.
 rewrite eq_sym subr_eq addrC => /eqP/(congr1 (fun x => x / 2%:R)).
-rewrite -mulr_natl mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
+rewrite -(mulr_natl (_ ^+ _)) mulrC mulrA mulVr ?unitfE ?pnatr_eq0 // mul1r.
 by move/(congr1 Num.sqrt); rewrite sqrtr_sqr.
 Qed.
 
