@@ -134,35 +134,7 @@ under eq_fun do rewrite -dotmulvv.
 exact: differentiable_dotmul.
 Qed.*)
 (* this one too *)
-(*Lemma derivable_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1 + n2)) t v :
-  (forall x, derivable f x v) -> derivable (fun x => rsubmx (f x)) t v.
-Proof.
-move=> /= => df1.
-apply/derivable_mxP => i j/=.
-rewrite (ord1 i).
-have /cvg_ex[/= r Hr]:= df1 t.
-apply/cvg_ex => /=; exists (r``_(rshift n1 j)).
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : Hr => /(_ _ e0).
-apply: filterS => x.
-apply: le_trans.
-rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
-apply: le_trans; last first.
-  exact: (le_bigmax _ _ (ord0, rshift n1 j)).
-by rewrite !mxE.
-Qed.*)
 
-(*Lemma derive_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1 + n2)) t v :
-  (forall x, derivable f x v) ->
-  'D_v (fun x => rsubmx (f x)) t = @rsubmx _ _ n1 _ ('D_v f t).
-Proof.
-move=> df1; apply/matrixP => i j; rewrite !mxE /=.
-rewrite derive_mx ?mxE//=; last exact: derivable_rsubmx.
-rewrite derive_mx ?mxE//=; congr ('D_v _ t).
-by apply/funext => x; rewrite !mxE.
-Qed.*)
 (*DONE*)
 Lemma differentiable_rsubmx0 {R : realFieldType} {V : normedModType R} {n1 n2} t :
   differentiable (@rsubmx R 1 n1 n2) t.
@@ -183,6 +155,7 @@ apply: (le_lt_trans _ (uv i (rshift n1 j))).
 by rewrite !mxE.
 Qed.
 (*DONE*)
+
 Lemma differentiable_rsubmx {R : realFieldType} (V : normedModType R) {n1 n2}
     (f : V -> 'rV[R]_(n1 + n2)) t :
   (forall x, differentiable f x) ->
@@ -192,36 +165,7 @@ move=> /= => df1.
 apply: differentiable_comp => //.
 exact: differentiable_rsubmx0.
 Qed.
-(*TODO*)
-Lemma derivable_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1 + n2)) t v :
-  (forall x, derivable f x v) -> derivable (fun x => lsubmx (f x)) t v.
-Proof.
-move=> /= => df1.
-apply/derivable_mxP => i j/=.
-rewrite (ord1 i).
-have /cvg_ex[/= l Hl]:= df1 t.
-apply/cvg_ex => /=; exists (l``_(lshift n2 j)).
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : Hl => /(_ _ e0).
-apply: filterS => x.
-apply: le_trans.
-rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
-apply: le_trans; last first.
-  exact: (le_bigmax _ _ (ord0, lshift n2 j)).
-by rewrite !mxE.
-Qed.
 
-Lemma derive_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f : V -> 'rV[R]_(n1 + n2)) t v :
-  (forall x, derivable f x v) ->
-  'D_v (fun x => lsubmx (f x)) t = @lsubmx _ _ n1 _ ('D_v f t).
-Proof.
-move=> df1; apply/matrixP => i j; rewrite !mxE /=.
-rewrite derive_mx ?mxE//=; last exact: derivable_lsubmx.
-rewrite derive_mx ?mxE//=; congr ('D_v _ t).
-by apply/funext => x; rewrite !mxE.
-Qed.
 (*DONE*)
 Lemma differentiable_lsubmx0 {R : realFieldType} {V : normedModType R} {n1 n2} t :
   differentiable (@lsubmx R 1 n1 n2) t.
@@ -259,6 +203,7 @@ rewrite -[in RHS]deriveE; last first.
   by [].
 rewrite derive_lsubmx//.
 Abort.*)
+
 (*DONE*)
 Lemma differentiable_lsubmx {R : realFieldType} (V : normedModType R) {n1 n2}
     (f : V -> 'rV[R]_(n1 + n2)) t :
