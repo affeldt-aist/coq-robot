@@ -432,10 +432,9 @@ Context {K : realType} {n : nat}.
 Let T := 'rV[K]_n.
 Variable phi : T -> T.
 Variable r : {posnum K}.
-Variable Delta : K.
 
-Definition state_space (Init : set T) (Delta : K) :=
-  [set x | exists f, is_sol phi Init Delta r f /\ exists t, t \in `]0,Delta[ /\ x = f t ].
+Definition state_space (Init : set T) (Delta : K) : set T:=
+  [set x | exists f, (is_sol phi Init Delta r f /\ (exists t, t \in `]0, Delta[%R /\ x = f t))].
 
 End state_space.
 
