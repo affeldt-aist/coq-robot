@@ -394,6 +394,17 @@ Variable phi : U -> U.
 Definition is_sol (Delta : K) (f : K -> U) (Init : set U) :=
   f 0 \in Init /\ is_sol_autonomous (f 0) phi 0 Delta f.
 
+Definition is_global_sol (f : K -> U) (Init : set U) :=
+   f 0 \in Init /\ forall x , derivable f x 1 /\ f^`() x = phi (f x).
+
+Lemma global_sol_sol f Init : is_global_sol f Init -> forall Delta, is_sol Delta f Init.
+Proof.
+  move => [init0 /= solP] Delta.
+  do 3 split =>//.
+  apply: derivable_within_continuous.
+  move => x _.
+  apply solP.
+Qed.
 End ode.
 
 Section is_sol.
@@ -464,20 +475,46 @@ Let T := 'rV[K]_n.
 Variable phi : T -> T.
 Variable Init : set T.
 
-Definition is_stable_at (x : T) (z : K -> 'rV[K]_n) :=
-  forall eps, eps > 0 -> exists2 d, d > 0 &
-    `| z 0 - x | < d -> forall t, t >= 0 -> `| z t - x | < eps.
-
 Definition is_locally_stable_at (x : T) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
   forall (z : K -> 'rV[K]_n) (Delta : K), is_sol phi Delta z Init ->
     `| z 0 - x | < d -> forall t, 0 < t < Delta -> `| z t - x | < eps.
+
+(* assuming solution exists for all time *)
+Definition is_stable_at (x : T) :=
+  forall eps, eps > 0 -> exists2 d, d > 0 &
+  forall (z : K -> 'rV[K]_n), is_global_sol phi z Init ->
+    `| z 0 - x | < d -> forall t, 0 < t  -> `| z t - x | < eps.
+
+Lemma locally_stable_stable x : is_locally_stable_at x -> is_stable_at x.
+Proof.
+move => lstable e e0.
+move /(_ _ e0) : lstable => [d d0 stable].
+exists d => // z zglob zd t t0.
+apply (stable _ (t+1)) => //.
+by apply global_sol_sol.
+rewrite t0/=.
+by rewrite ltrDl.
+Qed.
 
 Definition is_asymptotically_stable_at (x : T) (z : K -> 'rV[K]_n) : Prop :=
   exists2 d, d > 0 & `| z 0 - x | < d -> z t @[t --> +oo] --> x.
 
 End stability.
 
+Section bounded.
+Context {K : realType} {n : nat}.
+Let T := 'rV[K]_n.
+Variable phi : T -> T.
+(* Variable sol : K->T. *)
+Variable Init : set T.
+Variable x0 : T.
+(* Hypothesis solP: is_sol phi Delta sol Init. *)
+(* Lemma stable_bounded : is_locally_stable_at phi Init x0 -> forall eps, exists d, forall u0 Delta sol, `|u0 - x0| <= d -> is_sol_autonomous u0 phi 0 Delta sol -> forall t, 0<=t<=Delta -> `|sol t - x0| <= eps. *)
+(* Proof. *)
+(*   move => stable eps.  *)
+(*   have :=  *)
+End bounded.
 (* f' = phi f *)
 (* phi_robot f =def= fun f t => phi t (f t) *)
 (*Definition existence_uniqueness {K : realType} {n}
@@ -1492,6 +1529,200 @@ apply: (@le_trans _ _
   admit.
 apply: (@le_trans _ _
     (`|maxr alpha1 gamma *: x a b - maxr alpha1 gamma *: x0 a b|)); last first.
+Abort.
+
+(* Todo: Maybe useful generally? (PR) *)
+Lemma norm_rowmx  {m n1 n2 : nat} (A1 : matrix K m.+1 n1.+1) (A2 : matrix K m.+1 n2.+1) : `|row_mx A1 A2| = max `|A1| `|A2|.
+Proof.
+rewrite /Num.norm/=.
+rewrite !mx_normrE.
+apply/eqP; rewrite eq_le; apply/andP; split.
+- apply: bigmax_le => /=.
+    rewrite le_max;apply /orP;left.
+    apply/le_trans/(le_bigmax _ _ (ord0,ord0) ).
+    by apply normr_ge0.
+  move => [i j] _.
+  rewrite /=.
+  rewrite le_max;apply /orP.
+  rewrite mxE.
+  case: (splitP  j) => j1 h1.
+  left;exact: (le_bigmax _ _ (i, j1)).
+  right;exact: (le_bigmax _ _ (i, j1)).
+rewrite ge_max;apply /andP;split.
+  apply: bigmax_le => /=.
+  apply: le_trans; last first.
+    exact: (le_bigmax _ _ (ord0, ord0)).
+    exact: normr_ge0.
+ move => [i j] _.
+ rewrite /=.
+ rewrite -(row_mxEl _ A2).
+ exact: (le_bigmax _ _ (i, lshift n2.+1 j)).
+apply: bigmax_le => /=.
+apply: le_trans; last first.
+  exact: (le_bigmax _ _ (ord0, ord0)).
+  exact: normr_ge0.
+move => [i j] _.
+rewrite /=.
+rewrite -(row_mxEr A1).
+exact: (le_bigmax _ _ (i, rshift n1.+1 j)).
+Qed.
+
+Lemma left_sub (x y : 'rV[K]_6) : Left x - Left y = Left (x -y).
+Proof.
+  rewrite /Left.
+  apply/matrixP => i j.
+  by rewrite !mxE.
+Qed.
+
+Lemma right_sub (x y : 'rV[K]_6) : Right x - Right y = Right (x -y).
+Proof.
+  rewrite /Left.
+  apply/matrixP => i j.
+  by rewrite !mxE.
+Qed.
+Lemma left_norm_le (x : 'rV[K]_6) : `|Left x|  <= `|x|.
+Proof.
+rewrite /Num.norm/=.
+rewrite !mx_normrE.
+apply: bigmax_le.
+  by apply/le_trans/(le_bigmax _ _ (ord0,ord0) );apply normr_ge0.
+ move => [i j] _.
+ rewrite /=.
+ rewrite mxE.
+ exact: (le_bigmax _ _ (i, lshift 3 j)).
+Qed.
+
+Lemma right_norm_le (x : 'rV[K]_6) : `|Right x|  <= `|x|.
+Proof.
+rewrite /Num.norm/=.
+rewrite !mx_normrE.
+apply: bigmax_le.
+  by apply/le_trans/(le_bigmax _ _ (ord0,ord0) );apply normr_ge0.
+ move => [i j] _.
+ rewrite /=.
+ rewrite mxE.
+ exact: (le_bigmax _ _ (i, rshift 3 j)).
+Qed.
+
+(*Todo: This also seems useful in general (PR) *)
+Lemma mx_norm_mul {m n p} (A : matrix K m.+1 n.+1) (B : 'M_(n.+1, p.+1)) :
+  mx_norm (A *m B) <= (n.+1)%:R * mx_norm A * mx_norm B.
+Proof.
+  rewrite !mx_normrE.
+  apply: bigmax_le.
+    rewrite -mulrA.
+    apply mulr_ge0 => //.
+    by apply mulr_ge0; apply/le_trans/(le_bigmax _ _ (ord0,ord0) );apply normr_ge0.
+  move => [i j] _.
+  rewrite /=.
+  rewrite mxE.
+  apply: le_trans; first by apply ler_norm_sum.
+  rewrite /=.
+Admitted.
+
+Lemma mx_norm_sq {n} (A : matrix K n.+1 n.+1) : `|A^+2| <=  (n.+1)%:R* `|A|^+2.
+Proof.
+  rewrite !expr2 mulrA.
+  exact: mx_norm_mul.
+Qed.
+
+Lemma closed_ball_bounded {n} (x y : 'rV[K]_n) r: 0 < r -> closed_ball x r y -> `|y| <= `|x| + r. 
+Proof.
+move => r0.
+rewrite closed_ballE//.
+rewrite /closed_ball_/=.
+move => dxy.
+rewrite ler_distlCDr //.
+by apply: (le_trans  (ler_dist_dist _ _)).
+Qed.
+
+Lemma tilt_eqn_locally_lipschitz : forall x, exists (r k : {posnum K}),  k%:num.-lipschitz_(closed_ball x r%:num) tilt_eqn.
+Proof.
+move => /= x.
+rewrite /tilt_eqn.
+(* near (pinfty_nbhs K) => k'. *)
+(* exists k' => -[/= x x0] _. *)
+(* rewrite /tilt_eqn. *)
+exists (PosNum ltr01).
+near (pinfty_nbhs K) => k.
+have k0 : (0 < k) by [].
+exists (PosNum k0) => /= => -[/= x0 x1] [x0B x1B].
+
+rewrite (opp_row_mx (n1:=3)) (add_row_mx (n1:=3)).
+rewrite !scaleNr opprK/=.
+rewrite addrC -scalerBr.
+rewrite /eqn14b_rhs.
+rewrite -!scalemxAl -scalerBr.
+rewrite (norm_rowmx (m:=0) (n1:=2) (n2:=2)).
+rewrite ge_max;apply /andP;split.
+- rewrite mx_normZ.
+  rewrite left_sub.
+  apply: ler_pM; try by apply normr_ge0.
+  by [].
+  rewrite distrC.
+  by apply /le_trans/left_norm_le.
+- rewrite mx_normZ.
+  set a := (Right x0 - Left x0).
+  set b := (Right x1 - Left x1).
+  set c := \S('e_2 - Right x0) ^+ 2.
+  set d := \S('e_2 - Right x1) ^+ 2.
+  have abound : `|a| <= 2 * (`|x| + 1).  
+    rewrite /a.
+    apply: (le_trans (ler_normB _ _ )).
+    rewrite mulrDl lerD // mul1r.
+    apply : (le_trans (right_norm_le _)).
+    by apply closed_ball_bounded.
+    apply : (le_trans (left_norm_le _)).
+    by apply closed_ball_bounded.
+    (* todo: find some bound and show *)
+  have dbound : `|d| <= `|\S('e_2)| + (1 + `|x|)^+2.
+    rewrite /d.
+    rewrite skew.sqr_spin.
+    apply: (le_trans (ler_normB _ _)).
+    apply lerD;last first.
+    rewrite scalemx1.
+    admit.
+    admit.
+  rewrite -ler_pdivlMl; last by rewrite normr_gt0 lt0r_neq0.
+  rewrite -(subrKA (a *m d) (a *m c )) (le_trans (ler_normD _ _))//.
+  (* why is this so slow?*)
+  rewrite -mulmxBr.
+  rewrite -(@mulmxBl K 1 3 3 a b d).
+  rewrite (splitr  `|gamma|^-1 ) mulrDl lerD //.
+  + apply: le_trans.
+    apply: mx_norm_mul.
+    admit.
+  + apply: le_trans.
+    apply: mx_norm_mul.
+    have -> : (a - b) = (Right x0 - Right x1) + (Left x1 - Left x0).
+    admit.
+    rewrite mulrC.
+    apply (@le_trans _ _ (`| d| *  (6 * `|x0 - x1|))).
+    apply ler_pM => //.
+    apply: (normr_ge0 d).
+    apply mulr_ge0 => //.
+    apply: (normr_ge0  (Right x0 - _ + (_ - _))).
+    have -> : (6 : K) = (3 * 2) by ring.
+    rewrite -mulrA.
+    apply ler_pM => //.
+    apply: (normr_ge0  (Right x0 - _ + (_ - _))).
+    apply (le_trans (ler_normD (Right x0 - _) _)).
+    rewrite mulrDl lerD // mul1r.
+    by rewrite right_sub;apply right_norm_le.
+    by rewrite distrC left_sub; apply left_norm_le.
+    rewrite -invrM; last 2 first.
+      by rewrite unitfE.
+      rewrite unitfE.
+      apply lt0r_neq0.
+      by rewrite normr_gt0 lt0r_neq0.
+    apply: (le_trans  (ler_pM  _ _ dbound (lexx _ ))).
+    apply normr_ge0.
+    apply mulr_ge0 => //.
+    rewrite ler_pdivlMl; last first.
+       apply mulr_gt0 => //.
+       by rewrite normr_gt0 lt0r_neq0.
+    rewrite !mulrA.
+    apply ler_pM => //.
 Abort.
 
 (*Lemma invariant_state_space_tilt p
