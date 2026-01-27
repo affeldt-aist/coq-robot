@@ -1618,7 +1618,23 @@ Proof.
   rewrite mxE.
   apply: le_trans; first by apply ler_norm_sum.
   rewrite /=.
-Admitted.
+  have le_inside :forall i0, `|A i i0 * B i0 j| <= `| A | * `|B|.
+    move => k.
+    rewrite normrM.
+    rewrite /Num.norm/= !mx_normrE.
+    apply ler_pM.
+    exact: normr_ge0.
+    exact: normr_ge0.
+    apply: (le_bigmax _ _ (i,k)).
+    apply: (le_bigmax _ _ (k,j)).
+    rewrite -mulrA.
+    apply : (@le_trans _ _ (\sum_(i0 < n.+1)  `|A| * `|B|)).
+    apply: ler_sum => k _; apply le_inside.
+    rewrite mulr_natl.
+    rewrite big_const_ord.
+    rewrite iter_addr_0.
+    by rewrite /Num.norm/= !mx_normrE.
+Qed.
 
 Lemma mx_norm_sq {n} (A : matrix K n.+1 n.+1) : `|A^+2| <=  (n.+1)%:R* `|A|^+2.
 Proof.
