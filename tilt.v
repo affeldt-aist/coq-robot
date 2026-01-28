@@ -1606,8 +1606,9 @@ Qed.
 
 (*Todo: This also seems useful in general (PR) *)
 Lemma mx_norm_mul {m n p} (A : matrix K m.+1 n.+1) (B : 'M_(n.+1, p.+1)) :
-  mx_norm (A *m B) <= (n.+1)%:R * mx_norm A * mx_norm B.
+ `|(A *m B)| <= (n.+1)%:R * `| A| * `|B|.
 Proof.
+  rewrite /Num.norm/=.
   rewrite !mx_normrE.
   apply: bigmax_le.
     rewrite -mulrA.
@@ -1636,11 +1637,12 @@ Proof.
     by rewrite /Num.norm/= !mx_normrE.
 Qed.
 
-Lemma mx_norm_sq {n} (A : matrix K n.+1 n.+1) : `|A^+2| <=  (n.+1)%:R* `|A|^+2.
+Lemma mx_norm_sq_le {n} (A : matrix K n.+1 n.+1) : `|A^+2| <=  (n.+1)%:R* `|A|^+2.
 Proof.
   rewrite !expr2 mulrA.
   exact: mx_norm_mul.
 Qed.
+
 
 Lemma closed_ball_bounded {n} (x y : 'rV[K]_n) r: 0 < r -> closed_ball x r y -> `|y| <= `|x| + r. 
 Proof.
@@ -1651,6 +1653,96 @@ move => dxy.
 rewrite ler_distlCDr //.
 by apply: (le_trans  (ler_dist_dist _ _)).
 Qed.
+Local Lemma euclidean_norm_mxnorm {n} (x : 'rV[K]_n.+1) : (norm x)^+2 <= n.+1%:R* `|x| ^ 2. 
+Proof.
+rewrite sqr_norm /=.
+have le_inside :forall i, x``_i^+2  <= `| x |^+2.
+  move => i.
+  rewrite -sqr_normr.
+  suff h : `|x``_i| <= `|x| by apply ler_pM => //; apply normr_ge0.
+  rewrite {2}/Num.norm/= !mx_normrE /=.
+  exact: (le_bigmax _ _ (ord0,i)).
+apply : (@le_trans _ _ (\sum_(i0 < n.+1)  `|x|^+2 )).
+apply: ler_sum => k _; apply le_inside.
+by rewrite big_const_ord mulr_natl iter_addr_0.
+Qed.
+
+Lemma mx_norm1 {n} :  `|(1 : matrix K n.+1 n.+1)| = 1.
+Proof.
+rewrite /Num.norm/= !mx_normrE.
+apply/eqP; rewrite eq_le; apply/andP; split.
+- apply: bigmax_le => //.
+  move => i _.
+  rewrite mxE /=.
+   case: eqP => /= _.
+   by rewrite normr1.
+   by rewrite normr0.
+rewrite -normr1.
+have ->: ((1 : K) = ((1 : matrix K n.+1 n.+1) ord0 ord0)) by rewrite mxE.
+exact: (le_bigmax _ _ (ord0, ord0)).
+Qed.
+Local Lemma I3_cases (i : 'I_3) :  i = 0 \/ i = 1 \/ i = 2.
+Proof.
+case: i => m hm.
+have : m = 0 \/ m = 1 \/ m = 2.
+case: m hm => [|[|[|m]]] //=; by [left| right;left | right;right].
+by case=> [h|[h|h]];[left|right;left|right;right];apply/val_inj.
+Qed.
+
+Lemma spin_le_norm (x : 'rV[K]_3) : `|\S(x)| <= `|x|.
+Proof.
+rewrite {1}/Num.norm/= !mx_normrE.
+apply: bigmax_le.
+apply normr_ge0.
+move  => [i j] _.
+have [->|[->|->]] := I3_cases i;have [->|[->|->]] := I3_cases j => //=.
+all: rewrite ?spinii ?spin01 ?spin02 ?spin10 ?spin12 ?spin20 ?spin21
+            ?normr0 ?normrN ?normr_ge0 // {2}/Num.norm/= !mx_normrE;exact : (le_bigmax _ _ (0,_)).
+Qed.
+
+Lemma spin_sq_norm_bound (x : 'rV[K]_3) : `|\S(x)^+2| <= 3* `|x|^+2.
+Proof.
+  apply: (le_trans (mx_norm_sq_le _)).
+  apply  ler_pM => //.
+  suff h : `|\S(x)| <= `|x| by apply ler_pM.
+  exact: spin_le_norm.
+Qed.
+
+Lemma spin_sq_dist_bound (x y: 'rV[K]_3)  : `|\S(x)^+2 - \S(y)^+2| <= 3 * (`|x|+`|y|)* `|x-y|.
+Proof.
+have -> : \S(x) ^+ 2 - \S(y) ^+ 2 = \S(x) *m (\S(x) - \S(y)) + (\S(x) - \S(y)) *m \S(y).
+  by rewrite mulmxBr mulmxBl addrA subrK.
+rewrite mulrDr mulrDl.
+apply: (le_trans (ler_normD _ _)).
+rewrite -spinN -spinD.
+apply: lerD.
+  apply: (le_trans (mx_norm_mul _ _)).
+  apply : ler_pM => //.
+  apply : ler_pM => //.
+  exact: spin_le_norm.
+  exact: spin_le_norm.
+rewrite -mulrA (mulrC `|y|) mulrA.
+apply: (le_trans (mx_norm_mul _ _)).
+apply : ler_pM => //.
+apply : ler_pM => //.
+exact: spin_le_norm.
+exact: spin_le_norm.
+Qed.
+
+(* Lemma spin_sq_norm_bound (x : 'rV[K]_3) : `|\S(x)^+2| <= 4* `|x|^+2. *)
+(* Proof. *)
+(* have -> : 4* `|x|^+2 = `|x|^+2 + 3* `|x|^+2 by ring. *)
+(* rewrite skew.sqr_spin. *)
+(* apply: (le_trans (ler_normB _ _)). *)
+(* apply lerD. *)
+(*   apply: (le_trans (mx_norm_mul _ _)). *)
+(*   rewrite norm_trmx. *)
+(*   by rewrite mul1r. *)
+(* rewrite mx_normZ. *)
+(* rewrite mx_norm1 mulr1. *)
+(* rewrite normrM normr_norm. *)
+(* exact: euclidean_norm_mxnorm. *)
+(* Qed. *)
 
 Lemma tilt_eqn_locally_lipschitz : forall x, exists (r k : {posnum K}),  k%:num.-lipschitz_(closed_ball x r%:num) tilt_eqn.
 Proof.
@@ -1690,47 +1782,72 @@ rewrite ge_max;apply /andP;split.
     by apply closed_ball_bounded.
     apply : (le_trans (left_norm_le _)).
     by apply closed_ball_bounded.
-    (* todo: find some bound and show *)
-  have dbound : `|d| <= `|\S('e_2)| + (1 + `|x|)^+2.
-    rewrite /d.
-    rewrite skew.sqr_spin.
+  (* todo: find some bound and show *)
+  have sbound x' : closed_ball x 1 x' ->  `|'e_2 - Right x'| <= 2+`|x|.
+    move => cb.
     apply: (le_trans (ler_normB _ _)).
-    apply lerD;last first.
-    rewrite scalemx1.
-    admit.
-    admit.
+    have -> : 2 + `|x| = 1+(1+`|x|) by ring.
+    apply lerD.
+    rewrite /Num.norm /= mx_normrE.
+    apply: bigmax_le => //.
+    move => i _.
+    rewrite mxE /=.
+    case: eqP=> /= _;last by rewrite normr0.
+    case:eqP => /= _;last by rewrite normr0.
+    by rewrite normr1.
+    apply: (le_trans (right_norm_le _)).
+    rewrite addrC.
+    by apply closed_ball_bounded.
+  have dbound : `|d| <=  3* (2 + `|x|)^+2.
+    rewrite /d.
+    apply: (le_trans (spin_sq_norm_bound _)).
+    apply ler_pM => //.
+    suff h :  `|'e_2 - Right x1| <= 2 + `|x|.
+       by apply ler_pM => //; apply normr_ge0.
+    by apply sbound.
   rewrite -ler_pdivlMl; last by rewrite normr_gt0 lt0r_neq0.
   rewrite -(subrKA (a *m d) (a *m c )) (le_trans (ler_normD _ _))//.
   (* why is this so slow?*)
   rewrite -mulmxBr.
   rewrite -(@mulmxBl K 1 3 3 a b d).
-  rewrite (splitr  `|gamma|^-1 ) mulrDl lerD //.
-  + apply: le_trans.
-    apply: mx_norm_mul.
-    admit.
-  + apply: le_trans.
-    apply: mx_norm_mul.
-    have -> : (a - b) = (Right x0 - Right x1) + (Left x1 - Left x0).
-    admit.
-    rewrite mulrC.
-    apply (@le_trans _ _ (`| d| *  (6 * `|x0 - x1|))).
-    apply ler_pM => //.
-    apply: (normr_ge0 d).
-    apply mulr_ge0 => //.
-    apply: (normr_ge0  (Right x0 - _ + (_ - _))).
-    have -> : (6 : K) = (3 * 2) by ring.
-    rewrite -mulrA.
-    apply ler_pM => //.
-    apply: (normr_ge0  (Right x0 - _ + (_ - _))).
-    apply (le_trans (ler_normD (Right x0 - _) _)).
-    rewrite mulrDl lerD // mul1r.
-    by rewrite right_sub;apply right_norm_le.
-    by rewrite distrC left_sub; apply left_norm_le.
-    rewrite -invrM; last 2 first.
+  rewrite (splitr  `|gamma|^-1) mulrDl.
+  rewrite -invrM; last 2 first.
       by rewrite unitfE.
       rewrite unitfE.
       apply lt0r_neq0.
       by rewrite normr_gt0 lt0r_neq0.
+  rewrite lerD //.
+  + apply: (le_trans (mx_norm_mul _ _)).
+    have h0 := spin_sq_dist_bound ('e_2 - Right x0) ('e_2 - Right x1).
+    apply : (le_trans (ler_pM _ _ (le_refl _) h0)) => //.
+    have -> : 'e_2 - Right x0 - ('e_2 - Right x1) = Right x1 - Right x0.
+      by rewrite opprB addrC addrA subrK.
+    rewrite !mulrA.
+    apply ler_pM => //; last by rewrite distrC right_sub;exact: right_norm_le.
+    rewrite (mulrC 3) -!mulrA.
+    apply : (le_trans (ler_pM _ _ abound (le_refl _))) => //.
+    rewrite !mulrA.
+    rewrite ler_pdivlMl; last first.
+       apply mulr_gt0 => //.
+       by rewrite normr_gt0 lt0r_neq0.
+    rewrite !mulrA.
+    suff h : `|'e_2 - Right x0| + `|'e_2 - Right x1| <= 2 * (2 + `|x|).
+      by apply: (le_trans (ler_pM _ _ (le_refl _) h)) => //.
+    rewrite mulrDl mul1r.
+    by apply lerD;  apply sbound.
+  + apply: le_trans.
+    apply: mx_norm_mul.
+    rewrite opprB -addrA (addrC (-Left x0)) addrA (addrC (Left x1)) addrA  -(addrA (Right x0 - _)).
+    rewrite mulrC.
+    apply (@le_trans _ _ (`| d| *  (6 * `|x0 - x1|))).
+    apply ler_pM => //.
+    have -> : (6 : K) = (3 * 2) by ring.
+    rewrite -mulrA.
+    apply ler_pM => //.
+    apply (le_trans (ler_normD (Right x0 - _) _)).
+    rewrite mulrDl lerD // mul1r.
+    by rewrite right_sub;apply right_norm_le.
+    by rewrite distrC left_sub; apply left_norm_le.
     apply: (le_trans  (ler_pM  _ _ dbound (lexx _ ))).
     apply normr_ge0.
     apply mulr_ge0 => //.
@@ -1739,7 +1856,8 @@ rewrite ge_max;apply /andP;split.
        by rewrite normr_gt0 lt0r_neq0.
     rewrite !mulrA.
     apply ler_pM => //.
-Abort.
+Unshelve. all: by end_near. Qed.
+
 
 (*Lemma invariant_state_space_tilt p
   (p33 : state_space tilt_eqn' state_space_tilt p) :
