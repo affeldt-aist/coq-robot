@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra ring.
+From mathcomp Require Import all_boot all_order all_algebra ring.
 From mathcomp Require Import interval_inference.
 From mathcomp Require Import boolp classical_sets functions reals.
 From mathcomp Require Import topology normedtype derive.
@@ -13,6 +13,66 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 
+(* see Appendix VII.A of
+   https://hal.science/hal-04271257v1/file/benallegue2019tac_October_2022.pdf *)
+Section basic_facts.
+Variable K : realType.
+
+Lemma fact212 (v w : 'rV[K]_3) : \S(v) * \S(w) = w^T *m v - (v *m w^T)``_0 *: 1.
+Proof.
+apply/matrix3P/and9P; split; apply/eqP;  rewrite !(mxE,sum3E,spinij,sum1E); Simp.r.
+  ring.
+by rewrite mulrC.
+by rewrite mulrC.
+by rewrite mulrC.
+by rewrite !opprD; ring.
+by rewrite mulrC.
+by rewrite mulrC.
+by rewrite mulrC.
+by rewrite !opprD; ring.
+Qed.
+
+Lemma fact213 (v w : 'rV[K]_3) : \S(v) * \S(w) * \S(v) = - (v *m w^T) ``_0 *: \S(v).
+Proof.
+rewrite fact212 mulrBl -mulmxE -mulmxA; have: v *m \S(v) = 0.
+  apply: trmx_inj.
+  by rewrite trmx_mul tr_spin mulNmx spin_mul_tr trmx0 oppr0.
+move => ->.
+by rewrite mulmx0 sub0r -mul_scalar_mx -mulNmx; congr (_ *m _); rewrite scalemx1 rmorphN.
+Qed.
+
+Lemma fact215 ( v w : 'rV[K]_3) : \S(w *m \S(v)) = \S(w) * \S(v) - \S(v) * \S(w).
+Proof.
+by rewrite spinE spin_crossmul.
+Qed.
+
+Lemma fact216 (v w : 'rV[K]_3): \S(w *m \S(v)) = v^T *m w - w^T *m v.
+Proof.
+by rewrite fact215 !fact212 -!/(_ *d _) dotmulC opprB addrA subrK.
+Qed.
+Lemma fact217 (v : 'rV[K]_3): \S(v) ^+ 3 = - (`|v|_e ^+2) *: \S(v).
+  exact: spin3.
+Qed.
+
+Lemma fact214 (R : 'M[K]_3) (v_ : seq 'rV[K]_3) : R \is 'SO[K]_3 ->
+  R^T * (\prod_(i <- v_) \S( i )) * R = (\prod_(i <- v_) \S( i *m R)).
+Proof.
+move => RSO.
+elim/big_ind2 : _ => //.
+  by rewrite -!mulmxE mulmx1 rotation_tr_mul.
+- move => a b c d H1 H2.
+  rewrite -H1 // -H2 // -!mulmxE -!rotation_inv // !mulmxA -[R^-1 *m b *m R *m R^-1]mulmxA.
+  rewrite mulmxV; last first.
+    rewrite unitmxE.
+    apply: orthogonal_unit.
+    exact: rotation_sub.
+  by rewrite -[R^-1 *m b *m 1%:M *m d]mulmxA mul1mx.
+- move => i true.
+  exact: spin_similarity.
+Qed.
+
+End basic_facts.
+
 (* spin and matrix/norm properties *)
 
 Lemma tr_sqr_spin {R : realFieldType} (u : 'rV[R]_3) :
@@ -22,8 +82,29 @@ Proof. by apply/esym/eqP; rewrite -symE; exact: sqr_spin_is_sym. Qed.
 Lemma mul_tr_spin {R : comNzRingType} (u : 'rV[R]_3) : u *m \S(u)^T = 0.
 Proof. by apply: trmx_inj; rewrite trmx_mul trmxK spin_mul_tr trmx0. Qed.
 
-Lemma CauchySchwarz_vec {R : rcfType} {n : nat} (a b : 'rV[R]_n) :
-  (a *d b)^+2 <= (a *d a) * (b *d b).
+Lemma norm_spin {R : rcfType} (u : 'rV[R]_3) (v : 'rV[R]_3) :
+  (u *m \S(v - u) ^+ 2 *m (u)^T) 0 0 = - `|u *m \S(v)|_e ^+ 2.
+Proof.
+rewrite spinD spinN -tr_spin mulmxA !mulmxDr mulmxDl !mul_tr_spin !addr0.
+rewrite -dotmulvv /dotmul trmx_mul.
+rewrite mxE [X in _ + X = _](_ : _ = 0) ?addr0; last first.
+  by rewrite tr_spin -mulmxA mulNmx spin_mul_tr mulmxN mulmx0 oppr0 mxE.
+by rewrite tr_spin mulNmx mulmxN [in RHS]mxE opprK mulmxA.
+Qed.
+
+Lemma sqr_spin {R : rcfType} (u : 'rV[R]_3) (norm_u1 : `|u|_e = 1) :
+  \S(u) *m \S(u) = u^T *m u - 1%:M.
+Proof.
+have sqrspin : \S(u) ^+ 2 = u^T *m u - (`|u|_e ^+ 2)%:A by rewrite sqr_spin.
+rewrite expr2 norm_u1 expr2 mulr1 in sqrspin.
+rewrite mulmxE sqrspin.
+  apply/matrixP => i j ; rewrite mxE /= [in RHS]mxE /=.
+  congr (_+_); rewrite mxE mxE /= mul1r.
+  by rewrite [in RHS]mxE [in RHS]mxE /= -mulNrn mxE -mulNrn.
+Qed.
+
+Lemma CauchySchwarz_rV {R : rcfType} {n : nat} (a b : 'rV[R]_n) :
+  (a *d b) ^+ 2 <= (a *d a) * (b *d b).
 Proof.
 suffices: 0 <= (b *d b) * (a *d a) - (a *d b) ^+ 2.
   rewrite subr_ge0.
@@ -32,11 +113,10 @@ rewrite subr_ge0 expr2 mulrC !dotmulvv /= -expr2.
 have [->|hb] := eqVneq b 0.
   rewrite dotmulv0 expr0n.
   rewrite enorm0.
-  by rewrite expr0n //= mul0r.
+  by rewrite expr0n mul0r.
 pose t := (a *d b) / (`|b|_e ^+ 2).
 have h : 0 <= `|a - t *: b|_e ^+ 2.
-  rewrite exprn_ge0 //.
-  by rewrite enorm_ge0.
+  by rewrite exprn_ge0// enorm_ge0.
 rewrite -(dotmulvv (a - t *: b)) in h.
 rewrite dotmulBl dotmulBr dotmulvv in h.
 rewrite dotmulvZ in h.
@@ -52,7 +132,7 @@ have h1 : 0 <= a *d a - (a *d b) ^+ 2 / `|b|_e ^+ 2.
   by rewrite subrr subr0 !expr2 mulrAC.
 have h2 : 0 <= `|b|_e ^+ 2 * (a *d a) - (a *d b) ^+ 2.
   have pos: 0 < `|b|_e ^+ 2.
-    by rewrite exprn_gt0 // enorm_gt0.
+    by rewrite exprn_gt0// enorm_gt0.
   suff: `|b|_e ^+ 2 * (a *d a - (a *d b) ^+ 2 / `|b|_e ^+ 2) =
       `|b|_e ^+ 2 * (a *d a) - (a *d b) ^+ 2.
     move=> eq_step.
@@ -66,20 +146,14 @@ by rewrite dotmulvv mulrC in h2.
 Qed.
 
 (* not used *)
-Lemma young_inequality_vec {R : rcfType} {n : nat} (a b : 'rV[R]_n) :
-  (a *d b) <= (2^-1 * `|a|_e ^+ 2) + (2^-1 * `|b|_e ^+ 2).
+Lemma Young_inequality_rV {R : rcfType} {n : nat} (a b : 'rV[R]_n) :
+  (a *d b) <= (2^-1 * (`|a|_e) ^+ 2) + (2^-1 * `|b|_e ^+ 2).
 Proof.
-have normage0 : 0 <= `|a|_e ^+ 2.
-  rewrite expr2.
-  by rewrite mulr_ge0 // enorm_ge0.
-have normbge0 : 0 <= `|b|_e ^+ 2.
-  rewrite expr2.
-  by rewrite mulr_ge0 // enorm_ge0.
+have normage0 : 0 <= `|a|_e ^+ 2 by rewrite sqr_ge0.
+have normbge0 : 0 <= `|b|_e ^+ 2 by rewrite sqr_ge0.
 rewrite -!dotmulvv.
-have: 0 <= `|a - b|_e ^+ 2.
-  rewrite expr2.
-  by rewrite mulr_ge0 // enorm_ge0.
-rewrite -(dotmulvv (a - b)) dotmulD !dotmulvv.
+have: 0 <= `|a - b|_e ^+ 2 by rewrite sqr_ge0.
+rewrite -dotmulvv dotmulD !dotmulvv.
 move => h.
 rewrite -mulr_natl in h.
 have h2 : 2 * (a *d b)  <= `|a|_e ^+ 2 + `|- b|_e ^+ 2.
@@ -112,7 +186,7 @@ Lemma ortho_spin {R : numFieldType} (u : 'rV[R]_3) (v : 'rV[R]_3) :
 Proof. by rewrite dotmulBl dotmulC dotmulspin1 dotmulC dotmulspin2 subr0. Qed.
 
 Lemma enorm_squared {R : rcfType} n (u : 'rV[R]_n) :
-  (u *m (u)^T) 0 0 = `|u|_e ^+2.
+  (u *m u^T) 0 0 = `|u|_e ^+ 2.
 Proof. by rewrite -dotmulvv /dotmul. Qed.
 
 Global Instance is_diff_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
@@ -122,24 +196,15 @@ Global Instance is_diff_rsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
 Proof.
 case=> diff_f dfE.
 apply: DiffDef.
-  by apply: differentiable_comp => //; exact: differentiable_rsubmx0.
+  by apply: differentiable_comp => //; exact: differentiable_rsubmx.
 apply/funext => v.
 rewrite -dfE.
 rewrite -[LHS]deriveE; last first.
-  by apply: differentiable_comp => //; exact: differentiable_rsubmx0.
+  by apply: differentiable_comp => //; exact: differentiable_rsubmx.
 rewrite -[in RHS]deriveE; last first.
   by [].
 rewrite derive_rsubmx//.
-Abort.
-
-Lemma differentiable_rsubmx_comp {R : realFieldType} (V : normedModType R) {n1 n2}
-    (f : V -> 'rV[R]_(n1 + n2)) t :
-  (forall x, differentiable f x) ->
-  differentiable (fun x => rsubmx (f x)) t.
-Proof.
-move=> /= => df1.
-apply: differentiable_comp => //.
-exact: differentiable_rsubmx.
+by apply: diff_derivable.
 Qed.
 
 (*Global Instance is_diff_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
@@ -158,16 +223,6 @@ rewrite -[in RHS]deriveE; last first.
   by [].
 rewrite derive_lsubmx//.
 Abort.*)
-
-Lemma differentiable_lsubmx_comp {R : realFieldType} (V : normedModType R) {n1 n2}
-    (f : V -> 'rV[R]_(n1 + n2)) t :
-  (forall x, differentiable f x) ->
-  differentiable (fun x => lsubmx (f x)) t.
-Proof.
-move=> /= => df1.
-apply: differentiable_comp => //.
-exact: differentiable_lsubmx0.
-Qed.
 
 Lemma derivable_row_mx {R : realFieldType} {n1 n2 : nat}
     (f : R -> 'rV[R]_n1) (g : R -> 'rV[R]_n2) t v :
@@ -237,7 +292,7 @@ apply/polyP => -[|[|[|i]]]; last first.
 - have := (rwP (leq_sizeP (char_poly M) i.+3)).2.
   rewrite size_char_poly => /(_ erefl) /(_ i.+3) => ->//.
   rewrite (rwP (leq_sizeP P i.+3)).2//.
-  rewrite /P -addrA size_addl ?size_polyXn//.
+  rewrite /P -addrA size_polyDl ?size_polyXn//.
   rewrite -mulNr size_MXaddC; case: ifPn => // _.
   by rewrite ltnS -polyCN size_polyC; case: (_ == _).
 - rewrite /P -[in RHS]addrA [RHS]coefD coefXn/= coefD -mulrN coefCM coefC/= coefN coefX/= oppr0 mulr0 !addr0.
@@ -285,8 +340,7 @@ Qed.
 
 Lemma derive_enorm_squared {K : realType} n (u : K -> 'rV[K]_n) (t : K) :
   derivable u t 1 ->
-  'D_1 (fun x => `|u x|_e ^+ 2) t =
-  2 * ('D_1 u t *d u t).
+  'D_1 (fun x => `|u x|_e ^+ 2) t = 2 * ('D_1 u t *d u t).
 Proof.
 move=> ut1.
 under eq_fun do rewrite -dotmulvv.
@@ -302,4 +356,43 @@ Proof.
 move=> dif1.
 under eq_fun do rewrite -dotmulvv.
 exact: differentiable_dotmul.
+Qed.
+
+Lemma spin_le_norm {K : rcfType} (x : 'rV[K]_3) : `|\S(x)| <= `|x|.
+Proof.
+rewrite {1}/Num.norm/= !mx_normrE.
+apply: bigmax_le; first exact: normr_ge0.
+move=> /= [i j] _/=.
+by have [->|->|->] := I3_cases i; have [->|->|->] := I3_cases j;
+  rewrite ?(spinij,normr0,normrN)// /Num.norm/= mx_normrE;
+  exact: (le_bigmax _ _ (0, _)).
+Qed.
+
+Lemma spin_sq_norm_bound {K : rcfType} (x : 'rV[K]_3) : `|\S(x) ^+ 2| <= 3 * `|x|^+2.
+Proof.
+rewrite (le_trans (mx_norm_sq_le _))// ler_pM//.
+suff h : `|\S(x)| <= `|x| by apply: ler_pM.
+exact: spin_le_norm.
+Qed.
+
+Lemma spin_sq_dist_bound {K : rcfType} (x y: 'rV[K]_3) :
+  `|\S(x)^+2 - \S(y)^+2| <= 3 * (`|x| +`|y|) * `|x-y|.
+Proof.
+have -> : \S(x) ^+ 2 - \S(y) ^+ 2 = \S(x) *m (\S(x) - \S(y)) + (\S(x) - \S(y)) *m \S(y).
+  by rewrite mulmxBr mulmxBl addrA subrK.
+rewrite mulrDr mulrDl.
+apply: (le_trans (ler_normD _ _)).
+rewrite -spinN -spinD.
+apply: lerD.
+  apply: (le_trans (mx_norm_mul _ _)).
+  apply : ler_pM => //.
+    apply : ler_pM => //.
+    exact: spin_le_norm.
+  exact: spin_le_norm.
+rewrite -mulrA (mulrC `|y|) mulrA.
+apply: (le_trans (mx_norm_mul _ _)).
+apply : ler_pM => //.
+  apply : ler_pM => //.
+  exact: spin_le_norm.
+exact: spin_le_norm.
 Qed.

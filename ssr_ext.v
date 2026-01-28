@@ -191,6 +191,12 @@ have -> : k = if i == k then i else if j == k then j else - (i + j).
 by move: i j k neq_ij; do 3![case=> [[|[|[|?]]] ?] //=]; constructor.
 Qed.
 
+Lemma I3_cases (i : 'I_3) : [\/ i = 0, i = 1 | i = 2].
+Proof.
+by move: i => [[|[|[|[|]]]]] // ?; [
+  exact/Or31/val_inj| exact/Or32/val_inj| exact/Or33/val_inj].
+Qed.
+
 Lemma odd_perm312 : perm3 1 2%:R = false :> bool.
 Proof.
 suff ->: perm3 1 2%:R = 1%g by rewrite odd_perm1.

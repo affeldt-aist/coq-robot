@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra ring.
+From mathcomp Require Import all_boot all_order all_algebra ring.
 From mathcomp Require Import boolp classical_sets functions reals.
 From mathcomp Require Import topology normedtype derive realfun landau.
 From HB Require Import structures.
@@ -11,55 +11,64 @@ Unset Printing Implicit Defensive.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
- (* is already in realfun.v*)
-Global Instance is_derive1_sqrt {K : realType} (x : K) : 0 < x ->
-  is_derive x 1 Num.sqrt (2 * Num.sqrt x)^-1.
-Proof.
-move=> x_gt0.
-have sqrtK : {in Num.pos, cancel (@Num.sqrt K) (fun x => x ^+ 2)}.
-  by move=> a a0; rewrite sqr_sqrtr// ltW.
-rewrite -[x]sqrtK//.
-apply: (@is_derive_inverse K (fun x => x ^+ 2)).
-- near=> z.
-  rewrite sqrtr_sqr gtr0_norm//.
-  have [xz|zx|->] := ltgtP z (Num.sqrt x); last first.
-  + by rewrite sqrtr_gt0.
-  + by rewrite (lt_trans _ zx)// sqrtr_gt0.
-  + move: xz.
-    near: z.
-    exists (Num.sqrt x / 2).
-      rewrite /=.
-      rewrite mulr_gt0 //.
-      by rewrite sqrtr_gt0 x_gt0.
-      rewrite invr_gt0.
-      by [].
-    move=> r/=.
-    move=> /[swap] rx.
-    rewrite gtr0_norm ?subr_gt0//.
-    rewrite ltrBlDl.
-    rewrite -ltrBlDr.
-    apply: le_lt_trans.
-    rewrite subr_ge0.
-    rewrite ger_pMr.
-    rewrite invf_le1.
-    by rewrite ler1n.
-    by [].
-    by rewrite sqrtr_gt0.
-- near=> z.
-  exact: exprn_continuous.
-- rewrite !sqrtK//; split.
-    exact: exprn_derivable (* TODO: renaming, see https://github.com/math-comp/analysis/issues/1677 *).
-  by rewrite exp_derive (* TODO: renaming -> issue *) expr1 scaler1.
-- by rewrite mulf_neq0 ?pnatr_eq0// gt_eqF// sqrtr_gt0 exprn_gt0// sqrtr_gt0.
-Unshelve. all: by end_near. Qed.
 
-Lemma derive_sqrt {K : realType} (r : K) : 0 < r ->
-   (Num.sqrt^`())%classic r = (2 * Num.sqrt r)^-1 :> K.
+(* Todo: Maybe useful generally? (PR) *)
+Lemma norm_rowmx {K : rcfType} {m n1 n2 : nat}
+    (A1 : 'M[K]_(m.+1, n1.+1)) (A2 : 'M[K]_(m.+1, n2.+1)) :
+  `|row_mx A1 A2| = Num.max `|A1| `|A2|.
 Proof.
-move=> r0.
-rewrite derive1E.
-apply: derive_val.
-exact: is_derive1_sqrt.
+rewrite /Num.norm/= !mx_normrE.
+apply/eqP; rewrite eq_le; apply/andP; split.
+- apply: bigmax_le => /=.
+    rewrite le_max;apply /orP;left.
+    exact/le_trans/(le_bigmax _ _ (ord0,ord0)).
+  move=> [i j] _ /=.
+  rewrite le_max; apply/orP.
+  rewrite mxE.
+  case: (splitP  j) => j1 h1.
+    by left; exact: (le_bigmax _ _ (i, j1)).
+  by right;exact: (le_bigmax _ _ (i, j1)).
+rewrite ge_max; apply/andP; split.
+  apply: bigmax_le => /=.
+    apply: le_trans; last first.
+      exact: (le_bigmax _ _ (ord0, ord0)).
+    exact: normr_ge0.
+   move=> [i j] _.
+   rewrite -(row_mxEl _ A2).
+   exact: (le_bigmax _ _ (i, lshift n2.+1 j)).
+apply: bigmax_le => /=.
+  apply: le_trans; last first.
+    exact: (le_bigmax _ _ (ord0, ord0)).
+  exact: normr_ge0.
+move=> [i j] _.
+rewrite -(row_mxEr A1).
+exact: (le_bigmax _ _ (i, rshift n1.+1 j)).
+Qed.
+
+(*Todo: This also seems useful in general (PR) *)
+Lemma mx_norm_mul {K : rcfType} {m n p} (A : 'M[K]_(m.+1, n.+1)) (B : 'M_(n.+1, p.+1)) :
+ `|A *m B| <= n.+1%:R * `| A| * `|B|.
+Proof.
+rewrite /Num.norm/= !mx_normrE.
+apply: bigmax_le.
+  rewrite -mulrA mulr_ge0//.
+  by apply mulr_ge0; apply/le_trans/(le_bigmax _ _ (ord0, ord0)).
+move=> /= [i j] _/=.
+rewrite mxE.
+rewrite (le_trans (ler_norm_sum _ _ _))//=.
+have le_inside k : `|A i k * B k j| <= `|A| * `|B|.
+  rewrite normrM /Num.norm/= !mx_normrE/= ler_pM//=.
+  - exact: normr_ge0.
+  - exact: normr_ge0.
+  - exact: (le_bigmax _ _ (i, k)).
+  - exact: (le_bigmax _ _ (k, j)).
+rewrite -mulrA.
+rewrite (@le_trans _ _ (\sum_(k < n.+1) `|A| * `|B|))//.
+  by apply: ler_sum => k _; apply le_inside.
+rewrite mulr_natl.
+rewrite big_const_ord.
+rewrite iter_addr_0.
+by rewrite /Num.norm/= !mx_normrE.
 Qed.
 
 Lemma differentiable_scalar_mx {R : realType} n (r : R) :
@@ -68,7 +77,6 @@ Proof.
 apply/derivable1_diffP/cvg_ex => /=.
 exists 1; apply/cvgrPdist_le => /= e e0.
 near=> t.
-Search (_%:A). 
 rewrite scaler1 -raddfB/= addrK (scale_scalar_mx _ t^-1) mulVf.
   by rewrite subrr normr0 ltW.
 by near: t; exact: nbhs_dnbhs_neq.
@@ -105,11 +113,11 @@ rewrite dotmulP mxE /= mulr1n derive_dotmul// dotmulC.
 by field.
 Qed.
 
-Lemma derivable_sqrt {K: realType} (u : K) : u > 0 -> derivable Num.sqrt (u) 1.
+Lemma derivable_sqrt {K: realType} (u : K) : u > 0 -> derivable Num.sqrt u 1.
 Proof.
-move => gt0.
+move=> u0.
 apply: ex_derive.
-by apply: (is_derive1_sqrt gt0).
+exact: (is_derive1_sqrt u0).
 Qed.
 (* should go to tilt_robot*)
 Lemma differentiable_enorm {K : realType} m n (f : 'rV[K]_m -> 'rV_n)
@@ -135,56 +143,14 @@ exact: differentiable_dotmul.
 Qed.*)
 (* this one too *)
 
-(*DONE*)
-Lemma differentiable_rsubmx0 {R : realFieldType} {V : normedModType R} {n1 n2} t :
-  differentiable (@rsubmx R 1 n1 n2) t.
-Proof.
-have lin_rsubmx : linear (@rsubmx R 1 n1 n2).
-  move=> a b c.
-  by rewrite linearD//= linearZ.
-pose build_lin_rsubmx := GRing.isLinear.Build _ _ _ _ _ lin_rsubmx.
-pose Rsubmx : {linear 'rV[R^o]_(n1 + n2) -> 'rV[R^o]_n2} := HB.pack (@rsubmx R _ _ _) build_lin_rsubmx.
-apply: (@linear_differentiable _ _ _ Rsubmx).
-move=> /= u A /=.
-move/nbhs_ballP=> [e /= e0 eA].
-apply/nbhs_ballP; exists e => //= v [? uv].
-apply: eA; split => //.
-(* TODO: lemma *)
-move: uv; rewrite /ball/= /mx_ball/ball /= => uv i j.
-apply: (le_lt_trans _ (uv i (rshift n1 j))).
-by rewrite !mxE.
-Qed.
-(*DONE*)
-
-Lemma differentiable_rsubmx {R : realFieldType} (V : normedModType R) {n1 n2}
+Lemma differentiable_rsubmx_comp {R : realFieldType} (V : normedModType R) {n1 n2}
     (f : V -> 'rV[R]_(n1 + n2)) t :
   (forall x, differentiable f x) ->
   differentiable (fun x => rsubmx (f x)) t.
 Proof.
-move=> /= => df1.
+move=> /= df1.
 apply: differentiable_comp => //.
-exact: differentiable_rsubmx0.
-Qed.
-
-(*DONE*)
-Lemma differentiable_lsubmx0 {R : realFieldType} {V : normedModType R} {n1 n2} t :
-  differentiable (@lsubmx R 1 n1 n2) t.
-Proof.
-have lin_lsubmx : linear (@lsubmx R 1 n1 n2).
-  move=> a b c.
-  by rewrite linearD//= linearZ.
-pose build_lin_lsubmx := GRing.isLinear.Build _ _ _ _ _ lin_lsubmx.
-pose Lsubmx : {linear 'rV[R^o]_(n1 + n2) -> 'rV[R^o]_n1} :=
-  HB.pack (@lsubmx R _ _ _) build_lin_lsubmx.
-apply: (@linear_differentiable _ _ _ Lsubmx).
-move=> /= u A /=.
-move/nbhs_ballP=> [e /= e0 eA].
-apply/nbhs_ballP; exists e => //= v [? uv].
-apply: eA; split => //.
-(* TODO: lemma *)
-move: uv; rewrite /ball/= /mx_ball/ball /= => uv i j.
-apply: (le_lt_trans _ (uv i (lshift n2 j))).
-by rewrite !mxE.
+exact: differentiable_rsubmx.
 Qed.
 
 (*Global Instance is_diff_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
@@ -204,15 +170,14 @@ rewrite -[in RHS]deriveE; last first.
 rewrite derive_lsubmx//.
 Abort.*)
 
-(*DONE*)
-Lemma differentiable_lsubmx {R : realFieldType} (V : normedModType R) {n1 n2}
+Lemma differentiable_lsubmx_comp {R : realFieldType} (V : normedModType R) {n1 n2}
     (f : V -> 'rV[R]_(n1 + n2)) t :
   (forall x, differentiable f x) ->
   differentiable (fun x => lsubmx (f x)) t.
 Proof.
-move=> /= => df1.
+move=> /= df1.
 apply: differentiable_comp => //.
-exact: differentiable_lsubmx0.
+exact: differentiable_lsubmx.
 Qed.
 
 (*Lemma derivable_row_mx {R : realFieldType} {n1 n2 : nat}
@@ -296,3 +261,87 @@ move: jE.
 rewrite jj1 => /(congr1 val) => /= /eqP.
 by rewrite eqn_add2l => /eqP /val_inj.
 Qed.*)
+
+Local Open Scope classical_set_scope.
+
+Lemma within_continuous_comp {R : realType} {K : numDomainType}
+  {U : pseudoMetricNormedZmodType K} a y (g : U -> R) (f : R -> U) :
+  a <= y ->
+  {in f @` `[a, y], continuous g} ->
+  {within `[a, y], continuous (fun x => f x)} ->
+  {within `[a, y], continuous fun x => (g \o f) x}.
+Proof.
+rewrite le_eqVlt => /predU1P[<- _ _|ay cg].
+  by rewrite set_itv1; exact: continuous_subspace1.
+move/(continuous_within_itvP f ay) => -[cf fa fy].
+apply/continuous_within_itvP => //; split => //.
+- move=> z zay; apply: continuous_comp => //.
+    exact: cf.
+  apply/cg/image_f.
+  by rewrite inE/=; apply: subset_itv_oo_cc zay.
+- apply/(cvg_comp f g fa)/cg/image_f.
+  by rewrite inE/= in_itv/= lexx/= ltW.
+- apply/(cvg_comp f g fy)/cg/image_f.
+  by rewrite inE/= in_itv/= lexx/= ltW.
+Qed.
+
+Local Notation Left := (@lsubmx _ 1 _ _).
+Local Notation Right := (@rsubmx _ 1 _ _).
+
+Lemma left_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
+  `|Left x| <= `|x|.
+Proof.
+rewrite /Num.norm/= !mx_normrE; apply: bigmax_le.
+  exact/le_trans/(le_bigmax _ _ (ord0, ord0)).
+move=> /= [i j] _ /=.
+rewrite mxE.
+exact: (le_bigmax _ _ (i, lshift n2.+1 j)).
+Qed.
+
+Lemma right_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
+  `|Right x| <= `|x|.
+Proof.
+rewrite /Num.norm/= !mx_normrE; apply: bigmax_le.
+  exact/le_trans/(le_bigmax _ _ (ord0,ord0)).
+move=> /= [i j] _ /=.
+rewrite mxE.
+exact: (le_bigmax _ _ (i, rshift n1.+1 j)).
+Qed.
+
+Lemma mx_norm1 {K : rcfType} {n} : `|1 : 'M[K]_n.+1| = 1.
+Proof.
+rewrite /Num.norm/= !mx_normrE.
+apply/eqP; rewrite eq_le; apply/andP; split.
+- apply: bigmax_le => //= i _.
+  rewrite mxE/=.
+  by case: eqP => /= _; rewrite ?(normr1, normr0).
+- rewrite -normr1.
+  have -> : (1 : K) = ((1 : 'M[K]_n.+1) ord0 ord0) by rewrite mxE.
+  exact: (le_bigmax _ _ (ord0, ord0)).
+Qed.
+
+Lemma mx_norm_delta_mx {K : rcfType} n (i : 'I_n.+1) : `| 'e_i : 'rV[K]__ | <= 1.
+Proof.
+rewrite /Num.norm /= mx_normrE; apply: bigmax_le => //= -[/= a b] _.
+rewrite mxE /=.
+case: eqP => /= _; last by rewrite normr0.
+case: eqP => /= _; last by rewrite normr0.
+by rewrite normr1.
+Qed.
+
+Lemma enorm_mxnorm {K : rcfType} {n} (x : 'rV[K]_n.+1) :
+  `|x|_e ^+ 2 <= n.+1%:R * `|x| ^ 2.
+Proof.
+rewrite sqr_enorm /=.
+apply : (@le_trans _ _ (\sum_(i0 < n.+1) `|x| ^+ 2)).
+  apply: ler_sum => k _.
+  rewrite -sqr_normr.
+  suff h : `|x ord0 k| <= `|x| by exact: ler_pM.
+  rewrite {2}/Num.norm/= !mx_normrE /=.
+  exact: (le_bigmax _ _ (ord0, k)).
+by rewrite big_const_ord mulr_natl iter_addr_0.
+Qed.
+
+Lemma mx_norm_sq_le {K : rcfType} {n} (A : 'M[K]_n.+1) :
+  `|A ^+ 2| <= n.+1%:R * `|A| ^+ 2.
+Proof. by rewrite !expr2 mulrA; exact: mx_norm_mul. Qed.
