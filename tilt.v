@@ -2100,6 +2100,55 @@ rewrite [in leRHS](mulrC (_ / 2)) (mulrC 2^-1) -mulrDr -splitr.
 by rewrite [leRHS]mulrC.
 Qed.
 
+Lemma V1dot_eq0_p1_or_p2 (sol : K -> 'rV[K]_6) (t : K) :
+  is_sol phi Delta sol state_space_tilt ->
+  t \in `[0, Delta[%R ->
+  V1dot  (sol t) = 0 ->
+  sol t = point1 \/ sol t = point2.
+Proof.
+move => solP t0d V1dsol.
+have h: u1 sol t = 0.
+  case: (u1 sol t =P 0) => [-> // |/eqP hsol].
+  have  := (V1dot_ub solP t0d).
+  have  := u2_quadratic_form_gt0 hsol.
+  rewrite V1dsol !mulNmx !mxE oppr_ge0.
+  move => h1 h2.
+  have := lt_le_trans h1 h2.
+  by rewrite ltxx.
+have L0: Left (sol t) = 0. 
+  apply /eqP; rewrite -enorm_eq0; apply /eqP.
+  have := congr1 (fun v : 'rV[K]_2 => v ord0 ord0) h.
+  by rewrite !mxE/=.
+have R0 :   (Right (sol t)) *m \S('e_2)   = 0.
+  apply /eqP.
+  rewrite -enorm_eq0.
+  apply /eqP.
+  have := congr1 (fun v : 'rV[K]_2 => v ord0 ord_max) h.
+  by rewrite !mxE/=.
+rewrite -(hsubmxK (n1:=3) (sol t)).
+rewrite L0.
+suff [-> | -> ]: (Right (sol t)) = 0 \/ Right (sol t) = (2 *: 'e_2).
+  left;apply /matrixP => i j;rewrite mxE.
+  case: splitP => // k _;by rewrite !mxE.
+  right;apply /matrixP => i j;rewrite mxE.
+  by case: splitP => // k _.
+have  := is_sol_state_space_tilt t0d solP.
+rewrite /state_space_tilt/=.
+have /sub_rVP [k ->] : (Right (sol t) <= ('e_2 : 'rV[K]_3))%MS.
+  apply: (@submx_trans _ _ _ _ _ _ (kermx \S('e_2))).
+    by apply /sub_kermxP.
+  rewrite submxElt kernel_spin //.
+  by apply /negP;rewrite -enorm_eq0 enormeE;apply /negP.
+rewrite -{1}(scale1r 'e_2) -scalerBl enormZ enormeE mulr1.
+rewrite -{2}normr1.
+move /eqP => hk.
+rewrite eqr_norm2 in hk.
+case /orP : hk.
+by rewrite subr_eq addrC -subr_eq subrr => /eqP <-;rewrite scale0r;left.
+by rewrite subr_eq addrC -subr_eq opprK => /eqP <-;right.
+Qed.
+
+
 (* TODO: rework of this proof is needed *)
 (* NB: unused *)
 Lemma derive_along_Left_Right_le0 (sol : _ -> _ -> _) (x : 'rV[K]_6) :
