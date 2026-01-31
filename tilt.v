@@ -7,6 +7,7 @@ From mathcomp Require Import matrix_normedtype.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
 
+
 (**md**************************************************************************)
 (* # Tentative formalization of [1]                                           *)
 (*                                                                            *)
@@ -409,7 +410,7 @@ Variable phi : T -> T.
 
 Definition state_space (Init : set T) : set T :=
   [set x | exists f Delta, (is_sol phi Delta f Init /\
-    (exists t, t \in `[0, Delta]%R /\ x = f t))].
+    (exists t, t \in `[0, Delta[%R /\ x = f t))].
 
 End state_space.
 
@@ -1540,7 +1541,6 @@ exists x0; split.
 case: cid => //= y' y'sol.
 case: cid => t'/= pt'.
 Abort.*)
-
 Lemma state_space_tiltS :
   state_space tilt_eqn state_space_tilt `<=` state_space_tilt.
 Proof.
@@ -1550,7 +1550,7 @@ have [Delta0|Delta0] := leP 0 Delta; last first.
   rewrite /state_space/= => -[t [rt x]].
   move : rt.
   rewrite in_itv/= => -[/andP[x0 xDelta]].
-  have := le_lt_trans xDelta Delta0.
+  have := lt_trans xDelta Delta0.
   by rewrite ltNge  x0.
 (* move=> p [y [[y0_init1]] [_ [/= deri [conti ball]]]]. *)
 rewrite /state_space_tilt.
@@ -1635,8 +1635,9 @@ suff: `|'e_2 - Right (y t)|_e ^+ 2 = 1.
   move => /(congr1 Num.sqrt).
   rewrite sqrtr1 sqr_sqrtr //.
   by rewrite dotmulvv sqr_ge0.
-rewrite norm_constant //; last first.
-  by rewrite inE.
+rewrite norm_constant //;last first.
+  rewrite inE.
+  by apply: subset_itv_co_cc .
 move: y0_init1.
 rewrite inE /state_space_tilt /= => ->.
 by rewrite expr2 mulr1.
@@ -1645,12 +1646,16 @@ Qed.
 Definition point1 : 'rV[K]_6 := 0.
 Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2).
 
+Lemma point1_in_state_space_tilt : point1 \in state_space_tilt.
+Proof.
+rewrite inE /state_space_tilt /point1/=.
+  by rewrite rsubmx_const /= subr0 enormeE.
+Qed.
 Lemma equilibrium_point1 :
   is_equilibrium_point tilt_eqn state_space_tilt point1.
 Proof.
 split.
-- rewrite inE /state_space_tilt /point1/=.
-  by rewrite rsubmx_const /= subr0 enormeE.
+- by apply point1_in_state_space_tilt.
 - split => //=.
   split.
   + move=> t t0Delta.
@@ -1670,16 +1675,21 @@ split.
     exact: cvg_cst.
 Qed.
 
+Lemma point2_in_state_space_tilt : point2 \in state_space_tilt.
+Proof.
+rewrite inE /state_space_tilt /point2 /=.
+rewrite row_mxKr.
+rewrite -[X in X - _ ]scale1r.
+rewrite -scalerBl enormZ enormeE mulr1 distrC.
+rewrite [X in _ - X](_:1 = 1%:R) //.
+by rewrite -natrB //= normr1.
+Qed.
+
 Lemma equilibrium_point2 :
   is_equilibrium_point tilt_eqn state_space_tilt point2.
 Proof.
 split.
-- rewrite inE /state_space_tilt /point2 /=.
-  rewrite row_mxKr.
-  rewrite -[X in X - _ ]scale1r.
-  rewrite -scalerBl enormZ enormeE mulr1 distrC.
-  rewrite [X in _ - X](_:1 = 1%:R) //.
-  by rewrite -natrB //= normr1.
+- exact: point2_in_state_space_tilt.
 - split => //.
   split.
   + move=> t t0Delta.
@@ -1873,6 +1883,7 @@ Lemma tilt_eqn_is_locally_exponentially_stable_at_0 alpha1 gamma :
   locally_exponentially_stable_at (tilt_eqn alpha1 gamma) point1.
 Proof.
 rewrite /locally_exponentially_stable_at /jacobian /hurwitz.
+rewrite /lin1_mx/=/tilt_eqn/eqn14b_rhs/=.
 move => a.
 move/eigenvalueP => [u] /[swap] u0 H.
 have a_eigen : eigenvalue (jacobian (tilt_eqn alpha1 gamma) point1) a.
@@ -1884,6 +1895,7 @@ have : root (char_poly (jacobian (tilt_eqn alpha1 gamma) point1)) a.
   rewrite -eigenvalue_root_char.
   exact : a_eigen.
 rewrite /tilt_eqn /jacobian.
+Search root char_poly.
 Abort.
 
 End hurwitz.
@@ -1936,7 +1948,7 @@ apply: (@state_space_tiltS _ alpha1 gamma) => //=.
 exists sol.
 exists Delta; split => //=.
 exists t; split => //.
-by rewrite in_itv/= (ltW t0) (ltW tDelta).
+by rewrite in_itv/= (ltW t0) tDelta.
 Qed.
 
 Lemma enorm_e2z2 (sol : K -> 'rV_6) (z : K)
@@ -2062,6 +2074,7 @@ rewrite -fctE /= !derive_along_enorm_squared//=.
 - by apply: dif1.
 - by apply: dif1.
 Qed.
+
 
 Definition u1 (sol : K -> 'rV[K]_6) t
   (zp1 := Left \o sol) (z2 := Right \o sol)
@@ -2341,6 +2354,136 @@ Qed.
 
 End tilt_eqn_Lyapunov.
 
+Section tilt_eqn_Lyapunov_global.
+Local Open Scope classical_set_scope.
+Context {K : realType}.
+Variables alpha1 gamma : K.
+Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
+Let phi := tilt_eqn alpha1 gamma.
+
+Let c1 := 2^-1 / alpha1.
+Let c2 := 2^-1 / gamma.
+
+(* todo: copy paste *)
+Lemma derive_zp10  (sol : K -> 'rV_6) :
+  is_global_sol phi sol state_space_tilt ->
+   'D_1 (Left \o sol) 0 = - alpha1 *: Left (sol 0).
+Proof.
+move=> [/= sol0in].
+move /(_ 0) => [d0 +].
+move=> /(congr1 Left).
+rewrite derive1E.
+rewrite row_mxKl.
+move=> <-.
+by rewrite derive_lsubmx.
+Qed.
+
+Lemma derive_z20  (sol : K -> 'rV_6) :
+  is_global_sol phi sol state_space_tilt ->
+  'D_1 (Right \o sol) 0 =
+  gamma *: (Right (sol 0) - Left (sol 0)) *m \S('e_2 - Right (sol 0)) ^+ 2.
+Proof.
+
+move=> [/= sol0in].
+move /(_ 0) => [d0 +].
+move => /(congr1 Right).
+rewrite derive1E.
+by rewrite row_mxKr => ?; rewrite derive_rsubmx.
+Qed.
+
+Lemma V1dotE0 (sol : K -> 'rV_6)
+  (zp1 := Left \o sol) (z2 := Right \o sol) :
+  is_global_sol phi sol state_space_tilt ->
+  V1dot (sol 0) =
+    c1 *: (2 *: 'D_1 zp1 0 *m (Left (sol 0))^T) 0 0 +
+    c2 *: (2 *: 'D_1 z2 0 *m (Right (sol 0))^T) 0 0.
+Proof.
+move => h.
+rewrite -scalemxAl mxE (scalerA c1 2) mulrAC mulVf ?pnatr_eq0// div1r.
+rewrite -scalemxAl [in X in _ + X]mxE (scalerA c2 2) mulrAC.
+rewrite mulVf// div1r.
+rewrite derive_zp10 // -scalemxAl mxE [X in X + _](mulrA (alpha1^-1) (- alpha1)).
+rewrite mulrN mulVf ?gt_eqF// mulN1r.
+rewrite derive_z20 // -scalemxAl mulmxA -scalemxAl [in X in _ + X]mxE.
+rewrite scalerA mulVf ?gt_eqF// scale1r.
+rewrite norm_squared /V1dot.
+congr +%R.
+rewrite -2![in LHS]mulmxA -mulmxBr -mulmxBr -linearB/=.
+rewrite -[X in (X *m (_ *m _)) 0 0 = _]trmxK.
+rewrite -[X in (_ *m (X *m _)) 0 0 = _]trmxK.
+rewrite mulmxA -trmx_mul -trmx_mul [LHS]mxE.
+rewrite -(mulmxA (Right (sol 0) - (Left (sol 0)))) mulmxE -expr2.
+rewrite tr_sqr_spin.
+by rewrite mulmxA.
+Qed.
+
+
+Lemma derive_along_V1_global t (sol : K -> 'rV_6) :
+  0 <= t ->
+  is_global_sol phi sol state_space_tilt ->
+  'D~(sol) (V1 alpha1 gamma) t = V1dot (sol t).
+Proof.
+move=> t0 tilt_eqnx.
+have dif1 : forall t,  differentiable sol t.
+   move => /= t'.
+   apply /derivable1_diffP.
+   by apply tilt_eqnx.
+rewrite /V1 derive_alongD; last 3 first.
+  apply/differentiableM => //=.
+  exact/differentiable_enorm_squared/differentiable_lsubmx_comp.
+  apply/differentiableM => //=.
+  exact/differentiable_enorm_squared/differentiable_rsubmx_comp.
+  exact: dif1.
+under [X in derive_along X _ _ + _]eq_fun do rewrite mulrC.
+under [X in _ + derive_along X _ _]eq_fun do rewrite mulrC.
+rewrite derive_alongMl => //; last first.
+  exact/differentiable_enorm_squared/differentiable_lsubmx_comp.
+rewrite derive_alongMl => //; last first.
+  exact/differentiable_enorm_squared/differentiable_rsubmx_comp.
+  rewrite -fctE /= !derive_along_enorm_squared//=.
+  move : t0.
+  rewrite le_eqVlt => /predU1P[<-//|t0].
+  rewrite V1dotE0 => //.
+  by rewrite !invfM.
+ -  rewrite (V1dotE alpha1_gt0 gamma_gt0 (global_sol_sol tilt_eqnx (t + 1))) //.
+    by rewrite !invfM.
+    by rewrite inE/=in_itv/=t0 ltrDl;apply /andP.
+- exact/differentiable_lsubmx_comp.
+Qed.
+
+Lemma derive_along_V1_le0_global (sol : K -> 'rV[K]_6) :
+  is_global_sol phi sol state_space_tilt ->
+  forall t : K, 0 <= t  ->
+  'D~(sol) (V1 alpha1 gamma) t <= 0.
+Proof.
+move=> solves.
+have diff : forall t,  differentiable sol t.
+   move => /= t'.
+   apply /derivable1_diffP.
+   by apply solves.
+move => t t0.
+rewrite derive_along_V1_global//.
+have t0Delta : t \in `[0, t+1[%R.
+  by rewrite in_itv/=t0 ltrDl ltr01.
+have Hub := V1dot_ub  (global_sol_sol solves (t + 1)) t0Delta.
+apply: (le_trans Hub).
+have Hquad : let u1 := \row_i [eta fun=> 0
+                   with 0 |-> `|(Left \o sol) t|_e,
+                        1 |-> `|(Right \o sol) t *m \S('e_2)|_e]
+                         i in 0 <= (u1 *m u2 *m u1^T) 0 0.
+  set u1 := \row_i [eta fun=> 0
+                   with 0 |-> `|(Left \o sol) t|_e,
+                        1 |-> `|(Right \o sol) t *m \S('e_2)|_e]
+            i.
+  rewrite /=.
+  case: (u1 =P 0) => [->|/eqP u1_neq0].
+    by rewrite !mul0mx mxE.
+  by rewrite ltW// u2_quadratic_form_gt0.
+by rewrite -oppr_ge0 !mulNmx mxE opprK Hquad.
+Qed.
+
+End tilt_eqn_Lyapunov_global.
+
 Section equilibrium_zero_stable.
 Context {K : realType}.
 Variables gamma alpha1 : K.
@@ -2362,17 +2505,22 @@ have [inD0 about_sol] := H Delta0.
 by split.
 Qed.
 
+Lemma V1_diff :  forall t : 'rV_6, differentiable (V1 alpha1 gamma) t.
+Proof.
+move=> t; apply/differentiableD => //=.
+  apply/differentiableM => //=.
+  exact/differentiable_enorm_squared/differentiable_lsubmx_comp.
+apply/differentiableM => //=.
+exact/differentiable_enorm_squared/differentiable_rsubmx_comp.
+Qed.
+
 Lemma equilibrium_zero_stable :
   0 \in Init -> open Init -> Init `<=` state_space_tilt ->
   is_locally_stable_at phi Init point1.
 Proof.
 move=> Init0 openInit Init_in_state.
 apply: (@Lyapunov_stability K _ phi Init openInit (V1 alpha1 gamma)).
-- move=> t; apply/differentiableD => //=.
-    apply/differentiableM => //=.
-    exact/differentiable_enorm_squared/differentiable_lsubmx_comp.
-  apply/differentiableM => //=.
-  exact/differentiable_enorm_squared/differentiable_rsubmx_comp.
+- exact: V1_diff.
 - move=> Delta sol solP t t0.
   case: solP => sol0Init solP.
   apply: (@derive_along_V1_le0 _ _ _ _ _ Delta sol).
@@ -2404,3 +2552,312 @@ apply: (@Lyapunov_stability K _ phi Init openInit (V1 alpha1 gamma)).
 Qed.
 
 End equilibrium_zero_stable.
+
+Section LaSalle.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.
+Variable phi : U -> U.
+Variable sol : U -> R -> U.
+
+Definition limS (A : set U) := \bigcup_(q in A) cluster (sol q @ +oo).
+Variable K : set U.
+Hypothesis Kco : compact K.
+Definition is_invariant A := state_space phi A `<=` A.
+Hypothesis invarK : is_invariant K.
+Hypothesis isSol : forall p, p \in K -> is_global_sol phi (sol p) setT.
+Hypothesis initp: forall p, p \in K -> sol p 0 = p. 
+
+Lemma invariant_limS A : A `<=` K -> is_invariant (limS A).
+Proof.
+Admitted.
+
+Lemma stable_limS (V : U -> R) :
+  {in K, continuous V} ->
+   (forall p t, K p -> 0 <= t -> differentiable V (sol p t)) ->
+  (forall p, K p -> 'D~(sol p) V 0 <= 0) ->
+  limS K `<=` [set p | 'D~(sol p) V 0 = 0].
+Proof.
+move=> Vcont Vsol_ex_deriv Vsol'le0 p0 [q Kq plimp].
+(* have ssqRpK : sol q @` [ `<=` K. *)
+(*   by move=> _ [t tge0 <-]; apply: Kinvar. *)
+(* suff : exists l, cluster (sol q @ +oo) `<=` V @^-1` [set l]. *)
+(*   move=> [l Vpliml]. *)
+(*   rewrite (@derive_ext_ge0 _ (fun=> l)); first exact: Derive_const. *)
+(*     exact: Rle_refl. *)
+(*   by move=> t tge0; apply/Vpliml/invariant_pos_limit_set. *)
+(* suff [l Vsoltol] : [cvg V \o sol q @ +oo]. *)
+(*   exists l; apply: (c0_cvg_cst_on_pos_lim_set Vcont)=> //. *)
+(*   exact: compact_closed hU Kco. *)
+(* apply: nincr_lb_cvg. *)
+(*   move=> s t [sge0 slet]. *)
+(*   apply: (@nincr_function_le _ (Finite 0) (Finite t))=> //; last first. *)
+(*   - exact: Rle_refl. *)
+(*   - move=> t' t'ge0 _. *)
+(*     suff <- : Derive (V \o (sol (sol q t'))) 0 = Derive (V \o (sol q)) t'. *)
+(*       exact/Vsol'le0/Kinvar. *)
+(*     rewrite -[t' in RHS]Rplus_0_r. *)
+(*     apply: derive_ext_ge0_shift; [apply: Rle_refl|apply: t'ge0|]. *)
+(*     by move=> ??; rewrite /comp -solD // Rplus_comm. *)
+(*   - by move=> t' t'ge0 _; apply: Vsol_ex_deriv. *)
+(* have: compact (V @` K) by apply: continuous_compact. *)
+(* move=> /compact_bounded [N hN]. *)
+(* exists (- N)=> _ [t tge0 <-]. *)
+(* have /hN : (V @` K) ((V \o sol q) t) by apply/imageP/Kinvar. *)
+(* by move=> /Rabs_def2 []. *)
+Admitted.
+ Lemma cvg_to_limS : 
+  forall p, p \in K -> sol p t @[t --> +oo] --> globally (limS K).
+ Admitted.
+End LaSalle.
+
+Section LaSalle_tilt.
+Context {K : realType}.
+Let U := 'rV[K]_6.
+Variable sol : U -> K -> U.
+Variables gamma alpha1 : K.
+Hypothesis gamma_gt0 : 0 < gamma.
+Hypothesis alpha1_gt0 : 0 < alpha1.
+Let phi := tilt_eqn alpha1 gamma.
+Hypothesis isSol : forall p, p \in state_space_tilt -> is_global_sol phi (sol p) setT.
+Hypothesis initp: forall p, p \in state_space_tilt -> sol p 0 = p. 
+Definition Ksub (p : U) :=
+  [set x | V1 alpha1 gamma x <= V1 alpha1 gamma p] `&` state_space_tilt.
+
+Lemma mxnorm_enorm_le {n} (x : 'rV[K]_n) : `|x| <= `|x|_e.
+Proof.
+rewrite /Num.norm/=mx_normrE.
+apply/bigmax_leP; split.
+  exact: enorm_ge0.
+move=> /= [i j] _ /=.
+rewrite {i}ord1.
+rewrite -sqrtr_sqr.
+rewrite /enorm dotmulvv sqr_enorm.
+rewrite ler_sqrt; last by apply sumr_ge0 => k _;apply sqr_ge0.
+rewrite (bigD1 j) //=.
+rewrite lerDl.
+by apply sumr_ge0 => k _;apply sqr_ge0.
+Qed.
+
+Lemma V1_bound_compact p : compact [set x | V1 alpha1 gamma x <= V1 alpha1 gamma p].
+Proof.
+apply: bounded_closed_compact.
+- rewrite /V1/=.
+  rewrite /bounded_near.
+  near=>R.
+  move => /= x.
+  rewrite !addf_div; rewrite ?lt0r_neq0 ?mulr_gt0 //.
+  rewrite ler_pdivrMr ?mulr_gt0 // divrK; last first.
+    by rewrite unitfE lt0r_neq0 // ?mulr_gt0.
+  rewrite  !(mulrC 2) !mulrA -!mulrDl ler_pM2r //.
+  move => h.
+  set c :=  `| Left p |_e ^+ 2 * gamma + `| Right p |_e ^+ 2 * alpha1.
+  have c0 : 0 <= c.
+    by apply addr_ge0; rewrite mulr_ge0  // ?sqr_ge0 ?ltW.
+  have hL :  `| Left x |_e <= Num.sqrt (c / gamma).
+    rewrite -(sqr_sqrtr (enorm_ge0 (Left x)) ).
+    rewrite /GRing.exp/= -sqrtrM ?enorm_ge0  // ler_sqrt ?divr_ge0 ?(@ltW _ _ _ gamma) //.
+    rewrite ler_pdivlMr //.
+    move : h;apply le_trans.
+    rewrite lerDl mulr_ge0 // ?sqr_ge0 ?ltW //.
+  have hR :  `| Right x |_e <= Num.sqrt (c / alpha1).
+    rewrite -(sqr_sqrtr (enorm_ge0 (Right x)) ).
+    rewrite /GRing.exp/= -sqrtrM ?enorm_ge0  // ler_sqrt ?divr_ge0 ?(@ltW _ _ _ alpha1) //.
+    rewrite ler_pdivlMr //.
+    move : h;apply le_trans.
+    rewrite addrC lerDl mulr_ge0 // ?sqr_ge0 ?ltW //.
+  have normb : `|x| <=  `| Left x |_e  + `|Right x|_e.
+    have {1}-> : x = row_mx (Left x) (Right x).
+      by rewrite hsubmxK.
+     rewrite (norm_rowmx (Left x)).
+     apply (@le_trans _ _ (`|Left x|  + `|Right x|)).
+     rewrite ge_max.
+     by apply /andP;split;rewrite ?lerDl ?lerDr normr_ge0 //.
+     apply lerD.
+     exact: mxnorm_enorm_le.
+     exact: mxnorm_enorm_le.
+  apply: (le_trans normb).
+  by apply: (le_trans (lerD hL hR)).
+- have -> : [set x | V1 alpha1 gamma x <= V1 alpha1 gamma p]  = (V1 alpha1 gamma) @^-1` [set r | r <= V1 alpha1 gamma p] by [].
+  apply: closed_comp.
+    move => /= x xin.
+    exact: (differentiable_continuous (V1_diff _ _ _ )).
+   exact: closed_le.
+Unshelve. all: by end_near. Qed.
+
+Lemma continuous_enorm {n:nat} : continuous (fun u : 'rV[K]_n => `|u|_e).
+Proof.
+rewrite /enorm.
+move => /= x.
+apply/ continuous_comp=>/=.
+move => /= A.
+Admitted.
+
+Lemma compact_Ksub p : compact (Ksub p).
+Proof.
+apply: compact_closedI.  
+exact: V1_bound_compact.
+have -> : state_space_tilt  = (fun x => `| 'e_2 - Right x |_e ) @^-1` [set (1 : K)].
+  by [].
+apply : closed_comp => //.
+move => x xp.
+apply : continuous_comp; last by exact:continuous_enorm.
+apply: continuousB.
+exact: cst_continuous.
+exact: continuous_rsubmx.
+Qed.
+Lemma invariant_Ksub p : is_invariant phi (Ksub p).
+Proof.
+move => x [/= sol' [d [solP [t h]]]].
+rewrite /Ksub/=.
+split; last first.
+- apply/(@state_space_tiltS  _ alpha1 gamma).
+  exists sol',d.
+  split;last by exists t.
+  apply/is_sol_subset/solP.
+  exact: subIsetr.
+- have [sol0 solA] := solP.
+   have  : V1 alpha1 gamma (sol' 0) <= V1 alpha1 gamma p.
+    by move: sol0; rewrite inE/=/Ksub/inE;move => [].
+  apply le_trans.
+  have [t0 ->] := h.
+  move : t0;rewrite in_itv/= => /andP[t0 td].
+  apply: (V_nincr solA (V1_diff _ _)); rewrite ?t0 ?lexx //.
+  apply : derive_along_V1_le0=> //.
+  by apply/is_sol_subset/solP;exact: subIsetr.
+  move => /= t' t'd.
+  apply /derivable1_diffP.
+  have [_ [solA' _]] := solA.
+  have td' : t' \in `]0,d[ by rewrite inE/=in_itv/=.
+  by move /(_ _ td') : solA' => [+ _].
+Qed.
+
+Local Lemma sol_Ksub p :forall u,  u \in Ksub p -> is_global_sol phi (sol u) setT.
+Proof.
+  move => u.
+  rewrite inE/=;move=> [h1 h2].
+  split.
+  apply isSol.
+    by rewrite inE.
+  move =>/= x.
+  apply isSol.
+  by rewrite inE.
+Qed.
+
+Lemma V1dot_p1_eq0 : V1dot point1 = (0 : K).
+Proof.
+rewrite /V1dot /point1 /=.
+rewrite lsubmx_const rsubmx_const enorm0 expr0n /= oppr0 add0r !mul0mx sub0r oppr0.
+by rewrite mxE.
+Qed.
+
+Lemma V1dot_p2_eq0 : V1dot point2 = (0 : K).
+Proof.
+rewrite /V1dot /point2 /=.
+rewrite row_mxKl row_mxKr.
+rewrite enorm0 expr0n /= oppr0 add0r.
+rewrite -!scalemxAl -scalerBr.
+rewrite trmx0 mulmx0 subr0.
+rewrite !scalemxAl.
+rewrite norm_spin.
+Search enorm (_ *: _).
+rewrite -!scalemxAl enormZ.
+rewrite spinE.
+suff -> : 'e_2 *v 'e_2 = (0 : 'rV[K]_3).
+  by rewrite enorm0 /GRing.exp /= !mulr0 oppr0.
+by rewrite vece2 /= scale0r.
+Qed.
+
+Local Lemma limS_subset_V1dot0 p : 
+  p \in state_space_tilt -> limS sol (Ksub p) `<=` [set x : 'rV[K]_6 | V1dot  x = 0] `&` state_space_tilt.
+Proof.
+move => ps.
+have H : limS sol (Ksub p) `<=` [set x | 'D~(sol x) (V1 alpha1 gamma) 0 = 0] `&` state_space_tilt.
+  rewrite subsetI;split.
+    apply: (@stable_limS _ _ _ _ _ _ _ (@sol_Ksub p) _ (V1 alpha1 gamma)).
+    exact: compact_Ksub.
+    exact: invariant_Ksub.
+    move => p0.
+    rewrite inE/=/Ksub/inE/=.
+    move => [_ K0].
+    by apply initp;rewrite inE.
+    move => p0 p0K.
+    exact: (differentiable_continuous (V1_diff _ _ _ )).
+    move => /= p0 t K0 t0.
+    apply: V1_diff.
+    move => p0 K0.
+    have p0s : (p0 \in state_space_tilt).
+    by move : K0;rewrite inE/=/Ksub/inE/=;move=>[].
+    apply : derive_along_V1_le0_global => //.
+    split.
+    by rewrite initp.
+    by apply isSol.
+  move=>/=x px.
+  admit.
+apply: (subset_trans H).
+move =>/= x [+ h1].
+rewrite derive_along_V1_global //=.
+by rewrite initp ?inE.
+split => //.
+by rewrite initp ?inE.
+move=>x0.
+have h1' : (x \in state_space_tilt) by rewrite inE.
+by have [_ /=] := (isSol h1').
+Admitted.
+
+Lemma limS_subset_p1p2 p :
+  p \in state_space_tilt -> limS sol (Ksub p) `<=` [set point1; point2]. 
+Proof.
+have -> :  [set point1; point2] = [set x : 'rV[K]_6 | V1dot  x = 0] `&` state_space_tilt.
+  apply /seteqP;split => x /=.
+  case => ->;split; [exact: V1dot_p1_eq0 | | exact: V1dot_p2_eq0 | ].
+  have :=  (@point1_in_state_space_tilt K).
+  by rewrite inE.
+  have :=  (@point2_in_state_space_tilt K).
+  by rewrite inE.
+  move => [h1 h2'].
+  have h2: x \in state_space_tilt by rewrite inE.
+  move : h1.
+  have hi := initp h2.
+  rewrite -hi => h1.
+  have sol' : is_sol phi 1 (sol x) state_space_tilt.
+    apply: global_sol_sol.
+    split.
+    by rewrite hi.
+    by apply isSol.
+  apply: (V1dot_eq0_p1_or_p2 sol') => //.
+  by rewrite in_itv /= lexx ltr01.
+by apply limS_subset_V1dot0.
+Qed.
+
+Lemma cvg_to_set_p1_p2 p : p \in state_space_tilt -> 
+  sol p t @[t --> +oo] --> globally [set point1; point2].
+Proof. 
+ rewrite inE => ps.
+  have : p \in Ksub p.
+    by rewrite inE; split => //=.
+  move => pK.
+
+  have p0K : (forall p0 : 'rV_6, p0 \in Ksub p -> sol p0 0 = p0).
+    move => q.
+    rewrite inE/=.
+    move => [_ h].
+    apply: initp.
+    by rewrite inE.
+  have H0 := cvg_to_limS  (@compact_Ksub p) (@invariant_Ksub p) (@sol_Ksub p) p0K pK.
+  apply: (cvg_trans H0).
+  rewrite /globally/=/cvg_to/=/nbhs/=.
+  move => A /= h1 x h2.
+  apply h1.
+  apply : (@limS_subset_p1p2 p) => //.
+  by rewrite inE.
+Qed.
+
+Lemma cvg_to_p1_or_p2 p : (p \in state_space_tilt) ->
+       (sol p t @[t --> +oo] --> point1 ) \/ ( sol p t @[t --> +oo] --> point2).
+Proof.  
+  move => h.
+  have := (cvg_to_set_p1_p2 h).
+  pose d := `|(@point1 K) - point2|.
+  pose g t :=  `|sol p t - point1| - `|sol p t - point2|.
+Admitted.
+End LaSalle_tilt.
