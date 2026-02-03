@@ -2835,6 +2835,137 @@ have -> :  [set point1; point2] = [set x : 'rV[K]_6 | V1dot  x = 0] `&` state_sp
 by apply limS_subset_V1dot0.
 Qed.
 
+(*Todo: generalize + PR? *)
+Lemma compact_decreasing_bigcap
+  (X : topologicalType)  (B : K -> set X) (O : set X) :
+  (forall i, compact (B i)) ->
+  (forall i j,  i <= j  -> B j `<=` B i) ->
+  open O ->
+  (\bigcap_i B i `<=` O) ->
+  exists i0, B i0 `<=` O.
+Proof.
+  move => H.
+Admitted.
+Lemma open_disjoint_separated (X : topologicalType) (A B : set X) :
+  open A -> open B -> A `&` B = set0 -> separated A B.
+Proof.
+  move=>Ao Bo ABdisj.
+  split.
+  apply /disjoints_subset.
+  rewrite (closure_id (~` B)).1; last by apply open_closedC.
+  by apply /closure_subset/disjoints_subset.
+  rewrite setIC;apply /disjoints_subset.
+  rewrite (closure_id (~` A)).1; last by apply open_closedC.
+  apply /closure_subset/disjoints_subset.
+  by rewrite setIC.
+Qed.
+
+Lemma separated_closedUP {T : topologicalType} (A B : set T) : separated A B -> closed (A `|` B) <-> closed A /\ closed B. 
+Proof.
+   move => ABsep.
+   split => [/closure_id h | [h1 h2]]; last  by apply closedU.
+   rewrite closureU in h.
+   split;apply /closure_id/seteqP;split => [|x cx]; try by apply subset_closure.
+   have /orP[] : (x \in A) || (x \in B).
+     by rewrite -in_setU h inE/=;left.
+   by rewrite inE.
+   rewrite inE => xB.
+   have [/seteqP[+ _] _] := ABsep.
+   case /(_ x).
+   by split.
+   have /orP[] : (x \in A) || (x \in B).
+     by rewrite -in_setU h inE/=;right.
+   rewrite inE => xB.
+   have [_ /seteqP[+ _]] := ABsep.
+   case /(_ x).
+   by split.
+   by rewrite inE.
+Qed.
+
+(*Todo: PR? *)
+(* NB: should be possible to generalize without normal_space X *)
+Lemma compact_connected_cluster
+  (X : topologicalType) (f : K -> X) (A : set X) :
+  hausdorff_space X ->
+  normal_space X ->
+  continuous f ->
+  compact A ->
+  (forall t, f t \in A) ->
+  connected (cluster (f t @[t --> +oo])).
+Proof.
+move => H Hn contf compactf imagef.
+set B := fun t => closure  (f @` `[t, +oo[).
+have Bcon t : connected (B t).
+  apply: connected_closure.
+  apply: connected_continuous_connected.
+  apply /connected_intervalP/interval_is_interval.
+  by apply continuous_subspaceT.
+have Bnonempty t : B t !=set0.
+  exists (f t);apply subset_closure.
+  by exists t; rewrite /=?in_itv/=?lexx.
+have Bmon (s t : K): s <= t -> B t `<=` B s.
+  move => st.
+  apply: closure_subset.
+  move => _ [t' tt'] <-.
+  exists t' => //.
+  move : tt'; rewrite /=!in_itv//= => /andP[ht _];apply /andP;split=>//.
+  by apply: (le_trans st).
+have Bcom t : compact (B t).
+  apply: (subclosed_compact _  compactf).
+  exact: closed_closure.
+  rewrite (closure_id A).1; last by apply compact_closed.
+  apply: closure_subset.
+  move => _ [t0 tp] <-.
+  move /(_ t0): imagef.
+  by rewrite inE.
+have -> :  cluster (f t @[t --> +oo]) = \bigcap_t B t.
+  rewrite clusterE.
+  apply /seteqP;split.
+    apply:sub_bigcap => t0 _.
+    apply: bigcap_inf.
+    exists t0; split.
+    apply num_real.
+    move => t tx; exists t;rewrite //=in_itv/=ltW//.
+  apply : sub_bigcap => b /= [t0 [_ /= h]].
+  apply: (subset_trans (bigcap_inf (i := t0+1) _)) => //.
+  apply closure_subset.
+  move => _ /= [x xt] <-.
+  apply h.
+  have t1: (t0+1 <= x).
+    by move : xt; rewrite /=in_itv/= => /andP[].
+  apply/lt_le_trans/t1.
+  by rewrite ltrDl.
+apply /connectedP => E [Enonempty Eu Esep].
+have /(separated_closedUP Esep) [E1c E2c] : closed ((E false) `|` (E true)).
+  by rewrite -Eu;apply closed_bigI => i _;apply compact_closed.
+have /normal_openP := Hn.
+move /(_ K (E false) (E true)) => [| | | V1 [V2 [V1o V2o V1E1 V2E2 V12disj]]]//.
+  by apply separated_disjoint.
+have V1V2o : open (V1 `|` V2).
+  by apply openU.
+have V1V2sep : separated V1 V2.
+  by apply open_disjoint_separated.
+have BV1V2 : \bigcap_t B t `<=` V1 `|` V2.
+  by rewrite Eu;apply : setUSS.
+case /compact_decreasing_bigcap : BV1V2 => // t0 Bto.
+suff: V1 `&` V2 !=set0.
+  by apply nonemptyPn.
+have [e1 E1 ] := Enonempty false.
+have [e2 E2 ] := Enonempty true.
+have EB : (E false `|` E true `<=` B t0).
+  rewrite <- Eu.
+  by apply bigcap_inf.
+case (connected_subset V1V2sep Bto (Bcon _)) => hbv.
+  exists e2.
+  split; last by apply V2E2.
+  apply hbv.
+  by apply EB;right.
+ exists e1.
+split; first by apply V1E1.
+apply hbv.
+by apply EB;left.
+Qed.
+
 Lemma cvg_to_set_p1_p2 p : p \in state_space_tilt -> 
   cluster (sol p t @[t --> +oo]) `<=` [set point1; point2].
 Proof. 
