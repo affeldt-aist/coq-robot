@@ -2606,7 +2606,11 @@ move => /=t.
 have [tlt | tge] := ltP t 0.
 - set sol' :=  fun t => 2*: (sol p 0) - sol p (- t).
   have H0 : {near t, sol' =1 sol p}.
-  admit.
+  near=> s.
+  rewrite /sol'.
+  rewrite -H1 //.
+  near: s.
+  by apply: lt_nbhsl.
   split.
   + apply : (near_eq_derivable _ H0) =>//.
     rewrite /sol'.
@@ -2626,9 +2630,20 @@ have [tlt | tge] := ltP t 0.
       symmetry.
       apply: near_eq_derive => //.
     rewrite /sol'.
-    rewrite deriveB/=?derive_cst ?sub0r.
+    rewrite deriveB/=?derive_cst ?sub0r => //.
+    have tt : 0 <= - t.
+    rewrite lerNr oppr0 ltW => //.
+    have h3 : 'D_1 (sol p ) (-t) = phi (sol p ( -t)).
+    have := H2 (-t) tt.
+    move=> h.
+    by apply derive_val.
+    rewrite -fctE.
+    have Dt_neg: 'D_1 (sol p \o -%R) t = - 'D_1 (sol p) (- t) by admit.
+    rewrite Dt_neg opprK.
+    rewrite h3.
     admit.
-    apply derivable_cst.
+    apply /derivable1_diffP.
+    apply: differentiable_comp => //.
     admit.
 - split.
    have {}H2 := H2 _ tge.
