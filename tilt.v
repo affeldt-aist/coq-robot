@@ -2405,7 +2405,7 @@ rewrite derive_zp10 // -scalemxAl mxE [X in X + _](mulrA (alpha1^-1) (- alpha1))
 rewrite mulrN mulVf ?gt_eqF// mulN1r.
 rewrite derive_z20 // -scalemxAl mulmxA -scalemxAl [in X in _ + X]mxE.
 rewrite scalerA mulVf ?gt_eqF// scale1r.
-rewrite norm_squared /V1dot.
+rewrite enorm_squared /V1dot.
 congr +%R.
 rewrite -2![in LHS]mulmxA -mulmxBr -mulmxBr -linearB/=.
 rewrite -[X in (X *m (_ *m _)) 0 0 = _]trmxK.
