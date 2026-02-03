@@ -17,6 +17,9 @@ scara.v
 derive_matrix.v
 differential_kinematics.v
 extra_trigo.v
+common.v
+contfun.v
+ode.v
 lasalle.v
 pendulum.v
 tilt_mathcomp.v
