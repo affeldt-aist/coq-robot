@@ -2641,6 +2641,14 @@ have [tlt | tge] := ltP t 0.
     have Dt_neg: 'D_1 (sol p \o -%R) t = - 'D_1 (sol p) (- t) by admit.
     rewrite Dt_neg opprK.
     rewrite h3.
+    rewrite /phi.
+    rewrite /tilt_eqn.
+    rewrite /eqn14b_rhs /=.
+    rewrite !linearB /=.
+    rewrite !linearZ /=.
+    rewrite ![in RHS] (H1 (t)); last by apply tlt.
+    rewrite ![in RHS]initp /=.
+    (* impossible ? *)
     admit.
     apply /derivable1_diffP.
     apply: differentiable_comp => //.
