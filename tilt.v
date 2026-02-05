@@ -2806,10 +2806,37 @@ suff -> : 'e_2 *v 'e_2 = (0 : 'rV[K]_3).
   by rewrite enorm0 /GRing.exp /= !mulr0 oppr0.
 by rewrite vece2 /= scale0r.
 Qed.
+
+Local Lemma sol_continuous p : p \in state_space_tilt -> continuous (sol p).
+Proof.
+move => sp t.
+have [issol0 issol1]: lasalle.is_sol phi (sol p).
+  apply: (sol_is_sol (sol := sol) (K:=state_space_tilt) ) => //.
+  move => y Ky.
+  by apply /solP;rewrite inE.
+  move : sp.
+  by rewrite inE.
+apply : differentiable_continuous.
+apply /derivable1_diffP.
+have [ht | ht] := ltP t 0; last by apply /ex_derive/issol1.
+apply : (@near_eq_derivable _ _ _ (fun t => 2 *: sol p 0 - sol p (-t))) => //.
+  near=> s.
+  rewrite -issol0 //.
+  near: s.
+   by apply: lt_nbhsl.
+apply /derivable1_diffP.
+apply: differentiable_comp => //.
+apply: differentiable_comp => //.
+apply: differentiable_comp => //.
+apply /derivable1_diffP.
+apply /ex_derive/issol1.
+rewrite lerNr oppr0 ltW//.
+Unshelve. all: by end_near. Qed.
+
 Local Lemma global_sol_T A sol' : is_global_sol phi sol' setT -> sol' 0 \in A -> is_global_sol phi sol' A.
 Proof.
-  move => [_ solP'] initP.
-  split=>//.
+move => [_ solP'] initP.
+split=>//.
 Qed.
 
 Local Lemma q_inKsubq q : q \in state_space_tilt -> q \in Ksub q.
@@ -2919,15 +2946,52 @@ Qed.
 
 (*Todo: generalize + PR? *)
 Lemma compact_decreasing_bigcap
-  (X : topologicalType)  (B : K -> set X) (O : set X) :
-  (forall i, compact (B i)) ->
+  (X : ptopologicalType)  (B : K -> set X) (O : set X) :
+  hausdorff_space X ->
+  (forall i, 0 <= i -> compact (B i)) ->
   (forall i j,  i <= j  -> B j `<=` B i) ->
   open O ->
-  (\bigcap_i B i `<=` O) ->
-  exists i0, B i0 `<=` O.
+  (\bigcap_(i in [set i | 0 <= i]) B i `<=` O) ->
+  exists i0, (0 <= i0) /\ B i0 `<=` O.
 Proof.
-  move => H.
+move => H comp decr openO subO.
+set V := fun i => ((B i) `&` ~` O).
+have comp' i :  (0 <= i) -> compact (V i).
+  move=>i0.
+  apply: compact_closedI.
+  by apply comp.
+  by apply open_closedC.
+have decr' i j : i <= j -> V j `<=` V i. 
+  move=>ij.
+  rewrite /V.
+  by apply setSI;apply decr.
+
+apply /not_existsP.
+move => /= hf.
+suff /set0P  : \bigcap_(i in [set t | 0 <= t]) V i !=set0.  
+  rewrite /V/=.
+  rewrite bigcapIl; last first.
+    by exists 0 => /=.
+    move /eqP => h.
+    by have /subsets_disjoint := h.
+have cf : closed_fam_of (B 0) [set t | t >= 0] V.
+  exists V => /=t t0 //.
+  apply closedI.
+  apply compact_closed => //.
+  apply comp => //.
+  by apply open_closedC.
+  rewrite /V.
+  rewrite setIA.
+  apply: congr2 => //.
+  symmetry.
+  rewrite setIC.
+  apply: setIidl.
+  by apply decr.
+have : compact (B 0) by apply comp.
+rewrite compact_In0/=.
+apply => //.
 Admitted.
+
 Lemma open_disjoint_separated (X : topologicalType) (A B : set X) :
   open A -> open B -> A `&` B = set0 -> separated A B.
 Proof.
@@ -2967,12 +3031,12 @@ Qed.
 (*Todo: PR? *)
 (* NB: should be possible to generalize without normal_space X *)
 Lemma compact_connected_cluster
-  (X : topologicalType) (f : K -> X) (A : set X) :
+  (X : ptopologicalType) (f : K -> X) (A : set X) :
   hausdorff_space X ->
   normal_space X ->
   continuous f ->
   compact A ->
-  (forall t, f t \in A) ->
+  (forall t, 0 <= t -> f t \in A) ->
   connected (cluster (f t @[t --> +oo])).
 Proof.
 move => H Hn contf compactf imagef.
@@ -2992,15 +3056,21 @@ have Bmon (s t : K): s <= t -> B t `<=` B s.
   exists t' => //.
   move : tt'; rewrite /=!in_itv//= => /andP[ht _];apply /andP;split=>//.
   by apply: (le_trans st).
-have Bcom t : compact (B t).
+have Bcom t : 0 <= t  -> compact (B t).
+  move => tge0.
   apply: (subclosed_compact _  compactf).
   exact: closed_closure.
   rewrite (closure_id A).1; last by apply compact_closed.
   apply: closure_subset.
   move => _ [t0 tp] <-.
   move /(_ t0): imagef.
+  have t0ge0 : 0 <= t0.
+    move : tp.
+    rewrite /=in_itv/= => /andP[+ _].
+    by apply le_trans.
+  move /(_ t0ge0).
   by rewrite inE.
-have -> :  cluster (f t @[t --> +oo]) = \bigcap_t B t.
+have -> :  cluster (f t @[t --> +oo]) = \bigcap_(t in [set t | 0 <= t]) B t.
   rewrite clusterE.
   apply /seteqP;split.
     apply:sub_bigcap => t0 _.
@@ -3009,17 +3079,21 @@ have -> :  cluster (f t @[t --> +oo]) = \bigcap_t B t.
     apply num_real.
     move => t tx; exists t;rewrite //=in_itv/=ltW//.
   apply : sub_bigcap => b /= [t0 [_ /= h]].
-  apply: (subset_trans (bigcap_inf (i := t0+1) _)) => //.
+  apply: (subset_trans (bigcap_inf (i := (max 0 (t0+1))) _)) => //.
+  by rewrite /=le_max lexx.
   apply closure_subset.
   move => _ /= [x xt] <-.
   apply h.
   have t1: (t0+1 <= x).
-    by move : xt; rewrite /=in_itv/= => /andP[].
+     move : xt; rewrite /=in_itv/= => /andP[+ _].
+     apply le_trans.
+     by rewrite le_max lexx;apply /orP;right.
   apply/lt_le_trans/t1.
   by rewrite ltrDl.
 apply /connectedP => E [Enonempty Eu Esep].
 have /(separated_closedUP Esep) [E1c E2c] : closed ((E false) `|` (E true)).
-  by rewrite -Eu;apply closed_bigI => i _;apply compact_closed.
+  rewrite -Eu;apply closed_bigI => i P;apply compact_closed => //.
+  by apply Bcom.
 have /normal_openP := Hn.
 move /(_ K (E false) (E true)) => [| | | V1 [V2 [V1o V2o V1E1 V2E2 V12disj]]]//.
   by apply separated_disjoint.
@@ -3027,16 +3101,16 @@ have V1V2o : open (V1 `|` V2).
   by apply openU.
 have V1V2sep : separated V1 V2.
   by apply open_disjoint_separated.
-have BV1V2 : \bigcap_t B t `<=` V1 `|` V2.
+have BV1V2 : \bigcap_(t in [set t | 0 <= t]) B t `<=` V1 `|` V2.
   by rewrite Eu;apply : setUSS.
-case /compact_decreasing_bigcap : BV1V2 => // t0 Bto.
+case /compact_decreasing_bigcap : BV1V2 => // t0 [t0ge0 Bto] //.
 suff: V1 `&` V2 !=set0.
   by apply nonemptyPn.
 have [e1 E1 ] := Enonempty false.
 have [e2 E2 ] := Enonempty true.
 have EB : (E false `|` E true `<=` B t0).
   rewrite <- Eu.
-  by apply bigcap_inf.
+  apply bigcap_inf => //.
 case (connected_subset V1V2sep Bto (Bcon _)) => hbv.
   exists e2.
   split; last by apply V2E2.
@@ -3147,56 +3221,113 @@ by left.
 by right.
 Admitted.
 
+Lemma cluster_nonempty p : p \in state_space_tilt -> cluster (sol p t @[t --> +oo]) !=set0.
+Proof.
+move => sp.
+suff : (Ksub p) `&`  cluster (sol p t @[t --> +oo]) !=set0. 
+  move => [x [_ cx]].
+  by exists x.
+apply (@compact_Ksub p) => //.
+  by apply: fmap_proper_filter.
+apply sub_image_at_infty => /=.
+move => _ [t t0] <-.
+apply invariant_Ksub => //.
+have:= (q_inKsubq sp).
+by rewrite inE.
+Qed.
+
+Lemma p1_Ksub p : Ksub p point1.
+Proof.
+split => /=; last by have := (@point1_in_state_space_tilt K);rewrite inE.
+rewrite /point1/V1.
+rewrite lsubmx_const rsubmx_const/= !enorm0 !expr0n /= !mul0r add0r.
+by rewrite addr_ge0 // divr_ge0 // ?sqr_ge0 ?mulr_ge0 // ltW.
+Qed.
+
+(*Todo : PR ? *)
+
 Lemma cvg_to_p1_or_p2 p : (p \in state_space_tilt) ->
        (sol p t @[t --> +oo] --> point1 ) \/ ( sol p t @[t --> +oo] --> point2).
 Proof.
 move => ps.
 have cluster_con : connected (cluster (sol p t @[t --> +oo])).
-  apply: (compact_connected_cluster _ _ _ (@compact_Ksub p)) => //.
+  apply: (compact_connected_cluster _ _ _ (@compact_Ksub p) ) => //.
     by apply: pseudometric_normal.
+    by apply: sol_continuous.
     move => t.
-    apply: differentiable_continuous.
-    apply /derivable1_diffP.
-    apply isSol => //.
-    admit. (* use solP or set time >= 0 in lemma *)
-    admit. (* same*)
-(*  have := connected2_subset cluster_con (cluster_contained_p1p2 ps). *)
-(* have [h | h] : cluster (sol p t @[t --> +oo]) = [set point1] \/  cluster (sol p t @[t --> +oo]) = [set point1]. *)
-(*   have := connected2_subset () *)
-(*   have := cluster_contained_p1p2 ps.  *)
-(*   have ->:  ((nbhs [set point1; point2]) = globally [set (point1 :U); point2]). *)
-(*     admit. *)
-(*   rewrite -closureEcluster. *)
-(*   left. *)
-(*   apply: (compact_cluster_set1 _ (@compact_Ksub p) ) => //. *)
-(*   rewrite nbhsE/=. *)
-(*    exists (ball point1 1).  *)
-(*    admit. *)
-(*    admit. *)
-(*    apply cvg_to_set_p1_p2. *)
-(*    admit. *)
-(*    admit. *)
-(*   have :=  nbhs_singleton. *)
-(*   rewrite /nbhs/=. *)
-(*   Search nbhs  *)
-(*   apply: (compact_cluster_set1 _ (closed_ball ) ) => //. *)
-(*   admit. *)
-(*   admit. *)
-(*   apply cvg_to_set_p1_p2. *)
-(*   exists (point1 : matrix K 1 6). *)
-(*   Search nbhs "mx". *)
-(*   apply mx_nbhs_filter. *)
-(*   exists . *)
-(* have:= cvg_to_plim. *)
-(*   move => h. *)
-(*   have /cvg_cluster := (cvg_to_set_p1_p2 h). *)
-(*   Search cluster. *)
-(*   rewrite /globally/= => hc. *)
-(*   have : exists t0, forall t, t > t0 -> sol p t \in  [set point1; point2]. *)
-(*   Search globally. *)
-(*   move => []. *)
-(*   move => h'. *)
-(*   pose d := `|(@point1 K) - point2|. *)
-(*   pose g t :=  `|sol p t - point1| - `|sol p t - point2|. *)
-Admitted.
+    rewrite inE.
+    apply : invariant_Ksub.
+    have := q_inKsubq ps.
+    by rewrite inE.
+have  := connected2_subset cluster_con (cluster_nonempty ps) (cluster_contained_p1p2 ps).
+suff H (q : U): cluster (sol p t @[t --> +oo]) = [set q] ->  sol p t @[t --> +oo] --> q. 
+  move => [h | h]; [left | right];apply H => //.
+move => H.
+
+have Ksubq : Ksub p q.
+   suff:  cluster (sol p t @[t --> +oo]) `<=` Ksub p.
+      by apply; rewrite H.
+   rewrite clusterE.
+   apply :(@subset_trans  _ (closure  (sol p @` `[0, +oo[))).
+     apply: bigcap_inf => //=.
+     exists 0; split => //= x x0.
+     exists x=>//.
+     rewrite in_itv/=ltW//.
+     rewrite (closure_id (Ksub p)).1;last first.
+       by apply compact_closed =>//; apply compact_Ksub.
+   apply closure_subset.
+   move => /= _ [t +] <-.
+   rewrite in_itv/= => /andP[t0 _].
+   apply invariant_Ksub => //.
+   have := q_inKsubq ps.
+   by rewrite inE.
+have [M [Mr Mp]]: bounded_set (Ksub p). 
+  apply compact_bounded.
+  exact: compact_Ksub.
+have [M0 | M0]  := leP 0 M;last first.
+   suff : `|q| < 0 by rewrite normr_lt0.
+   have M02 : M < M/2.
+     by rewrite ltr_pdivlMr // gtr_nMr // ltrDl.
+   have /= w := (Mp _ M02 _ Ksubq).
+   apply (le_lt_trans w).
+   rewrite ltr_pdivrMr // mul0r //.
+set V := ball  (p : U) (`|p|+(M+1+1) : K).
+have VKsub  : Ksub p `<=` V.
+  move => /= x Kx.
+  rewrite /V -ball_normE/ball_ /=.
+  apply: (le_lt_trans (ler_normB _ _)). 
+  apply: ler_ltD => //.
+  apply: ltr_pwDr => //.
+  apply Mp => //.
+  by apply: ltr_pwDr => //.
+have B1 :  0 < `|p| + (M + 1 + 1).
+  rewrite ltr_wpDl//?normr_ge0.
+  apply addr_gt0 => //.
+  by rewrite ltr_wpDl.
+have Vo : open V.
+  by rewrite /V;apply: ball_open.
+have cV : compact (closure V).
+   rewrite closure_ballE closed_ballE//.
+   apply: bounded_closed_compact; last by apply: closed_closed_ball_.
+   exists (`|p| + (`|p| + (M+1 +1))).
+   rewrite /closed_ball_/=.
+   split => //= x xB y Hy.
+   rewrite -(subrKC p y).
+   apply : (le_trans (ler_normD _ _)).
+   rewrite distrC.
+   apply (le_trans (lerD (lexx _ ) Hy)).
+   by apply ltW.
+apply: (compact_cluster_set1 _ cV ) => //.
+  rewrite nbhsE/=.
+  exists V; last by apply subset_closure.
+  split => //.
+  by apply VKsub.
+apply : (filterS (closure_subset VKsub)).
+exists 0;split => //= x /ltW x0.
+rewrite -(closure_id (Ksub p)).1;last first.
+  by apply compact_closed =>//; apply compact_Ksub.
+apply invariant_Ksub => //.
+have := q_inKsubq ps.
+by rewrite inE.
+Qed.
 End LaSalle_tilt.
