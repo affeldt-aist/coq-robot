@@ -540,7 +540,7 @@ Variables (phi : R -> U -> U).
 Variables (u0 : U).
 
 Lemma sup_phiS a b c d : {within `[a, b], continuous (phi ^~ u0)} ->
-  a < b -> `[c, d] `<=` `[a, b] ->
+  a <= b -> `[c, d] `<=` `[a, b] ->
   sup_phi phi c d u0 <= sup_phi phi a b u0.
 Proof.
 move=> cf ab cdab.
@@ -559,11 +559,10 @@ have [cd|dc] := leP c d.
   - split.
       exists `|phi a u0| => //=.
       exists a => //.
-      by rewrite in_itv/= lexx (ltW ab).
+      by rewrite in_itv/= lexx ab.
     have : {within `[a, b], continuous fun t : R => `|phi t u0|}.
-      apply: within_continuous_comp_norm => //.
-      exact/ltW.
-    move/(@EVT_max R (fun t => `|phi t u0|) _ _ (ltW ab)) => [e eab Hmax].
+      by apply: within_continuous_comp_norm => //.
+    move/(@EVT_max R (fun t => `|phi t u0|) _ _ ab) => [e eab Hmax].
     exists (`|phi e u0|) => x/= [r rab <-//].
     exact: Hmax.
 rewrite set_itv_ge ?bnd_simp/= -?ltNge// image_set0 sup0.
@@ -1702,12 +1701,10 @@ apply /(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - exact: ltDl_delta_max.
 - move=> t td.
   apply: lip2.
-  move: td; rewrite /=!in_itv/= => /andP [-> h] /=.
-  by rewrite (le_trans h)// -lerBrDl; exact: delta_max_itv.
-- move=> /= x xB  .
+  by apply: subset_itvl td; rewrite bnd_simp -lerBrDl delta_max_itv.
+- move=> /= x xB.
   apply/continuous_subspaceW/cont1 => //.
-  apply: subset_itvl => //=.
-  by rewrite bnd_simp -lerBrDl delta_max_itv.
+  by apply: subset_itvl => /=; rewrite bnd_simp -lerBrDl delta_max_itv.
 - rewrite /local_solution.
   exact: cts_fun.
 - by move => _ [t tad] <-; exact: cauchy_lipschitz_in_cball.
