@@ -22,7 +22,7 @@ Require Import lasalle.
 (*                                 initial_condition u0                       *)
 (*                                 equation phi                               *)
 (*                                 solution f on [t0, t1]                     *)
-(*      is_sol phi Delta f Init := is_sol_autonomous (f 0) phi 0 Delta f      *)
+(*      tilt_is_sol_autonomous phi Delta f Init := is_sol_autonomous (f 0) phi 0 Delta f      *)
 (*                                 + f 0 \in Init                             *)
 (*     is_equilibrium_point f p := solves_equation f (cst p)                  *)
 (*                state_space f == the set points attainable by a solution    *)
@@ -369,13 +369,13 @@ Let U := 'rV[K]_n.
 
 Variable phi : U -> U.
 
-Definition is_sol (Delta : K) (f : K -> U) (Init : set U) :=
+Definition tilt_is_sol_autonomous (Delta : K) (f : K -> U) (Init : set U) :=
   f 0 \in Init /\ is_sol_autonomous (f 0) phi 0 Delta f.
 
 Definition is_global_sol (f : K -> U) (Init : set U) :=
    f 0 \in Init /\ forall t , t >= 0 -> derivable f t 1 /\ f^`() t = phi (f t).
 
-Lemma global_sol_sol f Init : is_global_sol f Init -> forall Delta, is_sol Delta f Init.
+Lemma global_sol_sol f Init : is_global_sol f Init -> forall Delta, tilt_is_sol_autonomous Delta f Init.
 Proof.
   move => [init0 /= solP] Delta.
   do 3 split =>//.
@@ -383,11 +383,12 @@ Proof.
     rewrite /=inE/=in_itv/= => /andP[h _].
     apply solP.
     by rewrite ltW.
- apply: derivable_within_continuous.  
+ apply: derivable_within_continuous.
  move => x.
 rewrite /=in_itv/= => /andP[h _].
-by apply solP. 
+by apply solP.
 Qed.
+
 End ode.
 
 Section is_sol.
@@ -398,10 +399,10 @@ Variable Delta : K.
 
 Lemma is_sol_subset f (A B : set T) :
   A `<=` B ->
-  is_sol phi Delta f A -> is_sol phi Delta f B.
+  tilt_is_sol_autonomous phi Delta f A -> tilt_is_sol_autonomous phi Delta f B.
 Proof.
 move=> AB.
-rewrite /is_sol inE => -[inD0 [_ [deri cont]]]; rewrite inE.
+rewrite /tilt_is_sol_autonomous inE => -[inD0 [_ [deri cont]]]; rewrite inE.
 split => //.
 by apply: AB.
 Qed.
@@ -414,7 +415,7 @@ Let T := 'rV[K]_n.
 Variable phi : T -> T.
 
 Definition state_space (Init : set T) : set T :=
-  [set x | exists f Delta, (is_sol phi Delta f Init /\
+  [set x | exists f Delta, (tilt_is_sol_autonomous phi Delta f Init /\
     (exists t, t \in `[0, Delta[%R /\ x = f t))].
 
 End state_space.
@@ -427,7 +428,7 @@ Variable Init : set T.
 Variable Delta : K.
 
 Definition is_equilibrium_point (x : T) :=
-  forall Delta, is_sol phi Delta (cst x) Init.
+  forall Delta, tilt_is_sol_autonomous phi Delta (cst x) Init.
 
 End equilibrium_point.
 
@@ -444,7 +445,7 @@ Lemma equilibrium_points_subset (A B : set T) :
   equilibrium_points A `<=` equilibrium_points B.
 Proof.
 move=> AB x.
-rewrite /equilibrium_points/= /is_equilibrium_point /is_sol inE => H Delta.
+rewrite /equilibrium_points/= /is_equilibrium_point /tilt_is_sol_autonomous inE => H Delta.
 have [inD0 [deriv [cont tilt]]] := H Delta.
 rewrite inE; split => //.
 exact: AB.
@@ -460,7 +461,7 @@ Variable Init : set T.
 
 Definition is_locally_stable_at (x : T) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
-  forall (z : K -> 'rV[K]_n) (Delta : K), is_sol phi Delta z Init ->
+  forall (z : K -> 'rV[K]_n) (Delta : K), tilt_is_sol_autonomous phi Delta z Init ->
     `| z 0 - x | < d -> forall t, 0 < t < Delta -> `| z t - x | < eps.
 
 (* assuming solution exists for all time *)
@@ -719,7 +720,7 @@ Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
 
 Variable V : U -> K.
 Hypothesis Vdiff : forall t : U, differentiable V t.
-Hypothesis V'_le0 : forall Delta sol, is_sol phi Delta sol Init ->
+Hypothesis V'_le0 : forall Delta sol, tilt_is_sol_autonomous phi Delta sol Init ->
   forall t, 0 < t < Delta -> 'D~(sol) V t <= 0.
 
 (* khalil theorem 4.1 *)
@@ -776,7 +777,7 @@ have Omega_beta_Br : Omega_beta `<=` (B r)°.
 (* any trajectory starting in Omega_beta at t = 0
    stays in Omega_beta for all t >= 0 *)
 have Df_Omega_beta Delta sol :
-    is_sol phi Delta sol Init ->
+    tilt_is_sol_autonomous phi Delta sol Init ->
     sol 0 \in Omega_beta -> forall t, 0 < t < Delta -> sol t \in Omega_beta.
   move=> solP phi_Omega.
   have /= V_nincr_consequence : forall t, 0 < t < Delta -> forall u, 0 <= u <= t ->
@@ -1913,7 +1914,7 @@ Let phi := tilt_eqn alpha1 gamma.
 Variable Delta : K.
 
 Lemma derive_zp1 (t : K) (sol : K -> 'rV_6) :
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   t \in `]0, Delta[ -> 'D_1 (Left \o sol) t = - alpha1 *: Left (sol t).
 Proof.
 move=> [/= sol0in [_ [deri conti]] t0Delta].
@@ -1926,7 +1927,7 @@ by rewrite derive_lsubmx.
 Qed.
 
 Lemma derive_z2 (z : K) (sol : K -> 'rV_6) :
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   z \in `]0, Delta[ -> 'D_1 (Right \o sol) z =
   gamma *: (Right (sol z) - Left (sol z)) *m \S('e_2 - Right (sol z)) ^+ 2.
 Proof.
@@ -1939,7 +1940,7 @@ Qed.
 
 Lemma is_sol_state_space_tilt (sol : K -> 'rV_6) t :
   t \in `[0, Delta[%R ->
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   state_space_tilt (sol t).
 Proof.
 move=> t0Delta.
@@ -1958,7 +1959,7 @@ Qed.
 Lemma enorm_e2z2 (sol : K -> 'rV_6) (z : K)
     (z2 := Right \o sol) (zp1 := Left \o sol) (u := 'e_2 - z2 z) :
   z \in `[0, Delta[%R ->
-  is_sol phi Delta sol state_space_tilt -> `|u|_e = 1.
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt -> `|u|_e = 1.
 Proof.
 move=> z0Delta dtraj.
 suff: state_space_tilt (row_mx (zp1 z) (z2 z)).
@@ -1970,7 +1971,7 @@ Qed.
 Lemma angvel_sqr (sol : K -> 'rV_6) (z : K)  (z2 := fun r : K => Right (sol r) : 'rV_3)
   (w := (z2 z) *m \S('e_2)) (u := 'e_2 - z2 z) :
   z \in `[0, Delta[%R ->
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
 move=> z0Delta dtraj.
@@ -1994,7 +1995,7 @@ Qed.
 
 Lemma neg_spin (sol : K -> 'rV_6) (z : K) :
   z \in `[0, Delta[%R ->
-  is_sol phi Delta sol state_space_tilt->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt->
   `|Right (sol z) *m \S('e_2) *m - \S('e_2 - Right (sol z))|_e =
   `|Right (sol z) *m \S('e_2)|_e.
 Proof.
@@ -2022,7 +2023,7 @@ Let c2 := 2^-1 / gamma.
 
 Lemma V1dotE (z : K) (sol : K -> 'rV_6)
   (zp1 := Left \o sol) (z2 := Right \o sol) :
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   z \in `]0, Delta[ ->
   V1dot (sol z) =
     c1 *: (2 *: 'D_1 zp1 z *m (Left (sol z))^T) 0 0 +
@@ -2049,7 +2050,7 @@ Qed.
 
 Lemma derive_along_V1 t (sol : K -> 'rV_6) :
   t \in `]0, Delta[ ->
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   (forall t, t \in `]0, Delta[ -> differentiable sol t) ->
   'D~(sol) (V1 alpha1 gamma) t = V1dot (sol t).
 Proof.
@@ -2086,7 +2087,7 @@ Definition u1 (sol : K -> 'rV[K]_6) t
   \row_(i < 2) [eta (fun=> 0) with 0 |-> `|zp1 t|_e, 1 |-> `|w|_e] i.
 
 Lemma V1dot_ub (sol : K -> 'rV[K]_6) (zp1 := Left \o sol) (z2 := Right \o sol) :
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   forall t, t \in `[0, Delta[%R ->
     V1dot (sol t) <= (- (u1 sol t) *m u2 *m (u1 sol t)^T) 0 0.
 Proof.
@@ -2118,7 +2119,7 @@ by rewrite [leRHS]mulrC.
 Qed.
 
 Lemma V1dot_eq0_p1_or_p2 (sol : K -> 'rV[K]_6) (t : K) :
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   t \in `[0, Delta[%R ->
   V1dot  (sol t) = 0 ->
   sol t = point1 \/ sol t = point2.
@@ -2169,7 +2170,7 @@ Qed.
 (* TODO: rework of this proof is needed *)
 (* NB: unused *)
 Lemma derive_along_Left_Right_le0 (sol : _ -> _ -> _) (x : 'rV[K]_6) :
-  is_sol phi Delta (sol x) state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta (sol x) state_space_tilt ->
   sol x 0 = point1 ->
   \forall z \near 0^',
     ('D~(sol x) (fun x => `|Left x|_e ^+ 2 / (2 * alpha1)) +
@@ -2212,7 +2213,7 @@ Unshelve. all: try by end_near. Abort.
 
 (* NB: should be completed to prove asymptotic stability *)
 Lemma locnegsemidef_derive_alone_V1 sol (x : 'rV[K]_6) :
-  is_sol phi Delta (sol x) state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta (sol x) state_space_tilt ->
   sol x 0 = point1 ->
   locnegsemidef ('D~(sol x) (V1 alpha1 gamma)) 0.
 Proof.
@@ -2252,7 +2253,7 @@ Abort.
 
 Lemma locnegdef_derive_along_V1 (sol : 'rV_6 -> K -> 'rV_6) (x : 'rV[K]_6)
    (zp1 := Left \o sol x) (z2 := Right \o sol x) :
-  is_sol phi Delta (sol x) state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta (sol x) state_space_tilt ->
   (forall t : K, state_space_tilt (sol x t)) ->
   sol x 0 = point1 ->
   locnegdef ('D~(sol x) (V1 alpha1 gamma)) 0.
@@ -2325,7 +2326,7 @@ split.
 Qed.*) Abort.*)
 
 Lemma derive_along_V1_le0 (sol : K -> 'rV[K]_6) :
-  is_sol phi Delta sol state_space_tilt ->
+  tilt_is_sol_autonomous phi Delta sol state_space_tilt ->
   (forall t, 0 < t < Delta -> differentiable sol t) ->
   forall t : K, 0 < t < Delta ->
   'D~(sol) (V1 alpha1 gamma) t <= 0.
@@ -2934,7 +2935,7 @@ have -> :  [set point1; point2] = [set x : 'rV[K]_6 | V1dot  x = 0] `&` state_sp
   move : h1.
   have hi := initp x.
   rewrite -hi => h1.
-  have sol' : is_sol phi 1 (sol x) state_space_tilt.
+  have sol' : tilt_is_sol_autonomous phi 1 (sol x) state_space_tilt.
     apply: global_sol_sol.
     split.
     by rewrite hi.
