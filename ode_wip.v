@@ -55,7 +55,7 @@ Definition lipschitzT_solution_f : continuousFunType `[a, a + delta_max] [set: '
   repr (picard_fix ab k0 lip2' cont1' rho1).
 
 Lemma lipschitzT_solution :
-  is_sol_on phi a (a + delta_max) u0 lipschitzT_solution_f.
+  is_sol_on phi u0 a (BLeft (a + delta_max)) lipschitzT_solution_f.
 Proof.
 apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - exact: ltDl_delta_max.
@@ -84,7 +84,7 @@ Let f := lipschitzT_solution_f.
 
 Theorem lipschitzT_cauchy_lipschitz_local :
   delta_max > 0 /\
-  is_sol_on phi a (a + delta_max) u0 f /\
+  is_sol_on phi u0 a (BLeft (a + delta_max)) f /\
   {in `[a, a + delta_max], forall t, closed_ball u0 r%:num (f t)} /\
   {within `[a, a + delta_max], continuous f}.
 Proof.
@@ -275,7 +275,7 @@ Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_[set: 'rV[R]_n] (phi
 Hypothesis cont1 : {in [set: 'rV[R]_n], forall y, {within `[a, b], continuous phi ^~ y}}.
 
 Theorem cauchy_lipschitz_global : exists f : R -> 'rV_n (*: continuousFunType `[a, b] [set: 'rV[R]_n]*),
-  is_sol_on phi a b u0 f.
+  is_sol_on phi u0 a (BLeft b) f.
 Proof.
 near (0:R)^'+ => rho'.
 have rho'_gt0 : 0 < rho' by [].
@@ -352,7 +352,7 @@ have Iiab i : (i <= size s)%N -> [set` I i] `<=` `[a, b].
   - by rewrite inE prednK// (leq_trans _ si).
   - by rewrite -(ltn_add2r 1) !addn1 (leq_trans si)// prednK// (leq_trans _ si).
 suff: forall i, (i < size s)%N ->
-    exists f : R -> 'rV_n, is_sol_on phi (nth b (a :: s) i) (nth b (a :: s) i.+1) u0 f.
+    exists f : R -> 'rV_n, is_sol_on phi u0 (nth b (a :: s) i) (BLeft (nth b (a :: s) i.+1)) f.
   move=> suf.
   have pickup_itv (x : R) : x \in `[a, b] -> exists2 i : nat, (i < size s)%N & x \in I i.
     move=> xab; apply: itv_partition_ex => //.
@@ -501,11 +501,11 @@ Lemma exe325b1 : forall t, t \in `[a, T[ -> f t \in W.
 Proof.
 Admitted.
 
-Lemma exe325b2 : is_sol_on phi a T u0 f.
+Lemma exe325b2 : is_sol_on phi u0 a (BLeft T) f.
 Proof.
 Admitted.
 
-Lemma exe325b3 : exists delta, delta > 0 /\ is_sol_on phi a (T + delta) u0 f.
+Lemma exe325b3 : exists delta, delta > 0 /\ is_sol_on phi u0 a (BLeft (T + delta)) f.
 Proof.
 Admitted.
 
@@ -524,7 +524,7 @@ Variable T : R.
 Hypothesis aTab : `[a, T[ `<=` `[a, b].
 Variable f : R -> U.
 Variable u0 : U.
-Hypothesis fsol : is_sol_on phi a T(*exluded*) u0 f.
+Hypothesis fsol : is_sol_on phi u0 a (BLeft T)(*exluded*) f.
 
 Variable W : set U.
 Hypothesis compactW : compact W.

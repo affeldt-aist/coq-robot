@@ -1268,6 +1268,17 @@ HB.instance Definition _ {R : realType} (n : nat) := Complete.on (@row_vector R 
 HB.instance Definition _ {R : realType} (n : nat) := NormedModule.on (@row_vector R n).
 (*HB.instance Definition _ {R : realType} (n : nat) := CompleteNormedModule.on (@row_vector R n).*)
 
+Section is_sol.
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+Variables (phi : R -> U -> U) (u0 : U) (a : R) (b : itv_bound R) (sol : R -> U).
+
+Definition is_sol_on :=
+  sol a = u0 /\
+  {in [set` Interval (BRight a)(*open*) b (*(BLeft b)(*open*)*)], forall x, derivable sol x 1 /\ sol^`() x = phi x (sol x)}.
+
+End is_sol.
+
 Section integral_ode.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n : nat}.
@@ -1302,9 +1313,6 @@ Definition is_integral_sol_on := sol a = u0 /\
 (* by rewrite /=in_itv/=ht1//= lt_neqAle ht0/= eq_sym Ht0. *)
 (* Qed. *)
 
-Definition is_sol_on := sol a = u0 /\
-  {in `]a, b[, forall x, derivable sol x 1 /\ sol^`() x = phi x (sol x)}.
-
 Lemma picard_iterator_within_continuous i :
   {within `[a, b], continuous (fun x => phi x (sol x) ord0 i)}.
 Proof.
@@ -1335,7 +1343,7 @@ apply: continuous_compact_integrable; first exact: segment_compact.
 exact: picard_iterator_within_continuous.
 Qed.
 
-Lemma integral_sol_iff_sol : is_integral_sol_on <-> is_sol_on.
+Lemma integral_sol_iff_sol : is_integral_sol_on <-> is_sol_on phi u0 a (BLeft b) sol.
 Proof.
 split.
 - move => [hinit h]; split => // t tab.
@@ -1695,7 +1703,7 @@ Definition local_solution := repr (picard_fix ab k0 lip2 cont1 rho1).
 
 Local Notation delta_max := (delta_max phi a b k u0 r rho).
 
-Lemma solution_local_solution : is_sol_on phi a (a + delta_max) u0 local_solution.
+Lemma solution_local_solution : is_sol_on phi u0 a (BLeft (a + delta_max)) local_solution.
 Proof.
 apply /(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - exact: ltDl_delta_max.
@@ -1726,7 +1734,7 @@ Let f := cauchy_lipschitz_local_f.
 
 Theorem cauchy_lipschitz_local :
   delta_max > 0 /\
-  is_sol_on phi a (a + delta_max) u0 f /\
+  is_sol_on phi u0 a (BLeft (a + delta_max)) f /\
   {in `[a, a + delta_max], forall t, closed_ball u0 r%:num (f t)} /\
   {within `[a, a + delta_max], continuous f}.
 Proof.
@@ -1751,7 +1759,7 @@ Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Hypothesis cf : {within `[a, b], continuous f}.
 Hypothesis cf' : {within `[a, b], continuous f'}.
 
-Lemma solution_unique : is_sol_on phi a b u0 f -> is_sol_on phi a b u0 f' ->
+Lemma solution_unique : is_sol_on phi u0 a (BLeft b) f -> is_sol_on phi u0 a (BLeft b) f' ->
   {in `[a, b], f =1 f'}.
 Proof.
 rewrite -!(integral_sol_iff_sol (r := r) (k:=k)) => //.
@@ -1780,7 +1788,7 @@ Lemma phi_cont1 a b : {in B, forall y, {within `[a, b], continuous phi_ ^~ y}}.
 Proof. by move => /= x Bx; exact: cst_continuous_subspace. Qed.
 
 Lemma autonomous_solution a b f :
-  is_sol_autonomous a b f <-> is_sol_on phi_ a b u0 f.
+  is_sol_autonomous a b f <-> is_sol_on phi_ u0 a (BLeft b) f.
 Proof. by []. Qed.
 
 Let rho : {posnum R} := (2^-1)%:pos.
