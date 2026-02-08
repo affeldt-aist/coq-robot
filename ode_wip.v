@@ -298,12 +298,17 @@ have [barhok|barhok] := leP (b - a) (rho%:num / k).
     apply: Hr.
     exact: sup_phi_ge0.
   exists (@lipschitzT_solution_f R n phi a b k u0 r rho rho1 ab k0 lip2 cont1).
-  have [d0 [[fau0 H1] [H2 H3]]] :=
+  have [d0 [[fau0 H1] H2 [H3 H4]]] :=
     @lipschitzT_cauchy_lipschitz_local R n phi a b k u0 r rho rho1 ab k0 lip2 cont1.
-  split => // t tab.
-  apply H1; apply/mem_set.
-  move/set_mem : tab.
-  by apply: subset_itvl; rewrite bnd_simp delta_maxba subrKC.
+  split => //.
+    move=> t tab.
+    apply H1; apply/mem_set.
+    move/set_mem : tab.
+    by apply: subset_itvl; rewrite bnd_simp delta_maxba subrKC.
+  apply: continuous_subspaceW H4.
+  apply: subset_trans; first exact: itv_closure.
+  apply: subset_itvl; rewrite bnd_simp -lerBlDl.
+  by rewrite delta_maxba.
 have @r : {posnum R}.
   admit.
 have Hr : rho%:num / k < r%:num / ((k * r%:num)%R + sup_phi phi a b u0)%E.
@@ -392,7 +397,7 @@ suff: forall i, (i < size s)%N ->
     set K1 := Ilt _ _.
     set K2 := lip2'' _ _.
     set K3 := cont1'' _ _.
-    have [d0 [[H1 fiu0] [_ _]]] :=
+    have [d0 [[H1 fiu0] _ _]] :=
       @lipschitzT_cauchy_lipschitz_local R n phi (nth b (a :: s) x) (nth b (a :: s) x.+1) k u0 r
       rho rho1 K1 k0 (lip2'' _ (ltnW xs)) (cont1'' _ (ltnW xs)).
     rewrite -[RHS]H1.
@@ -412,7 +417,7 @@ suff: forall i, (i < size s)%N ->
       (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)).
     suff : derivable f t 1.
       admit.
-    have [d0 [[fau0 H1] [_ _]]] :=
+    have [d0 [[fau0 H1] _ _]] :=
       @lipschitzT_cauchy_lipschitz_local R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
         k u0 r rho rho1 (Ilt _ im) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)).
     rewrite /= in H1.
@@ -447,6 +452,7 @@ suff: forall i, (i < size s)%N ->
     move=> ->.
     admit.
   admit.
+admit.
 move=> i im.
 have Ilti1 : nth b (a :: s) i < nth b (a :: s) i.+1.
    by apply: Ilt.
@@ -458,7 +464,7 @@ have cont1'' (j : nat) : (j <= size s)%N ->
   admit.
 exists (@cauchy_lipschitz_local_f R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
     k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)) rho rho1).
-have [d0 [[fau0 H1] [H2 H3]]] :=
+have [d0 [[fau0 H1] H2 H3]] :=
   @cauchy_lipschitz_local R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
     k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)) rho rho1.
 split => // t tab.

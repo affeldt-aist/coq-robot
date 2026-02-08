@@ -1273,9 +1273,14 @@ Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
 Variables (phi : R -> U -> U) (u0 : U) (a : R) (b : itv_bound R) (sol : R -> U).
 
+(*NB: b = (BLeft r) is open,
+      b = (BRight r) is closed,
+      b = +oo%R is +oo *)
 Definition is_sol_on :=
-  sol a = u0 /\
-  {in [set` Interval (BRight a)(*open*) b (*(BLeft b)(*open*)*)], forall x, derivable sol x 1 /\ sol^`() x = phi x (sol x)}.
+  [/\ sol a = u0,
+      {in [set` Interval (BRight a)(*open*) b],
+        forall x, derivable sol x 1 /\ sol^`() x = phi x (sol x)} &
+      {within (closure [set` Interval (BRight a) b]), continuous sol}].
 
 End is_sol.
 
@@ -1346,7 +1351,11 @@ Qed.
 Lemma integral_sol_iff_sol : is_integral_sol_on <-> is_sol_on phi u0 a (BLeft b) sol.
 Proof.
 split.
-- move => [hinit h]; split => // t tab.
+- move => [hinit h].
+  split => //; last first.
+    apply: continuous_subspaceW cont_sol.
+    exact: itv_closure (* TODO: why not equality? *).
+  move=> t tab.
   move: (tab); rewrite inE /= in_itv /= => /andP[ta tb].
   have -> : sol^`() t  = (fun x => sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))^`() t.
     apply/eq_on_itv_deriv/tab => x xt01; apply h.
@@ -1884,6 +1893,13 @@ by rewrite lerDl ltW.
 Qed.
 End continuous_confined.
 
+Definition And31 (P1 P2 P3 : Prop) (a : [/\ P1, P2 & P3]) :=
+  let: And3 p1 p2 p3 := a in p1.
+Definition And32 (P1 P2 P3 : Prop) (a : [/\ P1, P2 & P3]) :=
+  let: And3 p1 p2 p3 := a in p2.
+Definition And33 (P1 P2 P3 : Prop) (a : [/\ P1, P2 & P3]) :=
+  let: And3 p1 p2 p3 := a in p3.
+
 Section solution_locally_unique.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
@@ -1913,8 +1929,8 @@ suff [rho [Delta [Hrho [Db [P1 P2]]]]]: exists rho Delta : {posnum R}, exists (H
   move: tab; rewrite !inE/=!in_itv/= => /andP[-> h] //=.
   apply (le_trans h).
   by rewrite lerD.
-have [d1 D1] := continuous_confined r ab cf sol1.1.
-have [d2 D2] := continuous_confined r ab cf' sol2.1.
+have [d1 D1] := continuous_confined r ab cf (And31 sol1).
+have [d2 D2] := continuous_confined r ab cf' (And31 sol2).
 have [rho [drho1 drho2]] : exists rho, dmax rho <= (Num.min d1%:num d2%:num) /\ rho%:num < 1. 
   rewrite /dmax/delta_max.
   have posk : 0 < Num.min rho_max%:num (Num.min (k * rho_max%:num) (k * (Num.min d1%:num d2%:num))).
@@ -1953,12 +1969,15 @@ split.
     by rewrite ge_min lexx;apply /orP;left.
   - split; first by apply sol1.
     move => t0 t0ad.
-    have [_ + ] := sol1;apply.
+    have [_ + _] := sol1; apply.
     move : t0ad.
     rewrite !inE/=!in_itv/= => /andP[-> h]//=.
     apply: (lt_le_trans h).
     rewrite -lerBrDl.
     exact: delta_max_itv.
+  - apply: continuous_subspaceW cf.
+    apply: subset_trans; first exact: itv_closure.
+    by apply: subset_itvl; rewrite bnd_simp -lerBrDl delta_max_itv.
   - exact: tad.
 move => t tad.
 apply /esym.
@@ -1977,12 +1996,13 @@ apply : cauchy_lipschitz_local_unique.
   by rewrite ge_min lexx;apply /orP;right.
 - split; first by apply sol2.
   move => t0 t0ad.
-  have [_ + ] := sol2;apply.
+  have [_ + _] := sol2; apply.
   move : t0ad.
   rewrite !inE/=!in_itv/= => /andP[-> h]//=.
-  apply: (lt_le_trans h).
-  rewrite -lerBrDl.
-  exact: delta_max_itv.
+  by rewrite (lt_le_trans h)// -lerBrDl delta_max_itv.
+- apply/continuous_subspaceW/cf' => //.
+  apply: subset_trans; first exact: itv_closure.
+  by apply: subset_itvl; rewrite bnd_simp -lerBrDl;apply delta_max_itv.
 exact: tad.
 Qed.
 
@@ -2050,8 +2070,8 @@ have Enonempty : E !=set0.
   exists a.
   rewrite /E/= => t.
   rewrite set_itv1 inE/= => ->.
-  by rewrite sol1.1 sol2.1.
-have mon c : a <= c -> E c -> forall c', a <= c' <= c -> E c'. 
+  by rewrite (And31 sol1) (And31 sol2).
+have mon c : a <= c -> E c -> forall c', a <= c' <= c -> E c'.
   move => ac.
   rewrite /E/= => h c' /andP[ac' cc'] t.
   rewrite inE => tac'.
@@ -2073,6 +2093,27 @@ Admitted.
 
 End solution_unique.
 
+(* proof to be PRed to mathcomp *)
+Section closure_neitv.
+Context {R : realType}.
+Implicit Type a b : R.
+
+Lemma closure_neitv_oo a b : a < b ->
+  closure `]a, b[%classic = `[a, b]%classic.
+Proof.
+move=> ab.
+set c := (a + b) / 2%:R.
+set d := (b - a) / 2%:R.
+rewrite (_:a = c - d); last by rewrite /c/d !mulrDl addrKA mulNr opprK -splitr.
+rewrite (_:b = c + d); last by rewrite addrC /c/d !mulrDl mulNr subrKA -splitr.
+rewrite -ball_itv -closed_ball_itv ?closure_ballE//.
+apply: divr_gt0 => //.
+by rewrite subr_gt0.
+Qed.
+
+End closure_neitv.
+
+
 Section picard_autonomous.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
@@ -2081,8 +2122,6 @@ Hypothesis k0 : 0 < k.
 Let B := closed_ball u0 r%:num.
 Hypothesis lip2 : k.-lipschitz_B phi.
 
-Definition is_sol_autonomous a b (f : R -> U) := f a = u0 /\
-  {in `]a, b[, forall x, derivable f x 1 /\ f^`() x = phi (f x)}.
 Definition phi_ (t : R) x := phi x.
 
 Lemma phi_lip2 a b:  {in `[a, b]%R, forall x, k.-lipschitz_B (phi_ x)}.
@@ -2091,17 +2130,13 @@ Proof. by move => x abx; exact: lip2. Qed.
 Lemma phi_cont1 a b : {in B, forall y, {within `[a, b], continuous phi_ ^~ y}}.
 Proof. by move => /= x Bx; exact: cst_continuous_subspace. Qed.
 
-Lemma autonomous_solution a b f :
-  is_sol_autonomous a b f <-> is_sol_on phi_ u0 a (BLeft b) f.
-Proof. by []. Qed.
-
 Let rho : {posnum R} := (2^-1)%:pos.
 
-Let rho1 : rho%:num < 1. 
-Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed. 
+Let rho1 : rho%:num < 1.
+Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 
 Theorem cauchy_lipschitz_autonomous a : exists f delta,
-  delta > 0 /\ is_sol_autonomous a (a + delta) f /\
+  delta > 0 /\ is_sol_on (phi_) u0 a (BLeft (a + delta)) f /\
   {in `[a, a + delta], forall t, closed_ball u0 r%:num (f t)} /\
   {within `[a, a + delta], continuous f}.
 Proof.
@@ -2124,7 +2159,7 @@ Hypothesis locally_lipschitz : forall x,
   exists r k : {posnum R}, k%:num.-lipschitz_(closed_ball x r%:num) phi.
 
 Theorem cauchy_lipschitz_ll u0 a : exists f delta r,
-  delta > 0 /\ is_sol_autonomous phi u0 a (a + delta) f /\
+  delta > 0 /\ is_sol_on (fun=> phi) u0 a (BLeft (a + delta)) f /\
   {in `[a, a + delta], forall t, closed_ball u0 r (f t)}.
 Proof.
 have [/= r [k lip]] := locally_lipschitz u0.
