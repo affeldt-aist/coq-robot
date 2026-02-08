@@ -457,10 +457,10 @@ have cont1'' (j : nat) : (j <= size s)%N ->
     {in closed_ball u0 r%:num, forall y : 'rV_n, {within [set` I j], continuous phi^~ y}}.
   admit.
 exists (@cauchy_lipschitz_local_f R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
-    k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im))).
+    k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)) rho rho1).
 have [d0 [[fau0 H1] [H2 H3]]] :=
   @cauchy_lipschitz_local R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
-    k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)).
+    k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)) rho rho1.
 split => // t tab.
 apply H1.
 apply/mem_set.
