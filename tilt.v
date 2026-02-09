@@ -2912,6 +2912,7 @@ Qed.
 
 From mathcomp Require Import finmap.
 
+  
 (*Todo: generalize + PR? *)
 Lemma compact_decreasing_bigcap (X : ptopologicalType) (B : K -> set X) (O : set X) :
   hausdorff_space X ->
@@ -2957,9 +2958,25 @@ have cf : closed_fam_of (B 0) [set t | t >= 0] V.
 have : compact (B 0) by apply comp.
 rewrite compact_In0/=.
 apply => //.
-
-Admitted.
-
+move => D Ds.
+set m  := \big[max/0]_(z <- D) z. 
+have M : forall x, x \in D -> x <= m.
+  move=>x xD.
+  rewrite /m.
+  by apply: le_bigmax_seq.
+suff Vm : V m `<=`  \bigcap_(i in [set` D]) V i .
+  apply: (subset_nonempty Vm).
+  have := (hf m).
+  apply contra_notP.
+  rewrite /V.
+  move /nonemptyPn => Ve.
+  split => //.
+  apply: bigmax_ge_id.
+  by apply subsets_disjoint.
+apply sub_bigcap => i Di.
+apply decr'.
+by apply M.
+Qed.
 (*Todo: PR? *)
 (* NB: should be possible to generalize without normal_space X *)
 Lemma compact_connected_cluster
