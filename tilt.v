@@ -2957,6 +2957,7 @@ have cf : closed_fam_of (B 0) [set t | t >= 0] V.
 have : compact (B 0) by apply comp.
 rewrite compact_In0/=.
 apply => //.
+
 Admitted.
 
 (*Todo: PR? *)
