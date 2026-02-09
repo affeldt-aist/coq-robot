@@ -18,7 +18,7 @@ Require Import ode lasalle.
 (*            locnegsemidef V x == V is locally negative semidefinite         *)
 (*               'D~(sol, x0) V == derivative of V along the solution sol     *)
 (*                                 starting at x0                             *)
-(*   tilt_is_sol_autonomous phi Delta Init f := f 0 \in Init +                *)
+(* tilt_is_sol phi Delta Init f := f 0 \in Init +                             *)
 (*                                 is_sol_on phi (f 0) 0 Delta f              *)
 (*     is_equilibrium_point f p := solves_equation f (cst p)                  *)
 (*                state_space f == the set points attainable by a solution    *)
@@ -468,7 +468,7 @@ Definition derive_along_partial {R : realType} n (V : 'rV[R]_n -> R)
     (a : R -> 'rV[R]_n) (t : R) : R :=
   \sum_(i < n) (partial V (a t) i * ('D_1 a t) ``_ i).
 
-Section picard.
+(*Section picard.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
 Variable u0 : U.
@@ -488,7 +488,7 @@ Theorem picard_lindeloeff_autonomous t0 :
   delta > 0 /\ is_sol_on (fun=> phi) u0 t0 (BLeft (t0 + delta)) sol.
 Admitted.
 
-End picard.
+End picard.*)
 
 Section ode.
 Context {K : realType} {n : nat}.
@@ -500,7 +500,7 @@ Definition tilt_is_sol (Delta : K) (Init : set U) (f : K -> U) :=
   f 0 \in Init /\ is_sol_on (fun=> phi) (f 0) 0 (BLeft Delta) f.
 
 Definition is_global_sol (Init : set U) (f : K -> U) :=
-   f 0 \in Init /\ forall t, t >= 0 -> derivable f t 1 /\ f^`() t = phi (f t).
+  f 0 \in Init /\ forall t, t >= 0 -> derivable f t 1 /\ f^`() t = phi (f t).
 
 Lemma global_sol_sol f Init : is_global_sol Init f ->
   forall Delta, tilt_is_sol Delta Init f.
@@ -1381,7 +1381,7 @@ Proof. by []. Qed.
 Lemma eqn_functionalE f t : eqn_functional f t = eqn (f t).
 Proof. by []. Qed.
 
-Definition state_space := [set x : 'rV[K]_6 | `| 'e_2 - Right x |_e = 1].
+Definition Gamma1 := [set x : 'rV[K]_6 | `| 'e_2 - Right x |_e = 1].
 
 Definition point1 : 'rV[K]_6 := 0.
 Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2).
@@ -1489,7 +1489,7 @@ rewrite ge_max; apply/andP; split.
 Unshelve. all: by end_near. Qed.
 
 Lemma tilt_state_spaceS :
-  state_space phi Tilt.state_space `<=` Tilt.state_space.
+  state_space phi Tilt.Gamma1 `<=` Tilt.Gamma1.
 Proof.
 move => p [y [Delta [[y0_init1 [/=_ deri conti] ]]]].
 have [Delta0|Delta0] := leP 0 Delta; last first.
@@ -1497,7 +1497,7 @@ have [Delta0|Delta0] := leP 0 Delta; last first.
   rewrite in_itv/= => -/andP[x0 xDelta].
   have := lt_trans xDelta Delta0.
   by rewrite ltNge x0.
-rewrite /Tilt.state_space.
+rewrite /Tilt.Gamma1.
 have : {in `]0, Delta[, (fun t => ('e_2 - Right (y t)) *d (('e_2 - Right (y t))))^`() =1 0}.
   move => x xd /=.
   transitivity ((fun t => -2 * (Right(y^`()%classic t) *d ('e_2 - Right (y t)))) x).
@@ -1579,18 +1579,18 @@ suff: `|'e_2 - Right (y t)|_e ^+ 2 = 1.
 rewrite norm_constant//; last first.
   by rewrite inE; exact: subset_itv_co_cc.
 move: y0_init1.
-rewrite inE /Tilt.state_space /= => ->.
+rewrite inE /Tilt.Gamma1 /= => ->.
 by rewrite expr2 mulr1.
 Qed.
 
-Lemma tilt_point1_in_state_space : @Tilt.point1 K \in Tilt.state_space.
+Lemma tilt_point1_in_state_space : @Tilt.point1 K \in Tilt.Gamma1.
 Proof.
-rewrite inE /Tilt.state_space /Tilt.point1/=.
+rewrite inE /Tilt.Gamma1 /Tilt.point1/=.
  by rewrite rsubmx_const /= subr0 enormeE.
 Qed.
 
 Lemma equilibrium_tilt_point1 :
-  is_equilibrium_point phi Tilt.state_space Tilt.point1.
+  is_equilibrium_point phi Tilt.Gamma1 Tilt.point1.
 Proof.
 split.
 - exact: tilt_point1_in_state_space.
@@ -1612,9 +1612,9 @@ split.
     exact: cvg_cst.
 Qed.
 
-Lemma tilt_point2_in_state_space : @Tilt.point2 K \in Tilt.state_space.
+Lemma tilt_point2_in_state_space : @Tilt.point2 K \in Tilt.Gamma1.
 Proof.
-rewrite inE /Tilt.state_space /Tilt.point2 /=.
+rewrite inE /Tilt.Gamma1 /Tilt.point2 /=.
 rewrite row_mxKr.
 rewrite -[X in X - _ ]scale1r.
 rewrite -scalerBl enormZ enormeE mulr1 distrC.
@@ -1623,7 +1623,7 @@ by rewrite -natrB //= normr1.
 Qed.
 
 Lemma equilibrium_tilt_point2 :
-  is_equilibrium_point phi Tilt.state_space Tilt.point2.
+  is_equilibrium_point phi Tilt.Gamma1 Tilt.point2.
 Proof.
 split; first exact: tilt_point2_in_state_space.
 split => //.
@@ -1842,7 +1842,7 @@ Let phi := Tilt.eqn alpha1 gamma.
 Variable Delta : K.
 
 Lemma derive_zp1 (t : K) (sol : K -> 'rV_6) :
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   t \in `]0, Delta[ -> 'D_1 (Left \o sol) t = - alpha1 *: Left (sol t).
 Proof.
 move=> [/= sol0in [_ deri conti] t0Delta].
@@ -1855,7 +1855,7 @@ by rewrite derive_lsubmx.
 Qed.
 
 Lemma derive_z2 (z : K) (sol : K -> 'rV_6) :
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   z \in `]0, Delta[ -> 'D_1 (Right \o sol) z =
   gamma *: (Right (sol z) - Left (sol z)) *m \S('e_2 - Right (sol z)) ^+ 2.
 Proof.
@@ -1868,8 +1868,8 @@ Qed.
 
 Lemma is_sol_state_space_tilt (sol : K -> 'rV_6) t :
   t \in `[0, Delta[%R ->
-  tilt_is_sol phi Delta Tilt.state_space sol ->
-  Tilt.state_space (sol t).
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
+  Tilt.Gamma1 (sol t).
 Proof.
 move=> t0Delta.
 case => sol0 [_ deriv_sol csol].
@@ -1886,11 +1886,11 @@ Qed.
 Lemma enorm_e2z2 (sol : K -> 'rV_6) (z : K)
     (z2 := Right \o sol) (zp1 := Left \o sol) (u := 'e_2 - z2 z) :
   z \in `[0, Delta[%R ->
-  tilt_is_sol phi Delta Tilt.state_space sol -> `|u|_e = 1.
+  tilt_is_sol phi Delta Tilt.Gamma1 sol -> `|u|_e = 1.
 Proof.
 move=> z0Delta dtraj.
-suff: Tilt.state_space (row_mx (zp1 z) (z2 z)).
-  by rewrite /Tilt.state_space/= row_mxKr.
+suff: Tilt.Gamma1 (row_mx (zp1 z) (z2 z)).
+  by rewrite /Tilt.Gamma1/= row_mxKr.
 rewrite /zp1 /z2 hsubmxK /=.
 by apply: is_sol_state_space_tilt => //.
 Qed.
@@ -1898,7 +1898,7 @@ Qed.
 Lemma angvel_sqr (sol : K -> 'rV_6) (z : K)  (z2 := fun r : K => Right (sol r) : 'rV_3)
   (w := (z2 z) *m \S('e_2)) (u := 'e_2 - z2 z) :
   z \in `[0, Delta[%R ->
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
 move=> z0Delta dtraj.
@@ -1922,7 +1922,7 @@ Qed.
 
 Lemma neg_spin (sol : K -> 'rV_6) (z : K) :
   z \in `[0, Delta[%R ->
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   `|Right (sol z) *m \S('e_2) *m - \S('e_2 - Right (sol z))|_e =
   `|Right (sol z) *m \S('e_2)|_e.
 Proof.
@@ -1931,7 +1931,7 @@ rewrite mulmxN enormN.
 pose zp1 := fun r => Left (sol r).
 pose z2 := fun r => Right (sol r).
 set w := (z2 z) *m \S('e_2).
-have Gamma1_traj : Tilt.state_space (sol z) by apply/is_sol_state_space_tilt.
+have Gamma1_traj : Tilt.Gamma1 (sol z) by apply/is_sol_state_space_tilt.
 rewrite /enorm.
 rewrite !dotmulvv [RHS]sqrtr_sqr sqrtr_sqr.
 have Hnorm_sq : `|w *m \S('e_2 - Right (sol z))|_e ^+ 2 = `|w|_e ^+ 2.
@@ -1948,7 +1948,7 @@ Let c2 := 2^-1 / gamma.
 
 Lemma V1dotE (z : K) (sol : K -> 'rV_6)
   (zp1 := Left \o sol) (z2 := Right \o sol) :
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   z \in `]0, Delta[ ->
   V1dot (sol z) =
     c1 *: (2 *: 'D_1 zp1 z *m (Left (sol z))^T) 0 0 +
@@ -1975,7 +1975,7 @@ Qed.
 
 Lemma derive_along_V1 t (sol : K -> 'rV_6) :
   t \in `]0, Delta[ ->
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   (forall t, t \in `]0, Delta[ -> differentiable sol t) ->
   'D~(sol) (V1 alpha1 gamma) t = V1dot (sol t).
 Proof.
@@ -2011,7 +2011,7 @@ Definition u1 (sol : K -> 'rV[K]_6) t
   \row_(i < 2) [eta (fun=> 0) with 0 |-> `|zp1 t|_e, 1 |-> `|w|_e] i.
 
 Lemma V1dot_ub (sol : K -> 'rV[K]_6) (zp1 := Left \o sol) (z2 := Right \o sol) :
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   forall t, t \in `[0, Delta[%R ->
     V1dot (sol t) <= (- (u1 sol t) *m u2 *m (u1 sol t)^T) 0 0.
 Proof.
@@ -2043,7 +2043,7 @@ by rewrite [leRHS]mulrC.
 Qed.
 
 Lemma V1dot_eq0_p1_or_p2 (sol : K -> 'rV[K]_6) (t : K) :
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   t \in `[0, Delta[%R ->
   V1dot (sol t) = 0 ->
   sol t = Tilt.point1 \/ sol t = Tilt.point2.
@@ -2073,7 +2073,7 @@ suff [-> | -> ] : Right (sol t) = 0 \/ Right (sol t) = (2 *: 'e_2).
   right;apply /matrixP => i j;rewrite mxE.
   by case: splitP => // k _.
 have := is_sol_state_space_tilt t0d solP.
-rewrite /Tilt.state_space/=.
+rewrite /Tilt.Gamma1/=.
 have /sub_rVP [k ->] : (Right (sol t) <= ('e_2 : 'rV[K]_3))%MS.
   apply: (@submx_trans _ _ _ _ _ _ (kermx \S('e_2))).
     by apply /sub_kermxP.
@@ -2091,7 +2091,7 @@ Qed.
 (* TODO: rework of this proof is needed *)
 (* NB: unused *)
 Lemma derive_along_Left_Right_le0 (sol : _ -> _ -> _) (x : 'rV[K]_6) :
-  tilt_is_sol phi Delta Tilt.state_space (sol x) ->
+  tilt_is_sol phi Delta Tilt.Gamma1 (sol x) ->
   sol x 0 = Tilt.point1 ->
   \forall z \near 0^',
     ('D~(sol x) (fun x => `|Left x|_e ^+ 2 / (2 * alpha1)) +
@@ -2134,7 +2134,7 @@ Unshelve. all: try by end_near. Abort.
 
 (* NB: should be completed to prove asymptotic stability *)
 Lemma locnegsemidef_derive_alone_V1 sol (x : 'rV[K]_6) :
-  tilt_is_sol phi Delta Tilt.state_space (sol x) ->
+  tilt_is_sol phi Delta Tilt.Gamma1 (sol x) ->
   sol x 0 = Tilt.point1 ->
   locnegsemidef ('D~(sol x) (V1 alpha1 gamma)) 0.
 Proof.
@@ -2179,8 +2179,8 @@ Abort.
 
 Lemma locnegdef_derive_along_V1 (sol : 'rV_6 -> K -> 'rV_6) (x : 'rV[K]_6)
    (zp1 := Left \o sol x) (z2 := Right \o sol x) :
-  tilt_is_sol phi Delta Tilt.state_space (sol x) ->
-  (forall t : K, Tilt.state_space (sol x t)) ->
+  tilt_is_sol phi Delta Tilt.Gamma1 (sol x) ->
+  (forall t : K, Tilt.Gamma1 (sol x t)) ->
   sol x 0 = Tilt.point1 ->
   locnegdef ('D~(sol x) (V1 alpha1 gamma)) 0.
 Proof.
@@ -2252,7 +2252,7 @@ split.
 Qed.*) Abort.*)
 
 Lemma derive_along_V1_le0 (sol : K -> 'rV[K]_6) :
-  tilt_is_sol phi Delta Tilt.state_space sol ->
+  tilt_is_sol phi Delta Tilt.Gamma1 sol ->
   (forall t, 0 < t < Delta -> differentiable sol t) ->
   forall t : K, 0 < t < Delta ->
   'D~(sol) (V1 alpha1 gamma) t <= 0.
@@ -2297,7 +2297,7 @@ Let c2 := 2^-1 / gamma.
 
 (* todo: copy paste *)
 Lemma derive_zp10 (sol : K -> 'rV_6) :
-  is_global_sol phi Tilt.state_space sol ->
+  is_global_sol phi Tilt.Gamma1 sol ->
   'D_1 (Left \o sol) 0 = - alpha1 *: Left (sol 0).
 Proof.
 move=> [/= sol0in].
@@ -2310,7 +2310,7 @@ by rewrite derive_lsubmx.
 Qed.
 
 Lemma derive_z20 (sol : K -> 'rV_6) :
-  is_global_sol phi Tilt.state_space sol ->
+  is_global_sol phi Tilt.Gamma1 sol ->
   'D_1 (Right \o sol) 0 =
   gamma *: (Right (sol 0) - Left (sol 0)) *m \S('e_2 - Right (sol 0)) ^+ 2.
 Proof.
@@ -2322,7 +2322,7 @@ by rewrite row_mxKr => ?; rewrite derive_rsubmx.
 Qed.
 
 Lemma V1dotE0 (sol : K -> 'rV_6) (zp1 := Left \o sol) (z2 := Right \o sol) :
-  is_global_sol phi Tilt.state_space sol ->
+  is_global_sol phi Tilt.Gamma1 sol ->
   V1dot (sol 0) =
     c1 *: (2 *: 'D_1 zp1 0 *m (Left (sol 0))^T) 0 0 +
     c2 *: (2 *: 'D_1 z2 0 *m (Right (sol 0))^T) 0 0.
@@ -2348,7 +2348,7 @@ Qed.
 
 Lemma derive_along_V1_global t (sol : K -> 'rV_6) :
   0 <= t ->
-  is_global_sol phi Tilt.state_space sol ->
+  is_global_sol phi Tilt.Gamma1 sol ->
   'D~(sol) (V1 alpha1 gamma) t = V1dot (sol t).
 Proof.
 move=> t0 tilt_eqnx.
@@ -2384,7 +2384,7 @@ exact:dif1.
 Qed.
 
 Lemma derive_along_V1_le0_global (sol : K -> 'rV[K]_6) :
-  is_global_sol phi Tilt.state_space sol ->
+  is_global_sol phi Tilt.Gamma1 sol ->
   forall t : K, 0 <= t  ->
   'D~(sol) (V1 alpha1 gamma) t <= 0.
 Proof.
@@ -2428,7 +2428,7 @@ Variable Init : set 'rV[K]_6.
 (* Hypothesis y00 : sol 0 0 = 0. *)
 
 Lemma is_equilibrium_subset : 0 \in Init ->
-  is_equilibrium_point phi Tilt.state_space 0 ->
+  is_equilibrium_point phi Tilt.Gamma1 0 ->
   is_equilibrium_point phi Init 0.
 Proof.
 move=> Init0.
@@ -2447,7 +2447,7 @@ exact/differentiable_enorm_squared/differentiable_rsubmx_comp.
 Qed.
 
 Lemma equilibrium_zero_stable :
-  0 \in Init -> open Init -> Init `<=` Tilt.state_space ->
+  0 \in Init -> open Init -> Init `<=` Tilt.Gamma1 ->
   is_locally_stable_at phi Init Tilt.point1.
 Proof.
 move=> Init0 openInit Init_in_state.
@@ -2484,36 +2484,6 @@ apply: (@Lyapunov_stability K _ phi Init openInit (V1 alpha1 gamma)).
 Qed.
 
 End equilibrium_zero_stable.
-
-(* from https://github.com/drouhling/LaSalle *)
-(* Section LaSalle. *)
-(* Context {R : realType} {n : nat}. *)
-(* Let U := 'rV[R]_n. *)
-(* Variable phi : U -> U. *)
-(* Variable sol : U -> R -> U. *)
-
-(* Definition limS (A : set U) := \bigcup_(q in A) cluster (sol q @ +oo). *)
-(* Variable K : set U. *)
-(* Hypothesis Kco : compact K. *)
-(* (* Definition is_invariant A := state_space phi A `<=` A. *) *)
-(* Hypothesis invarK : is_invariant K. *)
-(* Hypothesis isSol : forall p, p \in K -> is_global_sol phi (sol p) setT. *)
-(* Hypothesis initp: forall p, p \in K -> sol p 0 = p.  *)
-
-(* (* Lemma stable_limS (V : U -> R) : *) *)
-(* (*   {in K, continuous V} -> *) *)
-(* (*    (forall p t, K p -> 0 <= t -> differentiable V (sol p t)) -> *) *)
-(* (*   (forall p, K p -> 'D~(sol p) V 0 <= 0) -> *) *)
-(* (*   limS K `<=` [set p | 'D~(sol p) V 0 = 0]. *) *)
-(* (* Proof. *) *)
-(* (* Admitted. *) *)
-(*  (* lemma cvg_to_limS :  *) *)
-(*  (*  forall p, p \in K -> sol p t @[t --> +oo] --> (limS K). *) *)
-(*  (* Admitted. *) *)
-(*  Lemma cvg_to_limS : *)
-(*    forall p, p \in K -> cluster (sol p t @[t --> +oo]) `<=` limS K. *)
-(*  Admitted. *)
-(* End LaSalle. *)
 
 (* TODO: move *)
 Lemma open_disjoint_separated (X : topologicalType) (A B : set X) :
@@ -2601,13 +2571,14 @@ Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 Let phi := Tilt.eqn alpha1 gamma.
 
-Hypothesis solP : forall y, y 0 \in Tilt.state_space -> lasalle.is_sol phi y <-> y  = sol (y 0).
+Hypothesis solP : forall y, y 0 \in Tilt.Gamma1 ->
+  lasalle.is_sol phi y <-> y = sol (y 0).
 
 Hypothesis initp: forall p, sol p 0 = p.
 
-Let isSol : forall p, p \in Tilt.state_space -> is_global_sol phi [set: 'rV_6] (sol p).
+Let isSol p : p \in Tilt.Gamma1 -> is_global_sol phi [set: 'rV_6] (sol p).
 Proof.
-move => p Kp.
+move => Kp.
 have : lasalle.is_sol phi (sol p) by apply/solP; rewrite ?initp.
 move => [/=_ H].
 split; first by rewrite inE.
@@ -2618,7 +2589,7 @@ by rewrite derive1E;apply H.
 Qed.
 
 Definition Ksub (p : U) :=
-  [set x | V1 alpha1 gamma x <= V1 alpha1 gamma p] `&` Tilt.state_space.
+  [set x | V1 alpha1 gamma x <= V1 alpha1 gamma p] `&` Tilt.Gamma1.
 
 (* continuity in initial value: assumption needed for LaSalle *)
 Hypothesis cont_sol : forall p t, {within Ksub p, continuous sol^~ t}.
@@ -2676,7 +2647,7 @@ Lemma compact_Ksub p : compact (Ksub p).
 Proof.
 apply: compact_closedI.
 exact: V1_bound_compact.
-have -> : Tilt.state_space  = (fun x => `| 'e_2 - Right x |_e ) @^-1` [set (1 : K)].
+have -> : Tilt.Gamma1  = (fun x => `| 'e_2 - Right x |_e ) @^-1` [set (1 : K)].
   by [].
 apply : closed_comp => //.
 move => x xp.
@@ -2772,11 +2743,11 @@ suff -> : 'e_2 *v 'e_2 = (0 : 'rV[K]_3).
 by rewrite vece2 /= scale0r.
 Qed.
 
-Local Lemma sol_continuous p : p \in Tilt.state_space -> continuous (sol p).
+Local Lemma sol_continuous p : p \in Tilt.Gamma1 -> continuous (sol p).
 Proof.
 move => sp t.
 have [issol0 issol1]: lasalle.is_sol phi (sol p).
-  apply: (sol_is_sol (sol := sol) (K:=Tilt.state_space)) => //.
+  apply: (sol_is_sol (sol := sol) (K:=Tilt.Gamma1)) => //.
   move => y Ky.
   by apply /solP;rewrite inE.
   move : sp.
@@ -2805,12 +2776,12 @@ move => [_ solP'] initP.
 by split.
 Qed.
 
-Local Lemma q_inKsubq q : q \in Tilt.state_space -> q \in Ksub q.
+Local Lemma q_inKsubq q : q \in Tilt.Gamma1 -> q \in Ksub q.
 Proof. rewrite !inE => h;split => //=. Qed.
 
 Local Lemma limS_subset_V1dot0 p :
-  p \in Tilt.state_space ->
-  limS sol (Ksub p) `<=` [set x : 'rV[K]_6 | V1dot x = 0] `&` Tilt.state_space.
+  p \in Tilt.Gamma1 ->
+  limS sol (Ksub p) `<=` [set x : 'rV[K]_6 | V1dot x = 0] `&` Tilt.Gamma1.
 Proof.
 move => ps.
 have lasalle_sol : (forall y : K -> 'rV_6, Ksub p (y 0) -> lasalle.is_sol phi y <-> y = sol (y 0)).
@@ -2818,7 +2789,7 @@ have lasalle_sol : (forall y : K -> 'rV_6, Ksub p (y 0) -> lasalle.is_sol phi y 
   apply/solP.
   rewrite inE.
   by apply Ky.
-have H : limS sol (Ksub p) `<=` [set x | (V1 alpha1 gamma \o sol x)^`() 0 = 0] `&` Tilt.state_space.
+have H : limS sol (Ksub p) `<=` [set x | (V1 alpha1 gamma \o sol x)^`() 0 = 0] `&` Tilt.Gamma1.
   rewrite subsetI; split.
   apply: (@stable_limS _ _ _ _ (@compact_Ksub p) _ _ lasalle_sol _ (@invariant_Ksub p) (V1 alpha1 gamma)) => //=.
     apply/continuous_subspaceT => x xK.
@@ -2833,7 +2804,7 @@ have H : limS sol (Ksub p) `<=` [set x | (V1 alpha1 gamma \o sol x)^`() 0 = 0] `
     by have [_ +] := K0.
     exact: V1_diff.
     move => p0 K0.
-    have p0s : p0 \in Tilt.state_space.
+    have p0s : p0 \in Tilt.Gamma1.
     by move : K0;rewrite inE/=/Ksub/inE/=;move=>[].
     rewrite derive1E.
     rewrite -derive_along_derive.
@@ -2877,7 +2848,7 @@ by rewrite initp ?inE.
 split => //.
 by rewrite initp ?inE.
 move=>x0 x0t.
-have h1' : x \in Tilt.state_space by rewrite inE.
+have h1' : x \in Tilt.Gamma1 by rewrite inE.
 by apply (isSol h1').
 apply V1_diff.
 apply /derivable1_diffP.
@@ -2886,9 +2857,9 @@ by rewrite inE.
 Qed.
 
 Lemma limS_subset_points p :
-  p \in Tilt.state_space -> limS sol (Ksub p) `<=` Tilt.points.
+  p \in Tilt.Gamma1 -> limS sol (Ksub p) `<=` Tilt.points.
 Proof.
-have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.state_space.
+have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Gamma1.
   apply/seteqP; split => x /=.
     case => ->;split; [exact: V1dot_point1_eq0 | | exact: V1dot_point2_eq0 | ].
       have := @tilt_point1_in_state_space K.
@@ -2896,11 +2867,11 @@ have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.state_space.
     have := @tilt_point2_in_state_space K.
     by rewrite inE.
   move => [h1 h2'].
-  have h2 : x \in Tilt.state_space by rewrite inE.
+  have h2 : x \in Tilt.Gamma1 by rewrite inE.
   move : h1.
   have hi := initp x.
   rewrite -hi => h1.
-  have sol' : tilt_is_sol phi 1 Tilt.state_space (sol x) .
+  have sol' : tilt_is_sol phi 1 Tilt.Gamma1 (sol x) .
     apply: global_sol_sol.
     split.
       by rewrite hi.
@@ -3070,7 +3041,7 @@ apply hbv.
 by apply EB;left.
 Qed.
 
-Lemma cvg_to_set_points p : p \in Tilt.state_space ->
+Lemma cvg_to_set_points p : p \in Tilt.Gamma1 ->
   sol p t @[t --> +oo] --> Tilt.points.
 Proof.
 move=> /set_mem ps.
@@ -3085,7 +3056,7 @@ move => /= S [eps eps0 Be].
 exists eps => //.
 apply bigcup_sub => /= x H.
 apply: (subset_trans _ Be).
-have ps' : p \in Tilt.state_space by exact/mem_set.
+have ps' : p \in Tilt.Gamma1 by exact/mem_set.
 have : Tilt.points x by apply: (limS_subset_points ps').
 move => h x' Bx'.
 by exists x.
@@ -3114,7 +3085,7 @@ split => //.
 by apply V1c.
 Qed.
 
-Lemma cluster_contained_points p : p \in Tilt.state_space ->
+Lemma cluster_contained_points p : p \in Tilt.Gamma1 ->
   cluster (sol p t @[t --> +oo]) `<=` Tilt.points.
 Proof.
 move => ps.
@@ -3172,7 +3143,7 @@ by left.
 by right.
 Qed.
 
-Lemma cluster_nonempty p : p \in Tilt.state_space -> cluster (sol p t @[t --> +oo]) !=set0.
+Lemma cluster_nonempty p : p \in Tilt.Gamma1 -> cluster (sol p t @[t --> +oo]) !=set0.
 Proof.
 move => sp.
 suff : (Ksub p) `&`  cluster (sol p t @[t --> +oo]) !=set0.
@@ -3195,7 +3166,7 @@ by rewrite addr_ge0 // divr_ge0 // ?sqr_ge0 ?mulr_ge0 // ltW.
 Qed.
 
 (*Todo : PR ? *)
-Lemma cvg_to_p1_or_p2 p : p \in Tilt.state_space ->
+Lemma cvg_to_p1_or_p2 p : p \in Tilt.Gamma1 ->
   (sol p t @[t --> +oo] --> Tilt.point1 ) \/ ( sol p t @[t --> +oo] --> Tilt.point2).
 Proof.
 move => ps.
