@@ -2150,6 +2150,7 @@ have Enonempty : E !=set0.
   move => t.
   rewrite set_itv1 inE/= => ->.
   by rewrite (And31 sol1) (And31 sol2).
+
 have mon c :  E c -> forall c', a <= c' <= c -> E c'.
   rewrite /E/= => -[+ h c'] /andP[ac' cc'].
   rewrite /in_itv/= => /andP[c1 c2].
@@ -2174,100 +2175,138 @@ have [hP | hP] := lem (has_sup E);last first.
   move /(_ b) => [x Ex bx].
   apply (mon x) => //.
   by rewrite !ltW//.
+ 
 have Eclosed : closed E.
-  have -> : E = `[a,b] `&` [set t | t \in `[a,b]%R  -> {in `[a,t], f =1 f'}].
-    by apply /seteqP;split => x [xab x1];split => //;apply x1.
-  apply closedI.
-    by apply: itv_closed.
-  rewrite /closed/closure/=.
-  move => t /= tb.
-  rewrite /E.
-  move => tab.
-  move => t0 t0t.
-  apply /not_notP.
-  move => hf.
-  set E' :=  [set t | t \in `[a, b]%R -> {in `[a, t], f =1 f'}] .
-  suff: exists B, nbhs t B /\ E' `&` B =set0.
-    move => [B [B1 B2]].
-    have := tb B B1.
-    rewrite B2.
-    by case => //.
-  move : t0t.
-  rewrite inE/=in_itv/= => /andP[at0 ].
-  rewrite le_eqVlt => /orP[/eqP tt0 | tt0];last first.
-    exists (ball t (t- t0)).
-    split.
-        apply: nbhsx_ballx.
-         by rewrite subr_gt0.
-       rewrite /E'.
-      apply disjoints_subset => x Ex Bx.
-      have : t0 < x.
-      admit.
-    admit.
-  set g := fun x => `|f x - f' x|.
-  have contg : {within `[a,b], continuous g}.
-  admit.
-  have g0 x :   x \in `[a, b]%R -> (g x > 0) -> ~ E' x.
-    rewrite /E'/= => -Ex1 + Ex2. 
-    suff -> : g x = 0 by rewrite ltxx.
+(*    have Ei : E = `[a,b] `&` [set t | t \in `[a,b]%R  -> {in `[a,t], f =1 f'}]. *)
+(*      by apply /seteqP;split => x [xab x1];split => //;apply x1. *)
+(*   rewrite Ei. *)
+(*   apply closedI. *)
+(*   exact: itv_closed. *)
+  rewrite closedE/= => p pn.
+  (* rewrite Ei. *)
+  (* apply closedI. *)
+  (* admit. *)
+  suff : forall x, ~ E x -> \forall y \near x, ~ E y.
+    move => H.
+    apply /not_notP => Ec.
+    apply pn.
+    by apply H.
+  move => x Ex1.
+  have [xab | xnab ] := boolP (x \in `[a,b]%R); last first.
+    suff : \forall y \near x, ~ (y \in `[a,b]%R).
+      move => h.
+      near=>y.
+      rewrite not_andP;left.
+      near:y.
+      by [].
+   move : xnab.
+   rewrite in_itv/= negb_and/= -!ltNge => /orP[xa | xb].
+   near=>y.
+   apply /negP.
+   rewrite in_itv/=negb_and/= -!ltNge.
+   apply /orP;left.
+   near:y.
+   exact: lt_nbhsl.
+   near=>y.
+   apply /negP.
+   rewrite in_itv/=negb_and/= -!ltNge.
+   apply /orP;right.
+   near:y.
+   exact: lt_nbhsr.
+   rewrite not_andP in Ex1.
+   case Ex1 => // {}Ex1.
+   have [t Et]: exists t, t \in `[a,x] /\ ~ (f t = f' t).
+     rewrite not_existsP => h.
+     apply Ex1.
+     move => t tax.
+     have := (h t).
+     rewrite not_andP => -[]//.
+     by move /contrapT.
+   have [xt | xt]:= eqVneq x t.
+     subst t.
+    set g := fun x => `|f x - f' x|. 
+    have contg : {within `[a,b], continuous g}.
+      apply : within_continuous_comp_norm.
+      by apply ltW.
+      move => t.
+      apply: continuousB.
+      have := (And33 sol1).
+      rewrite closure_neitv_oo//.
+      apply.
+      have := (And33 sol2).
+      rewrite closure_neitv_oo//.
+      apply.
+   have g0x : g x > 0. 
+     rewrite normr_gt0 subr_eq0.
+      apply /eqP.
+      by case : Et.
+   have g0 t :   t \in `[a, b]%R -> (g t > 0) -> ~  {in `[a, t], f =1 f'}.
+    move => tab gt Et'.
+    move : gt.
+    suff -> : g t = 0 by rewrite ltxx.
     rewrite /g.
     apply /normr0P.
-    rewrite Ex2 =>//.
-      by rewrite subrr.
-    move : Ex1.
-      by rewrite in_itv/=!inE/=!in_itv/= lexx => /andP[-> _].
-  have ggt0 :  (g t0 > 0).
-    rewrite normr_gt0.
-    apply /eqP.
-    move /subr0_eq => h.
-    by apply hf.
-  rewrite -tt0.
-  suff : \forall x \near t0^'-,   0 < g x.
-    move => [e eps0 Be].
-    exists (ball t0 e).
-    split; first by apply:nbhsx_ballx.
-    apply disjoints_subset => x Ex Bx.
-    suff : ~ E' x by [].
-    rewrite /E'.
-    apply g0.
-    admit.
-    apply Be => //.
-    apply: monC => //.
-    split => //.
-    admit.
-    apply Ex.
-    admit.
-    rewrite /E/=.
-    rewrite tt0 tab //= not_andE;right.
-    have tat : t \in `[a, t].
-      by rewrite inE /=in_itv/=lexx//= -tt0 at0.
-    move /(_ t tat).
-    rewrite -tt0 => -h.
-    move : ggt0.
-    by rewrite /g h subrr normr0.
-  (*   move : t0t. *)
-  (*     by rewrite inE/=in_itv/= => /andP[]. *)
-  (*     by apply g0. *)
-  (*   have []:= (Be x Bx). *)
-  (*   have  *)
-  (* suff [eps [e0 Heps]]  : exists (eps : R), eps > 0 /\ forall (t : R), t < t0 -> ball t0 eps t -> 0 < g t. *)
-  (*   exists (ball t0 eps). *)
-  (*   split; first by apply:nbhsx_ballx. *)
-  (*   apply disjoints_subset => x Ex Bx. *)
-  (*   suff : ~ E' x by []. *)
-  (*   apply g0. *)
-  (*   apply Heps => //. *)
-  (*     apply: monC => //. *)
-  (*     move : t0t. *)
-  (*     by rewrite inE/=in_itv/= => /andP[]. *)
-  (*     by apply g0. *)
-    have at0' : (a < t0).
-    admit.
-    Search prop_near1 (_ < _).
-    have rcont : g x @[x --> t0^'-] --> g t0.
-      move => t1 t1ab /=.
+    rewrite Et'; first by rewrite subrr.
+    move : tab.
+    by rewrite in_itv/=inE/=!in_itv/= lexx => /andP[-> _].
+   suff hgx: \forall y \near x^'-, 0 < g y.
+     near=>y.
+     have [] := ltP y x;last first.
+       move => xy Ey.
+       have := mon _ Ey x.
+       move : xab.
+       rewrite /=in_itv/= xy => /andP[-> _] //.
+       move => /(_ isT).
+       case.
+       done.
+      move => yx.
+     apply /not_andP.
+     rewrite -implyE => yab.
+     apply g0 => //.
+     move : yx.
+     by near:y.
+    have := @cvgr_gt R R (nbhs x^'-) _ g (g x).
+    apply => //.
+    have xa : a < x.
+      move : Ex1.   
+      rewrite ltNge.
+      apply contra_notN.
+      move : xab.
+      rewrite in_itv/= => /andP[+ _ ].
+      move => h1 h2.
+      have := eq_le a x.
+      rewrite h1 h2 /=.
+      move => /eqP <-.
+      move => y.
+      rewrite set_itv1/=inE/= => ->.
+      by rewrite (And31 sol1) (And31 sol2).
+    have /(continuous_within_itvP _ ab) := contg => -[h1 _ h2].
+    move : xab.
+    rewrite in_itv/= => /andP[_ ].
+    rewrite le_eqVlt => /predU1P[-> // | xb ].
+    apply cvg_at_left_filter.
+    apply h1.
+    by rewrite in_itv/= xb xa.
+  have xt' : t < x.
+    case : Et.
+    rewrite inE/=in_itv/= => /andP[_ ].
+    by rewrite le_eqVlt eq_sym (negbTE xt) .
+  near=> y.
+    move => Ey.
+    have : (~ E t).
+      rewrite not_andP.
+      right.
+      move => /(_ t).
       admit.
-    by apply: (cvgr_gt _ rcont).
+    have ta : a <= t.
+    admit.
+    have := (monC y t ta Ey).
+    move => /[apply].
+    apply /negP.
+    rewrite -leNgt.
+    apply ltW.
+    near:y.
+    admit.
 have supE : E (sup E).
   rewrite {1}(closure_id E).1 //.
   apply: closure_sup => //.
@@ -2285,6 +2324,7 @@ have supeq : f' (sup E) = f (sup E).
 have [h|h] := leP b (sup E).
   apply: (mon _ supE) => //.
   by apply /andP; rewrite ltW.
+
 have [| Delta Hdelta] := locally_unique_at_t0 _ supeq; first by apply /andP.
 have Delta0 : 0 < Delta%:num by [].
 suff : Num.min b (sup E + Delta%:num) <= sup E.
