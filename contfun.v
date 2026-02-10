@@ -1,4 +1,3 @@
-(* mathcomp analysis (c) 2025 Inria and AIST. License: CeCILL-C.              *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrnum matrix interval poly.
 From mathcomp Require Import generic_quotient ring_quotient.
@@ -9,6 +8,7 @@ From mathcomp Require Import prodnormedzmodule tvs normedtype landau.
 From mathcomp Require Import ereal sequences derive numfun measure realfun.
 From mathcomp Require Import lebesgue_measure lebesgue_integral ftc.
 Require Import common.
+
 (**md**************************************************************************)
 (* # ODE                                                                      *)
 (*   infty_norm f := infty_norm0 (repr f)                                     *)
@@ -166,7 +166,7 @@ Local Notation T := quot_continuousFunType.
 HB.instance Definition _ := ZmodQuotient.on T.
 
 Definition quot_continuousFunType_to_fun (f : T) :
-  (* NB(rei): was R -> R before 2025-12-26 *)
+  (* NB: was R -> R before 2025-12-26 *)
   subspace `[a, b] -> W := repr f.
 Coercion quot_continuousFunType_to_fun : T >-> Funclass.
 

@@ -1,4 +1,3 @@
-(* mathcomp analysis (c) 2025 Inria and AIST. License: CeCILL-C.              *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrnum matrix interval poly.
 From mathcomp Require Import generic_quotient ring_quotient.
@@ -772,7 +771,7 @@ by apply:cont_within_cont_comp => w wK; exact: norm_continuous.
 Qed.
 
 Definition infty_norm0 {R : realType} {W : normedModType R} (K : set R)
-    (f : {fun K >-> [set: W]}) := sup ((Num.norm \o f) @` K).
+  (f : {fun K >-> [set: W]}) := sup ((Num.norm \o f) @` K).
 
 Section infty_norm0_lemmas.
 Context {R : realType} {W : normedModType R}.
