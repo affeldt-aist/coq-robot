@@ -563,6 +563,17 @@ Variable Delta : K.
 Definition is_equilibrium_point (x : T) :=
   x \in Init /\ forall Delta, is_sol_on0o phi Delta (cst x).
 
+Lemma equilibrium_point_in_state_space (x : T) : is_equilibrium_point x -> x \in state_space phi Init.
+Proof.
+  move => [xinit solD].  
+  rewrite inE.
+  exists (cst x).
+  exists (1).
+  split=>//.
+  exists 0.
+  split=>//.
+  by rewrite in_itv/= lexx //= ltW.
+Qed.
 End equilibrium_point.
 
 Section equilibrium_point.
