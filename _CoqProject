@@ -17,15 +17,16 @@ scara.v
 derive_matrix.v
 differential_kinematics.v
 extra_trigo.v
-common.v
-contfun.v
+ode_common.v
+ode_contfun.v
 ode.v
 lasalle.v
 pendulum.v
 tilt_mathcomp.v
 tilt_analysis.v
 tilt_robot.v
-tilt.v
+tilt_lyapunov.v
+tilt_lasalle.v
 ode_wip.v
 
 

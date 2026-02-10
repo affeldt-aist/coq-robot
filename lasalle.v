@@ -192,7 +192,7 @@ rewrite lerBrDr addrC -lerBrDr; apply: ybndN; last by exists t.
 by rewrite ltrBrDr; near: M; exists (N + N)%R; rewrite realD.
 Unshelve. all: by end_near. Qed.
 
-(* TODO: PR to mathcomp-analysis? *)
+(* TODO: update lasalle on github *)
 Lemma nearN (R : realFieldType) (P : set R) :
   (\forall x \near (0%R : R^o), P x) = (\forall x \near (0%R : R^o), P (- x)%R).
 Proof.
