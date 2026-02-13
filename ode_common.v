@@ -784,9 +784,9 @@ Lemma infty_norm0_le (g : T) (u : R) : {in K, forall x, `| g x | <= u} ->
   infty_norm0 g <= u.
 Proof.
 have [c Kc] := seg_nonempty ab.
-  move => h; rewrite /infty_norm0; apply: ge_sup.
+move=> h; rewrite /infty_norm0; apply: ge_sup.
   by exists (normr (g c)); exists c => //; rewrite /= in_itv/= lexx.
-  by move => _ [x xab] <-;apply h; rewrite inE.
+by move => _ [x xab] <-;apply h; rewrite inE.
 Qed.
 
 Lemma infty_norm0_ge (g : T) x : x \in K -> `|g x| <= infty_norm0 g.

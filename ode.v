@@ -639,8 +639,7 @@ rewrite closed_ballE// /img_cball.
 apply eq_set => /= f'; apply propext; split => h.
 - rewrite -(@reprK _ V f').
   rewrite /GRing.opp /= -Quotient.pi_opp /GRing.add /= -Quotient.pi_add.
-  rewrite norm_piE.
-  apply: infty_norm0_le => /=.
+  rewrite infty_norm_pi infty_norm0_le //=.
     exact: leDl_delta_max.
   move=> x adx.
   move /(_ (f' x)) : h.
@@ -656,10 +655,10 @@ apply eq_set => /= f'; apply propext; split => h.
     by rewrite !eval_mod_on_itv// inE.
   rewrite -(@reprK _ V f').
   rewrite /GRing.opp /= -Quotient.pi_opp /GRing.add /= -Quotient.pi_add.
-  rewrite eval_mod_on_itv;last by rewrite inE.
+  rewrite eval_mod_on_itv; last by rewrite inE.
   rewrite -inE in xad.
   apply: (le_trans (infty_norm0_ge (leDl_delta_max phi ab u0 r k0 rho) _ xad)).
-  rewrite -(norm_piE (leDl_delta_max phi ab u0 r k0 rho)).
+  rewrite -(infty_norm_pi (leDl_delta_max phi ab u0 r k0 rho)).
   by rewrite Quotient.pi_add Quotient.pi_opp reprK.
 Qed.
 
@@ -1145,7 +1144,7 @@ exists (NngNum (ge0 rho)); split => //=.
 move=> /= [/= x y] [Vrx Vry].
 rewrite /picard/=.
 rewrite !piE/=.
-rewrite norm_piE/=.
+rewrite infty_norm_pi/=.
 rewrite /infty_norm0/=.
 apply: ge_sup => //=.
   set u := _ \o _; exists (u a) => /=; exists a => //.
@@ -1760,7 +1759,8 @@ Lemma solution_continuous :
   {within `[a, a + delta_max], continuous local_solution}.
 Proof. exact: cts_fun. Qed.
 
-Definition cauchy_lipschitz_local_f : continuousFunType `[a, a + delta_max] [set: 'rV[R]_n] :=
+Definition cauchy_lipschitz_local_f :
+    continuousFunType `[a, a + delta_max] [set: 'rV[R]_n] :=
   repr (picard_fix ab k0 lip2 cont1 rho1).
 
 Let f := cauchy_lipschitz_local_f.
