@@ -57,7 +57,8 @@ Lemma lipschitzT_solution :
   is_sol_on phi u0 a (BLeft (a + delta_max)) lipschitzT_solution_f.
 Proof.
 apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
-- exact: ltDl_delta_max.
+- by rewrite gt_eqF.
+- by rewrite ltDl_delta_max.
 - move=> t td.
   apply: lip2'.
   by apply: subset_itvl td; rewrite bnd_simp -lerBrDl delta_max_itv.
