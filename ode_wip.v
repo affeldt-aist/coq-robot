@@ -48,23 +48,23 @@ Qed.
 Let cont1' : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Proof. by move=> t tab /=; apply: cont1; rewrite in_setT. Qed.
 
-Local Notation delta_max := (delta_max phi a b k u0 r rho).
+Local Notation safe_dist := (safe_dist phi a b k u0 r rho).
 
-Definition lipschitzT_solution_f : continuousFunType `[a, a + delta_max] [set: 'rV[R]_n] :=
+Definition lipschitzT_solution_f : continuousFunType `[a, a + safe_dist] [set: 'rV[R]_n] :=
   repr (picard_fix ab k0 lip2' cont1' rho1).
 
 Lemma lipschitzT_solution :
-  is_sol_on phi u0 a (BLeft (a + delta_max)) lipschitzT_solution_f.
+  is_sol_on phi u0 a (BLeft (a + safe_dist)) lipschitzT_solution_f.
 Proof.
 apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - by rewrite gt_eqF.
-- by rewrite ltDl_delta_max.
+- by rewrite ltDl_safe_dist.
 - move=> t td.
   apply: lip2'.
-  by apply: subset_itvl td; rewrite bnd_simp -lerBrDl delta_max_itv.
+  by apply: subset_itvl td; rewrite bnd_simp -lerBrDl safe_dist_itv.
 - move=> /= x xB.
   apply/continuous_subspaceW/cont1 => //.
-    by apply: subset_itvl => /=; rewrite bnd_simp -lerBrDl delta_max_itv.
+    by apply: subset_itvl => /=; rewrite bnd_simp -lerBrDl safe_dist_itv.
   by rewrite inE.
 - rewrite /local_solution.
   exact: cts_fun.
@@ -73,26 +73,24 @@ apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 Qed.
 
 Lemma lipschitzT_solution_stays_in_ball :
-  {in `[a, a + delta_max], forall t, closed_ball u0 r%:num (lipschitzT_solution_f t)}.
+  {in `[a, a + safe_dist], forall t, closed_ball u0 r%:num (lipschitzT_solution_f t)}.
 Proof. by move=> t; rewrite inE => /cauchy_lipschitz_in_cball; exact. Qed.
 
 Lemma lipschitzT_solution_continuous :
-  {within `[a, a + delta_max], continuous lipschitzT_solution_f}.
+  {within `[a, a + safe_dist], continuous lipschitzT_solution_f}.
 Proof. exact: cts_fun. Qed.
 
 Let f := lipschitzT_solution_f.
 
 Theorem lipschitzT_cauchy_lipschitz_local :
-  delta_max > 0 /\
-  is_sol_on phi u0 a (BLeft (a + delta_max)) f /\
-  {in `[a, a + delta_max], forall t, closed_ball u0 r%:num (f t)} /\
-  {within `[a, a + delta_max], continuous f}.
+  safe_dist > 0 /\
+  is_sol_on phi u0 a (BLeft (a + safe_dist)) f /\
+  {in `[a, a + safe_dist], forall t, closed_ball u0 r%:num (f t)}.
 Proof.
-split; first exact: delta_max_gt0.
-split; [| split].
+split; first exact: safe_dist_gt0.
+split.
 - exact: lipschitzT_solution.
 - exact: lipschitzT_solution_stays_in_ball.
-- exact: lipschitzT_solution_continuous.
 Qed.
 
 End cauchy_lipschitzT.
@@ -292,32 +290,33 @@ have [barhok|barhok] := leP (b - a) (rho%:num / k).
     rewrite mulrDr -ltrBrDl -[X in _ < X - _]mul1r (mulrC k).
     rewrite -mulrBl mulrCA -ltr_pdivrMr; last by rewrite mulr_gt0// subr_gt0.
     admit. (* for any finite sup_phi, we can choose r large enough so that this holds *)
-  have delta_maxba : delta_max phi a b k u0 r rho = b - a.
-    rewrite /delta_max; apply/min_idPl.
+  have safe_distba : safe_dist phi a b k u0 r rho = b - a.
+    rewrite /safe_dist; apply/min_idPl.
     rewrite (le_trans barhok)// le_min lexx andbT -/sup_phi ltW//.
     apply: Hr.
     exact: sup_phi_ge0.
   exists (@lipschitzT_solution_f R n phi a b k u0 r rho rho1 ab k0 lip2 cont1).
-  have [d0 [[fau0 H1] H2 [H3 H4]]] :=
+  have [d0 [[fau0 H1] H2 H3]] :=
     @lipschitzT_cauchy_lipschitz_local R n phi a b k u0 r rho rho1 ab k0 lip2 cont1.
   split => //.
     move=> t tab.
     apply H1; apply/mem_set.
     move/set_mem : tab.
-    by apply: subset_itvl; rewrite bnd_simp delta_maxba subrKC.
-  apply: continuous_subspaceW H4.
+    by apply: subset_itvl; rewrite bnd_simp safe_distba subrKC.
+  apply: continuous_subspaceW H2.
   apply: subset_trans; first exact: itv_closure.
+  rewrite closure_neitv_oo ?ltDl_safe_dist//.
   apply: subset_itvl; rewrite bnd_simp -lerBlDl.
-  by rewrite delta_maxba.
+  by rewrite safe_distba.
 have @r : {posnum R}.
   admit.
 have Hr : rho%:num / k < r%:num / ((k * r%:num)%R + sup_phi phi a b u0)%E.
   admit.
-pose delta : R := delta_max phi a b k u0 r rho.
-have Hdelta_max : delta = rho%:num / k.
-  rewrite /delta /delta_max minA; apply/min_idPr.
+pose delta : R := safe_dist phi a b k u0 r rho.
+have Hsafe_dist : delta = rho%:num / k.
+  rewrite /delta /safe_dist minA; apply/min_idPr.
   by rewrite le_min (ltW Hr) andbT ltW.
-have delta0 : 0 < delta by rewrite /delta delta_max_gt0.
+have delta0 : 0 < delta by rewrite /delta safe_dist_gt0.
 have [delta' [s [/andP[delta'0 delta'delta] [abs nthdelta']]]] : exists (delta' : R) s,
     0 < delta' < delta /\
     itv_partition a b s /\
@@ -427,14 +426,14 @@ suff: forall i, (i < size s)%N ->
       admit.
     rewrite (le_lt_trans ti)//.
     rewrite -[ltLHS]/(nth b (a :: s) i.+1).
-    have : delta_max phi (nth b (a :: s) i) (nth b s i)%E k u0 r rho = delta.
-      rewrite Hdelta_max.
-      rewrite /delta_max.
+    have : safe_dist phi (nth b (a :: s) i) (nth b s i)%E k u0 r rho = delta.
+      rewrite Hsafe_dist.
+      rewrite /safe_dist.
       rewrite minA.
       apply/min_idPr.
       rewrite le_min.
       apply/andP; split.
-        rewrite -Hdelta_max.
+        rewrite -Hsafe_dist.
         admit. (* pbm: rho must be defined after s!*)
       rewrite (le_trans (ltW Hr))//.
       rewrite ler_wpM2l//.

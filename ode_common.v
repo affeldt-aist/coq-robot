@@ -28,15 +28,15 @@ Import numFieldNormedType.Exports.
 Open Scope ring_scope.
 Open Scope classical_set_scope.
 
-(* NB: merged to MathComp *)
+(* NB: PR to MC *)
 Lemma gerN {R : numDomainType} (x : R) : 0 <= x -> - x <= x.
 Proof. by move=> x0; rewrite ge0_cp. Qed.
 
-(* TODO : rename *)
+(* TODO: rename, generalize to the subset relation *)
 Lemma in_switch {R : numDomainType} (I : interval R) P :
-  {in [set` I],forall x, P x} <-> {in I,forall x, P x}.
+  {in [set` I], forall x, P x} <-> {in I, forall x, P x}.
 Proof.
-split => [h x xI| h x xI];apply h.
+split => [h x xI| h x xI]; apply h.
   by rewrite inE.
 by rewrite inE in xI.
 Qed.
