@@ -1,0 +1,745 @@
+From HB Require Import structures.
+From mathcomp Require Import all_boot all_algebra ring.
+From mathcomp Require Import interval_inference.
+From mathcomp Require Import boolp classical_sets functions reals order.
+From mathcomp Require Import topology normedtype landau sequences derive realfun.
+From mathcomp Require Import matrix_normedtype.
+Require Import ssr_ext euclidean rigid frame skew derive_matrix.
+Require Import tilt_mathcomp tilt_analysis tilt_robot ode.
+
+(**md**************************************************************************)
+(* # Elements of stability theory                                             *)
+(*                                                                            *)
+(* ```                                                                        *)
+(*                   posdefmx M == M is definite positive                     *)
+(*                locposdef V x == V is locally positive definite at x        *)
+(*      is_Lyapunov_candidate V := locposdef V                                *)
+(*            locnegsemidef V x == V is locally negative semidefinite         *)
+(*               'D~(sol, x0) V == derivative of V along the solution sol     *)
+(*                                 starting at x0                             *)
+(*     is_equilibrium_point f p := solves_equation f (cst p)                  *)
+(*                state_space f == the set points attainable by a solution    *)
+(*                                 (in the sense of `is_sol`)                 *)
+(*  is_Lyapunov_stable_at f V x == Lyapunov stability                         *)
+(* ```                                                                        *)
+(*                                                                            *)
+(* Reference:                                                                 *)
+(* - Hassan K. Khalil, Nonlinear systems, 2002                                *)
+(******************************************************************************)
+
+Reserved Notation "''D~(' sol , x ) f" (at level 10, sol, x, f at next level,
+  format "''D~(' sol ,  x )  f").
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+Import Order.TTheory GRing.Theory Num.Def Num.Theory.
+Import numFieldNormedType.Exports.
+
+Local Open Scope ring_scope.
+
+Section posdefmx.
+
+Definition posdefmx {K : realType} m (M : 'M[K]_m) : Prop :=
+  M \is sym m K /\ forall a, eigenvalue M a -> a > 0.
+
+Lemma posdefmxP_direct {R : realType} m (M : 'M[R]_m) :
+  posdefmx M -> (forall v : 'rV[R]_m, v != 0 -> (v *m M *m v^T) 0 0 > 0).
+Proof.
+Abort.
+
+Lemma posdefmxP_converse {R : realType} m (M : 'M[R]_m) :
+  (forall v : 'rV[R]_m, v != 0 -> (v *m M *m v^T) 0 0 > 0) -> posdefmx M.
+Proof.
+Abort.
+
+End posdefmx.
+
+Local Open Scope classical_set_scope.
+
+Section locdef.
+Context {R : realType} {T : normedModType R}.
+Implicit Types V : T -> R.
+
+Definition is_Lyapunov_candidate V (D : set T) (x : T) :=
+  x \in D /\ V x = 0 /\ forall z, z \in D -> z != x -> V z > 0.
+
+(* NB: useful? mettre dans un fichier wip.v? *)
+Definition locnegdef V (x : T) := V x = 0 /\ \forall z \near x^', V z < 0.
+
+(* NB: useful? mettre dans un fichier wip.v? *)
+(* locally negative semidefinite *)
+Definition locnegsemidef V (x : T) := V x = 0 /\ \forall z \near x^', V z <= 0.
+
+End locdef.
+
+(* derivation along the trajectory h *)
+Definition derive_along {R : realType} {n : nat}
+    (V : 'rV[R]_n -> R) (f : R -> 'rV[R]_n)
+    (t : R) : R :=
+  (jacobian1 V (f t))^T *d 'D_1 f t.
+
+Notation "''D~(' sol ) f" := (derive_along f (sol)).
+
+Section derive_along.
+Context {R : realType} {n : nat}.
+Variable sol : R -> 'rV[R]_n.
+(* sol represents a solution of a differential equation *)
+
+Lemma derive_along_derive (V : 'rV[R]_n -> R) (t : R) :
+  differentiable V (sol t) -> differentiable sol t ->
+  'D~(sol) V t = 'D_1 (V \o sol) t.
+(* Warning: we are not representing the initial state at t = 0 of the trajectory sol
+   see Khalil p.114 *)
+Proof.
+move=> dif1 dif2.
+rewrite /derive_along /=.
+rewrite /jacobian1.
+rewrite /jacobian.
+rewrite /dotmul.
+rewrite -trmx_mul.
+rewrite mul_rV_lin1.
+rewrite mxE.
+rewrite -deriveE=> /=; last first.
+  apply: differentiable_comp => //.
+  exact/differentiable_scalar_mx.
+rewrite derive_mx /=; last first.
+  apply: derivable_scalar_mx => //.
+  exact: diff_derivable.
+rewrite mxE.
+rewrite [in RHS]deriveE/=; last first.
+  exact: differentiable_comp.
+rewrite [in RHS]diff_comp//=.
+do 2 (rewrite -[in RHS]deriveE; last by []).
+by under eq_fun do rewrite mxE /= mulr1n /=.
+Qed.
+
+Lemma derive_alongMl (f : 'rV_n -> R) (k : R) t :
+  differentiable f (sol t) -> differentiable sol t ->
+  'D~(sol) (k *: f) t = k *: 'D~(sol) f t.
+Proof.
+move=> dfx dpx.
+rewrite derive_along_derive; last 2 first.
+  exact: differentiable_comp.
+  by [].
+rewrite deriveZ/=; last first.
+  apply: diff_derivable => /=.
+  rewrite -fctE.
+  exact: differentiable_comp.
+congr (_ *: _).
+by rewrite derive_along_derive.
+Qed.
+
+Lemma derive_alongD (f g : 'rV_n -> R) t :
+  differentiable f (sol t) -> differentiable g (sol t) ->
+  differentiable sol t ->
+  'D~(sol) (f + g) t  = 'D~(sol) f t + 'D~(sol) g t.
+Proof.
+move=> dfx dgx difp.
+rewrite derive_along_derive; last 2 first.
+  exact: differentiableD.
+  by [].
+rewrite deriveD/=; last 2 first.
+  apply: diff_derivable => //.
+  rewrite -fctE.
+  exact: differentiable_comp.
+  apply: diff_derivable => //.
+  rewrite -fctE.
+  exact: differentiable_comp.
+rewrite derive_along_derive; [|by []..].
+by rewrite derive_along_derive.
+Qed.
+
+Lemma derivative_derive_along_eq0 (f : 'rV_n -> R) (t : R) :
+  differentiable f (sol t) ->
+  'D_1 sol t = 0 -> 'D~(sol) f t = 0.
+Proof.
+move=> df dsol0.
+rewrite /derive_along /jacobian1 /dotmul dotmulP /dotmul -trmx_mul.
+by rewrite dsol0 mul0mx !mxE.
+Qed.
+
+Lemma derive_along_enorm_squared m (f : 'rV[R]_n -> 'rV[R]_m) (t : R) :
+  differentiable f (sol t) ->
+  differentiable sol t ->
+  'D~(sol) (fun y => `|f y|_e ^+ 2) t =
+  (2 *: 'D_1 (f \o sol) t *m (f (sol t))^T) 0 0.
+Proof.
+move=> difff diffphi.
+rewrite derive_along_derive//; last exact: differentiable_enorm_squared.
+rewrite fctE derive_enorm_squared //=; last first.
+  by apply: diff_derivable=> //=; exact: differentiable_comp.
+by rewrite mulrDl mul1r scalerDl scale1r mulmxDl [in RHS]mxE.
+Qed.
+
+End derive_along.
+
+(* NB: not used, can be shown to be equivalent to derive_along *)
+Definition derive_along_partial {R : realType} n (V : 'rV[R]_n -> R)
+    (a : R -> 'rV[R]_n) (t : R) : R :=
+  \sum_(i < n) (partial V (a t) i * ('D_1 a t) ``_ i).
+
+Section ode.
+Context {K : realType} {n : nat}.
+Let U := 'rV[K]_n.
+Variable phi : U -> U.
+
+Definition is_sol_on0o (Delta : itv_bound K) (f : K -> U) :=
+  {in Interval (BLeft 0) Delta, forall t, derivable f t 1 /\ f^`() t = phi (f t)}.
+(* NB: (BLeft Delta) -> open on right *)
+
+Lemma is_sol_on0oP (Delta : K) (f : K -> U) (e : {posnum K} ) :
+  is_sol_on (fun=> phi) (f (- e%:num)) (- e%:num) (BLeft Delta) f ->
+  is_sol_on0o (BLeft Delta) f.
+Proof.
+by move=> [_ H cf] t t0D; apply H; rewrite inE/=; apply: subset_itv t0D; rewrite bnd_simp.
+Qed.
+
+(* "global" solution *)
+Definition is_sol_on0y (f : K -> U) := is_sol_on0o (BInfty K false) f.
+
+(* TODO: generalize this lemma *)
+Lemma is_sol_on0yP (f : K -> U) : is_sol_on0o (BInfty K false) f <->
+  forall t, t >= 0 -> derivable f t 1 /\ f^`() t = phi (f t).
+Proof.
+split=> H t t0oo; apply: H.
+  by rewrite in_itv/= andbT.
+by move: t0oo; rewrite in_itv/= andbT.
+Qed.
+
+Lemma global_sol_sol f : is_sol_on0y f -> forall Delta, is_sol_on0o Delta f.
+Proof.
+move=> + Delta t t0D.
+apply.
+by move: t0D;rewrite !in_itv/= => /andP[->].
+Qed.
+
+End ode.
+
+Section is_sol.
+Context {K : realType} {n : nat}.
+Let U := 'rV[K]_n.
+Variables (phi : U -> U) (Delta : K).
+
+(*Lemma is_sol_on0oS (A B : set U) : A `<=` B ->
+  is_sol_on0o phi Delta A `<=` is_sol_on0o phi Delta B.
+Proof.
+move=> AB f.
+rewrite /is_sol_on0o inE => -[inD0 [_ deri cont]]; rewrite inE.
+split => //.
+by apply: AB.
+Qed.
+*)
+End is_sol.
+
+Section state_space.
+Context {K : realType} {n : nat}.
+Let T := 'rV[K]_n.
+Variable phi : T -> T.
+
+(* TODO: two state_space definitions?! *)
+Definition state_space (Init : set T) : set T :=
+  [set x | exists f Delta, [/\ f 0 \in Init, is_sol_on0o phi (BLeft Delta) f &
+    (exists t, t \in `[0, Delta[%R /\ x = f t) ]].
+
+End state_space.
+
+Section equilibrium_point.
+Context {K : realType} {n : nat}.
+Let T := 'rV[K]_n.
+Variable phi : T -> T.  (* was (K -> T) -> K -> T *)
+Variable Init : set T.
+Variable Delta : K.
+
+Definition is_equilibrium_point (x : T) :=
+  x \in Init /\ forall Delta, is_sol_on0o phi Delta (cst x).
+
+Lemma equilibrium_point_in_state_space (x : T) : is_equilibrium_point x -> x \in state_space phi Init.
+Proof.
+  move => [xinit solD].
+  rewrite inE.
+  exists (cst x).
+  exists (1).
+  split=>//.
+  exists 0.
+  split=>//.
+  by rewrite in_itv/= lexx //= ltW.
+Qed.
+End equilibrium_point.
+
+Section equilibrium_point.
+Context {K : realType} {n : nat}.
+Let T := 'rV[K]_n.
+Variable phi : T -> T.
+
+Definition equilibrium_points A := [set p : T | is_equilibrium_point phi A p].
+
+Lemma equilibrium_points_subset (A B : set T) : A `<=` B ->
+  equilibrium_points A `<=` equilibrium_points B.
+Proof.
+move=> AB x.
+rewrite /equilibrium_points/= /is_equilibrium_point /is_sol_on0o inE => -[Ax H].
+split.
+  exact/mem_set/AB.
+move=> Delta t t0D.
+have [deriv1 deriv2] := H Delta t t0D.
+by split => //.
+Qed.
+
+End equilibrium_point.
+
+Section stability.
+Context {K : realType} {n : nat}.
+Let T := 'rV[K]_n.
+Variable phi : T -> T.
+Variable Init : set T.
+
+Definition is_locally_stable_at (x : T) :=
+  forall eps, eps > 0 -> exists2 d, d > 0 &
+  forall (f : K -> 'rV[K]_n) (Delta : K), f 0 \in Init /\ is_sol_on0o phi (BLeft Delta) f ->
+    `| f 0 - x | < d -> forall t, 0 < t < Delta -> `| f t - x | < eps.
+
+(* assuming solution exists for all time *)
+Definition is_stable_at (x : T) :=
+  forall eps, eps > 0 -> exists2 d, d > 0 &
+  forall (f : K -> 'rV[K]_n), f 0 \in Init /\ is_sol_on0y phi f ->
+    `| f 0 - x | < d -> forall t, 0 < t  -> `| f t - x | < eps.
+
+Lemma locally_stable_stable x : is_locally_stable_at x -> is_stable_at x.
+Proof.
+move => lstable e e0.
+move /(_ _ e0) : lstable => [d d0 stable].
+exists d => // z [z0Init zglob] zd t t0.
+apply (stable _ (t + 1)) => //.
+  split => //.
+  by apply global_sol_sol.
+by rewrite t0/= ltrDl.
+Qed.
+
+Definition is_asymptotically_stable_at (x : T) (f : K -> 'rV[K]_n) : Prop :=
+  exists2 d, d > 0 & `| f 0 - x | < d -> f t @[t --> +oo] --> x.
+
+End stability.
+
+Section bounded.
+Context {K : realType} {n : nat}.
+Let T := 'rV[K]_n.
+Variable phi : T -> T.
+(* Variable sol : K->T. *)
+Variable Init : set T.
+Variable x0 : T.
+(* Hypothesis solP: is_sol phi Delta sol Init. *)
+(* Lemma stable_bounded : is_locally_stable_at phi Init x0 -> forall eps, exists d, forall u0 Delta sol, `|u0 - x0| <= d -> is_sol_autonomous u0 phi 0 Delta sol -> forall t, 0<=t<=Delta -> `|sol t - x0| <= eps. *)
+(* Proof. *)
+(*   move => stable eps.  *)
+(*   have :=  *)
+End bounded.
+(* f' = phi f *)
+(* phi_robot f =def= fun f t => phi t (f t) *)
+(*Definition existence_uniqueness {K : realType} {n}
+  (phi : K -> 'rV[K]_n -> 'rV[K]_n) (Init : set 'rV[K]_n) Delta
+  (sol : K -> 'rV[K]_n) :=
+  forall y, y 0 \in Init -> is_sol phi Init Delta y <-> sol (y 0) = y.
+*)
+
+(*Definition initial_condition {K : realType} {n} (sol : K -> 'rV[K]_n) x0 :=
+  sol 0 = x0.*)
+
+(*Section solutions_unique.
+Context {K : realType} {n : nat}.
+Variable phi : K -> 'rV[K]_n -> 'rV[K]_n.
+Variable Init : set 'rV[K]_n.
+Variable Delta : K.
+
+Definition solutions_unique := forall (f g : K -> 'rV_n) (x0 : 'rV_n),
+  is_sol phi Init Delta f ->
+  is_sol phi Init Delta g ->
+  f 0 = x0 -> g 0 = x0 ->
+  f = g.
+
+End solutions_unique.
+
+Section solutions_unique_lemmas.
+Context {K : realType} {n : nat}.
+Variables (phi : K -> 'rV[K]_n -> 'rV[K]_n) (Init : set 'rV[K]_n).
+Variable Delta : K.
+
+Lemma existence_uniqueness_unique (sol : 'rV[K]_n -> K -> 'rV[K]_n) :
+  existence_uniqueness phi Init Delta sol ->
+  solutions_unique phi Init Delta.
+Proof.
+move=> solP f g x0 solf solg f0 g0.
+apply/funext => x.
+case : (solf) => //=.
+move => a0D Da fa.
+have := solP _ a0D.
+case.
+move => /(_ solf).
+move => a0a _.
+case : (solg) => //=.
+move => b0D Db fb.
+have := solP _ b0D.
+case.
+move => /(_ solg).
+move => b0b _.
+by rewrite -b0b -a0a f0 g0.
+Qed.
+
+Lemma existence_uniqueness_exists (sol : K -> 'rV[K]_n) :
+  existence_uniqueness phi Init Delta sol -> forall p, p \in Init ->
+  initial_condition sol p -> is_sol phi Init Delta (sol p).
+Proof.
+move=> solP sol0 p pD.
+have H := solP (sol p).
+apply H.
+  by rewrite sol0.
+by rewrite sol0.
+Qed.
+
+End solutions_unique_lemmas.*)
+
+(* TODO: move? *)
+Section sphere.
+Context {K : realType} {n : nat}.
+
+Definition sphere r := [set x : 'rV[K]_n | `|x| = r].
+
+Lemma sphere_nonempty r : n != 0 -> 0 < r -> sphere r !=set0.
+Proof.
+move=> n0 r_gt0.
+rewrite /sphere.
+exists (const_mx r).
+rewrite /sphere /= /normr/=.
+(* TODO: need lemma? *)
+rewrite mx_normrE/=.
+apply/eqP; rewrite eq_le; apply/andP; split.
+  apply: bigmax_le.
+    exact: ltW.
+  by move=> i _; rewrite mxE gtr0_norm.
+under eq_bigr do rewrite mxE gtr0_norm//.
+apply/le_bigmax => /=.
+destruct n as [|n'] => //.
+exact: (ord0, ord0).
+Qed.
+
+Lemma compact_sphere r : compact (sphere r).
+Proof.
+apply: bounded_closed_compact.
+  suff : \forall M \near +oo, forall p, sphere r p -> forall i, `|p ord0 i| < M.
+    rewrite /bounded_set; apply: filter_app; near=> M0.
+    move=> Kbnd /= p /Kbnd ltpM0.
+    rewrite /normr/= mx_normrE.
+    apply/bigmax_leP; split => //= i _.
+    by rewrite ord1; exact/ltW/ltpM0.
+  near=> M => v.
+  rewrite /sphere /= => vr i.
+  rewrite (@le_lt_trans _ _ r)//.
+    rewrite -vr [leRHS]/normr/= mx_normE.
+    under eq_bigr do rewrite ord1.
+    rewrite -(pair_big xpredT xpredT (fun _ j => `|v ord0 j|%:nng))//=.
+    rewrite big_ord_recr/= big_ord0.
+    rewrite max_r; last exact/bigmax_ge_id.
+    rewrite (bigD1 i)//= -maxE le_max.
+    by apply/orP; left.
+  clear v vr i.
+  by near: M; apply: nbhs_pinfty_gt; rewrite num_real.
+pose d := fun x : 'rV[K]_n  => `|x| : K.
+have contd : continuous d by move=> /= z; exact: norm_continuous.
+rewrite [X in closed X](_ : _ = d @^-1` [set r]); last first.
+  by apply/seteqP; split.
+by apply continuous_closedP.
+Unshelve. all: by end_near. Qed.
+
+End sphere.
+
+Section about_Lyapunov_function.
+Context {K : realType} {n : nat}.
+Let U := 'rV[K]_n.+1.
+Variable phi : U -> U.
+Variable Delta : K.
+Variable u0 : U.
+Variable sol : K -> U (* TODO(2026-02-08): maybe this should be U -> K -> U to match lasalle *).
+Hypothesis solP : is_sol_on0o phi (BLeft Delta) sol.
+
+Variable V : U -> K.
+Hypothesis Vdiff : forall t : U, differentiable V t.
+Hypothesis V'_le0 : forall t, 0 < t < Delta -> 'D~(sol) V t <= 0.
+
+Lemma V_nincr a b : b < Delta -> 0 <= a <= b ->
+  V (sol b) <= V (sol a).
+Proof.
+move=> bDelta /andP[a_ge0 ab].
+apply: (@ler0_derive1_le_cc _ (V \o sol) 0 b) => //=.
+- move=> y yb.
+  apply/diff_derivable/differentiable_comp; last exact: differentiable_comp.
+  rewrite -derivable1_diffP.
+  move: solP.
+  move/(_ y) /(_ _) => [].
+    move: yb.
+    apply: subset_itv; rewrite bnd_simp//.
+    exact: ltW.
+  by [].
+- move=> y yb.
+  rewrite derive1E -derive_along_derive//.
+  + apply: V'_le0.
+    move : yb; rewrite in_itv/= => /andP[->/= /lt_le_trans]; apply.
+    exact: ltW.
+  + rewrite -derivable1_diffP.
+    move: solP.
+    move/(_ y) /(_ _) => [].
+      move: yb.
+      apply: subset_itv; rewrite bnd_simp//.
+      exact/ltW.
+    by [].
+- (* `[0, b] *)
+  have [b0|] := ltP 0 b; last first.
+    move=> b0.
+    have ? : b = 0.
+      by apply/eqP; rewrite eq_le b0 (le_trans a_ge0)//.
+    subst b.
+    rewrite set_itv1.
+    exact: continuous_subspace1.
+  apply/continuous_within_itvP => //; split.
+  + move=> z z0b.
+    apply: continuous_comp; last exact: differentiable_continuous.
+    apply: differentiable_continuous => //.
+    rewrite -derivable1_diffP.
+    move: solP.
+    move/(_ z) /(_ _) => [].
+      move: z0b.
+      by apply: subset_itv; rewrite bnd_simp// ltW.
+    by [].
+  + have d0 : 0 < Delta by apply /lt_trans/bDelta.
+    have cont : {in `[0, Delta[%R, continuous sol}.
+      move=> t t0D.
+      apply: differentiable_continuous.
+      apply/derivable1_diffP.
+      by apply solP.
+    apply: cvg_comp.
+      apply: cvg_at_right_filter.
+      apply: cont.
+      by rewrite in_itv/= lexx.
+    by apply (differentiable_continuous (Vdiff (sol 0))).
+  + apply: cvg_at_left_filter.
+    apply: differentiable_continuous => //.
+    apply: differentiable_comp.
+      rewrite -derivable1_diffP.
+      move: solP.
+      move/(_ b) /(_ _) => [].
+        by rewrite in_itv/= (ltW b0)// bDelta.
+      by [].
+    by apply: Vdiff.
+- by rewrite !in_itv/= lexx (le_trans a_ge0).
+- by rewrite in_itv/= ab andbT.
+Qed.
+
+End about_Lyapunov_function.
+
+(* khalil theorem 4.1 *)
+Section Lyapunov_stability.
+Context {K : realType} {n : nat}.
+Let U := 'rV[K]_n.+1.
+Variable phi : U -> U.
+Variable Init : set U.
+Let u0 : U := 0.
+Hypothesis u0Init : u0 \in Init.
+
+Hypothesis openInit : open Init. (* Init est forcement un ouvert *)
+(* see Cohen Rouhling ITP 2017 Sect 3.2 *)
+
+Let B r := closed_ball_ (fun x => `|x|) (0 : 'rV[K]_n.+1) r.
+
+Let BE s : 0 < s -> B s = closed_ball 0 s.
+Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
+
+Variable V : U -> K.
+Hypothesis Vdiff : forall t : U, differentiable V t.
+Hypothesis V'_le0 : forall Delta sol, sol 0 \in Init -> is_sol_on0o phi (BLeft Delta) sol ->
+  forall t, 0 < t < Delta -> 'D~(sol) V t <= 0.
+
+Theorem Lyapunov_stability (x : 'rV[K]_n.+1 := 0) :
+  is_Lyapunov_candidate V Init x ->
+  is_equilibrium_point phi Init x ->
+  is_locally_stable_at phi Init x.
+Proof.
+move=> VDx eq /= eps eps0/=.
+move: VDx => [/= xD [Vx0 DxV]].
+have [r r_gt0 [r_eps BrD]] : exists2 r : K, 0 < r & r <= eps /\ B r `<=` Init.
+  move: xD; rewrite inE => /(open_subball openInit)[r0/= r0_gt0] q.
+  pose r := Num.min (r0 / 2) eps.
+  have r_gt0 : 0 < r by rewrite /r lt_min eps0 divr_gt0.
+  exists (r / 2); first by rewrite divr_gt0.
+  split; first by rewrite /r ler_pdivrMr// ge_min ler_pMr// ler1n orbT.
+  move=> v Brv; apply (q r) => //.
+    rewrite /ball/= sub0r normrN gtr0_norm//.
+    by rewrite /r gt_min ltr_pdivrMr// ltr_pMr// ltr1n.
+  by move: Brv; rewrite BE ?divr_gt0//; exact: subset_closure_half.
+have alpha_min : {x : 'rV[K]_n.+1 | x \in sphere r /\
+    forall y, y \in sphere r -> V x <= V y}.
+  have : {within sphere r, continuous V}.
+    apply: continuous_subspaceT => /= v.
+    by apply/differentiable_continuous; exact/Vdiff.
+  move/(EVT_min_rV (sphere_nonempty _ r_gt0) (@compact_sphere _ _ r)).
+  have m0 : n.+1 != 0 by [].
+  move=> /(_ m0).
+  by move=> /cid2[c sphere_r_c sphere_r_V]; exists c.
+pose alpha := V (sval alpha_min).
+have alpha_gt0 : 0 < alpha.
+  have sphere_pos y : y \in sphere r -> 0 < V y.
+    move=> yr; apply: DxV; last first.
+      rewrite gtr0_norm_neq0//.
+      by move: yr; rewrite inE /sphere/= => ->.
+    apply/mem_set/BrD.
+    move : yr; rewrite inE /sphere/= => <-.
+    by rewrite /B /closed_ball_/= sub0r normrN.
+  rewrite /alpha sphere_pos// /sphere inE/=.
+  by have [+ _] := svalP alpha_min; rewrite inE.
+have [beta /andP[beta_gt0 beta_alpha]] : exists beta, 0 < beta < alpha.
+  by exists (alpha / 2); rewrite divr_gt0//= ltr_pdivrMr//= ltr_pMr// ltr1n.
+set Omega_beta := [set x : 'rV[K]_n.+1 | B r x /\ V x <= beta].
+have Omega_beta_Br : Omega_beta `<=` (B r)°.
+  move=> y [Bry Vybeta].
+  rewrite BE// interior_closed_ballE => //=.
+  have yr : `|y| <= r by move: Bry; rewrite /B /closed_ball_/= sub0r normrN.
+  have [{}yr | ry | {}yr] := ltgtP (`|y|) r.
+  - by rewrite mx_norm_ball /ball_/= sub0r normrN.
+  - by have := le_lt_trans yr ry; rewrite ltxx.
+  - have alphaVy : alpha <= V y.
+      by rewrite /alpha; case: (svalP alpha_min) => [_]; apply; rewrite inE.
+    by have := lt_le_trans beta_alpha (le_trans alphaVy Vybeta); rewrite ltxx.
+(* any trajectory starting in Omega_beta at t = 0
+   stays in Omega_beta for all t >= 0 *)
+have Df_Omega_beta Delta sol : sol 0 \in Init -> is_sol_on0o phi (BLeft Delta) sol ->
+    sol 0 \in Omega_beta -> forall t, 0 < t < Delta -> sol t \in Omega_beta.
+  move=> sol0 solP phi_Omega.
+  have /= V_nincr_consequence : forall t, 0 < t < Delta -> forall u, 0 <= u <= t ->
+      'D~(sol) V u <= 0 ->
+      V (sol t) <= V (sol 0) <= beta.
+    move=> /= t1 /andP[t10 t1Delta] u ut1 Vle0.
+    apply/andP; split.
+      move : phi_Omega; rewrite inE /Omega_beta/= => -[Brphi0 Vphi0beta].
+      apply: (@V_nincr _ _ phi Delta sol).
+        assumption.
+      move=> t.
+      by apply: Vdiff.
+      move=> /= t t0.
+      apply: V'_le0 => //.
+      exact: solP.
+      assumption.
+      assumption.
+      by rewrite lexx/= (ltW t10).
+    by move: phi_Omega; rewrite inE => -[Brh0 Vh0beta].
+  move=> t /andP[t0 tDelta].
+  rewrite inE; split; last first.
+    have : 'D~(sol) V t <= 0.
+      apply: V'_le0 => //.
+      exact: solP.
+      by rewrite t0/=.
+    have := @V_nincr_consequence t.
+    rewrite t0 /= tDelta => /(_ isT t).
+    rewrite lexx (ltW t0)/= => /(_ isT).
+    move=> /[apply].
+    by move=> /andP[/le_trans] => /[apply].
+  move: phi_Omega; rewrite inE /Omega_beta/= /B /closed_ball_/=.
+  rewrite !sub0r !normrN => -[phi0r Vphi0beta].
+  rewrite leNgt; apply/negP => phi_t_r.
+  have [t1 [/andP[t1_ge0 t1t] phit1r]] : exists t0, 0 <= t0 <= t/\ `|sol t0| = r.
+    have norm_phi_cont : {within `[0, t]%classic, continuous (normr \o sol)}.
+      (* `[0, t] *)
+      apply/(@within_continuous_comp _ _ _ _ _ (@normr _ _) (sol)) => //.
+        exact: ltW.
+        move=> z _.
+        by apply: norm_continuous.
+      have cont : {in `[0, Delta[, continuous sol}.
+        move=> t' t'0D.
+        rewrite inE in t'0D.
+        apply: differentiable_continuous.
+        apply/derivable1_diffP.
+        by apply solP.
+      move/continuous_in_subspaceT : cont.
+      apply: continuous_subspaceW.
+      by apply: subset_itvl; rewrite bnd_simp.
+    have : Num.min `|sol 0| `|sol t| <= r <= Num.max `|sol 0| `|sol t|.
+      by rewrite ge_min phi0r/= le_max (ltW phi_t_r) orbT.
+    move=> /(IVT (ltW t0) norm_phi_cont)[c cI norm_phi_c].
+    by exists c; split => //; move/itvP: cI => ->.
+  have alphaVphit1 : alpha <= V (sol t1).
+    rewrite {alpha_gt0 beta_alpha} /alpha; case: alpha_min => /=.
+    by move=> y [_ +]; apply; rewrite inE.
+  have : beta < V (sol t1).
+    by rewrite (lt_le_trans _ alphaVphit1)//; case/andP : beta_alpha.
+  apply/negP; rewrite -leNgt.
+  move: t1_ge0; rewrite le_eqVlt => /predU1P[<-//|t10].
+  have := @V_nincr_consequence t1.
+  rewrite t10 (le_lt_trans t1t tDelta) => /(_ isT).
+  move=> /(_ t1).
+  rewrite (ltW t10) lexx => /(_ isT).
+  have : 'D~(sol) V t1 <= 0.
+    apply: V'_le0 => //.
+    exact: solP.
+    by rewrite t10/= (le_lt_trans _ tDelta).
+  move=> /[swap] /[apply].
+  by move=> /andP[/le_trans] => /[apply].
+have _ : compact Omega_beta.
+  apply: bounded_closed_compact; rewrite /Omega_beta.
+  - rewrite /bounded_set /= /globally.
+    exists r; split => //= t rt v.
+    rewrite /B /closed_ball_/= sub0r normrN.
+    by move=> [/le_trans vr _]; rewrite vr// ltW.
+  - apply: closedI => /=.
+      by rewrite BE//; exact: closed_ball_closed.
+    rewrite [X in closed X](_ : _ = V @^-1` [set x | x <= beta]); last first.
+      by apply/seteqP; split.
+    apply: closed_comp => //= v _.
+    apply: continuous_comp; first by [].
+    exact: differentiable_continuous.
+have [d0 d0_gt0 Vbeta] : exists2 d, d > 0 & forall x, `|x| <= d -> V x < beta.
+  have [d d_gt0 xdV] : exists2 d : K, 0 < d &
+      forall y, `|y - x| < d -> `|V y - V x| < beta.
+    have /cvgrPdist_lt /(_ _ beta_gt0) : V x @[x --> nbhs x] --> V x.
+      exact/differentiable_continuous/Vdiff.
+    rewrite nearE /= => /nbhs_ballP[d /= d_pos xdV].
+    exists d => // y.
+    move: xdV; rewrite mx_norm_ball /ball_ /= distrC => /[apply].
+    by rewrite distrC.
+  exists (d / 2); first exact: divr_gt0.
+  move=> v vd;  have /(xdV v) : `|v - x| < d.
+    by rewrite subr0 (le_lt_trans vd)// ltr_pdivrMr // ltr_pMr // ltr1n.
+  by rewrite Vx0 subr0; apply: le_lt_trans; rewrite ler_normlW.
+pose delta := Num.min d0 r.
+have delta_gt0 : 0 < delta by rewrite /delta lt_min d0_gt0 r_gt0.
+have deltaV y : `|y| <= delta -> V y < beta.
+  move=> /= ydelta.
+  have : `|y| <= d0 by rewrite (le_trans ydelta)// /delta ge_min lexx.
+  exact: Vbeta.
+have B_delta_Omega_beta : B delta `<=` Omega_beta.
+  rewrite /Omega_beta => /= v.
+  rewrite /B /closed_ball_/= sub0r normrN => vdelta.
+  split; last exact/ltW/deltaV.
+  by rewrite (le_trans vdelta)// /delta ge_min lexx orbT.
+rewrite /x.
+exists delta => //.
+move=> sol Delta' [sol0 solP] sol_delta t0 t0_ge0.
+rewrite subr0.
+have : sol 0 \in Omega_beta.
+  rewrite inE; apply: B_delta_Omega_beta.
+  rewrite /B /closed_ball_/= sub0r normrN; apply/ltW.
+  by rewrite subr0 in sol_delta.
+rewrite inE => -[+ _].
+rewrite /B /closed_ball_/= sub0r normrN => solx0r.
+have : (B r)° (sol t0).
+  apply: Omega_beta_Br; apply/set_mem.
+  apply: Df_Omega_beta => //.
+  exact: solP.
+  rewrite inE; split; first by rewrite /B /closed_ball_/= sub0r normrN.
+  have : B delta (sol 0).
+    rewrite /closed_ball_; apply: ltW; rewrite sub0r normrN.
+    by rewrite subr0 in sol_delta.
+  by move/B_delta_Omega_beta => [].
+  assumption.
+rewrite BE//= interior_closed_ballE//=.
+rewrite mx_norm_ball /ball_/= sub0r normrN => /lt_le_trans; exact.
+Unshelve. all: by end_near. Qed.
+
+End Lyapunov_stability.

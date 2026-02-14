@@ -1,4 +1,4 @@
-(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat.
 From mathcomp Require Import interval_inference.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.

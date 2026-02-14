@@ -2,8 +2,13 @@ From HB Require Import structures.
 From mathcomp Require Import all_boot all_order all_algebra ring.
 From mathcomp Require Import interval_inference.
 From mathcomp Require Import boolp classical_sets functions reals.
-From mathcomp Require Import topology normedtype derive.
+From mathcomp Require Import topology normedtype derive realfun.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix tilt_analysis.
+
+(**md**************************************************************************)
+(* # Additions to the RobotRocq library                                       *)
+(*                                                                            *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -318,6 +323,43 @@ apply/derivable1_diffP/derivable_sqrt.
 by rewrite dotmulvv expr2 mulr_gt0 //= !enorm_gt0.
 Qed.
 
+Lemma mxnorm_enorm_le {K : realType} {n} (x : 'rV[K]_n) : `|x| <= `|x|_e.
+Proof.
+rewrite /Num.norm/=mx_normrE.
+apply/bigmax_leP; split.
+  exact: enorm_ge0.
+move=> /= [i j] _ /=.
+rewrite {i}ord1.
+rewrite -sqrtr_sqr.
+rewrite /enorm dotmulvv sqr_enorm.
+rewrite ler_sqrt; last by apply sumr_ge0 => k _;apply sqr_ge0.
+rewrite (bigD1 j) //=.
+rewrite lerDl.
+by apply sumr_ge0 => k _;apply sqr_ge0.
+Qed.
+
+Lemma continuous_enorm {K : realType} {n : nat} :
+  continuous (fun u : 'rV[K]_n => `|u|_e).
+Proof.
+move=> /= x.
+rewrite /enorm/=.
+apply/continuous_comp=>/=.
+  apply: differentiable_continuous.
+  under eq_fun do rewrite dotmulvv sqr_enorm.
+  rewrite /=.
+  have <- : \sum_(i < n) (fun x0 : 'rV[K]_n => x0``_i ^+ 2) =
+            (fun x0 : 'rV[K]_n => \sum_(i < n) x0``_i ^+ 2).
+    apply funext => x0 /=.
+    exact: (big_morph (fun f : 'rV[K]_n -> K => f x0)).
+  apply: differentiable_sum.
+  move => i.
+  have -> : (fun x0 : 'rV[K]_n => x0``_i ^+ 2) =
+            (fun x0 : 'rV_n => x0``_i ) ^+2 by [].
+  apply: differentiableX.
+  exact: differentiable_coord.
+exact: sqrt_continuous.
+Qed.
+
 Lemma derivable_enorm_squared {K : realType} n (f : K -> 'rV[K]_n) (x0 : K) :
   derivable f x0 1 ->
   derivable (fun x => `|f x|_e ^+ 2) x0 1.
@@ -390,9 +432,22 @@ apply: lerD.
     exact: spin_le_norm.
   exact: spin_le_norm.
 rewrite -mulrA (mulrC `|y|) mulrA.
-apply: (le_trans (mx_norm_mul _ _)).
-apply : ler_pM => //.
-  apply : ler_pM => //.
-  exact: spin_le_norm.
+rewrite (le_trans (mx_norm_mul _ _))//.
+rewrite ler_pM//.
+  by rewrite ler_pM// spin_le_norm.
 exact: spin_le_norm.
 Qed.
+
+Lemma enorm_mxnorm {K : rcfType} {n} (x : 'rV[K]_n.+1) :
+  `|x|_e ^+ 2 <= n.+1%:R * `|x| ^ 2.
+Proof.
+rewrite sqr_enorm /=.
+apply : (@le_trans _ _ (\sum_(i0 < n.+1) `|x| ^+ 2)).
+  apply: ler_sum => k _.
+  rewrite -sqr_normr.
+  suff h : `|x ord0 k| <= `|x| by exact: ler_pM.
+  rewrite {2}/Num.norm/= !mx_normrE /=.
+  exact: (le_bigmax _ _ (ord0, k)).
+by rewrite big_const_ord mulr_natl iter_addr_0.
+Qed.
+

@@ -13,7 +13,9 @@ Require Import ssr_ext euclidean rigid skew.
 (**md**************************************************************************)
 (* # Derivatives of time-varying matrices                                     *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*      ang_vel_mx M == angular velocity matrix of M(t)                       *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 

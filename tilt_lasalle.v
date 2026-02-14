@@ -7,11 +7,14 @@ From mathcomp Require Import matrix_normedtype.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
 Require Import lasalle (* to at least get the structure of filters on sets *).
-Require Import ode tilt_lyapunov.
+Require Import ode tilt_stability tilt_lyapunov.
 
 (**md**************************************************************************)
-(* # Tentative formalization of [1]                                           *)
+(* # Formalization of [benallegue2023itac] (2/2)                              *)
 (*                                                                            *)
+(* Reference:                                                                 *)
+(* - [benallegue2023itac]                                                     *)
+(* https://hal.science/hal-04271257v1/file/benallegue2019tac_October_2022.pdf *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -189,12 +192,12 @@ Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 Let phi := Tilt.eqn alpha1 gamma.
 
-Hypothesis solP : forall y, y 0 \in Tilt.Gamma1 ->
+Hypothesis solP : forall y, y 0 \in Tilt.Upsilon1 ->
   lasalle.is_sol phi y <-> y = sol (y 0).
 
 Hypothesis initp : forall p, sol p 0 = p.
 
-Let isSol p : p \in Tilt.Gamma1 -> is_sol_on0y phi (sol p).
+Let isSol p : p \in Tilt.Upsilon1 -> is_sol_on0y phi (sol p).
 Proof.
 move => Kp.
 apply/is_sol_on0yP.
@@ -207,7 +210,7 @@ by rewrite derive1E;apply H.
 Qed.
 
 Definition Ksub (p : U) :=
-  [set x | V1 alpha1 gamma x <= V1 alpha1 gamma p] `&` Tilt.Gamma1.
+  [set x | V1 alpha1 gamma x <= V1 alpha1 gamma p] `&` Tilt.Upsilon1.
 
 (* continuity in initial value: assumption needed for LaSalle *)
 Hypothesis cont_sol : forall p t, {within Ksub p, continuous sol^~ t}.
@@ -267,7 +270,7 @@ Lemma compact_Ksub p : compact (Ksub p).
 Proof.
 apply: compact_closedI.
 exact: V1_bound_compact.
-have -> : Tilt.Gamma1  = (fun x => `| 'e_2 - Right x |_e ) @^-1` [set (1 : K)].
+have -> : Tilt.Upsilon1  = (fun x => `| 'e_2 - Right x |_e ) @^-1` [set (1 : K)].
   by [].
 apply : closed_comp => //.
 move => x xp.
@@ -350,11 +353,11 @@ suff -> : 'e_2 *v 'e_2 = (0 : 'rV[K]_3).
 by rewrite vece2 /= scale0r.
 Qed.
 
-Local Lemma sol_continuous p : p \in Tilt.Gamma1 -> continuous (sol p).
+Local Lemma sol_continuous p : p \in Tilt.Upsilon1 -> continuous (sol p).
 Proof.
 move => sp t.
 have [issol0 issol1]: lasalle.is_sol phi (sol p).
-  apply: (lasalle.sol_is_sol (sol := sol) (K:=Tilt.Gamma1)) => //.
+  apply: (lasalle.sol_is_sol (sol := sol) (K:=Tilt.Upsilon1)) => //.
   move => y Ky.
   by apply /solP;rewrite inE.
   move : sp.
@@ -376,12 +379,12 @@ apply /ex_derive/issol1.
 rewrite lerNr oppr0 ltW//.
 Unshelve. all: by end_near. Qed.
 
-Local Lemma q_inKsubq q : q \in Tilt.Gamma1 -> q \in Ksub q.
+Local Lemma q_inKsubq q : q \in Tilt.Upsilon1 -> q \in Ksub q.
 Proof. rewrite !inE => h;split => //=. Qed.
 
 Local Lemma limS_subset_V1dot0 p :
-  p \in Tilt.Gamma1 ->
-  lasalle.limS sol (Ksub p) `<=` [set x : 'rV[K]_6 | V1dot x = 0] `&` Tilt.Gamma1.
+  p \in Tilt.Upsilon1 ->
+  lasalle.limS sol (Ksub p) `<=` [set x : 'rV[K]_6 | V1dot x = 0] `&` Tilt.Upsilon1.
 Proof.
 move => ps.
 have lasalle_sol : (forall y : K -> 'rV_6, Ksub p (y 0) -> lasalle.is_sol phi y <-> y = sol (y 0)).
@@ -390,7 +393,7 @@ have lasalle_sol : (forall y : K -> 'rV_6, Ksub p (y 0) -> lasalle.is_sol phi y 
   rewrite inE.
   by apply Ky.
 have H : lasalle.limS sol (Ksub p) `<=`
-         [set x | (V1 alpha1 gamma \o sol x)^`()%classic 0 = 0] `&` Tilt.Gamma1.
+         [set x | (V1 alpha1 gamma \o sol x)^`()%classic 0 = 0] `&` Tilt.Upsilon1.
   rewrite subsetI; split.
   apply: (@lasalle.stable_limS _ _ _ _ (@compact_Ksub p) _ _ lasalle_sol _ (@invariant_Ksub p) (V1 alpha1 gamma)) => //=.
     apply/continuous_subspaceT => x xK.
@@ -406,7 +409,7 @@ have H : lasalle.limS sol (Ksub p) `<=`
     by have [_ +] := K0.
     exact: V1_diff.
     move => p0 K0.
-    have p0s : p0 \in Tilt.Gamma1.
+    have p0s : p0 \in Tilt.Upsilon1.
     by move : K0;rewrite inE/=/Ksub/inE/=;move=>[].
     rewrite derive1E.
     rewrite -derive_along_derive.
@@ -461,9 +464,9 @@ by rewrite inE.
 Qed.
 
 Lemma limS_subset_points p :
-  p \in Tilt.Gamma1 -> lasalle.limS sol (Ksub p) `<=` Tilt.points.
+  p \in Tilt.Upsilon1 -> lasalle.limS sol (Ksub p) `<=` Tilt.points.
 Proof.
-have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Gamma1.
+have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Upsilon1.
   apply/seteqP; split => x /=.
     case => ->;split; [exact: V1dot_point1_eq0 | | exact: V1dot_point2_eq0 | ].
       have := @tilt_point1_in_state_space K.
@@ -471,7 +474,7 @@ have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Gamma1.
     have := @tilt_point2_in_state_space K.
     by rewrite inE.
   move => [h1 h2'].
-  have h2 : x \in Tilt.Gamma1 by rewrite inE.
+  have h2 : x \in Tilt.Upsilon1 by rewrite inE.
   move : h1.
   have hi := initp x.
   rewrite -hi => h1.
@@ -485,7 +488,7 @@ have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Gamma1.
 by apply limS_subset_V1dot0.
 Qed.
 
-Lemma cvg_to_set_points p : p \in Tilt.Gamma1 ->
+Lemma cvg_to_set_points p : p \in Tilt.Upsilon1 ->
   sol p t @[t --> +oo] --> (Tilt.points : set 'rV_6).
 Proof.
 move=> /set_mem ps.
@@ -500,7 +503,7 @@ move => /= S [eps eps0 Be].
 exists eps => //.
 apply bigcup_sub => /= x H.
 apply: (subset_trans _ Be).
-have ps' : p \in Tilt.Gamma1 by exact/mem_set.
+have ps' : p \in Tilt.Upsilon1 by exact/mem_set.
 have : Tilt.points x by apply: (limS_subset_points ps').
 move => h x' Bx'.
 by exists x.
@@ -529,7 +532,7 @@ split => //.
 by apply V1c.
 Qed.
 
-Lemma cluster_contained_points p : p \in Tilt.Gamma1 ->
+Lemma cluster_contained_points p : p \in Tilt.Upsilon1 ->
   cluster (sol p t @[t --> +oo]) `<=` Tilt.points.
 Proof.
 move => ps.
@@ -587,7 +590,7 @@ by left.
 by right.
 Qed.
 
-Lemma cluster_nonempty p : p \in Tilt.Gamma1 -> cluster (sol p t @[t --> +oo]) !=set0.
+Lemma cluster_nonempty p : p \in Tilt.Upsilon1 -> cluster (sol p t @[t --> +oo]) !=set0.
 Proof.
 move => sp.
 suff : (Ksub p) `&`  cluster (sol p t @[t --> +oo]) !=set0.
@@ -609,7 +612,7 @@ rewrite lsubmx_const rsubmx_const/= !enorm0 !expr0n /= !mul0r add0r.
 by rewrite addr_ge0 // divr_ge0 // ?sqr_ge0 ?mulr_ge0 // ltW.
 Qed.
 
-Lemma tilt_cvg_to_point1_or_point2 p : p \in Tilt.Gamma1 ->
+Lemma tilt_cvg_to_point1_or_point2 p : p \in Tilt.Upsilon1 ->
   (sol p t @[t --> +oo] --> Tilt.point1) \/
   (sol p t @[t --> +oo] --> Tilt.point2).
 Proof.

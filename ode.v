@@ -7,7 +7,7 @@ From mathcomp Require Import functions reals interval_inference topology.
 From mathcomp Require Import prodnormedzmodule tvs normedtype landau.
 From mathcomp Require Import ereal sequences derive numfun measure realfun.
 From mathcomp Require Import lebesgue_measure lebesgue_integral ftc.
-Require Import ode_common ode_contfun.
+Require Import tilt_analysis ode_common ode_contfun.
 
 (**md**************************************************************************)
 (* # Proof of the Cauchy-Lipschitz theorem                                    *)
@@ -535,12 +535,6 @@ Lemma sup_phi_ge0 : 0 <= sup_phi.
 Proof. by rewrite /sup_phi sup_ge0//= => x [y _ <-]. Qed.
 
 End sup_phi.
-
-(* PR to MCA *)
-Lemma EVT_max_rV (R : realType) n (f : 'rV[R]_n -> R) (A : set 'rV[R]_n) :
-    A !=set0 -> compact A -> {within A, continuous f} ->
-  exists2 c, c \in A & forall t, t \in A -> f t <= f c.
-Admitted.
 
 Section sup_phi_lemmas.
 Context {R : realType} {n : nat}.

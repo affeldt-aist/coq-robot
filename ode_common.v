@@ -7,6 +7,7 @@ From mathcomp Require Import functions reals interval_inference topology.
 From mathcomp Require Import prodnormedzmodule tvs normedtype landau.
 From mathcomp Require Import ereal sequences derive numfun measure realfun.
 From mathcomp Require Import lebesgue_measure lebesgue_integral ftc.
+Require Import tilt_mathcomp.
 
 (**md**************************************************************************)
 (* # Preparation steps to ode_contfun.v                                       *)
@@ -27,19 +28,6 @@ Import numFieldNormedType.Exports.
 
 Open Scope ring_scope.
 Open Scope classical_set_scope.
-
-(* NB: PR to MC *)
-Lemma gerN {R : numDomainType} (x : R) : 0 <= x -> - x <= x.
-Proof. by move=> x0; rewrite ge0_cp. Qed.
-
-(* TODO: rename, generalize to the subset relation *)
-Lemma in_switch {R : numDomainType} (I : interval R) P :
-  {in [set` I], forall x, P x} <-> {in I, forall x, P x}.
-Proof.
-split => [h x xI| h x xI]; apply h.
-  by rewrite inE.
-by rewrite inE in xI.
-Qed.
 
 Lemma eq_on_itv_deriv {R : realType} {W : normedModType R} c d (g h : R -> W) :
   {in `]c,d[, g =1 h} -> {in `]c,d[, g^`() =1 h^`()}.
@@ -162,13 +150,13 @@ Qed.
 
 End about_sup.
 
-(* TODO: PR to MathComp-Analysis *)
+(* TODO: PR to MCA *)
 Lemma cst_is_fun {T1 T2} (A : set T1) x : @isFun T1 T2 A [set: T2] (cst x).
 Proof. by constructor. Qed.
 
 HB.instance Definition _ {T1 T2} (A : set T1) x := @cst_is_fun T1 T2 A x.
 
-Lemma seg_nonempty {R : realType} (c d : R) : c <= d -> `[c,d] !=set0.
+Lemma seg_nonempty {R : realType} (c d : R) : c <= d -> `[c, d] !=set0.
 Proof.
 move => h.
 exists c.
@@ -249,7 +237,7 @@ move: b ab {cf} => [b0 b/= /[!bnd_simp] ab|[//|_]].
 - by exists 2%R => //= c ca1 + ac; apply; rewrite ?gt_eqF ?in_itv/= ?ltW.
 Qed.
 
-(* NB: PR in progress *)
+(* NB: PR  *)
 Lemma continuous_within_itvP_g a b f : a < b ->
   {within `[a, b], continuous f} <->
   [/\ {in `]a, b[, continuous f}, f @ a^'+ --> f a & f @b^'- --> f b].
@@ -282,6 +270,7 @@ Qed.
 
 End continuous_within_itvP.
 
+(* TODO *)
 Lemma proveme {R : realType} (a b : R) (g : R -> R) :
   {within `[a, b], continuous g} ->
   {within `[a, b], continuous (g \o -%R)}.
@@ -309,18 +298,6 @@ apply: H3.
 by apply: cvg_norm.
 Qed.
 
-(* NB: it is now in master *)
-Lemma integrable_norm d {T : measurableType d} {R : realType}
-  (mu : {measure set T -> \bar R}) (D : set T) (f : T -> R) :
-  mu.-integrable D (EFin \o f) ->
-  mu.-integrable D (EFin \o (normr \o f)).
-Proof.
-move=> /integrableP[mf foo]; apply/integrableP; split.
-  do 2 apply: measurableT_comp => //.
-  exact/measurable_EFinP.
-by under eq_integral do rewrite /= normr_id.
-Qed.
-
 Lemma lipschitzW {R : realType} {T U W : normedModType R} (A B : set T) C (f : T -> U -> W) k :
   A `<=` B -> {in B, forall x, k.-lipschitz_C (f x)} -> {in A, forall x, k.-lipschitz_C (f x)}.
 Proof.
@@ -328,6 +305,7 @@ move=> AB H x xA.
 apply: H.
 by apply/mem_set/AB/set_mem.
 Qed.
+
 (* NB: why is in1_subset_itv so specialized?! *)
 
 Section lip_implies_cont.
@@ -802,7 +780,7 @@ Unshelve. all: end_near. Qed.
 
 End within_continuous_lipschitz.
 
-Lemma compact_has_ubound {R : realType} (A : set R) : compact A -> has_ubound A .
+Lemma compact_has_ubound {R : realType} (A : set R) : compact A -> has_ubound A.
 Proof.
 move=> /compact_bounded[u [_ /= uA]].
 exists (u + 1) => x Ax.
