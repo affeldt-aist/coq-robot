@@ -20,6 +20,7 @@ extra_trigo.v
 ode_common.v
 ode_contfun.v
 ode.v
+ode_autonomous.v
 lasalle.v
 pendulum.v
 tilt_mathcomp.v
