@@ -7,7 +7,8 @@ From mathcomp Require Import functions reals interval_inference topology.
 From mathcomp Require Import prodnormedzmodule tvs normedtype landau.
 From mathcomp Require Import ereal sequences derive numfun measure realfun.
 From mathcomp Require Import lebesgue_measure lebesgue_integral ftc.
-Require Import ode_common ode_contfun ode.
+Require Import ode_common ode_contfun ode tilt_analysis.
+
 (**md**************************************************************************)
 (* # Proofs of properties of autonomous ODEs                                  *)
 (*                                                                            *)
@@ -24,7 +25,6 @@ Import numFieldNormedType.Exports.
 Open Scope ring_scope.
 Open Scope classical_set_scope.
 
-
 Section picard_autonomous.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
@@ -36,15 +36,14 @@ Hypothesis lip2 : k.-lipschitz_B phi.
 Definition phi_ (t : R) x := phi x.
 
 Definition is_sol_sym u0 t0 d (sol : R -> U):=
-   sol t0 = u0 /\ {in `]t0-d,t0+d[,
-        forall x, derivable sol x 1 /\ sol^`() x = phi_ x (sol x)}.
+  sol t0 = u0 /\ {in `]t0 - d, t0 + d[,
+    forall x, derivable sol x 1 /\ sol^`() x = phi_ x (sol x)}.
 
-Lemma phi_lip2 a b:  {in `[a, b]%R, forall x, k.-lipschitz_B (phi_ x)}.
+Lemma phi_lip2 a b : {in `[a, b]%R, forall x, k.-lipschitz_B (phi_ x)}.
 Proof. by move => x abx; exact: lip2. Qed.
 
 Lemma phi_cont1 a b : {in B, forall y, {within `[a, b], continuous phi_ ^~ y}}.
 Proof. by move => /= x Bx; exact: cst_continuous_subspace. Qed.
-
 
 Let rho : {posnum R} := (2^-1)%:pos.
 
@@ -63,6 +62,7 @@ exists (@cauchy_lipschitz_local_f R n phi_ a _ k u0 r aa1 k0
 by exists (safe_dist phi_ a (a + 1) k u0 r rho).
 Qed.
 
+(* TODO: move *)
 Lemma patch_in {X : Type} (f g : R -> X)  S x : x \in S -> patch f S g x = g x.
 Proof.
   move => xs.
@@ -70,32 +70,16 @@ Proof.
   by rewrite xs.
 Qed.
 
-
-Lemma closed_ball_split (x1 x2 y :U) q : 0 < q ->  closed_ball x1 (q/2) y -> closed_ball x2 (q/2) x1  -> closed_ball x2 q y.
+Lemma closed_ball_split (x1 x2 y : U) q : 0 < q ->
+  closed_ball x1 (q/2) y -> closed_ball x2 (q/2) x1  -> closed_ball x2 q y.
 Proof.
-  move => hq.
-  have hq2:  (0 < q /2).
-    by rewrite divr_gt0.
-  rewrite !closed_ballE// /closed_ball_ /=. 
-  move => h1 h2.
-  rewrite -(subrKA x1 x2).
-  by apply: (le_trans (ler_normD _ _)); rewrite (splitr q) lerD//.
-Qed.
-
-(*todo : move or PR? *)
-Lemma within_continuous_minus  (f : R -> U) (a b : R) :
-  {within `[-b,-a], continuous f} -> {within `[a,b], continuous f \o -%R}.
-Proof.
-have [ab|ba _ |-> _] := ltgtP a b; last 2 first.
-  by rewrite set_itv_ge ?bnd_simp -?ltNge//; exact: continuous_subspace0.
-  by rewrite set_itv1; exact: continuous_subspace1.
-move/continuous_within_itvP; rewrite ltrN2 => /(_ ab)[cf fb fa].
-apply/(continuous_within_itvP _ ab); split.
-- move=> t tab.
-  apply: (@cvg_comp _ _ _ -%R f); first exact: oppr_continuous.
-  by apply: cf; rewrite oppr_itvoo !opprK.
-- by rewrite -{1}(opprK a); apply/cvg_at_leftNP; exact: fa.
-- by rewrite -{1}(opprK b); apply/cvg_at_rightNP; exact: fb.
+move => hq.
+have hq2:  (0 < q /2).
+  by rewrite divr_gt0.
+rewrite !closed_ballE// /closed_ball_ /=.
+move => h1 h2.
+rewrite -(subrKA x1 x2).
+by apply: (le_trans (ler_normD _ _)); rewrite (splitr q) lerD//.
 Qed.
 
 Local Lemma phi_lip2' a b:  {in `[a, b]%R, forall x, k.-lipschitz_B (-phi_ x)}.
@@ -106,12 +90,13 @@ exact: (lip2 B12).
 Qed.
 
 Local Lemma phi_cont1' a b : {in B, forall y, {within `[a, b], continuous -phi_ ^~ y}}.
-Proof. 
-  move => y _.     
-  move => t.
-  apply: continuousN.
-  exact: cst_continuous_subspace.
+Proof.
+move => y _.
+move => t.
+apply: continuousN.
+exact: cst_continuous_subspace.
 Qed.
+
 (* TODO: extending in both directions should be generalized to non-autonomous *)
 Lemma cauchy_lipschitz_autonomous a : exists f delta, delta > 0 /\ is_sol_sym u0 a delta f.
 Proof.
@@ -120,7 +105,6 @@ have amin1 : -a < -a + 1 by rewrite ltrDl.
 have [dminus0 [solminus cminus]] :=
   cauchy_lipschitz_local amin1 k0
     (@phi_lip2' (-a) (-a + 1)) (@phi_cont1' (-a) (-a + 1)) rho1.
-
 set fminus0 :=
   @cauchy_lipschitz_local_f R n (fun t x => - phi x) (-a) _ k u0 r
     amin1 k0 (@phi_lip2' (-a) (-a + 1)) (@phi_cont1' (-a) (-a + 1)) rho rho1.
@@ -128,9 +112,9 @@ set dminus := safe_dist (fun t x => - phi x) (-a) (-a + 1) k u0 r rho.
 set fminus := fminus0 \o -%R.
 set r2 := (r%:num/2)%:pos.
 set r4 := (r%:num/4)%:pos.
-have ler4 : r4%:num <= r%:num. 
+have ler4 : r4%:num <= r%:num.
   by rewrite /r4/= ler_pdivrMr // ler_pMr // lerDl.
-have ler42 : r4%:num <= r2%:num. 
+have ler42 : r4%:num <= r2%:num.
   by rewrite /r4/r2/= ler_pdivrMr// -mulrA ler_pMr // ler_pdivlMl // mulr1 lerD // lerDl.
 have adplus : a < a + dplus by rewrite ltrDl dplus0.
 have cfplus := And33 solplus.
@@ -154,7 +138,7 @@ pose f := patch fplus `[a - dboth, a] fminus.
 set uneg := f (a - dboth).
 have Buneg : closed_ball uneg (r%:num/2) `<=` closed_ball u0 r%:num.
   rewrite /uneg/f patch_in/f/=;last first.
-    by rewrite inE/=in_itv/= gerBl lexx ltW. 
+    by rewrite inE/=in_itv/= gerBl lexx ltW.
   move => /=x xb.
   apply: (closed_ball_split _ xb) => //.
   suff : fminus (a - dboth) \in closed_ball u0 (r%:num/4).
@@ -168,7 +152,7 @@ have Buneg : closed_ball uneg (r%:num/2) `<=` closed_ball u0 r%:num.
 have f01intersect : fminus a = fplus a.
   by rewrite /fminus/= (And31 solminus) (And31 solplus).
 have fa : f a = u0.
-   rewrite /f patch_in /fminus /=. 
+   rewrite /f patch_in /fminus /=.
    apply solminus.
    by rewrite inE/=in_itv/= lexx gerBl ltW.
 set B' := closed_ball uneg (r2%:num).
@@ -198,7 +182,7 @@ have fc : {in `[a-dboth, (a + dboth)], forall t : R,  closed_ball (fminus (a - d
   move => t tad.
   rewrite /f/=/patch/=.
    have : (closed_ball (fminus (a-dboth)) (r4%:num)) u0.
-     suff:  (fminus (a-dboth)) \in closed_ball u0 (r4%:num). 
+     suff: fminus (a - dboth) \in closed_ball u0 (r4%:num).
        by rewrite inE/= !closed_ballE/closed_ball_/= // distrC .
      apply: hrneg.
      rewrite !inE/=!in_itv/= lerNr lerNl opprD !opprK gerBl ltW //= lerB //.
@@ -234,9 +218,8 @@ have fc : {in `[a-dboth, (a + dboth)], forall t : R,  closed_ball (fminus (a - d
      apply: (closed_ball_split _ c2) =>//.
 exists f, dboth.
 split => //.
-suff  h: is_sol_on phi_ (f (a-dboth)) (a-dboth) (BLeft (a+dboth)) f.
-  by split => //;apply:(And32 h).  
-
+suff h : is_sol_on phi_ (f (a-dboth)) (a-dboth) (BLeft (a+dboth)) f.
+  by split => //; apply: (And32 h).
 have kn0 : k != 0 by apply lt0r_neq0.
 apply /(integral_sol_iff_sol (r := r2) kn0) => //.
   by rewrite ler_ltD // gtrN.
@@ -329,9 +312,9 @@ apply solution_extends => //.
      apply: lip2.
      split => /=.
      rewrite /B.
-     apply: (le_closed_ball _ Bx1). 
+     apply: (le_closed_ball _ Bx1).
      by rewrite ler_pdivrMr // ler_pMr // lerDr.
-     apply: (le_closed_ball _ Bx2). 
+     apply: (le_closed_ball _ Bx2).
      by rewrite ler_pdivrMr // ler_pMr // lerDr.
   + move=>x _; exact: cst_continuous_subspace.
   + by [].
@@ -352,13 +335,14 @@ apply solution_extends => //.
     move : tad.
     rewrite !inE/=!in_itv/= => /andP[-> h0]//=.
     apply (lt_le_trans h0).
-    by rewrite lerD //= ge_min lexx. 
+    by rewrite lerD //= ge_min lexx.
     apply /continuous_subspaceW/cfplus.
     rewrite closure_neitv_oo;last by rewrite ltrDl.
     apply subset_itvl.
     rewrite bnd_simp /=.
     by rewrite lerD //= ge_min lexx.
 Qed.
+
 End picard_autonomous.
 
 Definition locally_lipschitz {R : realType} n (U := 'rV[R]_n) (phi : U -> U) :=

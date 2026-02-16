@@ -245,10 +245,26 @@ apply/continuous_within_itvP => //; split => //.
   by rewrite inE/= in_itv/= lexx/= ltW.
 Qed.
 
+Lemma within_continuous_minus {R : realType} {K : numDomainType}
+    {U : pseudoMetricNormedZmodType K} (f : R -> U) (a b : R) :
+  {within `[- b, - a], continuous f} -> {within `[a,b], continuous f \o -%R}.
+Proof.
+have [ab|ba _ |-> _] := ltgtP a b; last 2 first.
+  by rewrite set_itv_ge ?bnd_simp -?ltNge//; exact: continuous_subspace0.
+  by rewrite set_itv1; exact: continuous_subspace1.
+move/continuous_within_itvP; rewrite ltrN2 => /(_ ab)[cf fb fa].
+apply/(continuous_within_itvP _ ab); split.
+- move=> t tab.
+  apply: (@cvg_comp _ _ _ -%R f); first exact: oppr_continuous.
+  by apply: cf; rewrite oppr_itvoo !opprK.
+- by rewrite -{1}(opprK a); apply/cvg_at_leftNP; exact: fa.
+- by rewrite -{1}(opprK b); apply/cvg_at_rightNP; exact: fb.
+Qed.
+
 Local Notation Left := (@lsubmx _ 1 _ _).
 Local Notation Right := (@rsubmx _ 1 _ _).
 
-Lemma left_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
+Lemma lsubmx_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
   `|Left x| <= `|x|.
 Proof.
 rewrite /Num.norm/= !mx_normrE; apply: bigmax_le.
@@ -258,7 +274,7 @@ rewrite mxE.
 exact: (le_bigmax _ _ (i, lshift n2.+1 j)).
 Qed.
 
-Lemma right_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
+Lemma rsubmx_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
   `|Right x| <= `|x|.
 Proof.
 rewrite /Num.norm/= !mx_normrE; apply: bigmax_le.

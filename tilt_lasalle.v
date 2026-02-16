@@ -12,7 +12,12 @@ Require Import ode tilt_stability tilt_lyapunov.
 (**md**************************************************************************)
 (* # Formalization of [benallegue2023itac] (2/2)                              *)
 (*                                                                            *)
+(* The main result of this file is to show that all solutions converge to one *)
+(* of the two equilibrium points.                                             *)
+(*                                                                            *)
 (* Reference:                                                                 *)
+(* - [cohen2017itp] C. Cohen, D. Rouhling. A formal proof in Coq of LaSalle’s *)
+(* invariance principle. ITP 2017                                             *)
 (* - [benallegue2023itac]                                                     *)
 (* https://hal.science/hal-04271257v1/file/benallegue2019tac_October_2022.pdf *)
 (******************************************************************************)
@@ -286,41 +291,39 @@ rewrite /= /lasalle.is_invariant/=.
 move => /= x. (* . [/= sol' [d [solP [t h]]]]*)
 rewrite /Ksub/= =>  -[Vx Kx] t t0.
 split; last first.
-- apply/(@tilt_state_spaceS  _ alpha1 gamma).
+  apply/(@tilt_state_spaceS  _ alpha1 gamma).
   exists (sol x), (t + 1) => /=. (* use large enough time *)
   split => //.
-  rewrite initp.
-  exact/mem_set.
-  apply global_sol_sol.
-  apply isSol => //.
-  by rewrite inE.
-  exists t; split => //.
-  by rewrite /=in_itv/=t0/=ltrDl.
-- move/mem_set : (Kx) => /isSol /is_sol_on0yP solA.
-  rewrite (le_trans _ Vx)//.
-  rewrite -[in leRHS](@initp x).
-  have : is_sol_on0o phi (BLeft (t + 1)) (sol x).
-    move => t'.
-    rewrite in_itv/= => /andP[t0' _].
-    by apply solA.
-  move /(V_nincr ) => /=.
-  move /(_ (V1 alpha1 gamma)).
-  apply.
-  exact: V1_diff.
-  (* apply : (V_nincr solA (V1_diff _ _)); rewrite ?t0 ?lexx //. *)
-  move => t1 tt1.
-  apply : (@derive_along_V1_le0 _ _ _ _ _ (t+1))=> //.
-  apply global_sol_sol => //.
+  + rewrite initp.
+    exact/mem_set.
+  + apply global_sol_sol.
+    apply isSol => //.
+    by rewrite inE.
+  + exists t; split => //.
+    by rewrite /= in_itv/=t0/=ltrDl.
+move/mem_set : (Kx) => /isSol /is_sol_on0yP solA.
+rewrite (le_trans _ Vx)//.
+rewrite -[in leRHS](@initp x).
+have : {in `[0, t + 1[, forall t : K, derivable (sol x) t 1}.
+  move=> t'.
+  rewrite in_itv/= => /andP[t0' _].
+  by apply solA.
+move/V_nincr => /= => /(_ (V1 alpha1 gamma)).
+apply.
+- exact: V1_diff.
+- move => t1 tt1.
+  apply : (@derive_along_V1_le0 _ _ _ _ _ (t + 1))=> //.
+  + apply global_sol_sol => //.
     apply/is_sol_on0yP.
+    by apply solA.
+  + by rewrite initp inE.
+  + move => t2.
+    move => /andP[t2' _].
+    apply/derivable1_diffP.
     apply solA.
-    by rewrite initp inE.
-  move => t2.
-  move => /andP[t2' _].
-  apply/derivable1_diffP.
-  apply solA.
-  by rewrite ltW.
-  by rewrite ltrDl.
-  by rewrite lexx.
+    by rewrite ltW.
+- by rewrite ltrDl.
+- by rewrite lexx.
 Qed.
 
 Local Lemma sol_Ksub p u : u \in Ksub p -> is_sol_on0y phi (sol u).
