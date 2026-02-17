@@ -53,7 +53,7 @@ Definition lipschitzT_solution_f : continuousFunType `[a, a + safe_dist] [set: '
   repr (picard_fix ab k0 lip2' cont1' rho1).
 
 Lemma lipschitzT_solution :
-  is_sol_on phi u0 a (BLeft (a + safe_dist)) lipschitzT_solution_f.
+  is_sol_oo phi u0 a (a + safe_dist) lipschitzT_solution_f.
 Proof.
 apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - by rewrite gt_eqF.
@@ -83,7 +83,7 @@ Let f := lipschitzT_solution_f.
 
 Theorem lipschitzT_cauchy_lipschitz_local :
   safe_dist > 0 /\
-  is_sol_on phi u0 a (BLeft (a + safe_dist)) f /\
+  is_sol_oo phi u0 a (a + safe_dist) f /\
   {in `[a, a + safe_dist], forall t, closed_ball u0 r%:num (f t)}.
 Proof.
 split; first exact: safe_dist_gt0.
@@ -388,6 +388,38 @@ Qed.
 
 End itv_partition_porder.
 
+Definition piecewise {R : realType} (U : normedModType R)
+    (f : nat -> R -> U) (a b : R) (s : seq R) (P : (R -> U) -> R -> Prop) :=
+  forall i : nat, (i < size s)%N ->
+    forall x : R,
+      nth b (a :: s) i <= x <= nth b (a :: s) i.+1 ->
+      P (f i) x.
+
+Definition patched {R : realType} (U : normedModType R)
+    (f : nat -> R -> U) (a b : R) (s : seq R) (F : R -> U) :=
+  forall x : R,
+    forall i : nat, (i < size s)%N ->
+      nth b (a :: s) i <= x <= nth b (a :: s) i.+1 ->
+        f i x = F x.
+
+Lemma piecewise_derivable {R : realType} (U : normedModType R)
+  (f : nat -> R -> U) (a b : R) (s : seq R) (abs : itv_partition a b s)
+  (F : R -> U) :
+  patched f a b s F ->
+  piecewise f a b s (fun g x => derivable g x 1) ->
+  forall x, x \in `[a, b] -> derivable F x 1.
+Proof.
+Admitted.
+
+Lemma piecewise_continuous {R : realType} (U : normedModType R)
+  (f : nat -> R -> U)  (a b : R) (s : seq R) (abs : itv_partition a b s)
+  (F : R -> U) :
+  patched f a b s F ->
+  piecewise f a b s (fun g x => continuous_at x g) ->
+  forall x, x \in `[a, b] -> continuous_at x F.
+Proof.
+Admitted.
+
 (* Theorem 3.2: global existence and uniqueness *)
 Section cauchy_lipschitz_global.
 Context {R : realType} {n : nat}.
@@ -410,7 +442,7 @@ Let i_ (x : elt_type) := (proj1_sig x).2.
 Let elt_rel i j := f_ j (a_ j) = f_ i (b_ i).
 
 Theorem cauchy_lipschitz_global : exists f : R -> 'rV_n (*: continuousFunType `[a, b] [set: 'rV[R]_n]*),
-  is_sol_on phi u0 a (BLeft b) f.
+  is_sol_oo phi u0 a b f.
 Proof.
 near (0:R)^'+ => rho'.
 have rho'_gt0 : 0 < rho' by [].
@@ -446,9 +478,8 @@ have [barhok|barhok] := leP (b - a) (rho%:num / k).
     @lipschitzT_cauchy_lipschitz_local R n phi a b k u0 r rho rho1 ab k0 lip2 cont1.
   split => //.
     move=> t tab.
-    apply H1; apply/mem_set.
-    move/set_mem : tab.
-    by apply: subset_itvl; rewrite bnd_simp safe_distba subrKC.
+    apply H1.
+    by apply: subset_itvl tab; rewrite bnd_simp safe_distba subrKC.
   apply: continuous_subspaceW H2.
   apply: subset_trans; first exact: itv_closure.
   rewrite closure_neitv_oo ?ltDl_safe_dist//.
@@ -662,11 +693,11 @@ Lemma exe325b1 : forall t, t \in `[a, T[ -> f t \in W.
 Proof.
 Admitted.
 
-Lemma exe325b2 : is_sol_on phi u0 a (BLeft T) f.
+Lemma exe325b2 : is_sol_oo phi u0 a T f.
 Proof.
 Admitted.
 
-Lemma exe325b3 : exists delta, delta > 0 /\ is_sol_on phi u0 a (BLeft (T + delta)) f.
+Lemma exe325b3 : exists2 delta, delta > 0 & is_sol_oo phi u0 a (T + delta) f.
 Proof.
 Admitted.
 
@@ -685,7 +716,7 @@ Variable T : R.
 Hypothesis aTab : `[a, T[ `<=` `[a, b].
 Variable f : R -> U.
 Variable u0 : U.
-Hypothesis fsol : is_sol_on phi u0 a (BLeft T)(*exluded*) f.
+Hypothesis fsol : is_sol_oo phi u0 a T f.
 
 Variable W : set U.
 Hypothesis compactW : compact W.

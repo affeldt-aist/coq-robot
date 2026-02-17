@@ -178,22 +178,20 @@ Context {K : realType} {n : nat}.
 Let U := 'rV[K]_n.
 Variable phi : U -> U.
 
-Definition is_sol_on0o (Delta : itv_bound K) (f : K -> U) :=
-  {in Interval (BLeft 0) Delta, forall t, derivable f t 1 /\ f^`() t = phi (f t)}.
-(* NB: (BLeft Delta) -> open on right *)
-
-Lemma is_sol_on0oP (Delta : K) (f : K -> U) (e : {posnum K} ) :
-  is_sol_on (fun=> phi) (f (- e%:num)) (- e%:num) (BLeft Delta) f ->
-  is_sol_on0o (BLeft Delta) f.
+Lemma sol_is_deriv_c0oP (D : K) (f : K -> U) (e : {posnum K} ) :
+  is_sol_oo (fun=> phi) (f (- e%:num)) (- e%:num) D f ->
+  sol_is_deriv_co (fun=> phi) 0 D f.
 Proof.
-by move=> [_ H cf] t t0D; apply H; rewrite inE/=; apply: subset_itv t0D; rewrite bnd_simp.
+move=> [_ H cf] t t0D; apply H; rewrite inE/=; apply: subset_itv t0D => //.
+by rewrite bnd_simp.
 Qed.
 
 (* "global" solution *)
-Definition is_sol_on0y (f : K -> U) := is_sol_on0o (BInfty K false) f.
+Definition sol_is_deriv_c0y (f : K -> U) :=
+  sol_is_deriv_cbnd (fun=> phi) 0 (BInfty K false) f.
 
 (* TODO: generalize this lemma *)
-Lemma is_sol_on0yP (f : K -> U) : is_sol_on0o (BInfty K false) f <->
+Lemma sol_is_deriv_c0yP (f : K -> U) : sol_is_deriv_c0y f <->
   forall t, t >= 0 -> derivable f t 1 /\ f^`() t = phi (f t).
 Proof.
 split=> H t t0oo; apply: H.
@@ -201,11 +199,12 @@ split=> H t t0oo; apply: H.
 by move: t0oo; rewrite in_itv/= andbT.
 Qed.
 
-Lemma global_sol_sol f : is_sol_on0y f -> forall Delta, is_sol_on0o Delta f.
+Lemma sol_is_deriv_c0yco f : sol_is_deriv_c0y f ->
+  forall D, sol_is_deriv_co (fun=> phi) 0 D f.
 Proof.
-move=> + Delta t t0D.
+move=> + D t t0D.
 apply.
-by move: t0D;rewrite !in_itv/= => /andP[->].
+by move: t0D; rewrite !in_itv/= => /andP[->].
 Qed.
 
 End ode.
@@ -216,11 +215,11 @@ Let U := 'rV[K]_n.
 Variables (phi : U -> U) (Delta : K).
 
 (* TODO: rm? *)
-(*Lemma is_sol_on0oS (A B : set U) : A `<=` B ->
-  is_sol_on0o phi Delta A `<=` is_sol_on0o phi Delta B.
+(*Lemma sol_is_derive_0oS (A B : set U) : A `<=` B ->
+  sol_is_derive_0o phi Delta A `<=` sol_is_derive_0o phi Delta B.
 Proof.
 move=> AB f.
-rewrite /is_sol_on0o inE => -[inD0 [_ deri cont]]; rewrite inE.
+rewrite /sol_is_derive_0o inE => -[inD0 [_ deri cont]]; rewrite inE.
 split => //.
 by apply: AB.
 Qed.
@@ -233,8 +232,8 @@ Let T := 'rV[K]_n.
 Variable phi : T -> T.
 
 Definition state_space (Init : set T) : set T :=
-  [set x | exists f Delta, [/\ f 0 \in Init, is_sol_on0o phi (BLeft Delta) f &
-    (exists t, t \in `[0, Delta[%R /\ x = f t) ]].
+  [set x | exists f D, [/\ f 0 \in Init, sol_is_deriv_co (fun=> phi) 0 D f &
+    exists2 t, t \in `[0, D[%R & x = f t]].
 
 End state_space.
 
@@ -244,14 +243,14 @@ Let T := 'rV[K]_n.
 Variable phi : T -> T.
 
 Definition is_equilibrium_point (Init : set T) (x : T) :=
-  x \in Init /\ forall d, is_sol_on0o phi d (cst x).
+  x \in Init /\ forall d, sol_is_deriv_co (fun=> phi) 0 d (cst x).
 
 Lemma equilibrium_point_in_state_space (Init : set T) :
   is_equilibrium_point Init `<=` state_space phi Init.
 Proof.
 move=> x [xinit solf].
 exists (cst x), 1; split => //.
-exists 0; split =>//.
+exists 0 => //.
 by rewrite bound_itvE ltr01.
 Qed.
 
@@ -261,7 +260,9 @@ Lemma equilibrium_points_subset (A B : set T) : A `<=` B ->
   equilibrium_points A `<=` equilibrium_points B.
 Proof.
 move=> AB x.
-rewrite /equilibrium_points/= /is_equilibrium_point /is_sol_on0o inE => -[Ax H].
+rewrite /equilibrium_points/= /is_equilibrium_point.
+rewrite /sol_is_deriv_co.
+rewrite inE => -[Ax H].
 split.
   exact/mem_set/AB.
 move=> d t t0d.
@@ -279,13 +280,13 @@ Variable Init : set T.
 
 Definition is_locally_stable_at (x : T) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
-  forall (f : K -> 'rV[K]_n) (D : K), f 0 \in Init /\ is_sol_on0o phi (BLeft D) f ->
+  forall f D, f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
     `| f 0 - x | < d -> forall t, 0 < t < D -> `| f t - x | < eps.
 
 (* assuming solution exists for all time *)
 Definition is_stable_at (x : T) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
-  forall (f : K -> 'rV[K]_n), f 0 \in Init /\ is_sol_on0y phi f ->
+  forall f, f 0 \in Init -> sol_is_deriv_c0y phi f ->
     `| f 0 - x | < d -> forall t, 0 < t -> `| f t - x | < eps.
 
 Lemma locally_stable_stable : is_locally_stable_at `<=` is_stable_at.
@@ -293,7 +294,7 @@ Proof.
 move=> x H e /H [d d0 stable].
 exists d => // z [z0Init zglob] zd /= t t0.
 apply: (stable _ (t + 1)) => //.
-  by split => //; exact: global_sol_sol.
+  exact: sol_is_deriv_c0yco.
 by rewrite t0/= ltrDl.
 Qed.
 
@@ -521,7 +522,7 @@ Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
 Variable V : U -> K.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis DV_le0 : forall D f, f 0 \in Init ->
-  is_sol_on0o phi (BLeft D) f ->
+  sol_is_deriv_co (fun=> phi) 0 D f ->
   forall t, 0 < t < D -> 'D~(f) V t <= 0.
 
 (* khalil theorem 4.1 *)
@@ -577,7 +578,7 @@ have Omega_beta_Br : Omega_beta `<=` (B r)°.
     by have := lt_le_trans beta_alpha (le_trans alphaVy Vybeta); rewrite ltxx.
 (* any trajectory starting in Omega_beta at t = 0
    stays in Omega_beta for all t >= 0 *)
-have Df_Omega_beta D f : f 0 \in Init -> is_sol_on0o phi (BLeft D) f ->
+have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
    f 0 \in Omega_beta -> forall t, 0 < t < D -> f t \in Omega_beta.
   move=> f0 solf f0_Omega.
   have /= V_nincr_consequence t : 0 < t < D -> forall u, 0 <= u <= t ->
@@ -694,17 +695,14 @@ Let U := 'rV[K]_n.+1.
 Variable phi : U -> U.
 Variable Init : set U.
 
-Lemma is_sol_on0o_substitution Delta f x :
- is_sol_on0o phi (BLeft Delta) f ->
- is_sol_on0o (fun y : 'rV_n.+1 => phi (y + x))
-    (BLeft Delta) (f \- cst x).
+Lemma sol_is_deriv_co_substitution D f x :
+ sol_is_deriv_co (fun=> phi) 0 D f ->
+ sol_is_deriv_co (fun _ y => phi (y + x)) 0 D (f \- cst x).
 Proof.
-rewrite /is_sol_on0o => /= H t t0Delta; split.
+rewrite /sol_is_deriv_co => /= H t t0Delta; split.
   apply: derivableB => //.
   by apply H.
-rewrite subrK.
-rewrite derive1E deriveB//; last first.
-  by apply H.
+rewrite subrK derive1E deriveB//; last by apply H.
 by rewrite derive_cst subr0 -derive1E; apply H.
 Qed.
 
@@ -718,11 +716,10 @@ have [/= d d0 {}H] := H _ e0.
 exists d => // f Delta [f0Init solf] f0xd t t0.
 rewrite -[_ - _]subr0.
 rewrite -[f t - x]/((f \- cst x) t).
-apply: (H _ Delta) => //; last first.
-  by rewrite /= subr0.
-split.
-  exact/image_f.
-exact: is_sol_on0o_substitution.
+apply: (H _ Delta) => //.
+- exact/image_f.
+- exact: sol_is_deriv_co_substitution.
+- by rewrite /= subr0.
 Qed.
 
 Lemma is_equilibrium_point_substitutionP x :
@@ -778,13 +775,13 @@ Context {K : realType} {n : nat}.
 Let U := 'rV[K]_n.+1.
 Variable phi : U -> U.
 Variable Init : set U.
-Hypothesis openInit : open Init. (* Init est forcement un ouvert *)
+Hypothesis openInit : open Init.
 
 Variable V : U -> K.
 Hypothesis Vdiff : forall t : U, differentiable V t.
-Hypothesis V'_le0 : forall Delta (sol : K -> U),
-  is_sol_on0o phi (BLeft Delta) sol ->
-  forall t, 0 < t < Delta -> 'D~(sol) V t <= 0.
+Hypothesis V'_le0 : forall D (sol : K -> U),
+  sol_is_deriv_co (fun=> phi) 0 D sol ->
+  forall t, 0 < t < D -> 'D~(sol) V t <= 0.
 
 Theorem Lyapunov_stability :
   is_Lyapunov_candidate V Init `<=` is_locally_stable_at phi Init.
@@ -810,7 +807,7 @@ apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
       apply sol0Init.
       rewrite in_itv/=.
       by move/andP : t0Delta => [/ltW-> ->].
-    have -> : (fun y : 'rV_n.+1 => V (y + x)) \o sol = [eta V] \o (+%R^~ (x) \o sol).
+    have -> : (fun y => V (y + x)) \o sol = V \o (+%R^~ x \o sol).
       exact/funext.
     rewrite derive_along_derive; last 2 first.
       exact: differentiable_comp.

@@ -202,16 +202,16 @@ Hypothesis solP : forall y, y 0 \in Tilt.Upsilon1 ->
 
 Hypothesis initp : forall p, sol p 0 = p.
 
-Let isSol p : p \in Tilt.Upsilon1 -> is_sol_on0y phi (sol p).
+Let isSol p : p \in Tilt.Upsilon1 -> sol_is_deriv_c0y phi (sol p).
 Proof.
 move => Kp.
-apply/is_sol_on0yP.
+apply/sol_is_deriv_c0yP.
 have : lasalle.is_sol phi (sol p) by apply/solP; rewrite ?initp.
 move => [/=_ H].
 move => /= t t0.
 split.
   by apply: ex_derive; apply H.
-by rewrite derive1E;apply H.
+by rewrite derive1E; apply H.
 Qed.
 
 Definition Ksub (p : U) :=
@@ -296,12 +296,12 @@ split; last first.
   split => //.
   + rewrite initp.
     exact/mem_set.
-  + apply global_sol_sol.
+  + apply sol_is_deriv_c0yco.
     apply isSol => //.
     by rewrite inE.
-  + exists t; split => //.
+  + exists t => //.
     by rewrite /= in_itv/=t0/=ltrDl.
-move/mem_set : (Kx) => /isSol /is_sol_on0yP solA.
+move/mem_set : (Kx) => /isSol /sol_is_deriv_c0yP solA.
 rewrite (le_trans _ Vx)//.
 rewrite -[in leRHS](@initp x).
 have : {in `[0, t + 1[, forall t : K, derivable (sol x) t 1}.
@@ -313,12 +313,11 @@ apply.
 - exact: V1_diff.
 - move => t1 tt1.
   apply : (@derive_along_V1_le0 _ _ _ _ _ (t + 1))=> //.
-  + apply global_sol_sol => //.
-    apply/is_sol_on0yP.
-    by apply solA.
   + by rewrite initp inE.
-  + move => t2.
-    move => /andP[t2' _].
+  + apply: sol_is_deriv_c0yco => //.
+    apply/sol_is_deriv_c0yP.
+    by apply solA.
+  + move=> t2 /andP[t2' _].
     apply/derivable1_diffP.
     apply solA.
     by rewrite ltW.
@@ -326,7 +325,7 @@ apply.
 - by rewrite lexx.
 Qed.
 
-Local Lemma sol_Ksub p u : u \in Ksub p -> is_sol_on0y phi (sol u).
+Local Lemma sol_Ksub p u : u \in Ksub p -> sol_is_deriv_c0y phi (sol u).
 Proof.
 rewrite inE/= => -[h1 h2].
 apply isSol => //.
@@ -417,8 +416,8 @@ have H : lasalle.limS sol (Ksub p) `<=`
     rewrite derive1E.
     rewrite -derive_along_derive.
     apply : derive_along_V1_le0_global => //.
-    by apply isSol.
     by rewrite initp.
+    by apply isSol.
     rewrite initp.
     by apply: V1_diff => //.
     apply /derivable1_diffP.
@@ -435,9 +434,9 @@ have H : lasalle.limS sol (Ksub p) `<=`
     rewrite initp;  apply q_inKsubq.
     have/= [_ +] := qKsub.
     by move/mem_set.
-    apply global_sol_sol.
+    apply: sol_is_deriv_c0yco.
     by apply isSol;rewrite inE;apply qKsub.
-    exists t;split => //.
+    exists t => //.
     by rewrite/=in_itv/=H ltrDl ltr01.
   have lim_sp : (sol q x @[x --> +oo]) (Ksub q).
     exists 0; split => // t t0 /=.
@@ -481,13 +480,14 @@ have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Upsilon1.
   move : h1.
   have hi := initp x.
   rewrite -hi => h1.
-  have sol' : is_sol_on0o phi (BLeft 1) (sol x) .
-    apply: global_sol_sol.
+  have sol' : sol_is_deriv_co (fun=> phi) 0 1 (sol x).
+    apply: sol_is_deriv_c0yco.
     by apply isSol.
-  apply: (V1dot_eq0_p1_or_p2 sol') => //.
-  rewrite hi.
-  exact/mem_set.
-  by rewrite in_itv /= lexx ltr01.
+  rewrite /Tilt.points/=.
+  apply: (V1dot_eq0_p1_or_p2 _ sol') => //.
+    rewrite hi.
+    exact/mem_set.
+  by rewrite bound_itvE ltr01.
 by apply limS_subset_V1dot0.
 Qed.
 

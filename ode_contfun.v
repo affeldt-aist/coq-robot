@@ -203,23 +203,23 @@ apply/(iffP idP); rewrite eqmodE//=.
   by apply/eqP; rewrite subr_eq0; exact/eqP/abfg.
 Qed.
 
-Lemma eqmod_on_itv f g : f = g %[mod T] -> {in `[a, b], f =1 g}.
+Lemma eqmod_on_itv f g : f = g %[mod T] -> {in `[a, b]%R, f =1 g}.
 Proof.
 move=> /eqmodP + x xab.
 move/set_mem => abfg0.
 apply: subr0_eq.
 move/(congr1 (fun z => z x)) : abfg0.
-by rewrite /patch xab.
+by rewrite /patch mem_setE/= xab.
 Qed.
 
-Lemma eval_mod_on_itv f x : x \in `[a, b] -> (\pi_T f : T) x = f x.
+Lemma eval_mod_on_itv f x : x \in `[a, b]%R -> (\pi_T f : T) x = f x.
 Proof.
 move => xab.
 apply: (@eqmod_on_itv (repr (\pi_T f)) f) => //.
 by rewrite reprK.
 Qed.
 
-Lemma quot_contSeg_fctB (f g : T) t : t \in `[a, b] ->
+Lemma quot_contSeg_fctB (f g : T) t : t \in `[a, b]%R ->
   (f - g : T) t = (f : T) t - (g : T) t.
 Proof.
 move=> tab.
@@ -237,7 +237,7 @@ End ContSeg_quot.
 Section zmodule_normed.
 Context {R : realType} {W : normedModType R}.
 Variables a b : R.
-Let K := `[a, b].
+Let K := `[a, b]%R.
 
 Import ContSeg_quot.
 
@@ -251,7 +251,7 @@ Lemma ler_infty_normD (x y : V) :
   infty_norm (x + y) <= infty_norm x + infty_norm y :> R.
 Proof.
 rewrite /infty_norm/=.
-have [K0|K0] := eqVneq K set0.
+have [K0|K0] := eqVneq [set` K] set0.
   rewrite /infty_norm0.
   do ! rewrite [X in [set _ | _ in X]](_ : _ = set0)// image_set0//.
   by rewrite sup0 addr0.
@@ -278,7 +278,7 @@ apply: sup_le.
   + exists (`|x a| + `|repr y a|)=> /=.
     exists (`|repr x a|) => //; [exists a => //; by rewrite in_itv/= lexx ab|].
     by exists `|repr y a| => //; exists a => //; rewrite bound_itvE.
-  + exists (sup [set `|repr x r| | r in K] + sup [set `|repr y r| | r in K]).
+  + exists (sup [set `|repr x r| | r in [set` K]] + sup [set `|repr y r| | r in [set` K]]).
     apply ubP => _ [x0 xs] [y0 ys] <-.
     rewrite lerD// ub_le_sup//.
       exact: (normr_has_sup x _).2.
@@ -293,7 +293,7 @@ apply/eqquotP.
 rewrite Quotient.equivE inE; apply: funext => r /=.
 rewrite /patch; case : ifPn => // /set_mem in_itv.
 rewrite 2!fctE.
-have -> : {in K, repr (0 : V) =1 (0 : @continuousFunType R W K setT)}.
+have -> : {in K, repr (0 : V) =1 (0 : @continuousFunType R W [set` K] setT)}.
 - apply/eqmod_on_itv.
   by rewrite reprK /GRing.zero /= /Quotient.zero /= -lock.
 - rewrite [LHS]subr0.
@@ -347,27 +347,27 @@ Lemma infty_norm_pi x : `|\pi_V x| = infty_norm0 x.
 Proof. by rewrite /Num.norm /= infty_norm_pi0. Qed.
 
 Lemma infty_norm_lt (f : V) e :
-  `| f | < e -> {in `[a, b], forall x : R, `|f x| < e}.
+  `| f | < e -> {in `[a, b]%R, forall x : R, `|f x| < e}.
 Proof.
 rewrite -{1}(reprK f) infty_norm_pi => h x xab.
 have [ab|ab] := leP a b.
   exact/le_lt_trans/h/infty_norm0_ge.
-move: xab; rewrite inE/= in_itv/= => /andP[/le_trans /[apply]].
+move: xab; rewrite in_itv/= => /andP[/le_trans /[apply]].
 by rewrite leNgt ab.
 Qed.
 
 Lemma infty_norm_le (f : V) e :
-  `| f | <= e -> {in `[a, b], forall x : R, `|f x| <= e}.
+  `| f | <= e -> {in `[a, b]%R, forall x : R, `|f x| <= e}.
 Proof.
 rewrite -{1}(reprK f) infty_norm_pi => h x xab.
 have [ab|ab] := leP a b.
   exact/le_trans/h/infty_norm0_ge.
-move: xab; rewrite inE/= in_itv/= => /andP[/le_trans /[apply]].
+move: xab; rewrite in_itv/= => /andP[/le_trans /[apply]].
 by rewrite leNgt ab.
 Qed.
 
 Lemma infty_norm_le2 (f : V) e (e0 : 0 <= e) :
-  {in `[a, b], forall x : R, `|f x| <= e} -> `| f | <= e.
+  {in `[a, b]%R, forall x : R, `|f x| <= e} -> `| f | <= e.
 Proof.
 move=> h.
 have [ab|ba] := leP a b.
@@ -424,6 +424,7 @@ apply/eqP; rewrite scaler_eq0.
 rewrite (negPf a0)/= subr_eq0.
 apply/eqP.
 case: piP => f.
+rewrite mem_setE in xrs.
 by move/eqmod_on_itv => /(_ _ xrs) <-.
 Qed.
 
@@ -456,7 +457,7 @@ apply/eqP; rewrite scaler_eq0 (negPf k0)/=.
 rewrite subr_eq0.
 apply/eqP.
 have := @eqmod_on_itv _ _ _ _ (repr (b + c)) (repr b + repr c).
-move=> ->//.
+move=> ->//; last by rewrite mem_setE in xrs.
 rewrite pi_add//=.
 by rewrite !reprK.
 Qed.
@@ -475,10 +476,10 @@ HB.instance Definition _ :=
   @GRing.Zmodule_isLmodule.Build R V cont_scale cont_scalerA cont_scale1r
   cont_scalerDr cont_scalerDl.
 
-Local Lemma repr_mult l (x : V) a : a \in `[r, s] ->
+Local Lemma repr_mult l (x : V) a : a \in `[r, s]%R ->
   repr (l *: x) a = l *: (repr x a).
 Proof.
-move =>ars.
+move=> ars.
 have : repr (l *: x) = l *: repr x %[mod V].
   by case: piP.
 move/(@eqmod_on_itv _ _ _ _ (repr (l *: x)) (l *: repr x)).
@@ -549,11 +550,11 @@ Proof. by constructor. Qed.
 HB.instance Definition _ F FF Fc := (@lim_fun_is_fun F FF Fc).
 
 Lemma lim_fun_cvg_pt (F : set_system V) (FF: ProperFilter F) (Fc : cauchy F) :
-  forall e : R, e > 0 -> forall t, t \in `[a,b] ->
+  forall e : R, e > 0 -> forall t, t \in `[a, b]%R ->
   \forall f \near F, `|lim_fun FF Fc t - (f : V) t| <= e.
 Proof.
 have /(_ _ _) /cauchy_cvg /cvg_app_entourageP cvF :
-    forall t : R, t \in `[a,b] ->
+    forall t : R, t \in `[a, b]%R ->
       cauchy (fmap (fun h : V => h t) (fun A : set V => nbhs F (fun g => A g))).
   move=> t tab A /=.
   rewrite -entourage_ballE => -[e /= e0 eA].
@@ -565,7 +566,7 @@ have /(_ _ _) /cauchy_cvg /cvg_app_entourageP cvF :
   rewrite -ball_normE /ball/=.
   rewrite -quot_contSeg_fctB//.
   exact: h.
-have cvg_pt (t : R) : t \in `[a,b] ->
+have cvg_pt (t : R) : t \in `[a, b]%R ->
     x @[x --> fmap (fun h : V => h t) F] --> lim_fun FF Fc t.
   move=> tab.
   apply/cvg_entourageP.
@@ -575,7 +576,7 @@ exact.
 Qed.
 
 Lemma lim_fun_cvg_uniform (F : set_system V) (FF: ProperFilter F) (Fc : cauchy F) :
-  forall e : R, e > 0 -> \forall f \near F, forall t, t \in `[a, b] ->
+  forall e : R, e > 0 -> \forall f \near F, forall t, t \in `[a, b]%R ->
   `|lim_fun FF Fc t - (f : V) t| <= e.
 Proof.
 move=> e e0.
@@ -605,22 +606,22 @@ have [ab|] := ltP a b; last first.
     by rewrite set_itv1; exact: continuous_subspace1.
   rewrite set_itv_ge// ?bnd_simp -?ltNge//.
   exact: continuous_subspace0.
-have H (e : R) : e > 0 -> forall t, t \in `[a, b] ->
+have H (e : R) : e > 0 -> forall t, t \in `[a, b]%R ->
     \forall t' \near t, t' \in `[a, b] ->
     `|lim_fun FF Fc t - lim_fun FF Fc t'| <= e.
   move=> e0 t tab.
   near F => f.
-  have lim_fune2 : forall u, u \in `[a, b] -> `|lim_fun FF Fc u - f u| <= e / 2.
+  have lim_fune2 : forall u, u \in `[a, b]%R -> `|lim_fun FF Fc u - f u| <= e / 2.
     by near: f; apply: lim_fun_cvg_uniform => //; rewrite divr_gt0.
   move/(continuous_within_itvP _ ab) : (@cts_fun _ _ f ) => [mc lc rc].
-  move: (tab).
+  have : t \in `[a, b] by rewrite inE.
   rewrite -{1}setUitv1/=; last by rewrite bnd_simp ltW.
   rewrite -{1}setU1itv/=; last by rewrite bnd_simp.
   rewrite inE/= in_itv/= => -[[->|tab']|->].
   - near=> t' => t'ab.
     rewrite -(subrKA (f a) (lim_fun FF Fc a)).
     rewrite (le_trans (ler_normD _ _))// (splitr e) lerD//.
-    + by rewrite lim_fune2// inE/= bound_itvE ltW.
+    + by rewrite lim_fune2// bound_itvE ltW.
     + rewrite -(subrKA (f t') (f a)).
       rewrite (le_trans (ler_normD _ _))// (splitr (e/2)) lerD//.
       * move: t'ab.
@@ -632,6 +633,7 @@ have H (e : R) : e > 0 -> forall t, t \in `[a, b] ->
         rewrite !divr_gt0// => /(_ isT)[e1 e10 eh].
         by exists e1 => // => x ae1x /andP [xa _]; exact: eh.
       * rewrite distrC.
+        rewrite mem_setE in t'ab.
         move: (t') t'ab.
         near: f.
         by apply lim_fun_cvg_uniform; rewrite !divr_gt0.
@@ -647,13 +649,14 @@ have H (e : R) : e > 0 -> forall t, t \in `[a, b] ->
       move /(_ _ tab') : mc => /cvgrPdist_le /=; apply.
       by rewrite !divr_gt0.
     rewrite distrC.
+    rewrite mem_setE in t'ab.
     move: (t') t'ab.
     near: f.
     by apply: lim_fun_cvg_uniform; rewrite !divr_gt0.
   - near=> t' => t'ab.
     rewrite -(subrKA (f b) (lim_fun FF Fc b)).
     rewrite (le_trans (ler_normD _ _))// (splitr e) lerD//.
-      by rewrite lim_fune2// inE/= bound_itvE ltW.
+      by rewrite lim_fune2// bound_itvE ltW.
     rewrite -(subrKA (f t') (f b)).
     rewrite (le_trans (ler_normD _ _))// (splitr (e / 2)) lerD//.
       move: t'ab.
@@ -665,6 +668,7 @@ have H (e : R) : e > 0 -> forall t, t \in `[a, b] ->
       rewrite !divr_gt0// => /(_ isT)[e1 e10 eh].
       by exists e1 => // x be1x /andP [_ xb]; exact: eh.
     rewrite distrC.
+    rewrite mem_setE in t'ab.
     move: (t') t'ab.
     near: f.
     by apply: lim_fun_cvg_uniform; rewrite !divr_gt0.
@@ -684,7 +688,7 @@ apply/continuous_within_itvP => //; split.
     by apply/andP; split; near: t'; [exact: nbhs_right_ge|exact: nbhs_right_le].
   near: t'.
   apply/(cvg_at_right_filter cvg_id)/H => //.
-  by rewrite inE/= bound_itvE// ltW.
+  by rewrite bound_itvE// ltW.
 - apply/cvgrPdist_le => /= e e0.
   near=> t'.
   have : t' \in `[a,b].
@@ -692,7 +696,7 @@ apply/continuous_within_itvP => //; split.
     by apply/andP; split; near: t'; [exact: nbhs_left_ge|exact: nbhs_left_le].
   near: t'.
   apply/(cvg_at_left_filter cvg_id)/H => //.
-  by rewrite inE /= bound_itvE/= ltW.
+  by rewrite bound_itvE/= ltW.
 Unshelve. all: by end_near. Qed.
 
 HB.instance Definition _ F FF Fc :=
@@ -703,11 +707,11 @@ Fail Check (V : completeType).
 
 Lemma cvg_V_entourageP (F : set_system V) (FF : Filter F) (f : V) :
   F --> f <-> forall A, entourage A ->
-              \forall g \near F, {in `[a, b], forall t : R, A (f t, (g : V) t)}.
+              \forall g \near F, {in `[a, b]%R, forall t : R, A (f t, (g : V) t)}.
 Proof.
 split => [/cvg_entourageP /= Ff A|/=Ff].
   rewrite -entourage_ballE => -[eps eps0 /= H].
-  apply: (Ff [set fg : V * V| {in `[a, b], forall t : R, A (fg.1 t, fg.2 t)}]).
+  apply: (Ff [set fg : V * V| {in `[a, b]%R, forall t : R, A (fg.1 t, fg.2 t)}]).
   exists eps => //.
   rewrite /pseudoMetric_from_normedZmodType.ball /=.
   move=> /= x bx t tab.
@@ -735,7 +739,7 @@ Lemma quot_cont_on_segType_cauchy_cvg (F : set_system V) :
 Proof.
 move=> FF Fc.
 have /(_ _ _)/cauchy_cvg/cvg_app_entourageP cvF :
-    forall t, t \in `[a, b] ->
+    forall t, t \in `[a, b]%R ->
     cauchy (fmap (fun h : V => h t) (fun A : set V => nbhs F (fun g => A g))).
   move=> t tab A/=.
   rewrite -entourage_ballE => -[e e0 ee]; rewrite near_simpl -near2E near_map2.

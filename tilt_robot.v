@@ -450,4 +450,3 @@ apply : (@le_trans _ _ (\sum_(i0 < n.+1) `|x| ^+ 2)).
   exact: (le_bigmax _ _ (ord0, k)).
 by rewrite big_const_ord mulr_natl iter_addr_0.
 Qed.
-

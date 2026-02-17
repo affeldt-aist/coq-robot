@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect ssralg ssrnum matrix interval poly.
+From mathcomp Require Import all_boot all_order ssralg ssrnum matrix interval poly.
 From mathcomp Require Import generic_quotient ring_quotient.
 From mathcomp Require Import mathcomp_extra unstable boolp classical_sets.
 From mathcomp Require Import constructive_ereal.
@@ -30,15 +30,13 @@ Open Scope ring_scope.
 Open Scope classical_set_scope.
 
 Lemma eq_on_itv_deriv {R : realType} {W : normedModType R} c d (g h : R -> W) :
-  {in `]c,d[, g =1 h} -> {in `]c,d[, g^`() =1 h^`()}.
+  {in `]c, d[%R, g =1 h} -> {in `]c, d[%R, g^`() =1 h^`()}.
 Proof.
 move=> gh x xcd; rewrite !derive1E; apply: near_eq_derive => //.
 near=>  x0.
 apply gh.
-rewrite inE.
 near: x0.
-apply/near_in_itvoo.
-by rewrite -inE.
+exact/near_in_itvoo.
 Unshelve. all: by end_near. Qed.
 
 Section about_sup.
@@ -816,15 +814,15 @@ Section infty_norm0_lemmas.
 Context {R : realType} {W : normedModType R}.
 Variables a b : R.
 Hypothesis ab : a <= b.
-Let K := `[a, b].
-Local Notation T := (continuousFunType K [set: W]).
+Let K := `[a, b]%R.
+Local Notation T := (continuousFunType [set` K] [set: W]).
 
 Lemma infty_norm0_le (g : T) (u : R) : {in K, forall x, `| g x | <= u} ->
   infty_norm0 g <= u.
 Proof.
 have [c Kc] := seg_nonempty ab.
 move=> h; rewrite /infty_norm0; apply: ge_sup.
-  by exists (normr (g c)); exists c => //; rewrite /= in_itv/= lexx.
+  by exists `|g c|; exists c => //; rewrite /= in_itv/= lexx.
 by move => _ [x xab] <-;apply h; rewrite inE.
 Qed.
 
@@ -833,11 +831,10 @@ Proof.
 move=> xK.
 rewrite sup_upper_bound //=.
   exact: normr_has_sup.
-exists x => //.
-by rewrite inE in xK.
+by exists x.
 Qed.
 
-Lemma infty_norm0_itv_eq (f g : T):  {in K, f =1 g} ->
+Lemma infty_norm0_itv_eq (f g : T) : {in K, f =1 g} ->
   infty_norm0 f = infty_norm0 g.
 Proof.
 move=> inK.

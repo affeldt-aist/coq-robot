@@ -33,11 +33,10 @@ Hypothesis k0 : 0 < k.
 Let B := closed_ball u0 r%:num.
 Hypothesis lip2 : k.-lipschitz_B phi.
 
-Definition phi_ (t : R) x := phi x.
+Definition phi_ (t : R) := phi.
 
 Definition is_sol_sym u0 t0 d (sol : R -> U):=
-  sol t0 = u0 /\ {in `]t0 - d, t0 + d[,
-    forall x, derivable sol x 1 /\ sol^`() x = phi_ x (sol x)}.
+  sol t0 = u0 /\ sol_is_deriv_oo phi_ (t0 - d) (t0 + d) sol.
 
 Lemma phi_lip2 a b : {in `[a, b]%R, forall x, k.-lipschitz_B (phi_ x)}.
 Proof. by move => x abx; exact: lip2. Qed.
@@ -51,7 +50,7 @@ Let rho1 : rho%:num < 1.
 Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 
 Local Lemma cauchy_lipschitz_autofwd a : exists f delta,
-  delta > 0 /\ is_sol_on (phi_) u0 a (BLeft (a + delta)) f /\
+  delta > 0 /\ is_sol_oo phi_ u0 a (a + delta) f /\
   {in `[a, a + delta], forall t, closed_ball u0 r%:num (f t)}.
 Proof.
 have aa1 : a < a + 1 by rewrite ltrDl.
@@ -65,13 +64,13 @@ Qed.
 (* TODO: move *)
 Lemma patch_in {X : Type} (f g : R -> X)  S x : x \in S -> patch f S g x = g x.
 Proof.
-  move => xs.
-  rewrite /patch.
-  by rewrite xs.
+move => xs.
+rewrite /patch.
+by rewrite xs.
 Qed.
 
 Lemma closed_ball_split (x1 x2 y : U) q : 0 < q ->
-  closed_ball x1 (q/2) y -> closed_ball x2 (q/2) x1  -> closed_ball x2 q y.
+  closed_ball x1 (q / 2) y -> closed_ball x2 (q / 2) x1 -> closed_ball x2 q y.
 Proof.
 move => hq.
 have hq2:  (0 < q /2).
@@ -82,7 +81,7 @@ rewrite -(subrKA x1 x2).
 by apply: (le_trans (ler_normD _ _)); rewrite (splitr q) lerD//.
 Qed.
 
-Local Lemma phi_lip2' a b:  {in `[a, b]%R, forall x, k.-lipschitz_B (-phi_ x)}.
+Local Lemma phi_lip2' a b : {in `[a, b]%R, forall x, k.-lipschitz_B (-phi_ x)}.
 Proof.
 move => y _ x B12.
 rewrite /= -normrN opprD !opprK /Algebra.opp /=.
@@ -218,7 +217,7 @@ have fc : {in `[a-dboth, (a + dboth)], forall t : R,  closed_ball (fminus (a - d
      apply: (closed_ball_split _ c2) =>//.
 exists f, dboth.
 split => //.
-suff h : is_sol_on phi_ (f (a-dboth)) (a-dboth) (BLeft (a+dboth)) f.
+suff h : is_sol_oo phi_ (f (a - dboth)) (a - dboth) (a + dboth) f.
   by split => //; apply: (And32 h).
 have kn0 : k != 0 by apply lt0r_neq0.
 apply /(integral_sol_iff_sol (r := r2) kn0) => //.
@@ -275,16 +274,16 @@ apply solution_extends => //.
       *  move => t tad.
          case : (And32 solminus (-t)).
            move : tad.
-           rewrite -/dminus !inE/=!in_itv/= ltrNr ltrNl opprD !opprK => /andP[h1 ->//=].
+           rewrite -/dminus !in_itv/= ltrNr ltrNl opprD !opprK => /andP[h1 ->//=].
            apply: (le_lt_trans _ h1).
            by rewrite lerD// lerNl opprK; rewrite ge_min;apply /orP;right;rewrite ge_min lexx.
          move => h1 h2.
-         have hd : (derivable fminus t 1).
+         have hd : derivable fminus t 1.
            rewrite /fminus/=.
-           apply /derivable1_diffP.
-           apply /differentiable_comp => //.
-           apply /derivable1_diffP.
-           apply h1.
+           apply/derivable1_diffP.
+           apply/differentiable_comp => //.
+           apply/derivable1_diffP.
+           by apply h1.
          split=>//.
          rewrite /fminus/=.
          apply /rowP => i /=.
@@ -332,15 +331,13 @@ apply solution_extends => //.
     apply solplus.
     move => t tad.
     apply solplus.
-    move : tad.
-    rewrite !inE/=!in_itv/= => /andP[-> h0]//=.
-    apply (lt_le_trans h0).
-    by rewrite lerD //= ge_min lexx.
-    apply /continuous_subspaceW/cfplus.
-    rewrite closure_neitv_oo;last by rewrite ltrDl.
-    apply subset_itvl.
-    rewrite bnd_simp /=.
-    by rewrite lerD //= ge_min lexx.
+    move: tad; rewrite !in_itv/= => /andP[-> h0]//=.
+    by rewrite (lt_le_trans h0)// lerD2l ge_min lexx.
+  apply /continuous_subspaceW/cfplus.
+  rewrite closure_neitv_oo;last by rewrite ltrDl.
+  apply subset_itvl.
+  rewrite bnd_simp /=.
+  by rewrite lerD //= ge_min lexx.
 Qed.
 
 End picard_autonomous.
@@ -375,11 +372,11 @@ Hypothesis ab : a < b.
 Hypothesis phi_locally_lipschitz : locally_lipschitz phi.
 
 Variables (u0 : U) (f : R -> U) (f' : R -> U).
-Hypothesis sol1 : is_sol_on (fun=> phi) u0 a (BLeft b) f.
-Hypothesis sol2 : is_sol_on (fun=> phi) u0 a (BLeft b) f'.
+Hypothesis sol1 : is_sol_oo (fun=> phi) u0 a b f.
+Hypothesis sol2 : is_sol_oo (fun=> phi) u0 a b f'.
 
 Lemma locally_unique_extends t : a <= t < b -> f' t = f t ->
-  exists Delta : {posnum R}, {in `[t, t + Delta%:num], f =1 f'}.
+  exists Delta : {posnum R}, {in `[t, t + Delta%:num]%R, f =1 f'}.
 Proof.
 move=> /andP[ta tb] eq.
 have taab : `[t, b] `<=` `[a, b].
@@ -391,12 +388,12 @@ have cf0 : {within `[t, b], continuous f}.
 have cf'0 : {within `[t, b], continuous f'}.
   have := And33 sol2.
   by rewrite closure_neitv_oo//; exact: continuous_subspaceW.
-have sol10 : is_sol_on (fun => phi) (f t) t (BLeft b) f.
+have sol10 : is_sol_oo (fun=> phi) (f t) t b f.
   split => //; last by rewrite closure_neitv_oo.
   move=> t0 tab.
   apply sol1.
   by move: tab; rewrite !inE/=; apply: subset_itvr; rewrite bnd_simp.
-have sol20 : is_sol_on (fun => phi) (f t) t (BLeft b) f'.
+have sol20 : is_sol_oo (fun=> phi) (f t) t b f'.
   split => //; last by rewrite closure_neitv_oo.
   move=> t0 tab.
   apply sol2.
@@ -411,13 +408,13 @@ have [D [P1 P2]] := initial_solution_unique tb k0 lip20 cont1 cf0 sol10 cf'0 sol
 by exists D.
 Qed.
 
-Lemma solution_unique :  {in `[a, b], f =1 f'}.
+Lemma solution_unique :  {in `[a, b]%R, f =1 f'}.
 Proof.
-set E := [set t | t \in `[a, b]%R /\ {in `[a, t], f =1 f'}].
+set E := [set t | t \in `[a, b]%R /\ {in `[a, t]%R, f =1 f'}].
 suff : E b by case.
 have Enonempty : E !=set0.
   exists a; split; first by rewrite in_itv/= lexx ltW.
-  rewrite set_itv1 => t; rewrite inE/= => ->.
+  move=> t; rewrite in_itv/= -eq_le => /eqP <-.
   by rewrite (And31 sol1) (And31 sol2).
 have mon c : E c -> forall c', a <= c' <= c -> E c'.
   move=> -[+ h c'] /andP[ac' cc'].
@@ -462,7 +459,7 @@ have Eclosed : closed E.
     by near: y; exact: lt_nbhsr.
   rewrite not_andP in Ex1.
   case: Ex1 => // {}Ex1.
-  have [t Et] : exists t, t \in `[a, x] /\ ~ (f t = f' t).
+  have [t Et] : exists t, t \in `[a, x]%R /\ ~ (f t = f' t).
      rewrite not_existsP => h.
      apply Ex1 => t tax.
      have := h t.
@@ -482,13 +479,13 @@ have Eclosed : closed E.
     have g0x : g x > 0.
       rewrite normr_gt0 subr_eq0.
       by apply/eqP; case: Et.
-    have g0 t : t \in `[a, b]%R -> g t > 0 -> ~  {in `[a, t], f =1 f'}.
+    have g0 t : t \in `[a, b]%R -> g t > 0 -> ~  {in `[a, t]%R, f =1 f'}.
       move => tab gt Et'.
       move : gt.
       suff -> : g t = 0 by rewrite ltxx.
       apply/normr0P.
       rewrite Et' ?subrr//.
-      by move: tab; rewrite inE/= !in_itv/= lexx => /andP[->].
+      by move: tab; rewrite !in_itv/= lexx => /andP[->].
     suff hgx: \forall y \near x^'-, 0 < g y.
       near=>y.
       have [yx|xy Ey] := ltP y x; last first.
@@ -505,7 +502,7 @@ have Eclosed : closed E.
       apply: contra_notN Ex1.
       move: xab; rewrite in_itv/= => /andP[+ _] ax.
       move/(conj ax) => /andP; rewrite -eq_le => /eqP ->.
-      rewrite set_itv1/= => y; rewrite inE/= => ->.
+      move=> t; rewrite in_itv/= -eq_le => /eqP <-.
       by rewrite (And31 sol1) (And31 sol2).
     have /(continuous_within_itvP _ ab) := contg => -[h1 _ h2].
     move: xab; rewrite in_itv/= => /andP[_ ].
@@ -513,7 +510,7 @@ have Eclosed : closed E.
     apply/cvg_at_left_filter/h1.
     by rewrite in_itv/= xb xa.
   have xt' : t < x.
-    case: Et; rewrite inE/=in_itv/= => /andP[_ ].
+    case: Et; rewrite in_itv/= => /andP[_ ].
     by rewrite le_eqVlt eq_sym (negbTE xt) .
   near=> y.
   move => Ey.
@@ -521,10 +518,10 @@ have Eclosed : closed E.
     rewrite not_andP.
     right.
     move=> /(_ t).
-    case: Et; rewrite !inE/= !in_itv/= => /andP[-> _/=].
+    case: Et; rewrite !in_itv/= => /andP[-> _/=].
     by rewrite lexx => /[swap] => /(_ isT).
   have ta : a <= t.
-    by case: Et; rewrite inE/= in_itv/= => /andP[].
+    by case: Et; rewrite in_itv/= => /andP[].
   move/(monC y t ta Ey).
   apply/negP; rewrite -leNgt.
   by near: y; exact: nbhs_ge.
@@ -535,12 +532,11 @@ have supE : E (sup E).
 have sup_itv : a <= sup E.
   apply sup_upper_bound => //.
   split; first by rewrite in_itv/= lexx ltW.
-  move => t.
-  rewrite set_itv1 inE/= => ->.
+  move=> t; rewrite in_itv/= -eq_le => /eqP <-.
   by rewrite (And31 sol1) (And31 sol2).
 have supeq : f' (sup E) = f (sup E).
   apply/esym; apply supE.
-  by rewrite inE/= in_itv/= lexx sup_itv.
+  by rewrite in_itv/= lexx sup_itv.
 have [h|h] := leP b (sup E).
   apply: (mon _ supE) => //.
   by rewrite (ltW ab).
@@ -554,10 +550,10 @@ apply: sup_upper_bound => //.
 split.
   by rewrite in_itv/= le_min (ltW ab)/= ler_wpDr//= ge_min lexx.
 move=> t.
-rewrite inE/= in_itv/= => -/andP[t1 t2].
+rewrite in_itv/= => -/andP[t1 t2].
 have [ht|ht] := leP t (sup E).
-  by apply supE; rewrite inE/= in_itv/= t1 ht.
-by apply: Hdelta; rewrite inE/= in_itv/= ltW// (le_trans t2)// ge_min lexx orbT.
+  by apply supE; rewrite in_itv/= t1 ht.
+by apply: Hdelta; rewrite in_itv/= ltW// (le_trans t2)// ge_min lexx orbT.
 Unshelve. all: by end_near. Qed.
 
 End uniqueness.
