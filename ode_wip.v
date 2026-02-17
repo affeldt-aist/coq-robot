@@ -94,6 +94,14 @@ Qed.
 
 End cauchy_lipschitzT.
 
+Lemma min2r (T : realDomainType) (a b c : T) : a <= c ->
+  (Num.min a b <= Num.min c b).
+Proof.
+rewrite /minr; have [ab|ba] := ltP a b; have [cb|bc] := ltP c b => //.
+- by move=> _; exact: ltW.
+- by move=> /le_lt_trans => /(_ _ cb); rewrite ltNge ba.
+Qed.
+
 Section itv_partition_lemmas.
 Context {R : realType}.
 Variables a b : R.
@@ -260,8 +268,127 @@ Qed.
 
 End itv_partition_lemmas.
 
+Section itv_partition_porder.
+Context {d} {T : porderType d}.
+Implicit Types (a b x : T) (s : seq T).
+
+Let itv_partition_in_itv a b s :
+  itv_partition a b s -> {in s, forall x, x \in `]a, b]%R}.
+Proof.
+move=> /[dup]parts.
+move=> [/[dup]/lt_path_min/allP sa].
+move=> /[dup]pas.
+rewrite lt_path_pairwise.
+move/pairwiseP => pwltas.
+move/eqP => lsb.
+move=> x xs.
+rewrite in_itv/=; apply/andP; split; first exact: sa.
+rewrite -lsb (last_nth a).
+have xas : x \in a :: s by rewrite in_cons; apply/orP; right.
+rewrite -(nth_index a xas).
+rewrite le_eqVlt; apply/predU1P.
+rewrite -implyNp => nlast.
+apply: pwltas.
+- rewrite inE/=.
+  case: ifP => // _.
+  by rewrite ltnS index_mem.
+- by rewrite inE//.
+- rewrite /=.
+ move: s lsb parts sa pas x nlast xs xas.
+  apply: last_ind => // s t IH.
+  rewrite last_rcons => ->.
+  move=> patsb asb psb x/[swap] xsb.
+  rewrite nth_index; last first.
+    by rewrite in_cons; apply/orP; right.
+    move/[swap] => _.
+    rewrite -last_nth last_rcons => xb.
+  rewrite ifN; last first.
+    by rewrite lt_eqF// asb.
+  rewrite (_ : index x (rcons s b) = index x s); last first.
+    rewrite -cats1 index_cat.
+    rewrite ifT//.
+    move: xsb.
+    by rewrite mem_rcons in_cons => /predU1P; case.
+  rewrite size_rcons ltnS.
+  rewrite index_mem.
+  move: xsb.
+  rewrite mem_rcons in_cons.
+  by move/predU1P; case.
+Qed.
+
+Lemma itv_partition_gt_lb a b s : (a < b)%O ->
+  itv_partition a b s -> forall n, (a < nth b s n)%O.
+Proof.
+move=> ab ps n.
+have [ns|ns] := ltnP n (size s).
+  suff : nth b s n \in `]a, b]%R.
+    by rewrite in_itv/= => /andP[].
+  apply: (itv_partition_in_itv ps).
+  exact: mem_nth.
+by rewrite nth_default.
+Qed.
+
+Lemma itv_partition_le_ub a b s :
+  itv_partition a b s -> forall n, (nth b s n <= b)%O.
+Proof.
+move=> ps n.
+have [ns|ns] := ltnP n (size s).
+  suff : nth b s n \in `]a, b]%R.
+    by rewrite in_itv/= => /andP[].
+  apply: (itv_partition_in_itv ps).
+  exact: mem_nth.
+by rewrite nth_default.
+Qed.
+
+Lemma itv_partition_head_in_itv a b s t :
+  itv_partition a b (rcons s t) -> {in s, forall x, x \in `]a, b[%R}.
+Proof.
+move=> pst x xs.
+have in_ab := itv_partition_in_itv pst.
+rewrite in_itv/=; apply/andP; split.
+  have := in_ab x.
+  rewrite mem_rcons in_cons.
+  have H : (x == t) || (x \in s) by apply/orP; right.
+  by move/(_ H); rewrite in_itv/= => /andP[ax xb].
+have [] := pst.
+rewrite lt_path_pairwise.
+move/pairwiseP => lt_ast.
+move/eqP <-; rewrite (last_nth a).
+have : x \in a :: (rcons s t).
+  rewrite in_cons; apply/orP; right.
+  by rewrite mem_rcons in_cons xs orbT.
+move/(nth_index a) <-.
+apply: lt_ast; last 2 first.
+- by rewrite inE.
+- rewrite /=.
+  rewrite ifF; last first.
+    rewrite lt_eqF => //.
+    have [/lt_path_min/allP + _] := pst.
+    by apply; rewrite mem_rcons in_cons xs orbT.
+  by rewrite size_rcons -cats1 index_cat xs ltnS index_mem.
+rewrite inE index_mem.
+rewrite in_cons; apply/orP; right.
+by rewrite mem_rcons in_cons xs orbT.
+Qed.
+
+Lemma itv_partition_lt_ub a b s :
+  itv_partition a b s -> forall n, (n.+1 < size s)%N -> (nth b s n < b)%O.
+Proof.
+elim/last_ind : s => // s0 s1 _ ps n.
+rewrite size_rcons ltnS => ns0.
+pose s := rcons s0 s1.
+rewrite -/s.
+suff : nth b s n \in `]a, b[%R.
+  by rewrite in_itv/= => /andP[].
+apply: (@itv_partition_head_in_itv _ _ s0 s1) => //.
+apply/(nthP b).
+exists n => //.
+by rewrite nth_rcons ns0.
+Qed.
+
+End itv_partition_porder.
+
 (* Theorem 3.2: global existence and uniqueness *)
-(* what happens when globally lipschitz? *)
 Section cauchy_lipschitz_global.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
@@ -271,6 +398,17 @@ Hypothesis k0 : 0 < k.
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_[set: 'rV[R]_n] (phi x)}.
 Hypothesis cont1 : {in [set: 'rV[R]_n], forall y, {within `[a, b], continuous phi ^~ y}}.
 
+Let elt_prop (f : (R -> U) * (R * R) * nat) := True.
+
+Let elt_type := {f : (R -> U) * (R * R) * nat | elt_prop f}.
+
+Let f_ (x : elt_type) := (proj1_sig x).1.1.
+Let a_ (x : elt_type) := (proj1_sig x).1.2.1.
+Let b_ (x : elt_type) := (proj1_sig x).1.2.2.
+Let i_ (x : elt_type) := (proj1_sig x).2.
+
+Let elt_rel i j := f_ j (a_ j) = f_ i (b_ i).
+
 Theorem cauchy_lipschitz_global : exists f : R -> 'rV_n (*: continuousFunType `[a, b] [set: 'rV[R]_n]*),
   is_sol_on phi u0 a (BLeft b) f.
 Proof.
@@ -279,21 +417,30 @@ have rho'_gt0 : 0 < rho' by [].
 have rho'_lt1 : rho' < 1 by [].
 pose rho := PosNum rho'_gt0.
 have rho1 : rho%:num < 1 by [].
+have r_gt0 init a' b' : 0 < (rho%:num * sup_phi phi a' b' init / ((1 - rho%:num) * k)) + 1.
+  rewrite ltr_wpDl// mulr_ge0 ?invr_ge0// mulr_ge0// ?subr_ge0.
+  exact: sup_phi_ge0.
+  exact: ltW.
+  exact: ltW.
 have [barhok|barhok] := leP (b - a) (rho%:num / k).
-  have @r : {posnum R}.
-    admit. (* can be chosen arbitrary large because the Lipschitz condition holds globally *)
-  have Hr h : 0 <= h -> r%:num / (k * r%:num + h) > rho%:num / k.
-    move=> h0.
-    rewrite ltr_pdivlMr; last by rewrite ltr_wpDr// mulr_gt0.
+  pose h := sup [set `|phi t u0| | t in `[a, b]].
+  have {}r_gt0 : 0 < (rho%:num * h / ((1 - rho%:num) * k)) + 1.
+    by rewrite r_gt0// sup_phi_ge0.
+  pose r := PosNum r_gt0.
+  have Hr : r%:num / (k * r%:num + h) > rho%:num / k.
+    rewrite ltr_pdivlMr; last first.
+      rewrite ltr_wpDr//.
+        exact: sup_phi_ge0.
+      by rewrite mulr_gt0.
     rewrite mulrAC -ltr_pdivlMr ?invr_gt0// invrK.
     rewrite mulrDr -ltrBrDl -[X in _ < X - _]mul1r (mulrC k).
     rewrite -mulrBl mulrCA -ltr_pdivrMr; last by rewrite mulr_gt0// subr_gt0.
-    admit. (* for any finite sup_phi, we can choose r large enough so that this holds *)
-  have safe_distba : safe_dist phi a b k u0 r rho = b - a.
+    by rewrite /= ltrDl.
+  have safe_distba : safe_dist phi a b k u0 (PosNum r_gt0) rho = b - a.
     rewrite /safe_dist; apply/min_idPl.
-    rewrite (le_trans barhok)// le_min lexx andbT -/sup_phi ltW//.
-    apply: Hr.
-    exact: sup_phi_ge0.
+    rewrite le_min barhok andbT.
+    rewrite (le_trans barhok)//.
+    exact: ltW.
   exists (@lipschitzT_solution_f R n phi a b k u0 r rho rho1 ab k0 lip2 cont1).
   have [d0 [[fau0 H1] H2 H3]] :=
     @lipschitzT_cauchy_lipschitz_local R n phi a b k u0 r rho rho1 ab k0 lip2 cont1.
@@ -307,172 +454,182 @@ have [barhok|barhok] := leP (b - a) (rho%:num / k).
   rewrite closure_neitv_oo ?ltDl_safe_dist//.
   apply: subset_itvl; rewrite bnd_simp -lerBlDl.
   by rewrite safe_distba.
-have @r : {posnum R}.
+have [delta /andP[delta_gt0 delta_rhok]] : exists delta, 0 < delta <= rho%:num / k.
   admit.
-have Hr : rho%:num / k < r%:num / ((k * r%:num)%R + sup_phi phi a b u0)%E.
-  admit.
-pose delta : R := safe_dist phi a b k u0 r rho.
-have Hsafe_dist : delta = rho%:num / k.
-  rewrite /delta /safe_dist minA; apply/min_idPr.
-  by rewrite le_min (ltW Hr) andbT ltW.
-have delta0 : 0 < delta by rewrite /delta safe_dist_gt0.
 have [delta' [s [/andP[delta'0 delta'delta] [abs nthdelta']]]] : exists (delta' : R) s,
     0 < delta' < delta /\
     itv_partition a b s /\
     forall i, (i < size s)%N -> nth b (a :: s) i.+1 - nth b (a :: s) i < delta.
   exact: itv_partition_lt.
+have sizes_gt0 : (0 < size s)%N.
+  move: abs.
+  destruct s => //.
+  case => /= _ /eqP ?; subst b.
+  move: ab.
+  by rewrite ltxx.
 have Ilt i : (i < size s)%N -> nth b (a :: s) i < nth b (a :: s) i.+1.
   move=> si; case: abs => sa /eqP asb.
   by move/(pathP b) : sa; apply.
 pose I i := `[nth b (a :: s) i, nth b (a :: s) i.+1]%R.
-have Iiab i : (i <= size s)%N -> [set` I i] `<=` `[a, b].
-  move=> si x/=.
-  rewrite !in_itv/= => /andP[ix xi]; apply/andP.
-  destruct i as [|i] => //.
-    rewrite ix; split => //.
+have Iiab i : [set` I i] `<=` `[a, b].
+  have [si|si] := leqP i (size s).
+    move=> x/=.
+    rewrite !in_itv/= => /andP[ix xi]; apply/andP.
+    destruct i as [|i] => //.
+      rewrite ix; split => //.
+      rewrite (le_trans xi)//.
+      destruct s as [|s0 s1] => //=.
+      case: abs => /= /andP[as0].
+      move/order_path_min => /(_ lt_trans)/allP H /eqP s0s1b.
+      destruct s1 as [|s1 s2].
+        by rewrite /= in s0s1b; rewrite s0s1b.
+      by apply/ltW/H; rewrite -s0s1b /=  mem_last.
+    split.
+      rewrite (le_trans _ ix)// ltW//.
+      case: abs => /order_path_min => /(_ lt_trans)/allP + _.
+      apply.
+      by apply/(nthP b); exists i.
     rewrite (le_trans xi)//.
-    destruct s as [|s0 s1] => //=.
-    case: abs => /= /andP[as0].
-    move/order_path_min => /(_ lt_trans)/allP H /eqP s0s1b.
-    destruct s1 as [|s1 s2].
-      by rewrite /= in s0s1b; rewrite s0s1b.
-    by apply/ltW/H; rewrite -s0s1b /=  mem_last.
-  split.
-    rewrite (le_trans _ ix)// ltW//.
-    case: abs => /order_path_min => /(_ lt_trans)/allP + _.
-    apply.
-    by apply/(nthP b); exists i.
-  rewrite (le_trans xi)//.
-  case: abs => sa /eqP asb.
-  move: si; rewrite leq_eqVlt => /predU1P[->|si].
-    by rewrite nth_default.
-  rewrite -{2} asb (last_nth b) -(@prednK (size s)); last by rewrite (leq_trans _ si).
-  apply: sorted_leq_nth => //.
-  - exact: le_trans.
-  - apply: path_sorted.
-    apply: sub_path sa.
-    by move=> ? ? /ltW.
-  - by rewrite inE prednK// (leq_trans _ si).
-  - by rewrite -(ltn_add2r 1) !addn1 (leq_trans si)// prednK// (leq_trans _ si).
-suff: forall i, (i < size s)%N ->
-    exists f : R -> 'rV_n, is_sol_on phi u0 (nth b (a :: s) i) (BLeft (nth b (a :: s) i.+1)) f.
-  move=> suf.
-  have pickup_itv (x : R) : x \in `[a, b] -> exists2 i : nat, (i < size s)%N & x \in I i.
-    move=> xab; apply: itv_partition_ex => //.
-    by move: xab; rewrite inE/= in_itv/=.
-  pose pickup_itv_fun (x : R) : nat :=
-    match pselect (x \in `[a, b]) with
-    | left H => sval (cid2 (pickup_itv x H))
-    | right _ => 0
-    end.
-  have lip2'' (i : nat) : (i <= size s)%N ->
-      {in I i, forall x : R, k.-lipschitz (phi x)}.
-    move=> im.
-    apply/in_switch/(@lipschitzW _ _ _ _ _ `[a, b]).
-      exact: Iiab.
-    apply/in_switch => t tab [X Y] [/= u0rX u0rY].
-    have /(_ (X, Y)) := lip2 tab.
-    exact.
-  have cont1'' (i : nat) : (i <= size s)%N ->
-      {in [set: 'rV_n], forall y : 'rV_n, {within [set` I i], continuous phi^~ y}}.
-    move=> si /= t tu0r.
-    apply: (@continuous_subspaceW _ _ _ `[a, b]); last exact: cont1.
+    case: abs => sa /eqP asb.
+    move: si; rewrite leq_eqVlt => /predU1P[->|si].
+      by rewrite nth_default.
+    rewrite -{2} asb (last_nth b) -(@prednK (size s)); last by rewrite (leq_trans _ si).
+    apply: sorted_leq_nth => //.
+    - exact: le_trans.
+    - apply: path_sorted.
+      apply: sub_path sa.
+      by move=> ? ? /ltW.
+    - by rewrite inE prednK// (leq_trans _ si).
+    - by rewrite -(ltn_add2r 1) !addn1 (leq_trans si)// prednK// (leq_trans _ si).
+   have -> : [set` I i] = [set b].
+     apply/seteqP; split => [x/=|].
+       rewrite in_itv/=.
+       rewrite nth_default/=//.
+       rewrite nth_default; last exact: ltnW.
+       by rewrite -eq_le => /eqP.
+     move=> _ /= ->.
+     rewrite in_itv/=.
+     rewrite nth_default/=//.
+     rewrite nth_default; last exact: ltnW.
+     by rewrite !lexx.
+   move=> x/= ->.
+   by rewrite bound_itvE ltW.
+have pickup_itv (x : R) : x \in `[a, b] -> exists2 i : nat, (i < size s)%N & x \in I i.
+  move=> xab; apply: itv_partition_ex => //.
+  by move: xab; rewrite inE/= in_itv.
+have lip2'' (i : nat) : (i <= size s)%N -> {in I i, forall x : R, k.-lipschitz (phi x)}.
+  move=> im.
+  apply/in_switch/(@lipschitzW _ _ _ _ _ `[a, b]).
     exact: Iiab.
-  pose F (x : R) : 'rV_n :=
+  apply/in_switch => t tab [X Y] [/= u0rX u0rY].
+  have /(_ (X, Y)) := lip2 tab.
+  exact.
+have cont1'' (i : nat) : (i <= size s)%N ->
+    {in [set: 'rV_n], forall y : 'rV_n, {within [set` I i], continuous phi^~ y}}.
+  move=> si /= t tu0r.
+  apply: (@continuous_subspaceW _ _ _ `[a, b]); last exact: cont1.
+  exact: Iiab.
+pose h0 := sup_phi phi a (nth b (a :: s) 1).
+pose f_0 : R -> U :=
+  @lipschitzT_solution_f R n phi a (nth b (a :: s) 1) k u0
+    (PosNum (r_gt0 u0 a (nth b (a :: s) 1))) rho rho1
+    (Ilt _ sizes_gt0) k0 (lip2'' _ (ltnW sizes_gt0)) (cont1'' _ (ltnW sizes_gt0)).
+have [v [v0 Pv]] : {v : nat -> elt_type |
+    v 0%N = exist _ (f_0, (a, nth b (a :: s) 1), O) Logic.I /\
+    forall n, elt_rel (v n) (v n.+1)}.
+  apply: dependent_choice => -[[[f [a' b']] i']] [].
+  pose init0 : U := f b'.
+  pose a'' := nth b (a :: s) i'.+1.
+  have [i's|i's] := ltnP (i'.+1) (size s)%N.
+    pose b'' := nth b (a :: s) i'.+2.
+    pose f_i : R -> U :=
+      @lipschitzT_solution_f R n phi a'' b'' k init0
+        (PosNum (r_gt0 init0 a'' b''))
+      rho rho1 (Ilt _ i's) k0 (lip2'' _ (ltnW i's)) (cont1'' _ (ltnW i's)).
+    exists (exist _ (f_i, (a'', b''), i'.+1) Logic.I).
+    rewrite /elt_rel.
+    rewrite /f_/=.
+    have [/=] := lipschitzT_solution init0 (PosNum (r_gt0 init0 a'' b'')) rho1
+         (Ilt i'.+1 i's) k0 (lip2'' i'.+1 (ltnW i's)) (cont1'' i'.+1 (ltnW i's)).
+    move=> + _ _.
+    rewrite -/f_i.
+    rewrite /init0.
+    rewrite /a_/=.
+    rewrite /b_/= => <-.
+    by rewrite /a''/=.
+  apply/cid.
+  move: i's; rewrite leq_eqVlt => /predU1P[i's|i's].
+    have a''E : a'' = last b s.
+      rewrite /a'' -i's.
+      rewrite -last_nth//.
+      rewrite -!nth_last.
+      apply: set_nth_default.
+      by rewrite prednK.
+    case: abs => _ /eqP asb.
+    have {}a''E : a'' = b.
+      rewrite a''E.
+      rewrite -nth_last -[RHS]asb -nth_last.
+      apply: set_nth_default.
+      by rewrite prednK.
+    exists (exist _ ((cst (f b')), (b, b), i'.+1) Logic.I).
+    rewrite /elt_rel/=.
+    rewrite /f_/=.
+    by rewrite /a_ /b_ /=.
+  have a''E : a'' = last b s.
+    rewrite /a'' /= nth_default//.
+    case: abs => _ /eqP asb.
+    rewrite -[LHS]asb -!nth_last.
+    apply: set_nth_default.
+    by rewrite prednK.
+  exists (exist _ ((cst (f b')), (b, b), i'.+1) Logic.I).
+  rewrite /elt_rel/=.
+  rewrite /f_/=.
+  by rewrite /a_ /b_ /=.
+pose pickup_itv_fun (x : R) : nat :=
+  match pselect (x \in `[a, b]) with
+  | left H => sval (cid2 (pickup_itv x H))
+  | right _ => 0
+  end.
+exists (fun x =>
     match pselect (x \in `[a, b]) with
     | left H => let i := sval (cid2 (pickup_itv x H)) in
                 let im : (i < size s)%N := (svalP (cid2 (pickup_itv x H))).1 in
                 let xIi : x \in I i := (svalP (cid2 (pickup_itv x H))).2 in
-      (@lipschitzT_solution_f R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1) k u0 r
-         rho rho1 (Ilt _ im) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im))) x
+      f_ (v i) x
     | right _ => \row_(i < n) 0
-    end.
-  exists F; split.
-    rewrite /F; case: pselect; last first.
-      by rewrite inE/= in_itv/= lexx (ltW ab).
-    move=> aab.
-    case: cid2 => /= x xs aIx.
-    set K1 := Ilt _ _.
-    set K2 := lip2'' _ _.
-    set K3 := cont1'' _ _.
-    have [d0 [[H1 fiu0] _ _]] :=
-      @lipschitzT_cauchy_lipschitz_local R n phi (nth b (a :: s) x) (nth b (a :: s) x.+1) k u0 r
-      rho rho1 K1 k0 (lip2'' _ (ltnW xs)) (cont1'' _ (ltnW xs)).
-    rewrite -[RHS]H1.
-    have <- : K2 = lip2'' x (ltnW xs) by apply: Prop_irrelevance.
-    have <- : K3 = (cont1'' x (ltnW xs)) by apply: Prop_irrelevance.
-    have x0 : x = 0.
-      admit.
-    by subst x.
-  move=> t tab.
-  have [i im tIi] : exists2 i : nat, (i < size s)%N & t \in I i.
-    apply: itv_partition_ex => //.
-    by move: tab; rewrite inE/= in_itv/= => /andP[] /ltW -> /ltW ->.
-  split.
-    move: tIi; rewrite /I in_itv/= => /andP[it ti].
-    pose f := @lipschitzT_solution_f R n phi
-      (nth b (a :: s) i) (nth b (a :: s) i.+1) k u0 r rho rho1 (Ilt _ im) k0
-      (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)).
-    suff : derivable f t 1.
-      admit.
-    have [d0 [[fau0 H1] _ _]] :=
-      @lipschitzT_cauchy_lipschitz_local R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
-        k u0 r rho rho1 (Ilt _ im) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)).
-    rewrite /= in H1.
-    apply H1.
-    rewrite inE/= in_itv/=.
-    apply/andP; split.
-      admit.
-    rewrite (le_lt_trans ti)//.
-    rewrite -[ltLHS]/(nth b (a :: s) i.+1).
-    have : safe_dist phi (nth b (a :: s) i) (nth b s i)%E k u0 r rho = delta.
-      rewrite Hsafe_dist.
-      rewrite /safe_dist.
-      rewrite minA.
-      apply/min_idPr.
-      rewrite le_min.
-      apply/andP; split.
-        rewrite -Hsafe_dist.
-        admit. (* pbm: rho must be defined after s!*)
-      rewrite (le_trans (ltW Hr))//.
-      rewrite ler_wpM2l//.
-      rewrite lef_pV2 ?posrE; last 2 first.
-        admit.
-        admit.
-      rewrite lerD2l.
-      apply: sup_phiS.
-      apply: cont1.
-      by rewrite inE.
-      exact: ltW.
-      apply: subset_itv; rewrite bnd_simp.
-      admit.
-      admit.
-    move=> ->.
+    end).
+split.
+- case: pselect; last first.
+    by rewrite inE/= bound_itvE (ltW ab).
+  move=> ?.
+  rewrite /=.
+  case: cid2 => // i/= si aIi.
+  rewrite /f_/=.
+  have i0 : i = 0.
+    apply/eqP/negPn.
+    rewrite -lt0n; apply/negP => i0.
+    move: aIi.
+    rewrite in_itv/= => /andP[ia ai].
+    move: ia.
+    rewrite leNgt => /negP; apply.
+    destruct i as [|i] => //=.
+    apply: itv_partition_gt_lb.
+    done.
+    done.
+  rewrite i0 v0/=.
+  have := lipschitzT_solution u0 (PosNum (r_gt0 u0 a (nth b (a :: s) 1))) rho1
+       (Ilt 0%N sizes_gt0) k0 (lip2'' 0%N (ltnW sizes_gt0)) (cont1'' 0%N (ltnW sizes_gt0)).
+  by case => //.
+- move=> t tab; split.
     admit.
   admit.
-admit.
-move=> i im.
-have Ilti1 : nth b (a :: s) i < nth b (a :: s) i.+1.
-   by apply: Ilt.
-have lip2'' (j : nat) : (j <= size s)%N ->
-    {in I j, forall x : R, k.-lipschitz_(closed_ball u0 r%:num) (phi x)}.
-  admit.
-have cont1'' (j : nat) : (j <= size s)%N ->
-    {in closed_ball u0 r%:num, forall y : 'rV_n, {within [set` I j], continuous phi^~ y}}.
-  admit.
-exists (@cauchy_lipschitz_local_f R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
-    k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)) rho rho1).
-have [d0 [[fau0 H1] H2 H3]] :=
-  @cauchy_lipschitz_local R n phi (nth b (a :: s) i) (nth b (a :: s) i.+1)
-    k u0 r (Ilti1) k0 (lip2'' _ (ltnW im)) (cont1'' _ (ltnW im)) rho rho1.
-split => // t tab.
-apply H1.
-apply/mem_set.
-move/set_mem : tab.
-apply: subset_itvl.
-rewrite bnd_simp.
-rewrite -lerBlDl.
-admit.
+- rewrite closure_neitv_oo//.
+  apply/(continuous_within_itvP _ ab); split.
+  + move=> t tab.
+    rewrite /continuous_at.
+    admit.
+  + admit.
+  + admit.
 Abort.
 
 End cauchy_lipschitz_global.
