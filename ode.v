@@ -1,12 +1,12 @@
 From HB Require Import structures.
 From mathcomp Require Import all_boot all_order ssralg ssrnum matrix interval.
 From mathcomp Require Import poly archimedean generic_quotient ring_quotient.
+From mathcomp Require Import interval_inference.
 From mathcomp Require Import mathcomp_extra unstable boolp classical_sets.
-From mathcomp Require Import constructive_ereal.
-From mathcomp Require Import functions reals interval_inference topology.
-From mathcomp Require Import prodnormedzmodule tvs normedtype landau.
-From mathcomp Require Import ereal sequences derive numfun measure realfun.
-From mathcomp Require Import lebesgue_measure lebesgue_integral ftc.
+From mathcomp Require Import contra functions constructive_ereal reals.
+From mathcomp Require Import topology prodnormedzmodule tvs normedtype.
+From mathcomp Require Import landau ereal sequences derive numfun measure.
+From mathcomp Require Import realfun lebesgue_measure lebesgue_integral ftc.
 Require Import tilt_analysis ode_common ode_contfun.
 
 (**md**************************************************************************)
@@ -1988,7 +1988,7 @@ Qed.
 
 End solution_locally_unique.
 
-(* move *)
+(* TODO: move *)
 Section closure_neitv.
 Context {R : realType}.
 Implicit Type a b : R.
@@ -2008,6 +2008,14 @@ Qed.
 
 End closure_neitv.
 
+(* TODO: move *)
+Lemma within_continuousB {K : realType} {V : normedModType K}
+    (A : set K) (f g : _ -> V) :
+  {within A, continuous f} -> {within A, continuous g} ->
+  {within A, continuous (f - g)}.
+Proof.
+by move=> cf cg x; apply: cvgB; [exact: cf|exact: cg].
+Qed.
 
 Section uniqueness.
 Context {R : realType} {n : nat} (a b : R).
@@ -2023,6 +2031,7 @@ Hypothesis phi_loclip :
 Variables (f : R -> U) (f' : R -> U).
 Hypothesis sol1 : is_sol_oo phi u0 a b f.
 Hypothesis sol2 : is_sol_oo phi u0 a b f'.
+
 Lemma locally_unique_extends t : a <= t < b -> f' t = f t ->
   exists Delta : {posnum R}, {in `[t, t + Delta%:num]%R, f =1 f'}.
 Proof.
@@ -2058,152 +2067,116 @@ have [D [P1 P2]] := initial_solution_unique tb k0 lip20 cont1' cf0 sol10 cf'0 so
 by exists D.
 Qed.
 
-Lemma solution_unique :  {in `[a, b]%R, f =1 f'}.
+Let in1_eq1 : {in `[a, a]%R, f =1 f'}.
 Proof.
-set E := [set t | t \in `[a, b]%R /\ {in `[a, t]%R, f =1 f'}].
+move=> t; rewrite in_itv/= -eq_le => /eqP <-.
+by rewrite (And31 sol1) (And31 sol2).
+Qed.
+
+Lemma solution_unique : {in `[a, b]%R, f =1 f'}.
+Proof.
+set E := `[a, b]%classic `&` [set t | {in `[a, t]%R, f =1 f'}].
 suff : E b by case.
-have Enonempty : E !=set0.
-  exists a; split; first by rewrite in_itv/= lexx ltW.
-  move => t; rewrite in_itv/= -eq_le => /eqP <-.
-  by rewrite (And31 sol1) (And31 sol2).
-have mon c : E c -> forall c', a <= c' <= c -> E c'.
-  move=> -[+ h c'] /andP[ac' cc'].
-  rewrite in_itv/= => /andP[ac cb].
-  split.
-    by rewrite in_itv/= ac' (le_trans cc').
-  move => t tac'.
-  apply: h.
-  by move: tac'; rewrite !inE/=; apply: subset_itvl; rewrite bnd_simp.
-have monC c c' : a <= c' -> E c -> ~ E c' -> c < c'.
-  move => ac' Ec nEc'.
-  rewrite ltNge; apply/negP => c'c.
-  apply/nEc'/(mon c) => //.
-  by rewrite ac'.
-have [hP|hP] := lem (has_sup E); last first.
-  have /(has_supPn Enonempty) := hP.
+have Ea : E a by split=> //=; rewrite bound_itvE/= ltW.
+have Enonempty : E !=set0 by exists a.
+have mon c : E c -> forall d, d \in `[a, c]%R -> E d.
+  move=> [/= cab] acff' d dac; split => /=.
+    by apply: subset_itvl dac; rewrite bnd_simp (itvP cab).
+  move=> t tad; apply: acff'.
+  by apply: subset_itvl tad; rewrite bnd_simp (itvP dac).
+have monC c d : a <= d -> E c -> ~ E d -> c < d.
+  move=> ad Ec nEd.
+  rewrite ltNge; apply/negP => cd.
+  apply/nEd/(mon c) => //.
+  by rewrite in_itv/= ad.
+have [hP|/(has_supPn Enonempty)] := lem (has_sup E); last first.
   move=> /(_ b)[x Ex bx].
-  apply/(mon x) => //.
-  by rewrite !ltW.
+  by apply/(mon x) => //; rewrite in_itv/= !ltW.
 have Eclosed : closed E.
   rewrite closedE/= => p pn.
   suff : forall x, ~ E x -> \forall y \near x, ~ E y.
-    move => H.
-    apply/not_notP => Ec.
-    apply: pn.
-    exact: H.
-  move=> x Ex1.
+    by apply: contraPP => Ep /(_ _ Ep).
+  move=> x notEx.
   have [xab|xnab] := boolP (x \in `[a, b]%R); last first.
     suff : \forall y \near x, ~ (y \in `[a,b]%R).
-      move=> h.
-      near=> y.
-      rewrite not_andP;left.
-      near: y.
-      exact: h.
+      by move=> ?; near do (rewrite not_andP; left).
     move: xnab; rewrite in_itv/= negb_and/= -!ltNge => /orP[xa|xb].
-      near=> y.
-      apply/negP; rewrite in_itv/= negb_and/= -!ltNge; apply/orP; left.
-      by near: y; exact: lt_nbhsl.
-    near=>y.
-    apply/negP.
-    rewrite in_itv/=negb_and/= -!ltNge; apply/orP; right.
-    by near: y; exact: lt_nbhsr.
-  rewrite not_andP in Ex1.
-  case: Ex1 => // {}Ex1.
-  have [t Et] : exists t, t \in `[a, x]%R /\ ~ (f t = f' t).
+    - near do (apply/negP; rewrite in_itv negb_and/= -!ltNge; apply/orP; left).
+      exact: lt_nbhsl.
+    - near do (apply/negP; rewrite in_itv negb_and/= -!ltNge; apply/orP; right).
+      exact: lt_nbhsr.
+  move: notEx;rewrite not_andP => -[//|notEx].
+  have [t Et] : exists t, t \in `[a, x]%R /\ f t != f' t.
      rewrite not_existsP => h.
-     apply Ex1 => t tax.
+     apply: notEx => t tax.
      have := h t.
-     by rewrite not_andP => -[//|/contrapT].
+     by rewrite not_andP => -[//|/negP/negPn/eqP].
   have [xt|xt]:= eqVneq x t.
     subst t.
     set g := fun x => `|f x - f' x|.
-    have contg : {within `[a,b], continuous g}.
-      apply: (within_continuous_comp_norm (ltW ab)) => t.
-      apply: continuousB.
-      - have := And33 sol1.
-        rewrite closure_neitv_oo//.
-        exact.
-      - have := And33 sol2.
-        rewrite closure_neitv_oo//.
-        exact.
-    have g0x : g x > 0.
-      rewrite normr_gt0 subr_eq0.
-      by apply/eqP; case: Et.
-    have g0 t : t \in `[a, b]%R -> g t > 0 -> ~  {in `[a, t]%R, f =1 f'}.
-      move => tab gt Et'.
-      move : gt.
+    have contg : {within `[a, b], continuous g}.
+      apply/(within_continuous_comp_norm (ltW ab))/within_continuousB.
+      - by have := And33 sol1; rewrite (closure_neitv_oo ab).
+      - by have := And33 sol2; rewrite (closure_neitv_oo ab).
+    have g0x : g x > 0 by rewrite normr_gt0 subr_eq0; case: Et.
+    have g0 t : t \in `[a, b]%R -> g t > 0 -> ~ {in `[a, t]%R, f =1 f'}.
+      move=> tab + atff'.
       suff -> : g t = 0 by rewrite ltxx.
-      apply/normr0P.
-      rewrite Et' ?subrr//.
+      apply/normr0P; rewrite atff' ?subrr//.
       by move: tab; rewrite !in_itv/= lexx => /andP[->].
     suff hgx: \forall y \near x^'-, 0 < g y.
-      near=>y.
+      near=> y.
       have [yx|xy Ey] := ltP y x; last first.
         have := mon _ Ey x.
         move: xab.
-        by rewrite /=in_itv/= xy => /andP[-> _] // /(_ isT)[].
-      apply/not_andP.
-      rewrite -implyE => yab.
-      apply g0 => //.
+        by rewrite !in_itv/= xy => /andP[-> _] /(_ isT)[].
+      apply/not_andP; rewrite -implyE => yab.
+      apply: g0 => //.
       by move: yx; near: y.
-    apply: (@cvgr_gt R R (nbhs x^'-) _ g (g x)) => //.
+    apply: (@cvgr_gt _ _ (x^'-) _ g (g x)) => //.
     have xa : a < x.
       rewrite ltNge.
-      apply: contra_notN Ex1.
+      contra: notEx.
       move: xab; rewrite in_itv/= => /andP[+ _] ax.
-      move/(conj ax) => /andP; rewrite -eq_le => /eqP ->.
-      move => t; rewrite in_itv/= -eq_le => /eqP <-.
-      by rewrite (And31 sol1) (And31 sol2).
-    have /(continuous_within_itvP _ ab) := contg => -[h1 _ h2].
+      by move/(conj ax) => /andP; rewrite -eq_le => /eqP ->.
+    have /(continuous_within_itvP _ ab)[cg _ gbb] := contg.
     move: xab; rewrite in_itv/= => /andP[_ ].
     rewrite le_eqVlt => /predU1P[-> //|xb].
-    apply/cvg_at_left_filter/h1.
+    apply/cvg_at_left_filter/cg.
     by rewrite in_itv/= xb xa.
-  have xt' : t < x.
-    case: Et; rewrite in_itv/= => /andP[_ ].
-    by rewrite le_eqVlt eq_sym (negbTE xt) .
+  have tx : t < x.
+    by case: Et; rewrite in_itv/= lt_neqAle (eq_sym t) xt => /andP[_ ->].
   near=> y.
-  move => Ey.
-  have : ~ E t.
-    rewrite not_andP.
-    right.
-    move=> /(_ t).
-    case: Et; rewrite  !in_itv/= => /andP[-> _/=].
-    by rewrite lexx => /[swap] => /(_ isT).
-  have ta : a <= t.
-    by case: Et; rewrite  in_itv/= => /andP[].
-  move/(monC y t ta Ey).
+  move=> Ey.
+  have ta : a <= t by case: Et; rewrite in_itv/= => /andP[].
+  have /(monC _ _ ta Ey) : ~ E t.
+    rewrite not_andP; right => /(_ t).
+    by rewrite bound_itvE/= ta => /(_ isT); apply/eqP; case: Et.
   apply/negP; rewrite -leNgt.
   by near: y; exact: nbhs_ge.
 have supE : E (sup E).
-  rewrite {1}(closure_id E).1 //.
-  apply: closure_sup => //.
-  by apply hP.
-have sup_itv : a <= sup E.
-  apply sup_upper_bound => //.
-  split; first by rewrite in_itv/= lexx ltW.
-  move => t; rewrite in_itv/= -eq_le => /eqP <-.
-  by rewrite (And31 sol1) (And31 sol2).
+  by rewrite {1}(closure_id E).1//; apply: closure_sup => //; apply hP.
+have sup_itv : a <= sup E by rewrite sup_upper_bound.
 have supeq : f' (sup E) = f (sup E).
   apply/esym; apply supE.
   by rewrite  in_itv/= lexx sup_itv.
 have [h|h] := leP b (sup E).
   apply: (mon _ supE) => //.
-  by rewrite (ltW ab).
+  by rewrite in_itv/= (ltW ab).
 have [|Delta Hdelta] := locally_unique_extends _ supeq; first by apply/andP.
 have Delta0 : 0 < Delta%:num by [].
 suff : Num.min b (sup E + Delta%:num) <= sup E.
-  rewrite ge_min => /orP[bE|].
-    by have := lt_le_trans h bE; rewrite ltxx.
+  rewrite ge_min => /orP[/(lt_le_trans h)|].
+    by rewrite ltxx.
   by rewrite gerDl leNgt Delta0.
 apply: sup_upper_bound => //.
 split.
-  by rewrite in_itv/= le_min (ltW ab)/= ler_wpDr//= ge_min lexx.
-move=> t.
-rewrite in_itv/= => -/andP[t1 t2].
+  by rewrite /= in_itv/= le_min (ltW ab)/= ler_wpDr//= ge_min lexx.
+move=> t ta.
 have [ht|ht] := leP t (sup E).
-  by apply supE; rewrite in_itv/= t1 ht.
-by apply: Hdelta; rewrite in_itv/= ltW// (le_trans t2)// ge_min lexx orbT.
+  by apply supE; rewrite in_itv/= (itvP ta).
+apply: Hdelta; rewrite in_itv/= ltW//=.
+by move: ta; rewrite in_itv/= le_min => /and3P[_].
 Unshelve. all: by end_near. Qed.
 
 End uniqueness.
