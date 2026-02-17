@@ -278,18 +278,18 @@ Let T := 'rV[K]_n.
 Variable phi : T -> T.
 Variable Init : set T.
 
-Definition is_locally_stable_at (x : T) :=
+Definition is_stable_at (x : T) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
   forall f D, f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
     `| f 0 - x | < d -> forall t, 0 < t < D -> `| f t - x | < eps.
 
 (* assuming solution exists for all time *)
-Definition is_stable_at (x : T) :=
+Definition is_global_time_stable_at (x : T) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
   forall f, f 0 \in Init -> sol_is_deriv_c0y phi f ->
     `| f 0 - x | < d -> forall t, 0 < t -> `| f t - x | < eps.
 
-Lemma locally_stable_stable : is_locally_stable_at `<=` is_stable_at.
+Lemma stable_global_time : is_stable_at `<=` is_global_time_stable_at.
 Proof.
 move=> x H e /H [d d0 stable].
 exists d => // z [z0Init zglob] zd /= t t0.
@@ -527,7 +527,7 @@ Hypothesis DV_le0 : forall D f, f 0 \in Init ->
 
 (* khalil theorem 4.1 *)
 Theorem Lyapunov_stability0 :
-  is_Lyapunov_candidate V Init 0 -> is_locally_stable_at phi Init 0.
+  is_Lyapunov_candidate V Init 0 -> is_stable_at phi Init 0.
 Proof.
 move=> VInitx /= eps eps0/=.
 move: VInitx => [/= xInit [Vx0 InitxV]].
@@ -706,12 +706,12 @@ rewrite subrK derive1E deriveB//; last by apply H.
 by rewrite derive_cst subr0 -derive1E; apply H.
 Qed.
 
-Lemma is_locally_stable_at_substitution x :
-  is_locally_stable_at (fun y => phi (y + x)) [set y - x | y in Init] 0 ->
-  is_locally_stable_at phi Init x.
+Lemma is_stable_at_substitution x :
+  is_stable_at (fun y => phi (y + x)) [set y - x | y in Init] 0 ->
+  is_stable_at phi Init x.
 Proof.
 move=> H.
-rewrite /is_locally_stable_at => /= e e0.
+rewrite /is_stable_at => /= e e0.
 have [/= d d0 {}H] := H _ e0.
 exists d => // f Delta [f0Init solf] f0xd t t0.
 rewrite -[_ - _]subr0.
@@ -784,10 +784,10 @@ Hypothesis V'_le0 : forall D (sol : K -> U),
   forall t, 0 < t < D -> 'D~(sol) V t <= 0.
 
 Theorem Lyapunov_stability :
-  is_Lyapunov_candidate V Init `<=` is_locally_stable_at phi Init.
+  is_Lyapunov_candidate V Init `<=` is_stable_at phi Init.
 Proof.
 move=> x VInitx.
-apply: is_locally_stable_at_substitution.
+apply: is_stable_at_substitution.
 apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
 - rewrite [X in open X](_ : _ = (fun y => y + x) @^-1` Init); last first.
     apply/seteqP; split.

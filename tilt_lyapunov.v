@@ -1466,7 +1466,7 @@ Variable Init : set 'rV[K]_6.
 
 Lemma equilibrium_zero_stable :
   Tilt.point1 \in Init -> open Init -> Init `<=` Tilt.Upsilon1 ->
-  is_locally_stable_at phi Init Tilt.point1.
+  is_stable_at phi Init Tilt.point1.
 Proof.
 move=> Init0 openInit Init_in_state.
 apply: (@Lyapunov_stability0 K _ phi Init openInit (V1 alpha1 gamma)).
