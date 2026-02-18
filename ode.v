@@ -2194,40 +2194,12 @@ Definition phi_ (t : R) x := phi x.
 Definition is_sol_sym u0 t0 d (sol : R -> U):=
    sol t0 = u0 /\ sol_is_deriv_oo phi (t0-d) (t0+d) sol.
 
-Let phi_lip2 t0: t0 \in `[a,b]%R ->  {in `[t0, b]%R, forall x, k.-lipschitz_B (phi x)}.  
-Proof.
-move => tab x abx; apply: lip2.
-move : abx; rewrite !inE/=; apply subset_itvr.
-by move : tab; rewrite in_itv/= bnd_simp => /andP[-> _].
-Qed.
-
-Let phi_cont1 t0 : t0 \in `[a,b]%R -> {in B, forall y, {within `[t0, b], continuous phi ^~ y}}.
-Proof.
-move => /= tab x Bx.
-apply /continuous_subspaceW/cont1 => //.
-apply: subset_itvr.
-by move : tab; rewrite in_itv/= bnd_simp => /andP[-> _].
-Qed.
-
 
 Let rho : {posnum R} := (2^-1)%:pos.
 
 Let rho1 : rho%:num < 1.
 Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 
-Let cauchy_lipschitz_fwd t0 : t0 \in `]a,b[%R -> exists f delta,
-  delta > 0 /\ is_sol_oo (phi) u0 t0 (t0 + delta) f /\
-  {in `[t0, t0 + delta]%R, forall t, closed_ball u0 r%:num (f t)}.
-Proof.
-rewrite /=in_itv/= => /andP[t0a t0b].
-have tab : t0 \in `[a,b]%R.
-  by rewrite in_itv/= !ltW.
-have [d0 [solf cball]] :=
-  cauchy_lipschitz_local t0b k0 (phi_lip2 tab) (phi_cont1 tab) rho1.
-exists (@cauchy_lipschitz_local_f R n phi t0 _ k u0 r t0b k0
-  (phi_lip2 tab) (phi_cont1 tab) rho rho1).
-by exists (safe_dist phi t0 b k u0 r rho).
-Qed.
 
 Lemma patch_in {X : Type} (f g : R -> X)  S x : x \in S -> patch f S g x = g x.
 Proof.
@@ -2264,19 +2236,55 @@ apply/(continuous_within_itvP _ ab); split.
 - by rewrite -{1}(opprK d); apply/cvg_at_rightNP; exact: fb.
 Qed.
 
-Let phi_lip2' t0 : t0 \in `[a,b] ->  {in `[-t0, -a]%R, forall x, k.-lipschitz_B (-phi (-x))}.
+Let r2 := (r%:num/2)%:pos.
+Let r4 := (r%:num/4)%:pos.
+
+Let ler4 : r4%:num <= r%:num. 
+Proof. by rewrite /r4/= ler_pdivrMr // ler_pMr // lerDl. Qed.
+Let ler42 : r4%:num <= r2%:num. 
+Proof. by rewrite /r4/r2/= ler_pdivrMr// -mulrA ler_pMr // ler_pdivlMl // mulr1 lerD // lerDl. Qed.
+
+Let B4 := closed_ball u0 r4%:num.
+
+Let phi_lip2 t0: t0 \in `[a,b]%R ->  {in `[t0, b]%R, forall x, k.-lipschitz_B4 (phi x)}.  
+Proof.
+move => tab x abx /= y By.
+apply: lip2.
+move : abx; rewrite !inE/=; apply subset_itvr.
+by move : tab; rewrite in_itv/= bnd_simp => /andP[-> _].
+split.
+by apply /le_closed_ball/By.1.
+by apply /le_closed_ball/By.2.
+Qed.
+
+Let phi_cont1 t0 : t0 \in `[a,b]%R -> {in B4, forall y, {within `[t0, b], continuous phi ^~ y}}.
+Proof.
+move => /= tab x Bx.
+apply /continuous_subspaceW/cont1 => //.
+apply: subset_itvr.
+by move : tab; rewrite in_itv/= bnd_simp => /andP[-> _].
+apply mem_set.
+apply set_mem in Bx.
+by apply /le_closed_ball/Bx.
+Qed.
+
+Let phi_lip2' t0 : t0 \in `[a,b]%R ->  {in `[-t0, -a]%R, forall x, k.-lipschitz_B4 (-phi (-x))}.
 Proof.
 move => t0ab  /= y ab x B12.
 rewrite /= -normrN opprD !opprK.
-apply: (lip2 _  B12).
+have B12' : (B `*` B) x.
+  split.
+  by apply /le_closed_ball/B12.1.
+  by apply /le_closed_ball/B12.2.
+apply: (lip2 _  B12').
 move : ab.
 rewrite !in_itv/= lerNl lerNr => /andP[h1 ->]//=.
 apply (le_trans h1).
 move : t0ab.
-by rewrite inE/=in_itv/= => /andP[].
+by rewrite in_itv/= => /andP[].
 Qed.
 
-Local Lemma phi_cont1' t0 : t0 \in `[a,b] -> {in B, forall y, {within `[-t0, -a], continuous -(fun t => phi (-t) y)}}.
+Local Lemma phi_cont1' t0 : t0 \in `[a,b]%R -> {in B4, forall y, {within `[-t0, -a], continuous -(fun t => phi (-t) y)}}.
 Proof. 
 move => t0ab /= y By.
 move => t.
@@ -2285,70 +2293,81 @@ have /within_continuous_minus : {within `[-(-a), - (-t0)], continuous phi^~ y}.
   rewrite !opprK.
   apply /continuous_subspaceW/cont1 => //.
   apply : subset_itvl.
-  by move: t0ab; rewrite inE/=in_itv/= bnd_simp => /andP[].
+  by move: t0ab; rewrite /=in_itv/= bnd_simp => /andP[].
+apply set_mem in By.
+apply mem_set.
+by apply : le_closed_ball By.
 apply.
 Qed.
 
-Lemma cauchy_lipschitz_sym t0 : t0 \in `]a,b[%R -> exists f delta, delta > 0 /\ is_sol_sym u0 t0 delta f.
+
+Let dplus t0 :=  safe_dist phi t0 b k u0 (r4%:num)%:pos rho.
+Let dminus t0 := safe_dist (fun t x => - phi (-t) x) (-t0) (-a) k u0 (r4%:num)%:pos rho.
+Let dboth t0 := Num.min (b-t0) (Num.min (dplus t0) (dminus t0)).
+(* Let fplus t0 t0b t0ab :=  @cauchy_lipschitz_local_f R n phi t0 _ k u0 (r%:num/4)%:pos *)
+(*     t0b k0 (phi_lip2 t0ab) (phi_cont1 t0ab) rho rho1. *)
+(* Let fminus t0 t0a t0ab := *)
+(*   @cauchy_lipschitz_local_f R n (fun t x => - phi (-t) x) (-t0) _ k u0 r *)
+(*     t0a k0 (phi_lip2' t0ab) (phi_cont1' t0ab) rho rho1. *)
+Lemma cauchy_lipschitz_sym t0 : t0 \in `]a,b[%R -> exists f, is_sol_sym u0 t0 (dboth t0) f.
 Proof.
 move => t0ab.
-have t0ab' : t0 \in `[a,b].
+have t0ab' : t0 \in `[a,b]%R.
   by rewrite inE;apply: subset_itv_oo_cc.
-have  [fplus [dplus [dplus0 [solplus cplus]]]] := cauchy_lipschitz_fwd t0ab.
+have t0b : t0 < b.
+  move: t0ab.
+  by rewrite in_itv/= => /andP[].
+have [dplus0 [solplus cplus]] :=
+  cauchy_lipschitz_local t0b k0
+    (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
+set fplus :=  @cauchy_lipschitz_local_f R n phi t0 _ k u0 r4 t0b k0
+                  (phi_lip2 t0ab') (phi_cont1 t0ab') rho rho1.
 have amin1 : -t0 < -a.
   rewrite ltrNr opprK.
   by move : t0ab; rewrite in_itv/= => /andP[].
-have [dminus0 [solminus cminus]] :=
+have dminus0 : 0 < dminus t0.
+  by apply safe_dist_gt0.
+
+have [_ [solminus cminus]] :=
   cauchy_lipschitz_local amin1 k0
     (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
-
 set fminus0 :=
-  @cauchy_lipschitz_local_f R n (fun t x => - phi (-t) x) (-t0) _ k u0 r
+  @cauchy_lipschitz_local_f R n (fun t x => - phi (-t) x) (-t0) _ k u0 r4
     amin1 k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho rho1.
-set dminus := safe_dist (fun t x => - phi (-t) x) (-t0) (-a) k u0 r rho.
 set fminus := fminus0 \o -%R.
-set r2 := (r%:num/2)%:pos.
-set r4 := (r%:num/4)%:pos.
-have ler4 : r4%:num <= r%:num. 
-  by rewrite /r4/= ler_pdivrMr // ler_pMr // lerDl.
-have ler42 : r4%:num <= r2%:num. 
-  by rewrite /r4/r2/= ler_pdivrMr// -mulrA ler_pMr // ler_pdivlMl // mulr1 lerD // lerDl.
-have adplus : t0 < t0 + dplus by rewrite ltrDl dplus0.
+have adplus : t0 < t0 + dplus t0 by rewrite ltrDl dplus0.
 have cfplus := And33 solplus.
 rewrite closure_neitv_oo in cfplus; last by rewrite ltrDl.
-have [rpos hropos] := ode.continuous_confined (a:=t0) (b:=t0 + dplus) (u0:=u0) r4 adplus cfplus (And31 solplus).
-have amind : -t0 < -t0 + dminus by rewrite ltrDl dminus0.
+have amind : -t0 < -t0 + dminus t0 by rewrite ltrDl dminus0.
 have cfminus' := And33 solminus.
 rewrite closure_neitv_oo in cfminus'; last by rewrite ltrDl.
-have cfminus : {within `[t0-dminus, t0], continuous fminus}.
+have cfminus : {within `[t0-dminus t0, t0], continuous fminus}.
   rewrite /fminus.
   apply: within_continuous_minus.
   apply /continuous_subspaceW/cfminus'.
   apply: subset_itvl.
   rewrite -/dminus.
   by rewrite bnd_simp/= opprD opprK.
-have [rneg hrneg] := ode.continuous_confined (a:=-t0) (b:=-t0 + dminus) (u0:=u0) r4 amind cfminus' (And31 solminus).
-set dboth := Num.min (b-t0) (Num.min dplus (Num.min dminus (Num.min rneg%:num rpos%:num))).
-have dboth0 : 0 < dboth.
+have dboth0 : 0 < dboth t0.
    rewrite lt_min; apply /andP;split; last by rewrite lt_min dplus0 //= lt_min dminus0 //=.
    rewrite subr_gt0.
    move : t0ab.
    by rewrite in_itv/= => /andP[].
-pose f := patch fplus `[t0 - dboth, t0] fminus.
-set uneg := f (t0 - dboth).
+pose f := patch fplus `[t0 - dboth t0, t0] fminus.
+set uneg := f (t0 - dboth t0).
 have Buneg : closed_ball uneg (r%:num/2) `<=` closed_ball u0 r%:num.
   rewrite /uneg/f patch_in/f/=;last first.
     by rewrite inE/=in_itv/= gerBl lexx ltW. 
   move => /=x xb.
   apply: (closed_ball_split _ xb) => //.
-  suff : fminus (t0 - dboth) \in closed_ball u0 (r%:num/4).
+  suff : fminus (t0 - dboth t0) \in closed_ball u0 (r%:num/4).
     rewrite !inE.
     apply le_closed_ball.
     rewrite ler_pdivrMr//= -mulrA /=ler_peMr//.
     by rewrite ler_pdivlMl //= mulr1 ltW // ler_ltD //= ltrDl.
-  apply hrneg.
-    rewrite inE/=in_itv/= opprB lerDr ltW //= addrC lerD //.
-    by rewrite /dboth ge_min; do 3 (apply /orP; right; rewrite ge_min);apply /orP;left.
+    apply mem_set;apply: cminus.
+    rewrite in_itv/= opprB lerDr ltW //= addrC lerD // .
+    by rewrite /dboth/dplus 3!ge_min lexx !orbT.
 have f01intersect : fminus t0 = fplus t0.
   by rewrite /fminus/= (And31 solminus) (And31 solplus).
 have fa : f t0 = u0.
@@ -2356,7 +2375,7 @@ have fa : f t0 = u0.
    apply solminus.
    by rewrite inE/=in_itv/= lexx gerBl ltW.
 set B' := closed_ball uneg (r2%:num).
-have lip2' : {in `[t0-dboth,t0+dboth], forall x, k.-lipschitz_B' (phi x)}.
+have lip2' : {in `[t0-dboth t0 ,t0+dboth t0], forall x, k.-lipschitz_B' (phi x)}.
   move => /= t tab [x1 x2] [Bx1 Bx2].
   apply lip2 => //.
   move : tab.
@@ -2367,15 +2386,15 @@ have lip2' : {in `[t0-dboth,t0+dboth], forall x, k.-lipschitz_B' (phi x)}.
   rewrite -lerBrDl.
   by rewrite !ge_min lexx.
   by split;apply Buneg.
-have contf_minus :   {within `[t0 - dboth, t0], continuous fminus}.
+have contf_minus :   {within `[t0 - dboth t0, t0], continuous fminus}.
   apply /continuous_subspaceW/cfminus.
   apply: subset_itvr.
   by rewrite bnd_simp /= lerD //= lerNr opprK 3!ge_min lexx !orbT. 
-have contf_plus :   {within `[t0, t0+dboth], continuous fplus}.
+have contf_plus :   {within `[t0, t0+dboth t0], continuous fplus}.
   apply /continuous_subspaceW/cfplus.
   apply: subset_itvl.
-  by rewrite bnd_simp /= lerD //= 3!ge_min lexx !orbT.
-have contf :   {within `[t0 - dboth, (t0 + dboth)%E], continuous f}.
+  by rewrite bnd_simp /= lerD //= 2!ge_min lexx !orbT.
+have contf :   {within `[t0 - dboth t0, (t0 + dboth t0)%E], continuous f}.
   apply : within_continuous_patch => //.
   by rewrite gtrBl.
   by rewrite ltrDl.
@@ -2384,50 +2403,47 @@ have r42 : r4%:num = (r2%:num / 2).
   rewrite -mulrA.
   apply congr2 => //.
   by rewrite -invfM -natrM.
-have fc : {in `[t0-dboth, (t0 + dboth)], forall t : R,  closed_ball (fminus (t0 - dboth)) r2%:num (f t)}.
+have fc : {in `[t0-dboth t0, (t0 + dboth t0)], forall t : R,  closed_ball (fminus (t0 - dboth t0)) r2%:num (f t)}.
   move => t tad.
   rewrite /f/=/patch/=.
-   have : (closed_ball (fminus (t0-dboth)) (r4%:num)) u0.
-     suff:  (fminus (t0-dboth)) \in closed_ball u0 (r4%:num). 
+   have : (closed_ball (fminus (t0-dboth t0)) (r4%:num)) u0.
+     suff:  (fminus (t0-dboth t0)) \in closed_ball u0 (r4%:num). 
        by rewrite inE/= !closed_ballE/closed_ball_/= // distrC .
-     apply: hrneg.
-     rewrite !inE/=!in_itv/= lerNr lerNl opprD !opprK gerBl ltW //= lerB //.
-     by rewrite !ge_min lexx !orbT.
+     apply mem_set;apply cminus.
+     rewrite !in_itv/= lerNr lerNl opprD !opprK gerBl ltW //= lerB //.
+     by rewrite /dboth/dminus 3!ge_min lexx !orbT. 
   rewrite r42.
   move => c1.
   case : ifP => ht.
   - have  : (fminus t) \in closed_ball u0 (r4%:num).
-     apply: hrneg.
-     move : ht.
-     rewrite !inE/=!in_itv/= lerNr lerNl opprD !opprK => /andP[h1 ->//=].
-     apply: (le_trans _ h1).
-     rewrite lerB //.
-     by rewrite !ge_min lexx !orbT.
+    apply mem_set;apply cminus.
+    move: ht.
+    rewrite inE/=!in_itv/= lerNr lerNl opprD !opprK => /andP[h1 ->//=]. 
+     apply: (le_trans _ h1). 
+     by rewrite lerB // 3!ge_min lexx !orbT.
    rewrite inE.
    rewrite !r42.
    move => c2.
    apply: (closed_ball_split _ c2) =>//.
   - have  : (fplus t) \in closed_ball u0 (r4%:num).
-     have ht' : t \in `[t0, t0 + dboth].
+     have ht' : t \in `[t0, t0 + dboth t0].
        have := tad.
        rewrite !inE /=!in_itv/= => /andP[h1 ->]; apply /andP; split => //.
        have [hat | hat] := lerP t0 t => //.
        rewrite -ht.
        by rewrite inE/=in_itv/= h1//= ltW.
-     apply: hropos.
+       apply mem_set;apply cplus.
        move : ht'.
-       rewrite !inE/= !in_itv/= => /andP[-> h1//=].
-       apply: (le_trans h1).
-       rewrite lerD //.
-       by rewrite !ge_min lexx !orbT.
+       rewrite inE/= !in_itv/= => /andP[-> h1//=].
+       apply: (le_trans h1). 
+       by rewrite lerD // /dboth /dplus 2!ge_min lexx !orbT.
      rewrite inE.
      rewrite !r42.
      move => c2.
      apply: (closed_ball_split _ c2) =>//.
-exists f, dboth.
+exists f.
 split => //.
-suff  h: is_sol_oo phi (f (t0-dboth)) (t0-dboth) (t0+dboth) f.
-  by split => //;apply:(And32 h).  
+suff  h: is_sol_oo phi (f (t0-dboth t0)) (t0-dboth t0) (t0+dboth t0) f by apply (And32 h).  
 have kn0 : k != 0 by apply lt0r_neq0.
 apply /(integral_sol_iff_sol (r := r2) kn0) => //.
   by rewrite ler_ltD // gtrN.
@@ -2481,13 +2497,12 @@ apply solution_extends => //.
     move => _ [/= t' tp] <-.
     apply (le_closed_ball (e1:=r4%:num)) => //.
     suff : (fminus t') \in closed_ball u0 r4%:num by rewrite inE.
-    apply hrneg.
-    move : tp.
-    rewrite in_itv/=inE/=in_itv/= lerNl opprK => /andP[h0 ->//=].
-    rewrite lerNl opprD opprK //=.
-    apply: (le_trans _ h0).
-    rewrite lerB //.
-    by rewrite !ge_min lexx !orbT.
+    apply mem_set;apply cminus.
+     move : tp. 
+    rewrite !in_itv/=lerNl opprK => /andP[h0 ->//=]. 
+    rewrite lerNl opprD opprK //=. 
+    apply: (le_trans _ h0). 
+    by rewrite lerB // 3!ge_min lexx !orbT.
 - apply : (within_continuous_lipschitz _ kn0 (u0 := u0) (r:=r)).
     exact: contf_plus.
     move => x bx.
@@ -2509,12 +2524,11 @@ apply solution_extends => //.
     move => _ [/= t' tp] <-.
     apply (le_closed_ball (e1:=r4%:num)) => //.
     suff : (fplus t') \in closed_ball u0 r4%:num by rewrite inE.
-    apply hropos.
+    apply mem_set;apply cplus.
     move : tp.
-    rewrite in_itv/=inE/=in_itv/= => /andP[-> h0 //=].
-    apply: (le_trans h0).
-    rewrite lerD //=.
-    by rewrite !ge_min lexx !orbT.
+    rewrite  !in_itv/= => /andP[-> h1//=].
+    apply: (le_trans h1). 
+    by rewrite lerD // /dboth /dplus 2!ge_min lexx !orbT.
 - apply /(integral_sol_iff_sol (r:=r2) kn0).
   + by rewrite gtrBl.
   + move => x bx.
@@ -2537,7 +2551,7 @@ apply solution_extends => //.
   + move => _ [t tp] <-.
     rewrite {1}/f patch_in;last first.
       by rewrite inE/=in_itv/= lexx //= gerBl ltW.
-    have tin : t \in `[t0-dboth, t0+dboth].
+    have tin : t \in `[t0-dboth t0, t0+dboth t0].
       move : tp.
       rewrite !inE.
       apply: subset_itv; rewrite bnd_simp //.
@@ -2621,12 +2635,11 @@ apply solution_extends => //.
     rewrite /fminus /=(And31 solminus).
     apply : (le_closed_ball ler42).
     suff :  fplus t \in closed_ball u0 r4%:num by rewrite inE.
-    apply hropos.
-    move : tp.
-    rewrite !inE/=!in_itv/= => /andP[-> h0]//=.
-    apply (le_trans h0).
-    rewrite lerD //=.
-    by rewrite !ge_min lexx !orbT.
+     apply mem_set;apply cplus.
+     move /mem_set : tp.
+     rewrite inE /=!in_itv/= => /andP[-> h1//=].
+     apply: (le_trans h1). 
+     by rewrite lerD // /dboth /dplus 2!ge_min lexx !orbT.
     rewrite /fminus /=(And31 solminus).
     split.
     apply solplus.
@@ -2635,14 +2648,15 @@ apply solution_extends => //.
     move : tad.
     rewrite !in_itv/= => /andP[-> h0]//=.
     apply (lt_le_trans h0).
-    by rewrite lerD //= !ge_min lexx !orbT. 
+    by rewrite lerD //= /dboth /dplus 2!ge_min lexx !orbT.  
     apply /continuous_subspaceW/cfplus.
     rewrite closure_neitv_oo;last by rewrite ltrDl.
     apply subset_itvl.
     rewrite bnd_simp /=.
-    by rewrite lerD //= !ge_min lexx !orbT. 
+    by rewrite lerD //= /dboth /dplus 2!ge_min lexx !orbT.  
 Qed.
 End picard_symmetric.
 
+(* only for autonomous, used for tilt *)
 Definition locally_lipschitz {R : realType} n (U := 'rV[R]_n) (phi : U -> U) :=
  forall x, exists r k : {posnum R}, k%:num.-lipschitz_(closed_ball x r%:num) phi.
