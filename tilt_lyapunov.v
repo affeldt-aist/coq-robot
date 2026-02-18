@@ -106,22 +106,21 @@ Qed.
 
 (* not used but could be interesting *)
 Lemma dRu t (u : K -> 'rV[K]_3) (T : K -> 'M[K]_3) (w' := ang_vel T)
-  : 'D_1 (fun t => u t *m T t) t = u t *m T t *m \S(w' t) + 'D_1 u t *m T t.
+  : (forall t, derivable u t 1) -> (forall t, derivable T t 1) -> (forall t, t \is 'SO[K]_3) -> 'D_1 (fun t => u t *m T t) t = u t *m T t *m \S(w' t) + 'D_1 u t *m T t.
 Proof.
-rewrite derive_mulmx; last 2 first.
-  admit.
-  admit.
+move => deru dert TisSO.
+rewrite derive_mulmx => //.
 rewrite addrC.
 congr(_+_).
-rewrite -ang_vel_mxE; last 2 first.
-  admit.
-  admit.
+rewrite -ang_vel_mxE ; last 2 first.
+  by move => t0; rewrite rotation_sub.
+  exact : dert.
 rewrite -mulmxA.
 rewrite mulmxE.
 rewrite -derive1mx_ang_vel; last first.
-  admit.
+  by move => t0; rewrite rotation_sub.
 by [].
-Abort.
+Qed.
 
 (* eqn (10/11): we write x_1 * S(w) whereas it is - S(w) * x_1 in [benallegue2023itac] *)
 Notation y_a := (y_a R g0).
@@ -852,6 +851,7 @@ Definition locally_exponentially_stable_at n (eqn : 'rV[K]_n -> 'rV[K]_n)
   hurwitz (jacobian eqn point).
 
 (* TODO: rm? *)
+(* lynda : future work ? *)
 Lemma tilt_eqn_is_locally_exponentially_stable_at_0 alpha1 gamma :
   locally_exponentially_stable_at (Tilt.eqn alpha1 gamma) Tilt.point1.
 Proof.
@@ -1131,6 +1131,8 @@ Qed.
 
 (* TODO: rework of this proof is needed *)
 (* NB: unused *)
+(* lynda : rm*)
+
 Lemma derive_along_Left_Right_le0 (sol : _ -> _ -> _) (x : 'rV[K]_6) :
   sol x 0 = Tilt.point1 ->
   sol_is_deriv_co (fun=> phi) 0 D (sol x) ->
@@ -1218,6 +1220,7 @@ Proof.
   by rewrite rsubmx_const lsubmx_const !subr0 !scaler0 mul0mx row_mx0.*)
 Abort.
 
+(* lynda : remove *)
 Lemma locnegdef_derive_along_V1 (sol : 'rV_6 -> K -> 'rV_6) (x : 'rV[K]_6)
    (zp1 := Left \o sol x) (z2 := Right \o sol x) :
   sol x 0 \in Tilt.Upsilon1 ->
