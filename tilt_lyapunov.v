@@ -810,26 +810,25 @@ Lemma V1_is_Lyapunov_candidate :
   is_Lyapunov_candidate V1 [set: 'rV_6] Tilt.point1.
 Proof.
 rewrite /V1 /Tilt.point1; split; first by rewrite inE.
-split.
-  by rewrite lsubmx_const rsubmx_const enorm0 expr0n/= !mul0r add0r.
-move=> /= z_near _ z0.
-have /orP[lz0|rz0] : (Left z_near != 0) || (Right z_near != 0).
-  rewrite -negb_and.
-  apply: contra z0 => /andP[/eqP l0 /eqP r0].
-  rewrite -[eqbLHS](@hsubmxK _ _ 3 3) l0 r0.
-  apply/eqP/rowP; move => i; rewrite !mxE /=; case: splitP => ? ?;
-  by rewrite mxE.
-- set rsub := Right z_near.
-  have : `|rsub|_e >= 0 by rewrite enorm_ge0.
-  set lsub := Left z_near.
-  move=> nor.
-  have normlsub : `|lsub|_e > 0 by rewrite enorm_gt0.
-  rewrite ltr_pwDl//.
-    by rewrite divr_gt0 ?exprn_gt0// mulr_gt0.
-  by rewrite divr_ge0 ?exprn_ge0// mulr_ge0// ltW.
-- rewrite ltr_pwDr//.
-    by rewrite divr_gt0 ?exprn_gt0 ?mulr_gt0 ?enorm_gt0.
-  by rewrite divr_ge0 ?exprn_ge0 ?enorm_ge0 ?mulr_ge0// ltW.
+- by rewrite lsubmx_const rsubmx_const enorm0 expr0n/= !mul0r add0r.
+- move=> /= z_near _ z0.
+  have /orP[lz0|rz0] : (Left z_near != 0) || (Right z_near != 0).
+    rewrite -negb_and.
+    apply: contra z0 => /andP[/eqP l0 /eqP r0].
+    rewrite -[eqbLHS](@hsubmxK _ _ 3 3) l0 r0.
+    apply/eqP/rowP; move => i; rewrite !mxE /=; case: splitP => ? ?;
+    by rewrite mxE.
+  + set rsub := Right z_near.
+    have : `|rsub|_e >= 0 by rewrite enorm_ge0.
+    set lsub := Left z_near.
+    move=> nor.
+    have normlsub : `|lsub|_e > 0 by rewrite enorm_gt0.
+    rewrite ltr_pwDl//.
+      by rewrite divr_gt0 ?exprn_gt0// mulr_gt0.
+    by rewrite divr_ge0 ?exprn_ge0// mulr_ge0// ltW.
+  + rewrite ltr_pwDr//.
+      by rewrite divr_gt0 ?exprn_gt0 ?mulr_gt0 ?enorm_gt0.
+    by rewrite divr_ge0 ?exprn_ge0 ?enorm_ge0 ?mulr_ge0// ltW.
 Unshelve. all: by end_near. Qed.
 
 Definition V1dot (zp1_z2 : 'rV[K]_6) : K :=
@@ -1293,7 +1292,7 @@ Qed.*) Abort.*)
 Lemma derive_along_V1_le0 (sol : K -> 'rV[K]_6) :
   sol 0 \in Tilt.Upsilon1 ->
   sol_is_deriv_co (fun=> phi) 0 D sol ->
-  (forall t, 0 < t < D -> differentiable sol t) ->
+  (forall t, t \in `]0, D[%R -> differentiable sol t) ->
   forall t : K, 0 < t < D ->
   'D~(sol) (V1 alpha1 gamma) t <= 0.
 Proof.
@@ -1469,31 +1468,24 @@ Lemma equilibrium_zero_stable :
   is_stable_at phi Init Tilt.point1.
 Proof.
 move=> Init0 openInit Init_in_state.
-apply: (@Lyapunov_stability0 K _ phi Init openInit (V1 alpha1 gamma)).
+apply: (@Lyapunov_stability K _ phi Init openInit (V1 alpha1 gamma)).
 - exact: V1_diff.
-- move=> Delta /= sol sol0 solP t t0.
-  apply: (@derive_along_V1_le0 _ _ _ _ _ Delta sol).
-  + assumption.
-  + assumption.
+- move=> D /= sol sol0 solP t t0.
+  apply: (@derive_along_V1_le0 _ _ _ _ _ D sol) => //.
   + rewrite inE.
     apply: Init_in_state.
     by rewrite inE in sol0.
-  + exact: solP.
-  + move=> /= t1 t10Delta.
+  + move=> /= t1 t10D.
     apply/derivable1_diffP.
     apply solP.
-    rewrite in_itv/=.
-    by case/andP : t10Delta => /ltW -> ->.
-  + exact: t0.
+    by apply: subset_itvr t10D; rewrite bnd_simp.
 - have := V1_is_Lyapunov_candidate alpha1_gt0 gamma_gt0.
   rewrite /is_Lyapunov_candidate /Tilt.point1 => Hpos.
   rewrite /V1 lsubmx_const rsubmx_const; split => //.
-  split.
-    by rewrite !expr2 !enorm0 !mulr0 !mul0r add0r.
-  move=> z zin z_neq0.
-  case: Hpos => // _ [V1_eq0 V1_gt0].
-  apply: V1_gt0 => //.
-  by rewrite inE.
+  + by rewrite !expr2 !enorm0 !mulr0 !mul0r add0r.
+  + move=> z zin z_neq0.
+    case: Hpos => // _ [V1_eq0].
+    by apply => //; rewrite in_setT.
 Qed.
 
 End equilibrium_zero_stable.
