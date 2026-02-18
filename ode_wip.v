@@ -65,8 +65,7 @@ apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
   apply/continuous_subspaceW/cont1 => //.
     by apply: subset_itvl => /=; rewrite bnd_simp -lerBrDl safe_dist_itv.
   by rewrite inE.
-- rewrite /local_solution.
-  exact: cts_fun.
+- exact: cts_fun.
 - by move => _ [t tad] <-; exact: cauchy_lipschitz_in_cball.
 - exact: cauchy_lipschitz_integral_version.
 Qed.
