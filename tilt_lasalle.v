@@ -148,6 +148,17 @@ have [hbv|hbv] := connected_subset V1V2sep Bto (Bcon _).
   by apply: hbv; apply: EB; left.
 Qed.
 
+Section sublevel.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.
+
+Definition sublevel (V : U -> R) c := [set x : U | V x <= c].
+
+Lemma sublevel_preimage (V : U -> R) c : sublevel V c = V @^-1` [set r | r <= c].
+Proof. by []. Qed.
+
+End sublevel.
+
 Section LaSalle_tilt.
 Context {K : realType}.
 Let U := 'rV[K]_6.
@@ -173,85 +184,76 @@ split.
 by rewrite derive1E; apply H.
 Qed.
 
-Definition Ksub (p : U) :=
-  [set x | Tilt.V1 alpha1 gamma x <= Tilt.V1 alpha1 gamma p] `&` Tilt.Upsilon1.
+Definition sublevelUpsilon1 (p : U) :=
+  sublevel (Tilt.V1 alpha1 gamma) (Tilt.V1 alpha1 gamma p) `&` Tilt.Upsilon1.
+
+Lemma mem_sublevelUpsilon1 p : Tilt.Upsilon1 p ->
+  p \in sublevelUpsilon1 p.
+Proof. by rewrite /sublevelUpsilon1 /sublevel/= inE/=. Qed.
 
 (* continuity in initial value: assumption needed for LaSalle *)
-Hypothesis cont_sol : forall p t, {within Ksub p, continuous sol^~ t}.
+Hypothesis cont_sol : forall p t, {within sublevelUpsilon1 p, continuous sol^~ t}.
 
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
 Lemma V1_bound_compact p :
-  compact [set x | Tilt.V1 alpha1 gamma x <= Tilt.V1 alpha1 gamma p].
+  compact (sublevel (Tilt.V1 alpha1 gamma) (Tilt.V1 alpha1 gamma p)).
 Proof.
 (* TODO: use something similar to compact_sphere *)
 apply: bounded_closed_compact.
 - rewrite /Tilt.V1/= /bounded_near.
-  near=>R.
-  move => /= x.
-  rewrite !addf_div; rewrite ?lt0r_neq0 ?mulr_gt0 //.
-  rewrite ler_pdivrMr ?mulr_gt0 // divrK; last first.
+  near=> r.
+  move=> /= x.
+  rewrite /sublevel/= !addf_div; rewrite ?lt0r_neq0 ?mulr_gt0//.
+  rewrite ler_pdivrMr ?mulr_gt0// divrK; last first.
     by rewrite unitfE lt0r_neq0 // ?mulr_gt0.
-  rewrite  !(mulrC 2) !mulrA -!mulrDl ler_pM2r //.
-  move => h.
-  set c :=  `| Left p |_e ^+ 2 * gamma + `| Right p |_e ^+ 2 * alpha1.
+  rewrite  !(mulrC 2) !mulrA -!mulrDl ler_pM2r//  => h.
+  set c := `| Left p |_e ^+ 2 * gamma + `| Right p |_e ^+ 2 * alpha1.
   have c0 : 0 <= c.
-    by apply addr_ge0; rewrite mulr_ge0  // ?sqr_ge0 ?ltW.
-  have hL :  `| Left x |_e <= Num.sqrt (c / gamma).
-    rewrite -(sqr_sqrtr (enorm_ge0 (Left x)) ).
+    by rewrite addr_ge0// mulr_ge0 ?sqr_ge0 ?ltW.
+  have hL : `| Left x |_e <= Num.sqrt (c / gamma).
+    rewrite -(sqr_sqrtr (enorm_ge0 (Left x))).
     rewrite /GRing.exp/= -sqrtrM ?enorm_ge0//.
     rewrite ler_sqrt ?divr_ge0 ?(@ltW _ _ _ gamma)//.
     rewrite ler_pdivlMr//.
     apply: le_trans h.
     by rewrite lerDl mulr_ge0// ?sqr_ge0 ?ltW.
-  have hR :  `| Right x |_e <= Num.sqrt (c / alpha1).
-    rewrite -(sqr_sqrtr (enorm_ge0 (Right x)) ).
+  have hR : `| Right x |_e <= Num.sqrt (c / alpha1).
+    rewrite -(sqr_sqrtr (enorm_ge0 (Right x))).
     rewrite /GRing.exp/= -sqrtrM ?enorm_ge0//.
     rewrite ler_sqrt// ?divr_ge0 ?(@ltW _ _ _ alpha1)//.
     rewrite ler_pdivlMr//.
     apply: le_trans h.
     by rewrite addrC lerDl mulr_ge0 // ?sqr_ge0 ?ltW.
   have normb : `|x| <=  `| Left x |_e  + `|Right x|_e.
-    have {1}-> : x = row_mx (Left x) (Right x).
-      by rewrite hsubmxK.
-   rewrite (norm_rowmx (Left x)).
-   apply (@le_trans _ _ (`|Left x|  + `|Right x|)).
-   rewrite ge_max.
-     by apply /andP; split; rewrite ?lerDl ?lerDr normr_ge0.
-   apply: lerD.
-     exact: mxnorm_enorm_le.
-   exact: mxnorm_enorm_le.
-  apply: (le_trans normb).
-  by apply: (le_trans (lerD hL hR)).
-- have -> : [set x | Tilt.V1 alpha1 gamma x <= Tilt.V1 alpha1 gamma p] =
-            (Tilt.V1 alpha1 gamma) @^-1`
-              [set r | r <= Tilt.V1 alpha1 gamma p] by [].
+    rewrite -[in leLHS](@hsubmxK _ 1 3 3 x) (norm_rowmx (Left x)) ge_max.
+    by rewrite !(le_trans (mxnorm_enorm_le _))//= ?lerDl ?lerDr ?enorm_ge0.
+  exact/(le_trans normb)/(le_trans (lerD hL hR)).
+- rewrite sublevel_preimage.
   apply: closed_comp.
     move=> /= x xin.
-    exact: (differentiable_continuous (V1_diff _ _ _ )).
+    exact: (differentiable_continuous (V1_diff _ _ _)).
   exact: closed_le.
 Unshelve. all: by end_near. Qed.
 
-Lemma compact_Ksub p : compact (Ksub p).
+Lemma compact_sublevelUpsilon1 p : compact (sublevelUpsilon1 p).
 Proof.
-apply: compact_closedI.
-exact: V1_bound_compact.
-have -> : Tilt.Upsilon1  = (fun x => `| 'e_2 - Right x |_e ) @^-1` [set (1 : K)].
-  by [].
-apply : closed_comp => //.
-move => x xp.
-apply : continuous_comp; last by exact:continuous_enorm.
+apply: compact_closedI; first exact: V1_bound_compact.
+rewrite Tilt.Upsilon1_preimage.
+apply : closed_comp => // => x xp.
+apply : continuous_comp; last exact: continuous_enorm.
 apply: continuousB.
-exact: cst_continuous.
+  exact: cst_continuous.
 exact: continuous_rsubmx.
 Qed.
 
-Lemma invariant_Ksub p : lasalle.is_invariant sol (Ksub p).
+Lemma invariant_sublevelUpsilon1 p :
+  lasalle.is_invariant sol (sublevelUpsilon1 p).
 Proof.
 rewrite /= /lasalle.is_invariant/=.
-move => /= x. (* . [/= sol' [d [solP [t h]]]]*)
-rewrite /Ksub/= =>  -[Vx Kx] t t0.
+move => /= x.
+rewrite /sublevelUpsilon1/= =>  -[Vx Kx] t t0.
 split; last first.
   apply/(@tilt_state_spaceS  _ alpha1 gamma).
   exists (sol x), (t + 1) => /=. (* use large enough time *)
@@ -264,6 +266,7 @@ split; last first.
   + exists t => //.
     by rewrite /= in_itv/=t0/=ltrDl.
 move/mem_set : (Kx) => /isSol /sol_is_deriv_c0yP solA.
+rewrite /sublevel/=.
 rewrite (le_trans _ Vx)//.
 rewrite -[in leRHS](@initp x).
 have : {in `[0, t + 1[, forall t : K, derivable (sol x) t 1}.
@@ -287,7 +290,8 @@ apply.
 - by rewrite lexx.
 Qed.
 
-Local Lemma sol_Ksub p u : u \in Ksub p -> sol_is_deriv_c0y phi (sol u).
+Local Lemma sol_sublevelUpsilon1 p u :
+  u \in sublevelUpsilon1 p -> sol_is_deriv_c0y phi (sol u).
 Proof.
 rewrite inE/= => -[h1 h2].
 apply isSol => //.
@@ -330,106 +334,98 @@ apply : differentiable_continuous.
 apply /derivable1_diffP.
 have [ht | ht] := ltP t 0; last by apply /ex_derive/issol1.
 apply : (@near_eq_derivable _ _ _ (fun t => 2 *: sol p 0 - sol p (-t))) => //.
-  near=> s.
-  rewrite -issol0 //.
-  near: s.
-   by apply: lt_nbhsl.
-apply /derivable1_diffP.
+  near do (rewrite -issol0//).
+  exact: lt_nbhsl.
+apply/derivable1_diffP.
 apply: differentiable_comp => //.
 apply: differentiable_comp => //.
 apply: differentiable_comp => //.
-apply /derivable1_diffP.
-apply /ex_derive/issol1.
-rewrite lerNr oppr0 ltW//.
+apply/derivable1_diffP.
+apply/ex_derive/issol1.
+by rewrite lerNr oppr0 ltW.
 Unshelve. all: by end_near. Qed.
-
-Local Lemma q_inKsubq q : q \in Tilt.Upsilon1 -> q \in Ksub q.
-Proof. rewrite !inE => h;split => //=. Qed.
 
 Local Lemma limS_subset_V1dot0 p :
   p \in Tilt.Upsilon1 ->
-  lasalle.limS sol (Ksub p) `<=` [set x : 'rV[K]_6 | V1dot x = 0] `&` Tilt.Upsilon1.
+  lasalle.limS sol (sublevelUpsilon1 p) `<=`
+  [set x : 'rV[K]_6 | V1dot x = 0] `&` Tilt.Upsilon1.
 Proof.
 move => ps.
-have lasalle_sol : (forall y : K -> 'rV_6, Ksub p (y 0) -> lasalle.is_sol phi y <-> y = sol (y 0)).
-  move => y Ky.
+have lasalle_sol (y : K -> 'rV_6) :
+  sublevelUpsilon1 p (y 0) -> lasalle.is_sol phi y <-> y = sol (y 0).
+  move=> Ky.
   apply/solP.
   rewrite inE.
   by apply Ky.
-have H : lasalle.limS sol (Ksub p) `<=`
+have H : lasalle.limS sol (sublevelUpsilon1 p) `<=`
          [set x | (Tilt.V1 alpha1 gamma \o sol x)^`()%classic 0 = 0] `&`
          Tilt.Upsilon1.
   rewrite subsetI; split.
-  apply: (@lasalle.stable_limS _ _ _ _ (@compact_Ksub p) _ _ lasalle_sol _ (@invariant_Ksub p) (Tilt.V1 alpha1 gamma)) => //=.
-    apply/continuous_subspaceT => x xK.
-    apply : differentiable_continuous.
-    apply: V1_diff.
-    move => /= p0 t K0 t0.
-    apply /derivable1_diffP.
-    apply differentiable_comp.
-    apply /derivable1_diffP.
-    apply isSol => //; last first.
-      by rewrite in_itv/= andbT.
-    rewrite inE.
-    by have [_ +] := K0.
-    exact: V1_diff.
-    move => p0 K0.
-    have p0s : p0 \in Tilt.Upsilon1.
-    by move : K0;rewrite inE/=/Ksub/inE/=;move=>[].
-    rewrite derive1E.
-    rewrite -derive_along_derive.
-    apply : derive_along_V1_le0_global => //.
-    by rewrite initp.
-    by apply isSol.
-    rewrite initp.
-    by apply: V1_diff => //.
-    apply /derivable1_diffP.
-    apply isSol => //.
+  - apply: (@lasalle.stable_limS _ _ _ _ (@compact_sublevelUpsilon1 p) _ _
+        lasalle_sol _ (@invariant_sublevelUpsilon1 p)
+        (Tilt.V1 alpha1 gamma)) => //=.
+    + apply/continuous_subspaceT => x xK.
+      apply: differentiable_continuous.
+      exact: V1_diff.
+    + move=> /= p0 t K0 t0.
+      apply/derivable1_diffP.
+      apply: differentiable_comp.
+        apply/derivable1_diffP.
+        apply isSol => //; last first.
+          by rewrite in_itv/= andbT.
+        rewrite inE.
+        by have [_ +] := K0.
+      exact: V1_diff.
+    + move=> p0 K0.
+      have p0s : p0 \in Tilt.Upsilon1.
+        by move : K0; rewrite inE/= /inE/= => -[].
+      rewrite derive1E -derive_along_derive.
+      * apply : derive_along_V1_le0_global => //.
+          by rewrite initp.
+        by apply isSol.
+      * rewrite initp.
+        exact: V1_diff.
+    + apply /derivable1_diffP.
+      apply isSol => //.
+      by rewrite in_itv/= lexx.
+  - move=>/=x [q qKsub xcl].
+    suff [] : (sublevelUpsilon1 q) x by [].
+    rewrite (closure_id (sublevelUpsilon1 q)).1; last first.
+      apply compact_closed => //.
+      exact: compact_sublevelUpsilon1.
+    have qs (t : K) : 0 <= t -> state_space phi (sublevelUpsilon1 q) (sol q t).
+      move=> t0; exists (sol q), (t + 1); split.
+      + by rewrite initp; apply: mem_sublevelUpsilon1; case: qKsub.
+      + apply: sol_is_deriv_c0yco.
+        by apply isSol; rewrite inE; apply qKsub.
+      + exists t => //.
+        by rewrite/=in_itv/= t0 ltrDl ltr01.
+    have lim_sp : (sol q x @[x --> +oo]) (sublevelUpsilon1 q).
+      exists 0; split => // t t0 /=.
+      apply invariant_sublevelUpsilon1.
+        split => /=.
+          by rewrite /sublevel/=.
+        by case: qKsub.
+      by rewrite ltW.
+    by move: xcl; rewrite clusterE; exact.
+apply: (subset_trans H) =>/= x [+ h1] /=.
+rewrite /= derive1E -derive_along_derive.
+- rewrite derive_along_V1_global //=.
+    by rewrite initp ?inE.
+  split => //.
+  apply isSol => //.
+    by apply/mem_set.
+  apply isSol => //.
+  by apply/mem_set.
+- exact: V1_diff.
+- apply/derivable1_diffP.
+  apply isSol => //; last first.
     by rewrite in_itv/= lexx.
-  move=>/=x [q qKsub xcl].
-  suff [] : (Ksub q) x by [].
-  rewrite (closure_id (Ksub q)).1;last first.
-  apply compact_closed => //.
-  exact: compact_Ksub.
-  have qs (t :K) : 0 <= t -> state_space phi (Ksub q) (sol q t).
-    exists (sol q), (t+1).
-    split.
-    rewrite initp;  apply q_inKsubq.
-    have/= [_ +] := qKsub.
-    by move/mem_set.
-    apply: sol_is_deriv_c0yco.
-    by apply isSol;rewrite inE;apply qKsub.
-    exists t => //.
-    by rewrite/=in_itv/=H ltrDl ltr01.
-  have lim_sp : (sol q x @[x --> +oo]) (Ksub q).
-    exists 0; split => // t t0 /=.
-    apply invariant_Ksub.
-    split => /=.
-    by rewrite lexx.
-    by have/= [_ +] := qKsub.
-    by rewrite ltW.
-  rewrite clusterE in xcl.
-  by apply: xcl.
-apply: (subset_trans H).
-move =>/= x [+ h1].
-rewrite derive1E.
-rewrite -derive_along_derive.
-rewrite derive_along_V1_global //=.
-by rewrite initp ?inE.
-split => //.
-apply isSol => //.
-by apply/mem_set.
-apply isSol => //.
-by apply/mem_set.
-by apply: V1_diff.
-apply /derivable1_diffP.
-apply isSol => //; last first.
-  by rewrite in_itv/= lexx.
-by rewrite inE.
+  by rewrite inE.
 Qed.
 
 Lemma limS_subset_points p :
-  p \in Tilt.Upsilon1 -> lasalle.limS sol (Ksub p) `<=` Tilt.points.
+  p \in Tilt.Upsilon1 -> lasalle.limS sol (sublevelUpsilon1 p) `<=` Tilt.points.
 Proof.
 have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Upsilon1.
   apply/seteqP; split => x /=.
@@ -458,13 +454,12 @@ Lemma cvg_to_set_points p : p \in Tilt.Upsilon1 ->
   sol p t @[t --> +oo] --> (Tilt.points : set 'rV_6).
 Proof.
 move=> /set_mem ps.
-have : p \in Ksub p by apply/mem_set; split => //=.
-move => pK.
-have p0K : (forall p0 : 'rV_6, p0 \in Ksub p -> sol p0 0 = p0).
+have p0K : (forall p0 : 'rV_6, p0 \in sublevelUpsilon1 p -> sol p0 0 = p0).
   move => q /set_mem[_ h].
   exact: initp.
-apply: (cvg_trans (lasalle.cvg_to_limS (@compact_Ksub p) (@invariant_Ksub p) _)).
-  by move: pK => /set_mem.
+apply: (cvg_trans (lasalle.cvg_to_limS (@compact_sublevelUpsilon1 p)
+                    (@invariant_sublevelUpsilon1 p) _)).
+  by apply/set_mem/mem_sublevelUpsilon1.
 move => /= S [eps eps0 Be].
 exists eps => //.
 apply bigcup_sub => /= x H.
@@ -551,7 +546,8 @@ have sep : separated [set (@Tilt.point1 K)] [set Tilt.point2].
     rewrite sub1set.
     apply/mem_set => /=.
     exact/nesym/eqP/Tilt.point1_neq2.
-have [/subset_set1 [/nonemptyPn A0 | ] | /subset_set1 [/nonemptyPn A0 |] ]:= (connected_subset sep Asub Ac) => //.
+have [/subset_set1 [/nonemptyPn A0 | ] | /subset_set1 [/nonemptyPn A0 |] ] :=
+  connected_subset sep Asub Ac => //.
 by left.
 by right.
 Qed.
@@ -559,21 +555,21 @@ Qed.
 Lemma cluster_nonempty p : p \in Tilt.Upsilon1 -> cluster (sol p t @[t --> +oo]) !=set0.
 Proof.
 move => sp.
-suff : (Ksub p) `&`  cluster (sol p t @[t --> +oo]) !=set0.
+suff : (sublevelUpsilon1 p) `&`  cluster (sol p t @[t --> +oo]) !=set0.
   move => [x [_ cx]].
   by exists x.
-apply (@compact_Ksub p) => //.
+apply (@compact_sublevelUpsilon1 p) => //.
   by apply: fmap_proper_filter.
 apply sub_image_at_infty => /=.
 move => _ [t t0] <-.
-apply invariant_Ksub => //.
-by have /set_mem := q_inKsubq sp.
+apply invariant_sublevelUpsilon1 => //.
+by apply/set_mem/mem_sublevelUpsilon1/set_mem.
 Qed.
 
-Lemma p1_Ksub p : Ksub p Tilt.point1.
+Lemma p1_sublevelUpsilon1 p : sublevelUpsilon1 p Tilt.point1.
 Proof.
 split => /=; last by have /set_mem := @tilt_point1_in_state_space K.
-rewrite /Tilt.point1 /Tilt.V1.
+rewrite /sublevel/= /Tilt.point1 /Tilt.V1.
 rewrite lsubmx_const rsubmx_const/= !enorm0 !expr0n /= !mul0r add0r.
 by rewrite addr_ge0 // divr_ge0 // ?sqr_ge0 ?mulr_ge0 // ltW.
 Qed.
@@ -584,19 +580,19 @@ Lemma tilt_cvg_to_point1_or_point2 p : p \in Tilt.Upsilon1 ->
 Proof.
 move => ps.
 have cluster_con : connected (cluster (sol p t @[t --> +oo])).
-  apply: (compact_connected_cluster _ _ _ (@compact_Ksub p) ) => //.
+  apply: (compact_connected_cluster _ _ _ (@compact_sublevelUpsilon1 p) ) => //.
     by apply: pseudometric_normal.
     by apply: sol_continuous.
   move => t t0.
   apply/mem_set.
-  apply: invariant_Ksub => //.
-  by have /set_mem := q_inKsubq ps.
+  apply: invariant_sublevelUpsilon1 => //.
+  by apply/set_mem/mem_sublevelUpsilon1/set_mem.
 have := connected2_subset cluster_con (cluster_nonempty ps) (cluster_contained_points ps).
 suff H (q : U): cluster (sol p t @[t --> +oo]) = [set q] ->  sol p t @[t --> +oo] --> q.
   move => [h | h]; [left | right];apply H => //.
 move => H.
-have Ksubq : Ksub p q.
-   suff:  cluster (sol p t @[t --> +oo]) `<=` Ksub p.
+have sublevelUpsilon1q : sublevelUpsilon1 p q.
+   suff:  cluster (sol p t @[t --> +oo]) `<=` sublevelUpsilon1 p.
       by apply; rewrite H.
    rewrite clusterE.
    apply :(@subset_trans  _ (closure  (sol p @` `[0, +oo[))).
@@ -604,25 +600,25 @@ have Ksubq : Ksub p q.
      exists 0; split => //= x x0.
      exists x=>//.
      rewrite in_itv/=ltW//.
-     rewrite (closure_id (Ksub p)).1;last first.
-       by apply compact_closed =>//; apply compact_Ksub.
+     rewrite (closure_id (sublevelUpsilon1 p)).1;last first.
+       by apply compact_closed =>//; apply compact_sublevelUpsilon1.
    apply closure_subset.
    move => /= _ [t +] <-.
    rewrite in_itv/= => /andP[t0 _].
-   apply invariant_Ksub => //.
-   by have /set_mem := q_inKsubq ps.
-have [M [Mr Mp]]: bounded_set (Ksub p).
+   apply invariant_sublevelUpsilon1 => //.
+   by apply/set_mem/mem_sublevelUpsilon1/set_mem.
+have [M [Mr Mp]]: bounded_set (sublevelUpsilon1 p).
   apply compact_bounded.
-  exact: compact_Ksub.
+  exact: compact_sublevelUpsilon1.
 have [M0 | M0]  := leP 0 M;last first.
    suff : `|q| < 0 by rewrite normr_lt0.
    have M02 : M < M/2.
      by rewrite ltr_pdivlMr // gtr_nMr // ltrDl.
-   have /= w := (Mp _ M02 _ Ksubq).
+   have /= w := (Mp _ M02 _ sublevelUpsilon1q).
    apply (le_lt_trans w).
    rewrite ltr_pdivrMr // mul0r //.
 set V := ball  (p : U) (`|p|+(M+1+1) : K).
-have VKsub  : Ksub p `<=` V.
+have VsublevelUpsilon1  : sublevelUpsilon1 p `<=` V.
   move => /= x Kx.
   rewrite /V -ball_normE/ball_ /=.
   by rewrite (le_lt_trans (ler_normB _ _))// ltrD2l ltr_pwDr// Mp// ltrDl.
@@ -645,13 +641,13 @@ apply: (compact_cluster_set1 _ cV ) => //.
   rewrite nbhsE/=.
   exists V; last by apply subset_closure.
   split => //.
-  by apply VKsub.
-apply: (filterS (closure_subset VKsub)).
+  by apply VsublevelUpsilon1.
+apply: (filterS (closure_subset VsublevelUpsilon1)).
 exists 0; split => //= x /ltW x0.
-rewrite -(closure_id (Ksub p)).1;last first.
-  by apply compact_closed =>//; apply compact_Ksub.
-apply invariant_Ksub => //.
-by have /set_mem := q_inKsubq ps.
+rewrite -(closure_id (sublevelUpsilon1 p)).1;last first.
+  by apply compact_closed =>//; apply compact_sublevelUpsilon1.
+apply invariant_sublevelUpsilon1 => //.
+by apply/set_mem/mem_sublevelUpsilon1/set_mem.
 Qed.
 
 End LaSalle_tilt.

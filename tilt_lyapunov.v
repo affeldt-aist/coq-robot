@@ -362,6 +362,10 @@ Proof. by []. Qed.
 
 Definition Upsilon1 := [set x : 'rV[K]_6 | `| 'e_2 - Right x |_e = 1].
 
+Lemma Upsilon1_preimage :
+  Upsilon1 = (fun x => `| 'e_2 - Right x |_e ) @^-1` [set (1 : K)].
+Proof. by []. Qed.
+
 Definition point1 : 'rV[K]_6 := 0.
 Definition point2 : 'rV[K]_6 := @row_mx _ _ 3 _ 0 (2 *: 'e_2).
 
