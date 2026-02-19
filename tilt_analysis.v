@@ -261,11 +261,8 @@ apply/(continuous_within_itvP _ ab); split.
 - by rewrite -{1}(opprK b); apply/cvg_at_rightNP; exact: fb.
 Qed.
 
-Local Notation Left := (@lsubmx _ 1 _ _).
-Local Notation Right := (@rsubmx _ 1 _ _).
-
 Lemma lsubmx_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
-  `|Left x| <= `|x|.
+  `|lsubmx x| <= `|x|.
 Proof.
 rewrite /Num.norm/= !mx_normrE; apply: bigmax_le.
   exact/le_trans/(le_bigmax _ _ (ord0, ord0)).
@@ -275,7 +272,7 @@ exact: (le_bigmax _ _ (i, lshift n2.+1 j)).
 Qed.
 
 Lemma rsubmx_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :
-  `|Right x| <= `|x|.
+  `|rsubmx x| <= `|x|.
 Proof.
 rewrite /Num.norm/= !mx_normrE; apply: bigmax_le.
   exact/le_trans/(le_bigmax _ _ (ord0,ord0)).

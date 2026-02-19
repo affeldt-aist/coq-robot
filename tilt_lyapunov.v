@@ -43,9 +43,6 @@ Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
 
-Local Notation Left := (@lsubmx _ 1 3 3).
-Local Notation Right := (@rsubmx _ 1 3 3).
-
 Definition S2 {K : realType} := [set x : 'rV[K]_3 | `|x|_e = 1].
 
 Module PhysicalModel.
@@ -150,7 +147,7 @@ Hypothesis v_derivable : forall t, derivable v t 1.
 
 (* section III.A in [benallegue2023itac] *)
 Section two_steps_first_order_estimator.
-Notation y_a := (y_a v).
+Local Notation y_a := (y_a v).
 Variables gamma alpha1 : K.
 
 Variable x1_hat : K -> 'rV[K]_3. (* estimator *)
@@ -344,6 +341,9 @@ Section tilt.
 Context {K : realType}.
 Variables alpha1 gamma : K.
 
+Local Notation Left := (@lsubmx _ 1 3 3).
+Local Notation Right := (@rsubmx _ 1 3 3).
+
 Definition eqn_functional (f : K -> 'rV[K]_6) : K -> 'rV[K]_6 :=
   let error1_p_dot := Left \o f in
   let error2_p_dot := Right \o f in
@@ -374,6 +374,11 @@ Qed.
 
 Definition points := [set point1; point2].
 
+Definition V1 (zp1_z2 : 'rV[K]_6) : K :=
+  let zp1 := Left zp1_z2 in
+  let z2 := Right zp1_z2 in
+  `|zp1|_e ^+ 2 / (2 * alpha1) + `|z2|_e ^+ 2 / (2 * gamma).
+
 End tilt.
 End Tilt.
 
@@ -384,6 +389,9 @@ Variables alpha1 gamma : K.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 Let phi := Tilt.eqn alpha1 gamma.
+
+Local Notation Left := (@lsubmx _ 1 3 3).
+Local Notation Right := (@rsubmx _ 1 3 3).
 
 Lemma tilt_eqn_locally_lipschitz : locally_lipschitz phi.
 Proof.
@@ -766,10 +774,9 @@ Variables alpha1 gamma : K.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 Hypothesis gamma_gt0 : 0 < gamma.
 
-Definition V1 (zp1_z2 : 'rV[K]_6) : K :=
-  let zp1 := Left zp1_z2 in
-  let z2 := Right zp1_z2 in
-  `|zp1|_e ^+ 2 / (2 * alpha1) + `|z2|_e ^+ 2 / (2 * gamma).
+Local Notation Left := (@lsubmx _ 1 3 3).
+Local Notation Right := (@rsubmx _ 1 3 3).
+Local Notation V1 := (Tilt.V1 alpha1 gamma).
 
 Lemma V1_diff (t : 'rV_6) : differentiable V1 t.
 Proof.
@@ -854,6 +861,9 @@ Variables alpha1 gamma : K.
 Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
 Let phi := Tilt.eqn alpha1 gamma.
 Variable D : K.
+
+Local Notation Left := (@lsubmx _ 1 3 3).
+Local Notation Right := (@rsubmx _ 1 3 3).
 
 Lemma derive_zp1 (t : K) (sol : K -> 'rV_6) :
   sol_is_deriv_co (fun=> phi) 0 D sol ->
@@ -990,10 +1000,10 @@ Lemma derive_along_V1 t (sol : K -> 'rV_6) :
   t \in `]0, D[ ->
   sol_is_deriv_co (fun=> phi) 0 D sol ->
   (forall t, t \in `]0, D[ -> differentiable sol t) ->
-  'D~(sol) (V1 alpha1 gamma) t = V1dot (sol t).
+  'D~(sol) (Tilt.V1 alpha1 gamma) t = V1dot (sol t).
 Proof.
 move=> t0D tilt_eqnx dif1.
-rewrite /V1 derive_alongD; last 3 first.
+rewrite /Tilt.V1 derive_alongD; last 3 first.
   apply/differentiableM => //=.
   exact/differentiable_enorm_squared/differentiable_lsubmx_comp.
   apply/differentiableM => //=.
@@ -1154,7 +1164,7 @@ Unshelve. all: try by end_near. Abort.
 Lemma locnegsemidef_derive_alone_V1 sol (x : 'rV[K]_6) :
   sol x 0 = Tilt.point1 ->
   sol_is_deriv_co (fun=> phi) 0 D (sol x) ->
-  locnegsemidef ('D~(sol x) (V1 alpha1 gamma)) 0.
+  locnegsemidef ('D~(sol x) (Tilt.V1 alpha1 gamma)) 0.
 Proof.
 (* move=> [y033] dy dtraj traj0. *)
 (* rewrite /locnegsemidef /V1. *)
@@ -1202,7 +1212,7 @@ Lemma locnegdef_derive_along_V1 (sol : 'rV_6 -> K -> 'rV_6) (x : 'rV[K]_6)
   sol_is_deriv_co (fun=> phi) 0 D (sol x) ->
   (forall t : K, Tilt.Upsilon1 (sol x t)) ->
   sol x 0 = Tilt.point1 ->
-  locnegdef ('D~(sol x) (V1 alpha1 gamma)) 0.
+  locnegdef ('D~(sol x) (Tilt.V1 alpha1 gamma)) 0.
 Proof.
 move=> sol0 solP state y0.
 split.
@@ -1272,7 +1282,7 @@ Lemma derive_along_V1_le0 (sol : K -> 'rV[K]_6) :
   sol_is_deriv_co (fun=> phi) 0 D sol ->
   (forall t, t \in `]0, D[%R -> differentiable sol t) ->
   forall t : K, 0 < t < D ->
-  'D~(sol) (V1 alpha1 gamma) t <= 0.
+  'D~(sol) (Tilt.V1 alpha1 gamma) t <= 0.
 Proof.
 move=> sol0 solP diff t t0.
 rewrite derive_along_V1//; last 2 first.
@@ -1311,6 +1321,9 @@ Let phi := Tilt.eqn alpha1 gamma.
 
 Let c1 := 2^-1 / alpha1.
 Let c2 := 2^-1 / gamma.
+
+Local Notation Left := (@lsubmx _ 1 3 3).
+Local Notation Right := (@rsubmx _ 1 3 3).
 
 (* todo: copy paste *)
 Lemma derive_zp10 (sol : K -> 'rV_6) :
@@ -1366,7 +1379,7 @@ Qed.
 Lemma derive_along_V1_global t (sol : K -> 'rV_6) :
   0 <= t ->
   sol_is_deriv_c0y phi sol ->
-  'D~(sol) (V1 alpha1 gamma) t = V1dot (sol t).
+  'D~(sol) (Tilt.V1 alpha1 gamma) t = V1dot (sol t).
 Proof.
 move=> t0 tilt_eqnx.
 have dif1 : forall (t : K), 0 <= t -> differentiable sol t.
@@ -1374,7 +1387,7 @@ have dif1 : forall (t : K), 0 <= t -> differentiable sol t.
    apply/derivable1_diffP.
    move/sol_is_deriv_c0yP in tilt_eqnx.
    by apply tilt_eqnx.
-rewrite /V1 derive_alongD; last 3 first.
+rewrite /Tilt.V1 derive_alongD; last 3 first.
   apply/differentiableM => //=.
   exact/differentiable_enorm_squared/differentiable_lsubmx_comp.
   apply/differentiableM => //=.
@@ -1403,7 +1416,7 @@ Lemma derive_along_V1_le0_global (sol : K -> 'rV[K]_6) :
   sol 0 \in Tilt.Upsilon1 ->
   sol_is_deriv_c0y phi sol ->
   forall t : K, 0 <= t  ->
-  'D~(sol) (V1 alpha1 gamma) t <= 0.
+  'D~(sol) (Tilt.V1 alpha1 gamma) t <= 0.
 Proof.
 move=> sol0 solves.
 have diff : forall (t : K), 0 <= t -> differentiable sol t.
@@ -1446,7 +1459,7 @@ Lemma equilibrium_zero_stable :
   is_stable_at phi Init Tilt.point1.
 Proof.
 move=> Init0 openInit Init_in_state.
-apply: (@Lyapunov_stability K _ phi Init openInit (V1 alpha1 gamma)).
+apply: (@Lyapunov_stability K _ phi Init openInit (Tilt.V1 alpha1 gamma)).
 - exact: V1_diff.
 - move=> D /= sol sol0 solP t t0.
   apply: (@derive_along_V1_le0 _ _ _ _ _ D sol) => //.
@@ -1459,7 +1472,7 @@ apply: (@Lyapunov_stability K _ phi Init openInit (V1 alpha1 gamma)).
     by apply: subset_itvr t10D; rewrite bnd_simp.
 - have := V1_is_Lyapunov_candidate alpha1_gt0 gamma_gt0.
   rewrite /is_Lyapunov_candidate /Tilt.point1 => Hpos.
-  rewrite /V1 lsubmx_const rsubmx_const; split => //.
+  rewrite /Tilt.V1 lsubmx_const rsubmx_const; split => //.
   + by rewrite !expr2 !enorm0 !mulr0 !mul0r add0r.
   + move=> z zin z_neq0.
     case: Hpos => // _ [V1_eq0].
