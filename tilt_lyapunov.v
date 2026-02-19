@@ -16,12 +16,16 @@ Require Import ode tilt_stability.
 (* stable.                                                                    *)
 (*                                                                            *)
 (* ```                                                                        *)
-(*                S2 == unit sphere centered at 0                             *)
-(*   Tilt.point{1.2} == equilibrium points                                    *)
-(*     Tilt.Upsilon1 == state-space                                           *)
-(*          Tilt.eqn == equation (14) in [benallegue2023itac]                 *)
-(*                u2 == 2x2 matrix to prove the Lyapunov function             *)
-(*                V1 == Lyapunov function                                     *)
+(*                    S2 == unit sphere centered at 0                         *)
+(*  Module PhysicalModel == This module contains a formalization of the       *)
+(*                          transformation of a system of measurements to     *)
+(*                          a differential equation that captures the error   *)
+(*                          dynamics.                                         *)
+(*       Tilt.point{1.2} == equilibrium points                                *)
+(*         Tilt.Upsilon1 == state-space                                       *)
+(*              Tilt.eqn == equation (14) in [benallegue2023itac]             *)
+(*                    u2 == 2 x 2 matrix to prove the Lyapunov function       *)
+(*                    V1 == Lyapunov function                                 *)
 (* ```                                                                        *)
 (*                                                                            *)
 (* Reference:                                                                 *)
@@ -45,36 +49,44 @@ Local Notation Right := (@rsubmx _ 1 3 3).
 Definition S2 {K : realType} := [set x : 'rV[K]_3 | `|x|_e = 1].
 
 Module PhysicalModel.
-
-Section ya.
-(* accelerometer measure *)
+Section physicalmodel.
 Variable K : realType.
-Variable R : K -> 'M[K]_3. (* L/W *)
-Variable g0 : K. (*standard gravity constant*)
-Let w t := ang_vel R t. (* local frame of the sensor (gyroscope) *)
-Definition x2 t : 'rV_3 := 'e_2 *m R t.
-Definition y_a x t := - x t *m \S(w t) + 'D_1 x t + g0 *: x2 t. (* world frame *)
-Variable p : K -> 'rV[K]_3.
-Let v := fun t : K => 'D_1 p t *m R t.
+Variable g0 : K. (* standard gravitational constant *)
+Hypotheses g0_neq0 : g0 != 0.
+
+Variable R : K -> 'M[K]_3. (* orientation of frame L w.r.t. frame W *)
 Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 
-Lemma y_aE t (derivableR : forall t, derivable R t 1)
-    (derivablep : forall t, derivable p t 1)
-    (derivableDp : forall t, derivable ('D_1 p) t 1) :
+Let w t := ang_vel R t. (* angular velocity *)
+
+(* tilt, eqn (8) *)
+Definition x2 t : 'rV[K]_3 := 'e_2 *m R t.
+
+Lemma x2_S2 t : x2 t \in S2.
+Proof. by rewrite /S2 /x2 inE/= orth_preserves_norm ?enormeE ?rotation_sub. Qed.
+
+(* what the accelerometer measures according to [benallegue2023itac] *)
+Definition y_a x t := - x t *m \S(w t) + 'D_1 x t + g0 *: x2 t.
+
+(* proof that y_a is indeed the sum of linear and gravitational acceleration *)
+Section y_aE.
+Variable p : K -> 'rV[K]_3.
+Let v := fun t : K => 'D_1 p t *m R t.
+
+Lemma y_aE t : (forall t, derivable R t 1) ->
+    (forall t, derivable p t 1) -> (forall t, derivable ('D_1 p) t 1) ->
   ('D_1 ('D_1 p) t + g0 *: 'e_2) *m R t = y_a v t.
 Proof.
+move=> derivableR derivablep derivableDp.
 rewrite mulmxDl.
 rewrite /y_a/= /= /x2.
 congr +%R; last by rewrite scalemxAl.
 rewrite -ang_vel_mxE/=; last 2 first.
- move=> t0.
- by rewrite rotation_sub.
- exact : derivableR.
+  by move=> ?; rewrite rotation_sub.
+  exact: derivableR.
 rewrite [in RHS]derive_mulmx => //.
-rewrite derive1mx_ang_vel => //; last first.
-  by move=> t0; rewrite rotation_sub.
-rewrite ang_vel_mxE// => //; last first.
-  by move=> t0; rewrite rotation_sub.
+rewrite derive1mx_ang_vel//; last by move=> ?; rewrite rotation_sub.
+rewrite ang_vel_mxE//; last by move=> ?; rewrite rotation_sub.
 rewrite addrCA.
 rewrite -mulmxE.
 rewrite -mulNmx.
@@ -83,47 +95,35 @@ rewrite !mulNmx.
 by rewrite -mulmxA /= addrN addr0.
 Qed.
 
-End ya.
+End y_aE.
+
+Hypothesis derivableR : forall t, derivable R t 1.
+Variable v : K -> 'rV[K]_3. (* linear velocity *)
+Let x1 t := v t.
 
 (* section III.A of [benallegue2023itac] *)
 Section state_dynamics.
-Variable K : realType.
-Variable g0 : K.
-Variable R : K -> 'M[K]_3.
-Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
-Hypothesis derivableR : forall t, derivable R t 1.
-Variable v : K -> 'rV[K]_3.
-Let x1 t := v t.
-Let x2 t : 'rV_3 := ('e_2) *m R t (* eqn (8) *). (* local frame ez ? *)
-Let x1_dot t := 'D_1 x1 t.
-Let x2_dot t := 'D_1 x2 t.
-Let w t := ang_vel R t.
 
-Lemma x2_S2 t : x2 t \in S2.
+(* NB: not used *)
+Lemma derive_ang_vel t (u : K -> 'rV[K]_3) (T : K -> 'M[K]_3) :
+  (forall t, derivable u t 1) -> (forall t, derivable T t 1) ->
+  (forall t, t \is 'SO[K]_3) ->
+  'D_1 (fun t => u t *m T t) t = u t *m T t *m \S(ang_vel T t) + 'D_1 u t *m T t.
 Proof.
-by rewrite /S2 /x2 inE/= orth_preserves_norm ?enormeE ?rotation_sub.
-Qed.
-
-(* not used but could be interesting *)
-Lemma dRu t (u : K -> 'rV[K]_3) (T : K -> 'M[K]_3) (w' := ang_vel T)
-  : (forall t, derivable u t 1) -> (forall t, derivable T t 1) -> (forall t, t \is 'SO[K]_3) -> 'D_1 (fun t => u t *m T t) t = u t *m T t *m \S(w' t) + 'D_1 u t *m T t.
-Proof.
-move => deru dert TisSO.
+move=> deru dert TisSO.
 rewrite derive_mulmx => //.
-rewrite addrC.
-congr(_+_).
+rewrite addrC; congr +%R.
 rewrite -ang_vel_mxE ; last 2 first.
   by move => t0; rewrite rotation_sub.
-  exact : dert.
+  exact: dert.
 rewrite -mulmxA.
 rewrite mulmxE.
-rewrite -derive1mx_ang_vel; last first.
-  by move => t0; rewrite rotation_sub.
-by [].
+by rewrite -derive1mx_ang_vel// => ?; rewrite rotation_sub.
 Qed.
 
-(* eqn (10/11): we write x_1 * S(w) whereas it is - S(w) * x_1 in [benallegue2023itac] *)
-Notation y_a := (y_a R g0).
+(* eqn (10/11) *)
+(* NB: we write x_i * S(w) whereas it is - S(w) * x_i in [benallegue2023itac],
+   row convention *)
 Lemma derive_x1 t : 'D_1 x1 t = x1 t *m \S(w t) + y_a x1 t - g0 *: x2 t.
 Proof.
 rewrite /y_a/= -addrA addrK.
@@ -132,76 +132,54 @@ rewrite addrCA addrA mulNmx /= /w.
 by rewrite (addrC(-_)) subrr add0r.
 Qed.
 
- (* eqn (11b): x_2 * S(w) instead of - S(w) * x_2 in [benallegue2023itac] *)
-Lemma derive_x2 (t : K) : x2_dot t = x2 t *m \S( w t ).
+ (* eqn (11b) *)
+Lemma derive_x2 t : 'D_1 x2 t = x2 t *m \S( w t ).
 Proof.
-rewrite /w.
-rewrite -ang_vel_mxE; last 2 first.
-  by move=> ?; rewrite rotation_sub.
-  by [].
-rewrite /x2_dot.
-rewrite /x2.
-have ->: 'D_1 (fun t0 : K => 'e_2 *m (R t0)) t =
-         'e_2 *m 'D_1 (fun t => (R t)) t.
-  move => n /=.
+rewrite /w -ang_vel_mxE//; last by move=> ?; rewrite rotation_sub.
+have -> : 'D_1 (fun t0 => 'e_2 *m (R t0)) t = 'e_2 *m 'D_1 R t.
+  move=> n /=.
   rewrite derive_mulmx//=.
   by rewrite derive_cst mul0mx add0r.
-rewrite derive1mx_ang_vel /=; last first.
-  by move=> ?; rewrite rotation_sub.
+rewrite derive1mx_ang_vel /=; last by move=> ?; rewrite rotation_sub.
 by rewrite mulmxA.
 Qed.
 
 End state_dynamics.
 
+Hypothesis v_derivable : forall t, derivable v t 1.
+
 (* section III.A in [benallegue2023itac] *)
 Section two_steps_first_order_estimator.
-Context {K : realType}.
+Notation y_a := (y_a v).
 Variables gamma alpha1 : K.
-Variable v : K -> 'rV[K]_3.
-Variable R : K -> 'M[K]_3.
-Hypothesis derivableR : forall t, derivable R t 1.
-Let w t := ang_vel R t.
-Variable x1_hat : K -> 'rV[K]_3.
+
+Variable x1_hat : K -> 'rV[K]_3. (* estimator *)
 Hypothesis derivable_x1_hat : forall t, derivable x1_hat t 1.
-Variable x2_hat : K -> 'rV[K]_3.
-Variable g0 : K.
-Hypotheses g0_eq0 : g0 != 0.
-Notation y_a := (y_a R g0 v).
-Let x1 t := v t.
-Let x2'_hat t := - (alpha1 / g0) *: (x1 t - x1_hat t). (* eqn (12b) *)
-(* we write x^_1 * S(w) instead - S(w) * x^_1 in [benallegue2023itac] *)
-Hypothesis eqn12a : forall t,
-  'D_1 x1_hat t = x1_hat t *m \S(w t) + y_a t - g0 *: x2'_hat t. (* eqn (12a) *)
-(* we write x^_2 * S(...) instead of - S(...) * x^_2
-   and + gamma instead of - gamma in [benallegue2023itac] *)
-Hypothesis eqn12c : forall t,
-  'D_1 x2_hat t = x2_hat t *m \S(w t + gamma *: x2'_hat t *m \S(x2_hat t)). (* eqn (12c) *)
+
+Variable x2_hat : K -> 'rV[K]_3. (* estimator *)
 Hypothesis x2_hat_S2 : x2_hat 0 \in S2.
 Hypothesis x2_hat_derivable : forall t, derivable x2_hat t 1.
-Hypothesis v_derivable : forall t, derivable v t 1.
-Notation x2 := (x2 R).
+Hypothesis norm_x2_hat : forall t, `|x2_hat t|_e = 1.
+
+Let x2'_hat t := - (alpha1 / g0) *: (x1 t - x1_hat t). (* eqn (12b) *)
+
+Hypothesis eqn12a : forall t,
+  'D_1 x1_hat t = x1_hat t *m \S(w t) + y_a t - g0 *: x2'_hat t. (* eqn (12a) *)
+
+Hypothesis eqn12c : forall t,
+  'D_1 x2_hat t = x2_hat t *m \S(w t + gamma *: x2'_hat t *m \S(x2_hat t)).
+  (* eqn (12c) *)
+
 (* estimation error *)
 Let error1 t := x2 t - x2'_hat t. (* p_1 in [benallegue2023ieeetac] *)
 Let error2 t := x2 t - x2_hat t. (* \tilde{x_2} in [benallegue2023ieeetac] *)
-Let error1_dot t := 'D_1 error1 t.
-Let error2_dot t := 'D_1 error2 t.
-Hypothesis RisSO : forall t, R t \is 'SO[K]_3.
 (* projection from the local frame to the world frame(?) *)
 Let error1_p t := error1 t *m (R t)^T (* z_p_1 in [benallegue2023ieeetac] *).
 Let error2_p t := error2 t *m (R t)^T.
-Hypothesis norm_x2_hat : forall t, `|x2_hat t|_e = 1.
-
-Let error1E : error1 = fun t => x2 t + (alpha1 / g0) *: (x1 t - x1_hat t).
-Proof.
-apply/funext => ?.
-rewrite /error1 /x2; congr +%R.
-by rewrite /x2'_hat scaleNr opprK.
-Qed.
 
 Let error2E t : error2 t = error2_p t *m R t.
 Proof.
-rewrite /error2 -mulmxA.
-by rewrite orthogonal_tr_mul ?rotation_sub// mulmx1.
+by rewrite /error2 -mulmxA orthogonal_tr_mul ?rotation_sub// mulmx1.
 Qed.
 
 Let derivable_x2 t : derivable x2 t 1. Proof. exact: derivable_mulmx. Qed.
@@ -214,24 +192,23 @@ Let derivable_error1 t : derivable error1 t 1. Proof. exact: derivableB. Qed.
 Let derivable_error2 t : derivable error2 t 1. Proof. exact: derivableB. Qed.
 
 (* eqn (13a) *)
-(* we write p_1 * S(w) instead of - S(w) * p1 in [benallegue2023itac] *)
 Lemma derive_error1 t :
   'D_1 error1 t = error1 t *m \S(w t) - alpha1 *: error1 t.
 Proof.
 simpl in *.
-rewrite error1E.
-rewrite deriveD//=; last first.
-  by apply: derivableZ => /=; exact: derivableB.
+rewrite deriveB//=.
 rewrite deriveZ//=; last exact: derivableB.
+rewrite scaleNr opprK.
 rewrite deriveB//.
-rewrite !(derive_x2) // -/(x2 t) /=.
-rewrite (derive_x1  g0 R) //.
-rewrite -/(x2 t) -/(v t) -/(x1 t) -/(w t).
+rewrite !derive_x2 // -/(x2 t) /=.
+rewrite derive_x1//.
 rewrite eqn12a.
 transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t)
               - alpha1 *: error1 t).
-  transitivity (x2 t *m \S(w t) + (alpha1 / g0)
-                *: (x1 t *m \S(w t) - g0 *: x2 t - (x1_hat t *m \S(w t) - g0 *: x2'_hat t))).
+  transitivity (x2 t *m \S(w t) + (alpha1 / g0) *: (x1 t *m \S(w t) -
+                                                   g0 *: x2 t -
+                                                   (x1_hat t *m \S(w t) -
+                                                   g0 *: x2'_hat t))).
     congr (_ + _ *: _).
     rewrite -2![in LHS]addrA -[in RHS]addrA.
     congr +%R.
@@ -246,9 +223,9 @@ transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t)
     rewrite (addrC (y_a t)).
     by rewrite subrK.
   rewrite (_ : x1 t *m \S(w t) - g0 *: x2 t -
-                 (x1_hat t *m \S(w t) - g0 *: x2'_hat t) =
+               (x1_hat t *m \S(w t) - g0 *: x2'_hat t) =
                (x1 t - x1_hat t) *m \S(w t) -
-                 g0 *: (x2 t - x2'_hat t)); last first.
+               g0 *: (x2 t - x2'_hat t)); last first.
     rewrite mulmxBl scalerDr scalerN opprB addrA [LHS]addrC 2!addrA.
     rewrite -addrA; congr +%R.
       by rewrite addrC.
@@ -256,7 +233,7 @@ transitivity ((x2 t + (alpha1 / g0) *: (x1 t - x1_hat t)) *m \S(w t)
   rewrite -/(error1 t).
   rewrite scalerDr addrA scalemxAl -mulmxDl scalerN scalerA.
   by rewrite divfK.
-by rewrite error1E.
+by rewrite {2}/error1 /x2'_hat scaleNr opprK.
 Qed.
 
 (* eqn (13b) *)
@@ -359,6 +336,7 @@ Qed.
 
 End two_steps_first_order_estimator.
 
+End physicalmodel.
 End PhysicalModel.
 
 Module Tilt.
@@ -380,9 +358,6 @@ Definition eqn (dot_zp1_z2 : 'rV[K]_6) : 'rV[K]_6 :=
          (PhysicalModel.eqn14b_rhs gamma dot_zp1 dot_z2).
 
 Lemma eqnE (f : K -> 'rV[K]_6) t : eqn (f t) = eqn_functional f t.
-Proof. by []. Qed.
-
-Lemma eqn_functionalE f t : eqn_functional f t = eqn (f t).
 Proof. by []. Qed.
 
 Definition Upsilon1 := [set x : 'rV[K]_6 | `| 'e_2 - Right x |_e = 1].
