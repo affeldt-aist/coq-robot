@@ -20,3 +20,10 @@ Qed.
 
 Lemma gerN {R : numDomainType} (x : R) : 0 <= x -> - x <= x.
 Proof. by move=> x0; rewrite ge0_cp. Qed.
+
+Definition And31 (P1 P2 P3 : Prop) (a : [/\ P1, P2 & P3]) :=
+  let: And3 p1 p2 p3 := a in p1.
+Definition And32 (P1 P2 P3 : Prop) (a : [/\ P1, P2 & P3]) :=
+  let: And3 p1 p2 p3 := a in p2.
+Definition And33 (P1 P2 P3 : Prop) (a : [/\ P1, P2 & P3]) :=
+  let: And3 p1 p2 p3 := a in p3.

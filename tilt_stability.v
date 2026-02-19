@@ -14,15 +14,15 @@ Require Import tilt_mathcomp tilt_analysis tilt_robot ode.
 (* Lyapunov's stability theorem.                                              *)
 (*                                                                            *)
 (* ```                                                                        *)
-(*                   posdefmx M == M is definite positive                     *)
-(*      is_Lyapunov_candidate V := locposdef V                                *)
-(*                     'D~(f) V == derivative of V along the solution f       *)
-(*     is_equilibrium_point f p := solves_equation f (cst p)                  *)
-(*         state_space phi Init == the set points attainable by a solution    *)
-(*                                 of the autonomous ODE phi starting from    *)
-(*                                 Init                                       *)
-(*   is_locally_stable_at f V x == Lyapunov stability                         *)
-(*           is_stable_at f V x == TODO                                       *)
+(*                     posdefmx M == M is definite positive                   *)
+(*        is_Lyapunov_candidate V := locposdef V                              *)
+(*                       'D~(f) V == derivative of V along the solution f     *)
+(*       is_equilibrium_point f p := solves_equation f (cst p)                *)
+(*           state_space phi Init == the set points attainable by a solution  *)
+(*                                   of the autonomous ODE phi starting from  *)
+(*                                   Init                                     *)
+(*             is_stable_at f V x == Lyapunov stability                       *)
+(* is_global_time_stable_at f V x == TODO                                     *)
 (* ```                                                                        *)
 (*                                                                            *)
 (* Reference:                                                                 *)
@@ -80,11 +80,11 @@ Notation "''D~(' f ) V" := (derive_along V f).
 
 Section derive_along.
 Context {R : realType} {n : nat}.
-Variable sol : R -> 'rV[R]_n.
+Variable f : R -> 'rV[R]_n.
 
 Lemma derive_along_derive (V : 'rV[R]_n -> R) (t : R) :
-  differentiable V (sol t) -> differentiable sol t ->
-  'D~(sol) V t = 'D_1 (V \o sol) t.
+  differentiable V (f t) -> differentiable f t ->
+  'D~(f) V t = 'D_1 (V \o f) t.
 Proof.
 move=> difV difsol.
 rewrite /derive_along/=.
@@ -108,9 +108,9 @@ do 2 (rewrite -[in RHS]deriveE; last by []).
 by under eq_fun do rewrite mxE /= mulr1n /=.
 Qed.
 
-Lemma derive_alongMl (f : 'rV_n -> R) (k : R) t :
-  differentiable f (sol t) -> differentiable sol t ->
-  'D~(sol) (k *: f) t = k *: 'D~(sol) f t.
+Lemma derive_alongMl (V : 'rV_n -> R) (k : R) t :
+  differentiable V (f t) -> differentiable f t ->
+  'D~(f) (k *: V) t = k *: 'D~(f) V t.
 Proof.
 move=> dfx dpx.
 rewrite derive_along_derive; last 2 first.
@@ -125,9 +125,9 @@ by rewrite derive_along_derive.
 Qed.
 
 Lemma derive_alongD (V1 V2 : 'rV_n -> R) t :
-  differentiable V1 (sol t) -> differentiable V2 (sol t) ->
-  differentiable sol t ->
-  'D~(sol) (V1 + V2) t  = 'D~(sol) V1 t + 'D~(sol) V2 t.
+  differentiable V1 (f t) -> differentiable V2 (f t) ->
+  differentiable f t ->
+  'D~(f) (V1 + V2) t  = 'D~(f) V1 t + 'D~(f) V2 t.
 Proof.
 move=> dfV1 dfV2 dfsol.
 rewrite derive_along_derive; last 2 first.
@@ -144,20 +144,20 @@ rewrite derive_along_derive; [|by []..].
 by rewrite derive_along_derive.
 Qed.
 
-Lemma derivative_derive_along_eq0 (f : 'rV_n -> R) (t : R) :
-  differentiable f (sol t) ->
-  'D_1 sol t = 0 -> 'D~(sol) f t = 0.
+Lemma derivative_derive_along_eq0 (V : 'rV_n -> R) (t : R) :
+  differentiable V (f t) ->
+  'D_1 f t = 0 -> 'D~(f) V t = 0.
 Proof.
 move=> df dsol0.
 rewrite /derive_along /jacobian1 /dotmul dotmulP /dotmul -trmx_mul.
 by rewrite dsol0 mul0mx !mxE.
 Qed.
 
-Lemma derive_along_enorm_squared m (f : 'rV[R]_n -> 'rV[R]_m) (t : R) :
-  differentiable f (sol t) ->
-  differentiable sol t ->
-  'D~(sol) (fun y => `|f y|_e ^+ 2) t =
-  (2 *: 'D_1 (f \o sol) t *m (f (sol t))^T) 0 0.
+Lemma derive_along_enorm_squared m (V : 'rV[R]_n -> 'rV[R]_m) (t : R) :
+  differentiable V (f t) ->
+  differentiable f t ->
+  'D~(f) (fun y => `|V y|_e ^+ 2) t =
+  (2 *: 'D_1 (V \o f) t *m (V (f t))^T) 0 0.
 Proof.
 move=> difff diffphi.
 rewrite derive_along_derive//; last exact: differentiable_enorm_squared.
@@ -208,23 +208,6 @@ by move: t0D; rewrite !in_itv/= => /andP[->].
 Qed.
 
 End ode.
-
-Section is_sol.
-Context {K : realType} {n : nat}.
-Let U := 'rV[K]_n.
-Variables (phi : U -> U) (Delta : K).
-
-(* TODO: rm? *)
-(*Lemma sol_is_derive_0oS (A B : set U) : A `<=` B ->
-  sol_is_derive_0o phi Delta A `<=` sol_is_derive_0o phi Delta B.
-Proof.
-move=> AB f.
-rewrite /sol_is_derive_0o inE => -[inD0 [_ deri cont]]; rewrite inE.
-split => //.
-by apply: AB.
-Qed.
-*)
-End is_sol.
 
 Section state_space.
 Context {K : realType} {n : nat}.
@@ -281,7 +264,7 @@ Variable Init : set T.
 Definition is_stable_at (x : T) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
   forall f D, f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
-    `| f 0 - x | < d -> forall t, 0 < t < D -> `| f t - x | < eps.
+    `| f 0 - x | < d -> forall t, t \in `]0, D[%R -> `| f t - x | < eps.
 
 (* assuming solution exists for all time *)
 Definition is_global_time_stable_at (x : T) :=
@@ -292,94 +275,16 @@ Definition is_global_time_stable_at (x : T) :=
 Lemma stable_global_time : is_stable_at `<=` is_global_time_stable_at.
 Proof.
 move=> x H e /H [d d0 stable].
-exists d => // z [z0Init zglob] zd /= t t0.
+exists d => // z0 z0Init zglob zd /= t t0.
 apply: (stable _ (t + 1)) => //.
   exact: sol_is_deriv_c0yco.
-by rewrite t0/= ltrDl.
+by rewrite in_itv/= t0/= ltrDl.
 Qed.
 
 Definition is_asymptotically_stable_at (x : T) (f : K -> 'rV[K]_n) : Prop :=
   exists2 d, d > 0 & `| f 0 - x | < d -> f t @[t --> +oo] --> x.
 
 End stability.
-
-(* TODO: rm? *)
-Section bounded.
-Context {K : realType} {n : nat}.
-Let T := 'rV[K]_n.
-Variable phi : T -> T.
-(* Variable sol : K->T. *)
-Variable Init : set T.
-Variable x0 : T.
-(* Hypothesis solP: is_sol phi Delta sol Init. *)
-(* Lemma stable_bounded : is_locally_stable_at phi Init x0 -> forall eps, exists d, forall u0 Delta sol, `|u0 - x0| <= d -> is_sol_autonomous u0 phi 0 Delta sol -> forall t, 0<=t<=Delta -> `|sol t - x0| <= eps. *)
-(* Proof. *)
-(*   move => stable eps.  *)
-(*   have :=  *)
-End bounded.
-(* f' = phi f *)
-(* phi_robot f =def= fun f t => phi t (f t) *)
-(*Definition existence_uniqueness {K : realType} {n}
-  (phi : K -> 'rV[K]_n -> 'rV[K]_n) (Init : set 'rV[K]_n) Delta
-  (sol : K -> 'rV[K]_n) :=
-  forall y, y 0 \in Init -> is_sol phi Init Delta y <-> sol (y 0) = y.
-*)
-
-(*Definition initial_condition {K : realType} {n} (sol : K -> 'rV[K]_n) x0 :=
-  sol 0 = x0.*)
-
-(*Section solutions_unique.
-Context {K : realType} {n : nat}.
-Variable phi : K -> 'rV[K]_n -> 'rV[K]_n.
-Variable Init : set 'rV[K]_n.
-Variable Delta : K.
-
-Definition solutions_unique := forall (f g : K -> 'rV_n) (x0 : 'rV_n),
-  is_sol phi Init Delta f ->
-  is_sol phi Init Delta g ->
-  f 0 = x0 -> g 0 = x0 ->
-  f = g.
-
-End solutions_unique.
-
-Section solutions_unique_lemmas.
-Context {K : realType} {n : nat}.
-Variables (phi : K -> 'rV[K]_n -> 'rV[K]_n) (Init : set 'rV[K]_n).
-Variable Delta : K.
-
-Lemma existence_uniqueness_unique (sol : 'rV[K]_n -> K -> 'rV[K]_n) :
-  existence_uniqueness phi Init Delta sol ->
-  solutions_unique phi Init Delta.
-Proof.
-move=> solP f g x0 solf solg f0 g0.
-apply/funext => x.
-case : (solf) => //=.
-move => a0D Da fa.
-have := solP _ a0D.
-case.
-move => /(_ solf).
-move => a0a _.
-case : (solg) => //=.
-move => b0D Db fb.
-have := solP _ b0D.
-case.
-move => /(_ solg).
-move => b0b _.
-by rewrite -b0b -a0a f0 g0.
-Qed.
-
-Lemma existence_uniqueness_exists (sol : K -> 'rV[K]_n) :
-  existence_uniqueness phi Init Delta sol -> forall p, p \in Init ->
-  initial_condition sol p -> is_sol phi Init Delta (sol p).
-Proof.
-move=> solP sol0 p pD.
-have H := solP (sol p).
-apply H.
-  by rewrite sol0.
-by rewrite sol0.
-Qed.
-
-End solutions_unique_lemmas.*)
 
 (* TODO: move? *)
 Section sphere.
@@ -500,18 +405,18 @@ Qed.
 End about_Lyapunov_function.
 
 Section Lyapunov_stability.
-Context {K : realType} {n : nat}.
-Let U := 'rV[K]_n.+1.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.+1.
 Variable phi : U -> U.
 Variable Init : set U.
 Hypothesis openInit : open Init.
 
-Let B r := closed_ball_ (fun x => `|x|) (0 : 'rV[K]_n.+1) r.
+Let B r := closed_ball_ (fun x => `|x|) (0 : 'rV[R]_n.+1) r.
 
 Let BE s : 0 < s -> B s = closed_ball 0 s.
 Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
 
-Variable V : U -> K.
+Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis DV_le0 : forall D f, f 0 \in Init ->
   sol_is_deriv_co (fun=> phi) 0 D f ->
@@ -522,8 +427,8 @@ Theorem Lyapunov_stability0 :
   is_Lyapunov_candidate V Init 0 -> is_stable_at phi Init 0.
 Proof.
 move=> VInitx /= eps eps0/=.
-move: VInitx => [/= xInit [Vx0 InitxV]].
-have [r [r_gt0 r_eps BrD]] : exists r : K, [/\ 0 < r, r <= eps & B r `<=` Init].
+move: VInitx => [/= xInit Vx0 InitxV].
+have [r [r_gt0 r_eps BrD]] : exists r : R, [/\ 0 < r, r <= eps & B r `<=` Init].
   move: xInit; rewrite inE => /(open_subball openInit)[r0/= r0_gt0] q.
   pose r := Num.min (r0 / 2) eps.
   have r_gt0 : 0 < r by rewrite /r lt_min eps0 divr_gt0.
@@ -536,7 +441,7 @@ have [r [r_gt0 r_eps BrD]] : exists r : K, [/\ 0 < r, r <= eps & B r `<=` Init].
   move: Brv; rewrite BE ?divr_gt0//.
   exact: subset_closure_half(*TODO: naming seems off, report*).
 rewrite {xInit}.
-have alpha_min : {x : 'rV[K]_n.+1 | x \in sphere r /\
+have alpha_min : {x : 'rV[R]_n.+1 | x \in sphere r /\
     forall y, y \in sphere r -> V x <= V y}.
   have : {within sphere r, continuous V}.
     apply: continuous_subspaceT => /= v.
@@ -557,7 +462,7 @@ have alpha_gt0 : 0 < alpha.
 rewrite {InitxV}.
 have [beta /andP[beta_gt0 beta_alpha]] : exists beta, 0 < beta < alpha.
   by exists (alpha / 2); rewrite divr_gt0//= ltr_pdivrMr//= ltr_pMr// ltr1n.
-set Omega_beta := [set x : 'rV[K]_n.+1 | B r x /\ V x <= beta].
+set Omega_beta := [set x : 'rV[R]_n.+1 | B r x /\ V x <= beta].
 have Omega_beta_Br : Omega_beta `<=` (B r)°.
   move=> y [Bry Vybeta].
   rewrite BE// interior_closed_ballE => //=.
@@ -592,7 +497,7 @@ have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
   move: f0_Omega; rewrite inE /Omega_beta/= /B /closed_ball_/=.
   rewrite !sub0r !normrN => -[f0r Vf0beta].
   rewrite leNgt; apply/negP => rft.
-  have [t1 /andP[t1_ge0 t1t] phit1r] : exists2 t0 : K , 0 <= t0 <= t & `|f t0| = r.
+  have [t1 /andP[t1_ge0 t1t] phit1r] : exists2 t0, 0 <= t0 <= t & `|f t0| = r.
     have t0 : 0 <= t by rewrite (itvP t0D).
     have norm_phi_cont : {within `[0, t]%classic, continuous (normr \o f)}.
       apply/(@within_continuous_comp _ _ _ _ _ (@normr _ _) f t0) => //.
@@ -637,7 +542,7 @@ have _ : compact Omega_beta.
     apply: continuous_comp; first by [].
     exact: differentiable_continuous.
 have [d0 d0_gt0 Vbeta] : exists2 d, d > 0 & forall x, `|x| <= d -> V x < beta.
-  have [d d_gt0 xdV] : exists2 d : K, 0 < d &
+  have [d d_gt0 xdV] : exists2 d, 0 < d &
       forall y, `|y - 0| < d -> `|V y - V 0| < beta.
     have /cvgrPdist_lt /(_ _ beta_gt0) : V x @[x --> nbhs (0 : 'rV_n.+1) ] --> V 0.
       exact/differentiable_continuous/Vdiff.
@@ -661,21 +566,21 @@ have B_delta_Omega_beta : B delta `<=` Omega_beta.
   split; last exact/ltW/deltaV.
   by rewrite (le_trans vdelta)// /delta ge_min lexx orbT.
 exists delta => //.
-move=> f Delta' [f0 solf] f0xdelta t0 t0_ge0.
+move=> f D' f0 solf f0xD t0 t0_ge0.
 rewrite subr0.
 have : f 0 \in Omega_beta.
   rewrite inE; apply: B_delta_Omega_beta.
   rewrite /B /closed_ball_/= sub0r normrN; apply/ltW.
-  by rewrite subr0 in f0xdelta.
+  by rewrite subr0 in f0xD.
 rewrite inE => -[+ _].
 rewrite /B /closed_ball_/= sub0r normrN => solx0r.
 have : (B r)° (f t0).
   apply: Omega_beta_Br; apply/set_mem.
-  apply: (Df_Omega_beta Delta') => //.
+  apply: (Df_Omega_beta D') => //.
   rewrite inE; split; first by rewrite /B /closed_ball_/= sub0r normrN.
   have : B delta (f 0).
     rewrite /closed_ball_; apply: ltW; rewrite sub0r normrN.
-    by rewrite subr0 in f0xdelta.
+    by rewrite subr0 in f0xD.
   by move/B_delta_Omega_beta => [].
 rewrite BE//= interior_closed_ballE//=.
 rewrite mx_norm_ball /ball_/= sub0r normrN => /lt_le_trans; exact.
@@ -684,8 +589,8 @@ Unshelve. all: by end_near. Qed.
 End Lyapunov_stability.
 
 Section is_equilibrium_point_change_of_variables.
-Context {K : realType} {n : nat}.
-Let U := 'rV[K]_n.+1.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.+1.
 Variable phi : U -> U.
 Variable Init : set U.
 
@@ -693,7 +598,7 @@ Lemma sol_is_deriv_co_substitution D f x :
  sol_is_deriv_co (fun=> phi) 0 D f ->
  sol_is_deriv_co (fun _ y => phi (y + x)) 0 D (f \- cst x).
 Proof.
-rewrite /sol_is_deriv_co => /= H t t0Delta; split.
+rewrite /sol_is_deriv_co => /= H t t0D; split.
   apply: derivableB => //.
   by apply H.
 rewrite subrK derive1E deriveB//; last by apply H.
@@ -707,10 +612,10 @@ Proof.
 move=> H.
 rewrite /is_stable_at => /= e e0.
 have [/= d d0 {}H] := H _ e0.
-exists d => // f Delta [f0Init solf] f0xd t t0.
+exists d => // f D f0Init solf f0xd t t0.
 rewrite -[_ - _]subr0.
 rewrite -[f t - x]/((f \- cst x) t).
-apply: (H _ Delta) => //.
+apply: (H _ D) => //.
 - exact/image_f.
 - exact: sol_is_deriv_co_substitution.
 - by rewrite /= subr0.
@@ -763,15 +668,15 @@ Qed.
 End is_equilibrium_point_change_of_variables.
 
 Section Lyapunov_stability.
-Context {K : realType} {n : nat}.
-Let U := 'rV[K]_n.+1.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.+1.
 Variable phi : U -> U.
 Variable Init : set U.
 Hypothesis openInit : open Init.
 
-Variable V : U -> K.
+Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
-Hypothesis V'_le0 : forall D (f : K -> U),
+Hypothesis V'_le0 : forall D (f : R -> U),
   f 0 \in Init ->
   sol_is_deriv_co (fun=> phi) 0 D f ->
   forall t, 0 < t < D -> 'D~(f) V t <= 0.
