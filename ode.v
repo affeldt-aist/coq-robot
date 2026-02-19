@@ -1808,15 +1808,24 @@ Proof. exact: cts_fun. Qed.
 
 Let f := cauchy_lipschitz_f.
 
-Theorem cauchy_lipschitz : safe_dist > 0 /\
-  is_sol_oo phi u0 a (a + safe_dist) f /\
-  {in `[a, a + safe_dist]%R, forall t, closed_ball u0 r%:num (f t)}.
+Theorem cauchy_lipschitz :
+  is_sol_oo phi u0 a (a + safe_dist) cauchy_lipschitz_f.
 Proof.
-split; first exact: safe_dist_gt0.
-split.
-- exact: is_sol_cauchy_lipschitz_f.
-- exact: solution_stays_in_ball.
+apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
+- by rewrite ltDl_safe_dist.
+- move=> t td.
+  apply: lip2.
+  move: td; rewrite /=!in_itv/= => /andP [-> h] /=.
+  by rewrite (le_trans h)// -lerBrDl; exact: safe_dist_itv.
+- move=> /= x xB  .
+  apply/continuous_subspaceW/cont1 => //.
+  apply: subset_itvl => //=.
+  by rewrite bnd_simp -lerBrDl safe_dist_itv.
+- exact: cts_fun.
+- by move => _ [t tad] <-; exact: cauchy_lipschitz_in_cball.
+- exact: cauchy_lipschitz_integral_version.
 Qed.
+
 
 Local Notation V := (@ContSeg_quot.quot_contSeg R a (a + safe_dist) U).
 
@@ -2322,9 +2331,10 @@ have t0ab' : t0 \in `[a,b]%R.
 have t0b : t0 < b.
   move: t0ab.
   by rewrite in_itv/= => /andP[].
-have [dplus0 [solplus cplus]] :=
+have solplus :=
   cauchy_lipschitz t0b k0
     (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
+have cplus := solution_stays_in_ball.
 set fplus := @cauchy_lipschitz_f R n phi t0 _ k u0 r4 t0b k0
                   (phi_lip2 t0ab') (phi_cont1 t0ab') rho rho1.
 have amin1 : -t0 < -a.
@@ -2332,16 +2342,17 @@ have amin1 : -t0 < -a.
   by move : t0ab; rewrite in_itv/= => /andP[].
 have dminus0 : 0 < dminus t0.
   by apply safe_dist_gt0.
-have [_ [solminus cminus]] :=
+have solminus :=
   cauchy_lipschitz amin1 k0
     (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
+have cminus := solution_stays_in_ball.
 set fminus0 :=
   @cauchy_lipschitz_f R n (fun t x => - phi (-t) x) (-t0) _ k u0 r4
     amin1 k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho rho1.
 set fminus := fminus0 \o -%R.
-have adplus : t0 < t0 + dplus t0 by rewrite ltrDl dplus0.
+have adplus : t0 < t0 + dplus t0 by rewrite ltrDl safe_dist_gt0.
 have cfplus := And33 solplus.
-rewrite closure_neitv_oo in cfplus; last by rewrite ltrDl.
+rewrite closure_neitv_oo in cfplus; last by rewrite ltrDl safe_dist_gt0.
 have amind : -t0 < -t0 + dminus t0 by rewrite ltrDl dminus0.
 have cfminus' := And33 solminus.
 rewrite closure_neitv_oo in cfminus'; last by rewrite ltrDl.
@@ -2353,7 +2364,7 @@ have cfminus : {within `[t0-dminus t0, t0], continuous fminus}.
   rewrite -/dminus.
   by rewrite bnd_simp/= opprD opprK.
 have dboth0 : 0 < dboth t0.
-   rewrite lt_min; apply /andP;split; last by rewrite lt_min dplus0 //= lt_min dminus0 //=.
+   rewrite lt_min; apply /andP;split; last by rewrite lt_min safe_dist_gt0 //= lt_min dminus0 //=.
    rewrite subr_gt0.
    move : t0ab.
    by rewrite in_itv/= => /andP[].
