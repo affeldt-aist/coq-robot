@@ -1589,7 +1589,7 @@ rewrite (_ : repr picard_fix' x = picard_fix' x)//.
 by rewrite h// subrr.
 Qed.
 
-Theorem cauchy_lipschitz_ex : picard_fix a = u0 /\
+Lemma cauchy_lipschitz_quot_ex : picard_fix a = u0 /\
   {in `]a, a + safe_dist[%R, forall x, picard_fix^`() x = phi x (picard_fix x)}.
 Proof.
 split; first exact: picard_fix_init.
@@ -1808,8 +1808,8 @@ Proof. exact: cts_fun. Qed.
 
 Let f := cauchy_lipschitz_f.
 
-Theorem cauchy_lipschitz :
-  is_sol_oo phi u0 a (a + safe_dist) cauchy_lipschitz_f.
+Theorem cauchy_lipschitz_ex :
+  is_sol_oo phi u0 a (a + safe_dist) f.
 Proof.
 apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - by rewrite ltDl_safe_dist.
@@ -2332,7 +2332,7 @@ have t0b : t0 < b.
   move: t0ab.
   by rewrite in_itv/= => /andP[].
 have solplus :=
-  cauchy_lipschitz t0b k0
+  cauchy_lipschitz_ex t0b k0
     (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
 have cplus := solution_stays_in_ball.
 set fplus := @cauchy_lipschitz_f R n phi t0 _ k u0 r4 t0b k0
@@ -2343,7 +2343,7 @@ have amin1 : -t0 < -a.
 have dminus0 : 0 < dminus t0.
   by apply safe_dist_gt0.
 have solminus :=
-  cauchy_lipschitz amin1 k0
+  cauchy_lipschitz_ex amin1 k0
     (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
 have cminus := solution_stays_in_ball.
 set fminus0 :=
