@@ -49,23 +49,23 @@ Definition posdefmx {R : realType} m (M : 'M[R]_m) : Prop :=
 Local Open Scope classical_set_scope.
 
 Section locdef.
-Context {R : realType} {T : normedModType R}.
-Implicit Types V : T -> R.
+Context {R : realType} {U : normedModType R}.
+Implicit Types V : U -> R.
 
-Definition is_Lyapunov_candidate V (D : set T) (x : T) :=
-  [/\ x \in D, V x = 0 & forall z, z \in D -> z != x -> V z > 0].
+Definition is_Lyapunov_candidate V (A : set U) (x : U) :=
+  [/\ x \in A, V x = 0 & forall z, z \in A -> z != x -> V z > 0].
 
-Definition locnegdef V (x : T) := V x = 0 /\ \forall z \near x^', V z < 0.
+Definition locnegdef V (x : U) := V x = 0 /\ \forall z \near x^', V z < 0.
 
 (* locally negative semidefinite *)
-Definition locnegsemidef V (x : T) := V x = 0 /\ \forall z \near x^', V z <= 0.
+Definition locnegsemidef V (x : U) := V x = 0 /\ \forall z \near x^', V z <= 0.
 
 End locdef.
 
 (* derivation along the solution f, see Khalil p.114 *)
 (* NB: we are not representing the initial state at t = 0 of the solution f *)
-Definition derive_along {R : numFieldType} {n : nat} (V : 'rV[R]_n -> R)
-    (f : R -> 'rV[R]_n) (t : R) : R :=
+Definition derive_along {R : numFieldType} {n} (U := 'rV[R]_n) (V : U -> R)
+    (f : R -> U) t :=
   (jacobian1 V (f t))^T *d 'D_1 f t.
 
 Notation "''D~(' f ) V" := (derive_along V f).
@@ -74,7 +74,7 @@ Section derive_along.
 Context {R : realType} {n : nat}.
 Variable f : R -> 'rV[R]_n.
 
-Lemma derive_along_derive (V : 'rV[R]_n -> R) (t : R) :
+Lemma derive_along_derive (U := 'rV[R]_n) (V : U -> R) (t : R) :
   differentiable V (f t) -> differentiable f t ->
   'D~(f) V t = 'D_1 (V \o f) t.
 Proof.
@@ -274,32 +274,30 @@ Definition is_asymptotically_stable_at (x : U) (f : R -> U) : Prop :=
 End stability.
 
 Section about_Lyapunov_function.
-Context {K : realType} {n : nat}.
-Let U := 'rV[K]_n.+1.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.+1.
 Variable phi : U -> U.
-Variable D : K.
-Variable sol : K -> U.
-Hypothesis derivable_sol : {in `[0, D[%R, forall t, derivable sol t 1}.
+Variable D : R.
+Variable f : R -> U.
+Hypothesis derivable_f : {in `[0, D[%R, forall t, derivable f t 1}.
 
-Variable V : U -> K.
+Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
-Hypothesis DV_le0 : forall t, t \in `]0, D[%R -> 'D~(sol) V t <= 0.
+Hypothesis DV_le0 : forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
-Lemma V_nincr a b : b < D -> 0 <= a <= b -> V (sol b) <= V (sol a).
+Lemma V_nincr a b : b < D -> 0 <= a <= b -> V (f b) <= V (f a).
 Proof.
 move=> bD /andP[a_ge0 ab].
-apply: (@ler0_derive1_le_cc _ (V \o sol) 0 b) => //=.
+apply: (@ler0_derive1_le_cc _ (V \o f) 0 b) => //=.
 - move=> y yb.
   apply/diff_derivable/differentiable_comp; last exact: differentiable_comp.
-  rewrite -derivable1_diffP.
-  apply: derivable_sol.
+  rewrite -derivable1_diffP; apply: derivable_f.
   by apply: subset_itv yb; rewrite bnd_simp// ltW.
 - move=> y yb.
   rewrite derive1E -derive_along_derive//.
   + apply: DV_le0.
     by apply: subset_itvl yb; rewrite bnd_simp ltW.
-  + rewrite -derivable1_diffP.
-    apply: derivable_sol.
+  + rewrite -derivable1_diffP; apply: derivable_f.
     by apply: subset_itv yb; rewrite bnd_simp// ltW.
 - (* `[0, b] *)
   have [b0|] := ltP 0 b; last first.
@@ -311,24 +309,22 @@ apply: (@ler0_derive1_le_cc _ (V \o sol) 0 b) => //=.
   + move=> z z0b.
     apply: continuous_comp; last exact: differentiable_continuous.
     apply: differentiable_continuous => //.
-    rewrite -derivable1_diffP.
-    apply: derivable_sol.
+    rewrite -derivable1_diffP; apply: derivable_f.
     by apply: subset_itv z0b; rewrite bnd_simp// ltW.
   + have d0 : 0 < D by exact/lt_trans/bD.
-    have cont : {in `[0, D[%R, continuous sol}.
+    have cont : {in `[0, D[%R, continuous f}.
       move=> t t0D.
       apply: differentiable_continuous.
-      exact/derivable1_diffP/derivable_sol.
+      exact/derivable1_diffP/derivable_f.
     apply: cvg_comp.
       apply: cvg_at_right_filter.
       apply: cont.
       by rewrite bound_itvE.
-    exact: (differentiable_continuous (Vdiff (sol 0))).
+    exact: (differentiable_continuous (Vdiff (f 0))).
   + apply: cvg_at_left_filter.
     apply: differentiable_continuous => //.
     apply: differentiable_comp.
-      rewrite -derivable1_diffP.
-      apply: derivable_sol.
+      rewrite -derivable1_diffP; apply: derivable_f.
       by rewrite in_itv/= (ltW b0)// bDelta.
     exact: Vdiff.
 - by rewrite bound_itvE (le_trans a_ge0).
@@ -672,7 +668,7 @@ Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis V'_le0 : forall D (f : R -> U),
   f 0 \in Init ->
   sol_is_deriv_co (fun=> phi) 0 D f ->
-  forall t, 0 < t < D -> 'D~(f) V t <= 0.
+  forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 Theorem Lyapunov_stability :
   is_Lyapunov_candidate V Init `<=` is_stable_at phi Init.
