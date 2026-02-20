@@ -1585,8 +1585,7 @@ Proof. exact: cts_fun. Qed.
 
 Let f := cauchy_lipschitz_f.
 
-Theorem cauchy_lipschitz_ex :
-  is_sol_oo phi u0 a (a + safe_dist) f.
+Theorem cauchy_lipschitz_ex : is_sol_oo phi u0 a (a + safe_dist) f.
 Proof.
 apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - by rewrite ltDl_safe_dist.
@@ -1693,7 +1692,8 @@ End continuous_confined.
 Section solution_locally_unique.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
-Variables (phi : R -> U -> U) (a b : R) (k : R) (u0 : U) (r : {posnum R}) (f : R -> U).
+Variables (phi : R -> U -> U) (a b : R) (k : R) (u0 : U) (r : {posnum R})
+          (f : R -> U).
 Hypothesis ab : a < b.
 Hypothesis k0 : 0 < k.
 Let B := closed_ball u0 r%:num.

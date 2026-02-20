@@ -1,9 +1,10 @@
 From HB Require Import structures.
 From mathcomp Require Import all_boot all_order all_algebra ring.
 From mathcomp Require Import interval_inference.
-From mathcomp Require Import boolp classical_sets functions reals ereal.
-From mathcomp Require Import topology normedtype derive realfun landau.
-From mathcomp Require Import measure lebesgue_integral.
+From mathcomp Require Import boolp classical_sets functions filter reals.
+From mathcomp Require Import topology ereal prodnormedzmodule normedtype.
+From mathcomp Require Import sequences derive realfun landau measure.
+From mathcomp Require Import lebesgue_integral.
 Require Import ssr_ext derive_matrix.
 
 (**md**************************************************************************)
@@ -329,23 +330,6 @@ apply: differentiable_comp => //.
 exact: differentiable_rsubmx.
 Qed.
 
-(*Global Instance is_diff_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}
-    (f df : V -> 'rV[R]_(n1 + n2)) t :
-  is_diff t f df ->
-  is_diff t (fun x => lsubmx (f x)) (fun x => lsubmx (df x)).
-Proof.
-case=> diff_f dfE.
-apply: DiffDef.
-  by apply: differentiable_comp => //; exact: differentiable_lsubmx0.
-apply/funext => v.
-rewrite -dfE.
-rewrite -[LHS]deriveE; last first.
-  by apply: differentiable_comp => //; exact: differentiable_lsubmx0.
-rewrite -[in RHS]deriveE; last first.
-  by [].
-rewrite derive_lsubmx//.
-Abort.*)
-
 Lemma differentiable_lsubmx_comp {R : realFieldType} (V : normedModType R) {n1 n2}
     (f : V -> 'rV[R]_(n1 + n2)) t :
   (forall x, differentiable f x) ->
@@ -355,34 +339,6 @@ move=> /= df1.
 apply: differentiable_comp => //.
 exact: differentiable_lsubmx.
 Qed.
-
-(*Lemma derivable_row_mx {R : realFieldType} {n1 n2 : nat}
-    (f : R -> 'rV[R]_n1) (g : R -> 'rV[R]_n2) t v :
-  (forall x, derivable f x v) -> (forall x, derivable g x v) ->
-  derivable (fun x : R => row_mx (f x) (g x)) t v.
-Proof.
-move=> /= fv gv; apply/derivable_mxP => i j.
-rewrite (ord1 i)/=.
-have /cvg_ex[/= l Hl]:= fv t.
-have /cvg_ex[/= k Hk]:= gv t.
-apply/cvg_ex => /=; exists (row_mx l k)``_j.
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : Hl => /(_ _ e0) Hl.
-move/cvgrPdist_le : Hk => /(_ _ e0) Hk.
-move: Hl Hk; apply: filterS2 => x Hl Hk.
-rewrite !mxE.
-case: fintype.splitP => j1 jj1.
-  apply: le_trans Hl.
-  rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
-  apply: le_trans; last first.
-    exact: (le_bigmax _ _ (ord0, j1)).
-  by rewrite !mxE/=.
-apply: le_trans Hk.
-rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
-apply: le_trans; last first.
-  exact: (le_bigmax _ _ (ord0, j1)).
-by rewrite !mxE/=.
-Qed.*)
 
 Lemma derivable_scalar_mx {R : realFieldType} n (f : 'rV[R]_n -> R)
     (a : 'rV[R]_n) v :
@@ -401,40 +357,6 @@ apply: bigmax_le => //= -[i j] _.
 rewrite !mxE/=.
 by rewrite !ord1 eqxx !mulr1n.
 Qed.
-
-(* not used? *)
-(*Lemma derive_row_mx {R : realFieldType} {n1 n2 : nat}
-     (f : R -> 'rV[R]_n1) (g : R -> 'rV[R]_n2) t v :
-  (forall x : R, derivable f x v) ->
-  (forall x : R, derivable g x v) ->
-  'D_v (fun x => row_mx (f x) (g x)) t = row_mx ('D_v f t) ('D_v g t).
-Proof.
-move=> fv gv.
-apply/matrixP => i j.
-rewrite derive_mx ?mxE//=; last first.
-  by apply: derivable_row_mx; [exact: fv|exact: gv].
-do 2 rewrite derive_mx ?mxE//=.
-case: fintype.split_ordP => /= j1 jj1; rewrite !mxE; congr ('D_v _ t).
-  apply/funext => x; rewrite !mxE.
-  case: fintype.split_ordP => k jE.
-    congr (f x i _).
-    move: jE.
-    by rewrite jj1 => /(congr1 val) => /= /val_inj.
-  move: jE.
-  rewrite jj1 => /(congr1 val)/=.
-  have /[swap] -> := ltn_ord j1.
-  by rewrite ltnNge/= leq_addr.
-apply/funext => x; rewrite !mxE.
-case: fintype.split_ordP => k jE.
-  move: jE.
-  rewrite jj1 => /(congr1 val)/=.
-  have /[swap] <- := ltn_ord k.
-  by rewrite ltnNge/= leq_addr.
-congr (g x i _).
-move: jE.
-rewrite jj1 => /(congr1 val) => /= /eqP.
-by rewrite eqn_add2l => /eqP /val_inj.
-Qed.*)
 
 Local Open Scope classical_set_scope.
 
@@ -859,4 +781,3 @@ exact/diff_derivable.
 Qed.
 
 End gradient.
-
