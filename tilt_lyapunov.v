@@ -43,7 +43,7 @@ Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
 
-Definition S2 {K : realType} := [set x : 'rV[K]_3 | `|x|_e = 1].
+Definition S2 {R : realType} := [set x : 'rV[R]_3 | `|x|_e = 1].
 
 Module PhysicalModel.
 Section physicalmodel.
@@ -802,40 +802,6 @@ Definition V1dot (zp1_z2 : 'rV[R]_6) : R :=
 
 End V1.
 
-Section hurwitz.
-Context {K : realType}.
-
-(* thm 4.6 p136*)
-Definition hurwitz n (A : 'M[K]_n) : Prop :=
-  (forall a, eigenvalue A a -> a < 0).
-
-(* thm 4.7 p139 + fact: it is exponentially stable*)
-Definition locally_exponentially_stable_at n (eqn : 'rV[K]_n -> 'rV[K]_n)
-    (point : 'rV[K]_n) : Prop :=
-  hurwitz (jacobian eqn point).
-
-(* TODO: rm? *)
-(* lynda : future work ? *)
-Lemma tilt_eqn_is_locally_exponentially_stable_at_0 alpha1 gamma :
-  locally_exponentially_stable_at (Tilt.eqn alpha1 gamma) Tilt.point1.
-Proof.
-rewrite /locally_exponentially_stable_at /jacobian /hurwitz.
-rewrite /lin1_mx/= /Tilt.eqn /PhysicalModel.eqn14b_rhs/=.
-move => a.
-move/eigenvalueP => [u] /[swap] u0 H.
-have a_eigen : eigenvalue (jacobian (Tilt.eqn alpha1 gamma) Tilt.point1) a.
-  apply/eigenvalueP.
-  exists u.
-    exact: H.
-  exact: u0.
-have : root (char_poly (jacobian (Tilt.eqn alpha1 gamma) Tilt.point1)) a.
-  rewrite -eigenvalue_root_char.
-  exact : a_eigen.
-rewrite /Tilt.eqn /jacobian.
-Abort.
-
-End hurwitz.
-
 Section tilt_eqn_Lyapunov.
 Local Open Scope classical_set_scope.
 Context {R : realType}.
@@ -905,7 +871,7 @@ Lemma angvel_sqr (sol : R -> 'rV_6) (z : R) (z2 := fun r : R => Right (sol r) : 
   sol_is_deriv_co (fun=> phi) 0 D sol ->
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
-move=> z0Delta sol0 dtraj.
+move=> z0D sol0 dtraj.
 rewrite /dotmul !trmx_mul !tr_spin !mulNmx mulmxN opprK mulmxN !dotmulP.
 have key_ortho : (z2 z *m \S('e_2)) *d u = 0.
  by rewrite dotmulC; exact/ortho_spin.
@@ -1106,9 +1072,9 @@ Proof.
 move=> sol0 solP diff t t0.
 rewrite derive_along_V1//; last 2 first.
   by rewrite inE/= in_itv/=.
-  move=> t1 t10Delta.
+  move=> t1 t10D.
   apply: diff => //.
-  by rewrite inE/= in_itv/= in t10Delta.
+  by rewrite inE/= in_itv/= in t10D.
 have /(V1dot_ub sol0 solP) : t \in `[0, D[%R.
   by apply: subset_itvr t0; rewrite bnd_simp.
 move/le_trans; apply.
@@ -1241,9 +1207,9 @@ have diff : forall (t : R), 0 <= t -> differentiable sol t.
    by apply solves.
 move => t t0.
 rewrite derive_along_V1_global//.
-have t0Delta : t \in `[0, t+1[%R.
+have t0D : t \in `[0, t + 1[%R.
   by rewrite in_itv/=t0 ltrDl ltr01.
-have Hub := V1dot_ub sol0 (@sol_is_deriv_c0yco _ _ _ _ solves (t + 1)) t0Delta.
+have Hub := V1dot_ub sol0 (@sol_is_deriv_c0yco _ _ _ _ solves (t + 1)) t0D.
 apply: (le_trans Hub).
 have Hquad : let u1 := \row_i [eta fun=> 0
                    with 0 |-> `|(Left \o sol) t|_e,
