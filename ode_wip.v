@@ -6,7 +6,7 @@ From mathcomp Require Import functions reals interval_inference topology.
 From mathcomp Require Import prodnormedzmodule tvs normedtype landau.
 From mathcomp Require Import ereal sequences derive numfun measure realfun.
 From mathcomp Require Import lebesgue_measure lebesgue_integral ftc.
-Require Import tilt_analysis ode_common ode_contfun ode.
+Require Import tilt_analysis ode_common ode_contseg ode.
 
 (**md**************************************************************************)
 (* # ODE wip                                                                  *)

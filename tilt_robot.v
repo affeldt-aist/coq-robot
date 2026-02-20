@@ -59,19 +59,19 @@ Lemma fact217 (v : 'rV[K]_3): \S(v) ^+ 3 = - (`|v|_e ^+2) *: \S(v).
   exact: spin3.
 Qed.
 
-Lemma fact214 (R : 'M[K]_3) (v_ : seq 'rV[K]_3) : R \is 'SO[K]_3 ->
-  R^T * (\prod_(i <- v_) \S( i )) * R = (\prod_(i <- v_) \S( i *m R)).
+Lemma fact214 (M : 'M[K]_3) (v_ : seq 'rV[K]_3) : M \is 'SO[K]_3 ->
+  M^T * (\prod_(i <- v_) \S( i )) * M = (\prod_(i <- v_) \S(i *m M)).
 Proof.
-move => RSO.
+move=> MSO.
 elim/big_ind2 : _ => //.
   by rewrite -!mulmxE mulmx1 rotation_tr_mul.
 - move => a b c d H1 H2.
-  rewrite -H1 // -H2 // -!mulmxE -!rotation_inv // !mulmxA -[R^-1 *m b *m R *m R^-1]mulmxA.
+  rewrite -H1 // -H2 // -!mulmxE -!rotation_inv // !mulmxA -[M^-1 *m b *m M *m M^-1]mulmxA.
   rewrite mulmxV; last first.
     rewrite unitmxE.
     apply: orthogonal_unit.
     exact: rotation_sub.
-  by rewrite -[R^-1 *m b *m 1%:M *m d]mulmxA mul1mx.
+  by rewrite -[M^-1 *m b *m 1%:M *m d]mulmxA mul1mx.
 - move => i true.
   exact: spin_similarity.
 Qed.

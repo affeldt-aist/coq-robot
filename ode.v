@@ -7,7 +7,7 @@ From mathcomp Require Import contra functions constructive_ereal reals.
 From mathcomp Require Import topology prodnormedzmodule tvs normedtype.
 From mathcomp Require Import landau ereal sequences derive numfun measure.
 From mathcomp Require Import realfun lebesgue_measure lebesgue_integral ftc.
-Require Import tilt_mathcomp tilt_analysis ode_common ode_contfun.
+Require Import tilt_mathcomp tilt_analysis ode_common ode_contseg.
 
 (**md**************************************************************************)
 (* # Proof of the Cauchy-Lipschitz theorem                                    *)
