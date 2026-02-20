@@ -361,9 +361,6 @@ HB.instance Definition _ := isContinuous.Build (subspace `[a, b]) U
   (picard_fun_subdef phi gabB : subspace _ -> _)
   within_continuous_picard_fun_subdef.
 
-Let continuous_picard_fun_subdef :
-  {within `[a, b], continuous picard_fun_subdef phi gabB}.
-Proof. exact: cts_fun. Abort.
 
 End picard_fun_subdef_isContinuous.
 
@@ -1622,8 +1619,10 @@ Proof. by move=> t; move => /cauchy_lipschitz_in_cball; exact. Qed.
 Lemma solution_stays_in_ball :
   {in `[a, a + safe_dist]%R,
     forall t, closed_ball u0 r%:num (cauchy_lipschitz_f t)}.
-Proof. Admitted.
-
+Proof. 
+  move => t ta.
+  apply /le_closed_ball/solution_stays_in_ball2=>//.
+Qed.
 Lemma solution_continuous :
   {within `[a, a + safe_dist], continuous cauchy_lipschitz_f}.
 Proof. exact: cts_fun. Qed.
