@@ -1651,7 +1651,7 @@ Qed.
 
 Local Notation V := (@ContSeg_quot.quot_contSeg R a (a + safe_dist) U).
 
-Lemma cauchy_lipschitz_unique f' :
+Lemma cauchy_lipschitz_unique_restr f' :
   {within `[a, a + safe_dist], continuous f'} ->
   {in `[a, a + safe_dist]%R, forall t, closed_ball u0 r2%:num (f' t)}  ->
   is_sol_oo phi u0 a (a + safe_dist) f' ->
@@ -1786,7 +1786,7 @@ have [rho [drho1 drho2]] : exists rho, dmax rho <= (Num.min d1%:num d2%:num) /\ 
 have drho_pos : 0 < dmax rho by exact: safe_dist_gt0.
 exists rho, (PosNum drho_pos), drho2; split => //.
 - move => t tad.
-  apply/esym; apply: cauchy_lipschitz_unique.
+  apply/esym; apply: cauchy_lipschitz_unique_restr.
   - apply/continuous_subspaceW/cf => //.
     apply: subset_itvl => //=.
     by rewrite bnd_simp -lerBrDl;apply safe_dist_itv.
@@ -1804,7 +1804,7 @@ exists rho, (PosNum drho_pos), drho2; split => //.
     by apply: subset_itvl; rewrite bnd_simp -lerBrDl safe_dist_itv.
   - exact: tad.
 move => t tad.
-apply/esym; apply : cauchy_lipschitz_unique.
+apply/esym; apply : cauchy_lipschitz_unique_restr.
 - apply/continuous_subspaceW/cf' => //.
   by apply: subset_itvl => /=; rewrite bnd_simp -lerBrDl;apply safe_dist_itv.
 - move=> t0 t0ad.
@@ -2025,7 +2025,7 @@ rewrite !closed_ballE// /closed_ball_ /= => h1 h2.
 rewrite -(subrKA x1 x2).
 by rewrite (le_trans (ler_normD _ _))// (splitr q) lerD.
 Qed.
-Theorem cauchy_lipschitz_unique' f' :
+Theorem cauchy_lipschitz_unique f' :
   is_sol_oo phi u0 a (a + safe_dist) f' ->
   {in `[a, a + safe_dist]%R, f =1 f'}.
 Proof.
