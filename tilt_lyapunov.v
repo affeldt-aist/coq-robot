@@ -594,11 +594,10 @@ rewrite inE /Tilt.Upsilon1 /Tilt.point1/=.
  by rewrite rsubmx_const /= subr0 enormeE.
 Qed.
 
-Lemma equilibrium_point1 : is_equilibrium_point phi Tilt.Upsilon1 Tilt.point1.
+Lemma equilibrium_point1 : is_equilibrium_point phi Tilt.point1.
 Proof.
 split.
-- exact: tilt_point1_in_state_space.
-- move=> t t0; split; first exact: derivable_cst.
+- move=> t t0;  exact: derivable_cst.
   rewrite derive1E derive_cst /Tilt.point1; apply/eqP.
   rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP; split.
     by rewrite scaler_eq0 oppr_eq0 gt_eqF//= lsubmx_const.
@@ -619,11 +618,11 @@ rewrite [X in _ - X](_:1 = 1%:R) //.
 by rewrite -natrB //= normr1.
 Qed.
 
-Lemma equilibrium_point2 : is_equilibrium_point phi Tilt.Upsilon1 Tilt.point2.
+Lemma equilibrium_point2 : is_equilibrium_point phi Tilt.point2.
 Proof.
-split; first exact: tilt_point2_in_state_space.
 move=> D D0.
-split; first exact: derivable_cst.
+split.
+exact: derivable_cst.
 rewrite derive1E derive_cst; apply/eqP.
 rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.
 set N := (X in _ *: X == 0 /\ _).

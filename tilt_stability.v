@@ -217,27 +217,27 @@ Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
 Variable phi : U -> U.
 
-Definition is_equilibrium_point (Init : set U) (x : U) :=
-  x \in Init /\ sol_is_deriv_cy (fun=> phi) 0 (cst x).
+Definition is_equilibrium_point (x : U) :=
+   sol_is_deriv_cy (fun=> phi) 0 (cst x).
 
-Lemma equilibrium_point_in_state_space (Init : set U) :
-  is_equilibrium_point Init `<=` state_space phi Init.
-Proof.
-move=> x [xinit solf]; exists (cst x), 1; split => //=.
-  exact: sol_is_deriv_cy_co.
-by exists 0 => //; rewrite bound_itvE.
-Qed.
+(* Lemma equilibrium_point_in_state_space (Init : set U) : *)
+(*   is_equilibrium_point Init `<=` state_space phi Init. *)
+(* Proof. *)
+(* move=> x solf; exists (cst x), 1; split => //=. *)
+(*   apply: sol_is_deriv_cy_co. *)
+(* by exists 0 => //; rewrite bound_itvE. *)
+(* Qed. *)
 
-Definition equilibrium_points Init := [set p | is_equilibrium_point Init p].
+Definition equilibrium_points Init := [set p | Init p /\ is_equilibrium_point p].
 
 Lemma equilibrium_points_subset (A B : set U) : A `<=` B ->
   equilibrium_points A `<=` equilibrium_points B.
 Proof.
 move=> AB x.
 rewrite /equilibrium_points/= /is_equilibrium_point.
-rewrite inE => -[Ax H].
-split; first  exact/mem_set/AB.
-by move=> d t; exact: H.
+move => [Ax H].
+split => //.
+by apply AB.
 Qed.
 
 End equilibrium_point.
@@ -613,27 +613,21 @@ apply: (H _ D) => //.
 Qed.
 
 Lemma is_equilibrium_point_substitutionP x :
-  is_equilibrium_point (fun y => phi (y + x)) [set y - x | y in Init] 0 <->
-  is_equilibrium_point phi Init x.
+  is_equilibrium_point (fun y => phi (y + x)) 0 <->
+  is_equilibrium_point phi x.
 Proof.
 split.
-- move=> [u0Init issol]; split.
-    move: u0Init; rewrite !inE/= => -[v Initv].
-    by move/subr0_eq => <-.
-  move=> /= t t0.
-  split; first exact: derivable_cst.
+- move=> issol t t0; split.
+  exact: derivable_cst.
   have := issol 0.
   rewrite in_itv/= lexx => /(_ isT)[_].
   rewrite add0r => <-.
   by rewrite !derive1_cst.
-- move=> [u0Init issol]; split.
-    move: u0Init; rewrite !inE/= => xInit.
-    by exists x => //; rewrite subrr.
-  move=> t t0.
-  split; first exact: derivable_cst.
-  have [_] := issol _ t0.
-  rewrite /= add0r => <-.
-  by rewrite !derive1_cst.
+- move=> issol t t0; split.
+  exact: derivable_cst.
+  have []  := issol _ t0.
+  rewrite !derive1_cst //=.
+  by rewrite add0r => _ ->.
 Qed.
 
 Lemma is_Lyapunov_candidate_substitution V x :
