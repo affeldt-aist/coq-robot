@@ -32,7 +32,7 @@ Require Import tilt_mathcomp tilt_analysis ode_common ode_contfun.
 (* picard_fun lip2 cont1 g == same as picard_fun_subdef when                  *)
 (*   g @` `[a, b] `<=` closed_ball u0 r and cst 0 o.w.                        *)
 (*                                                                            *)
-(* Technical constants need for the proof:                                    *)
+(* Technical constants needed for the proof:                                  *)
 (*   sup_phi == sup {phi t u0 | t \in [a, b]}                                 *)
 (*   safe_dist == min (b - a, r / (k * r + sup_phi), rho / k)                 *)
 (*                upper-bound of delta                                        *)
@@ -1122,8 +1122,19 @@ Definition sol_is_deriv_cbnd (a : R) (b : itv_bound R) (f : R -> U) :=
 
 Definition sol_is_deriv_co a b := sol_is_deriv_cbnd a (BLeft b).
 
+Definition sol_is_deriv_cy a := sol_is_deriv_cbnd a +oo%O.
+
+Lemma sol_is_deriv_cy_co a b : sol_is_deriv_cy a `<=`
+  sol_is_deriv_cbnd a (BLeft b).
+Proof.
+move=> f H t tab.
+apply H.
+exact: subset_itvl tab.
+Qed.
+
 Definition sol_is_deriv_obnd (a : R) (b : itv_bound R) (f : R -> U) :=
-  {in Interval (BRight a) b, forall t, derivable f t 1 /\ f^`() t = phi t (f t)}.
+  {in Interval (BRight a) b,
+    forall t, derivable f t 1 /\ f^`() t = phi t (f t)}.
 
 Definition sol_is_deriv_oo a b := sol_is_deriv_obnd a (BLeft b).
 
@@ -1545,10 +1556,6 @@ Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 
 Variable rho : {posnum R}.
 Hypothesis rho1 : rho%:num < 1.
-(* Let rho : {posnum R} := (2^-1)%:pos. *)
-
-(* Let rho1 : rho%:num < 1. *)
-(* Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed. *)
 
 Local Notation safe_dist := (safe_dist phi a b k u0 r rho).
 
@@ -1712,7 +1719,8 @@ Lemma initial_solution_unique f' : {within `[a, b], continuous f'} ->
     {in `[a, a + D%:num]%R, forall t, closed_ball u0 r%:num (f t)}.
 Proof.
 move => cf' sol2.
-suff [rho [D [Hrho [Db P1 P2]]]] : exists rho D : {posnum R}, exists (Hrho : rho%:num < 1),
+suff [rho [D [Hrho [Db P1 P2]]]] : exists rho D : {posnum R},
+    exists (Hrho : rho%:num < 1),
     [/\ D%:num <= dmax rho,
         {in `[a, a + D%:num]%R, f =1 fc Hrho } &
         {in `[a, a + D%:num]%R, f' =1 fc Hrho} ].

@@ -351,11 +351,11 @@ Definition eqn_functional (f : R -> 'rV[R]_6) : R -> 'rV[R]_6 :=
     (- alpha1 *: error1_p_dot t)
     (PhysicalModel.eqn14b_rhs gamma (error1_p_dot t) (error2_p_dot t)).
 
-Definition eqn (dot_zp1_z2 : 'rV[R]_6) : 'rV[R]_6 :=
-  let dot_zp1 := Left dot_zp1_z2 in
-  let dot_z2 := Right dot_zp1_z2 in
-  row_mx (- alpha1 *: dot_zp1)
-         (PhysicalModel.eqn14b_rhs gamma dot_zp1 dot_z2).
+Definition eqn (dot_z1_z2 : 'rV[R]_6) : 'rV[R]_6 :=
+  let dot_z1 := Left dot_z1_z2 in
+  let dot_z2 := Right dot_z1_z2 in
+  row_mx (- alpha1 *: dot_z1)
+         (PhysicalModel.eqn14b_rhs gamma dot_z1 dot_z2).
 
 Lemma eqnE (f : R -> 'rV[R]_6) t : eqn (f t) = eqn_functional f t.
 Proof. by []. Qed.
@@ -596,7 +596,7 @@ Lemma equilibrium_point1 : is_equilibrium_point phi Tilt.Upsilon1 Tilt.point1.
 Proof.
 split.
 - exact: tilt_point1_in_state_space.
-- move=> D t t0D.
+- move=> t t0.
   split; first exact: derivable_cst.
   rewrite derive1E derive_cst /Tilt.point1; apply/eqP.
   rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP; split.
@@ -623,8 +623,7 @@ Qed.
 Lemma equilibrium_point2 : is_equilibrium_point phi Tilt.Upsilon1 Tilt.point2.
 Proof.
 split; first exact: tilt_point2_in_state_space.
-move=> Delta.
-move=> t t0Delta.
+move=> D D0.
 split; first exact: derivable_cst.
 rewrite derive1E derive_cst; apply/eqP.
 rewrite eq_sym (@row_mx_eq0 _ 1 3 3); apply/andP.

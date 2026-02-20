@@ -218,12 +218,13 @@ Let U := 'rV[R]_n.
 Variable phi : U -> U.
 
 Definition is_equilibrium_point (Init : set U) (x : U) :=
-  x \in Init /\ forall d, sol_is_deriv_co (fun=> phi) 0 d (cst x).
+  x \in Init /\ sol_is_deriv_cy (fun=> phi) 0 (cst x).
 
 Lemma equilibrium_point_in_state_space (Init : set U) :
   is_equilibrium_point Init `<=` state_space phi Init.
 Proof.
 move=> x [xinit solf]; exists (cst x), 1; split => //=.
+  exact: sol_is_deriv_cy_co.
 by exists 0 => //; rewrite bound_itvE.
 Qed.
 
@@ -618,21 +619,20 @@ split.
 - move=> [u0Init issol]; split.
     move: u0Init; rewrite !inE/= => -[v Initv].
     by move/subr0_eq => <-.
-  move=> D /= t t0D.
-  have [Hderivable Hderiv] := issol D _ t0D.
-  split.
-    exact: derivable_cst.
-  rewrite add0r in Hderiv.
-  by rewrite -Hderiv !derive1_cst.
+  move=> /= t t0.
+  split; first exact: derivable_cst.
+  have := issol 0.
+  rewrite in_itv/= lexx => /(_ isT)[_].
+  rewrite add0r => <-.
+  by rewrite !derive1_cst.
 - move=> [u0Init issol]; split.
     move: u0Init; rewrite !inE/= => xInit.
-    exists x => //.
-    by rewrite subrr.
-  move=> D /= t t0D.
-  have [Hderivable Hderiv] := issol D _ t0D.
-  split.
-    exact: derivable_cst.
-  by rewrite add0r -Hderiv !derive1_cst.
+    by exists x => //; rewrite subrr.
+  move=> t t0.
+  split; first exact: derivable_cst.
+  have [_] := issol _ t0.
+  rewrite /= add0r => <-.
+  by rewrite !derive1_cst.
 Qed.
 
 Lemma is_Lyapunov_candidate_substitution V x :

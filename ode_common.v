@@ -1,6 +1,6 @@
 From HB Require Import structures.
-From mathcomp Require Import all_boot all_order ssralg ssrnum matrix interval poly.
-From mathcomp Require Import generic_quotient ring_quotient.
+From mathcomp Require Import all_boot all_order ssralg ssrnum matrix interval.
+From mathcomp Require Import poly generic_quotient ring_quotient.
 From mathcomp Require Import mathcomp_extra unstable boolp classical_sets.
 From mathcomp Require Import constructive_ereal.
 From mathcomp Require Import functions reals interval_inference topology.
