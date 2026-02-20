@@ -251,13 +251,13 @@ Variable Init : set U.
 Definition is_stable_at (x : U) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
   forall f D, f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
-    `| f 0 - x | < d -> forall t, t \in `]0, D[%R -> `| f t - x | < eps.
+    `| f 0 - x | < d -> forall t, t \in `[0, D[%R -> `| f t - x | < eps.
 
 (* assuming solution exists for all time *)
 Definition is_global_time_stable_at (x : U) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
   forall f, f 0 \in Init -> sol_is_deriv_c0y phi f ->
-    `| f 0 - x | < d -> forall t, 0 < t -> `| f t - x | < eps.
+    `| f 0 - x | < d -> forall t, 0 <= t -> `| f t - x | < eps.
 
 Lemma stable_global_time : is_stable_at `<=` is_global_time_stable_at.
 Proof.
@@ -466,7 +466,7 @@ have Omega_beta_Br : Omega_beta `<=` (B r)°.
 (* any trajectory starting in Omega_beta at t = 0
    stays in Omega_beta for all t >= 0 *)
 have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
-   f 0 \in Omega_beta -> forall t, t \in `]0, D[%R -> f t \in Omega_beta.
+   f 0 \in Omega_beta -> forall t, t \in `[0, D[%R -> f t \in Omega_beta.
   move=> f0 solf f0_Omega.
   have /= V_nincr_consequence t : t \in `]0, D[%R -> forall u, 0 <= u <= t ->
       'D~(f) V u <= 0 -> V (f t) <= V (f 0) <= beta.
@@ -479,7 +479,11 @@ have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
       + by rewrite (itvP t0D).
       + by rewrite lexx/= (itvP t0D).
     - by move: f0_Omega; rewrite inE => -[].
-  move=> t t0D; rewrite inE; split; last first.
+  move=> t t0D.
+  have [->//|t0] := eqVneq t 0.
+  have {t0}t0D : t \in `]0, D[%R.
+    by rewrite in_itv/= lt_neqAle eq_sym t0/= 2!(itvP t0D).
+  rewrite inE; split; last first.
     have : 'D~(f) V t <= 0 by exact: (DV_le0 _ solf).
     have := @V_nincr_consequence t t0D t.
     rewrite lexx (itvP t0D)/= => /(_ isT) => /[apply].
@@ -534,7 +538,8 @@ have _ : compact Omega_beta.
 have [d0 d0_gt0 Vbeta] : exists2 d, d > 0 & forall x, `|x| <= d -> V x < beta.
   have [d d_gt0 xdV] : exists2 d, 0 < d &
       forall y, `|y - 0| < d -> `|V y - V 0| < beta.
-    have /cvgrPdist_lt /(_ _ beta_gt0) : V x @[x --> nbhs (0 : 'rV_n.+1) ] --> V 0.
+    have /cvgrPdist_lt /(_ _ beta_gt0) :
+        V x @[x --> nbhs (0 : 'rV_n.+1) ] --> V 0.
       exact/differentiable_continuous/Vdiff.
     rewrite nearE /= => /nbhs_ballP[d /= d_pos xdV].
     exists d => // y.
@@ -562,8 +567,8 @@ have : f 0 \in Omega_beta.
   rewrite inE; apply: B_delta_Omega_beta.
   rewrite /B /closed_ball_/= sub0r normrN; apply/ltW.
   by rewrite subr0 in f0xD.
-rewrite inE => -[+ _].
-rewrite /B /closed_ball_/= sub0r normrN => solx0r.
+rewrite inE => -[+ Vf0beta].
+rewrite /B /closed_ball_/= sub0r normrN => f0r.
 have : (B r)° (f t0).
   apply: Omega_beta_Br; apply/set_mem.
   apply: (Df_Omega_beta D') => //.
@@ -573,7 +578,7 @@ have : (B r)° (f t0).
     by rewrite subr0 in f0xD.
   by move/B_delta_Omega_beta => [].
 rewrite BE//= interior_closed_ballE//=.
-rewrite mx_norm_ball /ball_/= sub0r normrN => /lt_le_trans; exact.
+by rewrite mx_norm_ball /ball_/= sub0r normrN => /lt_le_trans; exact.
 Unshelve. all: by end_near. Qed.
 
 End Lyapunov_stability.
@@ -703,15 +708,11 @@ apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
     by [].
   apply: (@V'_le0 D); last by assumption.
   - rewrite inE/=.
-    move: sol0.
-    rewrite inE/= => -[x0 x0Init <-].
+    move: sol0; rewrite inE/= => -[x0 x0Init <-].
     by rewrite subrK.
-  - move=> /= z z0D.
-    split.
-      apply/derivable1_diffP.
-      apply: differentiable_comp => //.
-      apply/derivable1_diffP.
-      by apply sol0Init.
+  - move=> /= z z0D; split.
+      apply/derivable1_diffP/differentiable_comp => //.
+      by apply/derivable1_diffP; apply sol0Init.
     rewrite derive1E deriveD//; last by apply sol0Init.
     rewrite derive_cst addr0 -derive1E.
     by apply sol0Init.

@@ -1276,21 +1276,21 @@ Proof.
 move=> Init0 openInit Init_in_state.
 apply: (@Lyapunov_stability R _ phi Init openInit (Tilt.V1 alpha1 gamma)).
 - exact: V1_diff.
-- move=> D /= sol sol0 solP t t0.
-  apply: (@derive_along_V1_le0 _ _ _ _ _ D sol) => //.
+- move=> D /= f f0 sol_f t t0.
+  apply: (@derive_along_V1_le0 _ _ _ _ _ D f) => //.
   + rewrite inE.
     apply: Init_in_state.
-    by rewrite inE in sol0.
+    exact/set_mem.
   + move=> /= t1 t10D.
     apply/derivable1_diffP.
-    apply solP.
+    apply sol_f.
     by apply: subset_itvr t10D; rewrite bnd_simp.
 - have := V1_is_Lyapunov_candidate alpha1_gt0 gamma_gt0.
-  rewrite /is_Lyapunov_candidate /Tilt.point1 => Hpos.
+  rewrite /is_Lyapunov_candidate /Tilt.point1 => H.
   rewrite /Tilt.V1 lsubmx_const rsubmx_const; split => //.
   + by rewrite !expr2 !enorm0 !mulr0 !mul0r add0r.
-  + move=> z zin z_neq0.
-    case: Hpos => // _ [V1_eq0].
+  + move=> z zInit z_neq0.
+    case: H => // _ _.
     by apply => //; rewrite in_setT.
 Qed.
 
