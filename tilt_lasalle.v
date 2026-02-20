@@ -506,21 +506,20 @@ move => Hdist.
 have [S [So Sc Sx]] := avoid_x Hdist.
 have [e1 /= e10 /= P1] :  \forall e \near 0^'+, ball Tilt.point1 e `<=` S.
   apply: open_subball => //.
-  by apply Sc;left.
+  by apply Sc; left.
 have [e2 /= e20 /= P2] :  \forall e \near 0^'+, ball Tilt.point2 e `<=` S.
   apply: open_subball => //.
-  by apply Sc;right.
+  by apply Sc; right.
 set eps := Num.min (e1 / 2) (e2 / 2).
-have eps0 : 0 < eps.
-  by rewrite lt_min !divr_gt0.
+have eps0 : 0 < eps by rewrite lt_min !divr_gt0.
 have B1 : ball Tilt.point1 eps `<=` S.
   apply P1 => //.
   rewrite /ball_/= sub0r normrN ger0_norm ?gt_min ?ltW // ltr_pdivrMr // ltr_pMr ?ltrDr //.
-  by apply /orP;left.
+  by apply/orP; left.
 have B2 : ball Tilt.point2 eps `<=` S.
   apply P2 => //.
   rewrite /ball_/= sub0r normrN ger0_norm ?gt_min ?ltW // ?ltr_pdivrMr // ltr_pMr ?ltrDr //.
-  by apply /orP;right.
+  by apply/orP; right.
 have nbh' : (nbhs Tilt.points S).
   exists eps => //=.
   rewrite /ball_set.
@@ -552,7 +551,8 @@ by left.
 by right.
 Qed.
 
-Lemma cluster_nonempty p : p \in Tilt.Upsilon1 -> cluster (sol p t @[t --> +oo]) !=set0.
+Lemma cluster_nonempty p : p \in Tilt.Upsilon1 ->
+  cluster (sol p t @[t --> +oo]) !=set0.
 Proof.
 move => sp.
 suff : (sublevelUpsilon1 p) `&`  cluster (sol p t @[t --> +oo]) !=set0.
@@ -571,7 +571,7 @@ Proof.
 split => /=; last by have /set_mem := @tilt_point1_in_state_space K.
 rewrite /sublevel/= /Tilt.point1 /Tilt.V1.
 rewrite lsubmx_const rsubmx_const/= !enorm0 !expr0n /= !mul0r add0r.
-by rewrite addr_ge0 // divr_ge0 // ?sqr_ge0 ?mulr_ge0 // ltW.
+by rewrite addr_ge0// divr_ge0// ?sqr_ge0 ?mulr_ge0// ltW.
 Qed.
 
 Lemma tilt_cvg_to_point1_or_point2 p : p \in Tilt.Upsilon1 ->
@@ -581,43 +581,44 @@ Proof.
 move => ps.
 have cluster_con : connected (cluster (sol p t @[t --> +oo])).
   apply: (compact_connected_cluster _ _ _ (@compact_sublevelUpsilon1 p) ) => //.
-    by apply: pseudometric_normal.
-    by apply: sol_continuous.
-  move => t t0.
+    exact: pseudometric_normal.
+    exact: sol_continuous.
+  move=> t t0.
   apply/mem_set.
   apply: invariant_sublevelUpsilon1 => //.
-  by apply/set_mem/mem_sublevelUpsilon1/set_mem.
-have := connected2_subset cluster_con (cluster_nonempty ps) (cluster_contained_points ps).
-suff H (q : U): cluster (sol p t @[t --> +oo]) = [set q] ->  sol p t @[t --> +oo] --> q.
-  move => [h | h]; [left | right];apply H => //.
+  exact/set_mem/mem_sublevelUpsilon1/set_mem.
+have := connected2_subset cluster_con (cluster_nonempty ps)
+                          (cluster_contained_points ps).
+suff H (q : U): cluster (sol p t @[t --> +oo]) = [set q] ->
+    sol p t @[t --> +oo] --> q.
+  by move => [h | h]; [left|right]; apply H.
 move => H.
 have sublevelUpsilon1q : sublevelUpsilon1 p q.
-   suff:  cluster (sol p t @[t --> +oo]) `<=` sublevelUpsilon1 p.
-      by apply; rewrite H.
-   rewrite clusterE.
-   apply :(@subset_trans  _ (closure  (sol p @` `[0, +oo[))).
-     apply: bigcap_inf => //=.
-     exists 0; split => //= x x0.
-     exists x=>//.
-     rewrite in_itv/=ltW//.
-     rewrite (closure_id (sublevelUpsilon1 p)).1;last first.
-       by apply compact_closed =>//; apply compact_sublevelUpsilon1.
-   apply closure_subset.
-   move => /= _ [t +] <-.
-   rewrite in_itv/= => /andP[t0 _].
-   apply invariant_sublevelUpsilon1 => //.
-   by apply/set_mem/mem_sublevelUpsilon1/set_mem.
-have [M [Mr Mp]]: bounded_set (sublevelUpsilon1 p).
+  suff: cluster (sol p t @[t --> +oo]) `<=` sublevelUpsilon1 p.
+     by apply; rewrite H.
+  rewrite clusterE.
+  apply: (@subset_trans  _ (closure  (sol p @` `[0, +oo[))).
+    apply: bigcap_inf => //=.
+    exists 0; split => //= x x0.
+    exists x =>//.
+    rewrite in_itv/=ltW//.
+    rewrite (closure_id (sublevelUpsilon1 p)).1; last first.
+      by apply compact_closed =>//; apply compact_sublevelUpsilon1.
+  apply closure_subset.
+  move => /= _ [t +] <-.
+  rewrite in_itv/= => /andP[t0 _].
+  apply invariant_sublevelUpsilon1 => //.
+  exact/set_mem/mem_sublevelUpsilon1/set_mem.
+have [M [Mr Mp]] : bounded_set (sublevelUpsilon1 p).
   apply compact_bounded.
   exact: compact_sublevelUpsilon1.
-have [M0 | M0]  := leP 0 M;last first.
+have [M0 | M0] := leP 0 M;last first.
    suff : `|q| < 0 by rewrite normr_lt0.
-   have M02 : M < M/2.
-     by rewrite ltr_pdivlMr // gtr_nMr // ltrDl.
-   have /= w := (Mp _ M02 _ sublevelUpsilon1q).
+   have M02 : M < M / 2 by rewrite ltr_pdivlMr // gtr_nMr // ltrDl.
+   have /= w := Mp _ M02 _ sublevelUpsilon1q.
    apply (le_lt_trans w).
-   rewrite ltr_pdivrMr // mul0r //.
-set V := ball  (p : U) (`|p|+(M+1+1) : K).
+   by rewrite ltr_pdivrMr// mul0r.
+set V := ball (p : U) (`|p| + (M + 1 + 1) : K).
 have VsublevelUpsilon1  : sublevelUpsilon1 p `<=` V.
   move => /= x Kx.
   rewrite /V -ball_normE/ball_ /=.
@@ -628,7 +629,7 @@ have Vo : open V.
   by rewrite /V; exact: ball_open.
 have cV : compact (closure V).
    rewrite closure_ballE closed_ballE//.
-   apply: bounded_closed_compact; last by apply: closed_closed_ball_.
+   apply: bounded_closed_compact; last exact: closed_closed_ball_.
    exists (`|p| + (`|p| + (M + 1 +1))).
    rewrite /closed_ball_/=.
    split => //= x xB y Hy.

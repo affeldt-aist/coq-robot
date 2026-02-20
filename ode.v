@@ -1623,6 +1623,7 @@ Lemma solution_stays_in_ball :
   {in `[a, a + safe_dist]%R,
     forall t, closed_ball u0 r%:num (cauchy_lipschitz_f t)}.
 Proof. Admitted.
+
 Lemma solution_continuous :
   {within `[a, a + safe_dist], continuous cauchy_lipschitz_f}.
 Proof. exact: cts_fun. Qed.
