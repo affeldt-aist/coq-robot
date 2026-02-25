@@ -94,31 +94,29 @@ Qed.
 
 (* TODO: PR *)
 Section vector_continuous.
-Context {R : realType} {n : nat}.
+Context {R : realFieldType} {n : nat}.
 Let U := 'rV[R]_n.
 
-Lemma within_continuous_coord (h : R -> U) D :
-  {within D, continuous h} <-> forall i, {within D, continuous (fun x => h x ord0 i)}.
+Lemma within_continuous_coord A (f : R -> U) :
+  {within A, continuous f} <->
+  forall i, {within A, continuous (fun x => f x ord0 i)}.
 Proof.
-split=> [Dh i|H].
+split=> [Af i|Af].
 - apply/subspace_continuousP => /= x Dx.
-  have /subspace_continuousP/(_ x Dx) H := Dh.
-  apply: ((@cvg_comp _ _ _ h (fun z => z ord0 i)) _ _ _ H).
+  have /subspace_continuousP/(_ x Dx) Afx := Af.
+  apply: (cvg_comp f (fun z => z ord0 i) Afx).
   exact: coord_continuous.
-- apply/subspace_continuousP => /= x Dx.
-  apply/cvgrPdist_le => /= e e0.
+- apply/subspace_continuousP => /= x Ax; apply/cvgrPdist_le => /= e e0.
   rewrite near_withinE.
-  near=> t => Dt.
-  rewrite /Num.norm/= mx_normrE.
-  apply/(bigmax_le _ (ltW e0)) => /= -[i j] _ /=.
+  near=> t => At.
+  rewrite /Num.norm/= mx_normrE; apply/(bigmax_le _ (ltW e0)) => /= -[i j] _ /=.
   rewrite {i}(ord1 i) !mxE.
-  move: j Dt.
+  move: j At.
   near: t.
   apply: filter_forall => /= i.
-  have /subspace_continuousP/(_ x Dx) := H i.
+  have /subspace_continuousP/(_ x Ax) := Af i.
   move/cvgrPdist_le => /(_ _ e0).
-  rewrite near_withinE.
-  exact.
+  by rewrite near_withinE.
 Unshelve. all: by end_near. Qed.
 
 End vector_continuous.

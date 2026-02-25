@@ -746,14 +746,16 @@ have integrable1 : mu.-integrable `[a, y]
     under [x in integrable _ _  x]eq_fun do rewrite EFinN.
     rewrite integrableN //=.
     apply: continuous_compact_integrable => //=; first exact: segment_compact.
-    apply within_continuous_coord.
+    move: i {integrable2}.
+    apply/(@within_continuous_coord R n `[a, y] (phi ^~ u0)).
     apply/continuous_subspaceW/(@cont1_safe_dist R n phi a b k u0 r cont1 rho).
       apply: subset_itvl; rewrite bnd_simp.
       by move : yaaDelta;rewrite in_itv /= => /andP[].
     by rewrite /B inE; exact: closed_ballxx.
   apply integrable_norm => /=.
   apply continuous_compact_integrable => //=; first exact: segment_compact.
-  apply within_continuous_coord.
+  move: i {integrable2}.
+  apply/(@within_continuous_coord R n `[a, y] (phi ^~ u0)).
   apply/continuous_subspaceW/(@cont1_safe_dist R n phi a b k u0 r cont1 rho).
     apply: subset_itvl; rewrite bnd_simp.
     by move : yaaDelta;rewrite in_itv /= => /andP[].
@@ -777,7 +779,8 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
       under [x in integrable _ _  x]eq_fun do rewrite !mxE EFinB.
       rewrite integrableB //=.
         apply continuous_compact_integrable => //; first exact: segment_compact.
-        apply within_continuous_coord.
+        move: j.
+        apply/(@within_continuous_coord R n `[a, y] F).
         apply/continuous_subspaceW/cts_fun.
         apply: subset_itvl; rewrite bnd_simp.
         by move : yaaDelta; rewrite in_itv /= => /andP[].
@@ -846,7 +849,8 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * r%:num + sup_phi)))//.
       rewrite integrableB //=.
         apply continuous_compact_integrable => //.
           exact: segment_compact.
-        apply within_continuous_coord.
+        move: j.
+        apply/(@within_continuous_coord R n `[a, y] F).
         apply /continuous_subspaceW/cts_fun.
         apply: subset_itvl; rewrite bnd_simp.
         by move : yaaDelta; rewrite in_itv /= => /andP[].
@@ -1032,13 +1036,15 @@ have integrable3 : mu.-integrable `[a, t] (fun x0 => `|x x0 - y x0|%:E).
   rewrite integrableB//=.
     apply continuous_compact_integrable => //=.
       exact: segment_compact.
-    apply within_continuous_coord.
+    move: i.
+    apply/within_continuous_coord.
     apply/continuous_subspaceW/cts_fun.
     apply: subset_itvl; rewrite bnd_simp.
     by move: tNdd; rewrite in_itv /= => /andP[].
   apply continuous_compact_integrable => //=.
     exact: segment_compact.
-  apply within_continuous_coord.
+  move: i.
+  apply/within_continuous_coord.
   apply/continuous_subspaceW/cts_fun.
   apply: subset_itvl; rewrite bnd_simp.
   by move: tNdd; rewrite in_itv /= => /andP[].
