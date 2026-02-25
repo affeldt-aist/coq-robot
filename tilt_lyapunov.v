@@ -562,12 +562,11 @@ have norm_constant t0 : t0 \in `[0, D[%R ->
     by rewrite ltW// (itvP t0d').
   have {t0d'' hd0} := cc_is_derive_0_is_cst t0d'' _ hd0.
   apply => //; last by rewrite bound_itvE (itvP t0d').
-  apply: (@within_continuous_comp _ _ _ _ _ (fun x => `|'e_2 - Right x|_e ^+ 2) y) => //=.
-    by rewrite (itvP t0d').
-  move=> z _.
-  apply: differentiable_continuous => //.
-  apply: differentiable_enorm_squared => /=.
-  exact: differentiableB.
+  apply: (@within_continuous_comp _ _ _ `[0, t0] y (fun x => `|'e_2 - Right x|_e ^+ 2)) => //=.
+    move=> z _.
+    apply: differentiable_continuous => //.
+    apply: differentiable_enorm_squared => /=.
+    exact: differentiableB.
   rewrite /sol_is_deriv_co/= in deri.
   have cont : {in `[0, t0]%R, continuous y}.
     move=> t' t'0D.

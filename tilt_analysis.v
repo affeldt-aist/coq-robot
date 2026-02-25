@@ -42,6 +42,56 @@ Qed.
 
 End Rintegral.
 
+Lemma within_continuousB {T : topologicalType} {K : numFieldType}
+    {V : pseudoMetricNormedZmodType K} (A : set T) (f g : T -> V) :
+  {within A, continuous f} -> {within A, continuous g} ->
+  {within A, continuous (f - g)}.
+Proof. by move=> cf cg x; apply: cvgB; [exact: cf|exact: cg]. Qed.
+
+
+Lemma within_continuous_comp {U V W : topologicalType}
+  (A : set V) (f : V -> U) (g : U -> W) :
+  {in f @` A, continuous g} ->
+  {within A, continuous f} ->
+  {within A, continuous (g \o f)}.
+Proof.
+move=> cg /subspace_sigL_continuousP cf; apply/subspace_sigL_continuousP.
+rewrite /sigL -compA => /= x; apply: continuous_comp; first exact: cf.
+by apply/cg/image_f; rewrite inE; exact/set_valP.
+Qed.
+
+Lemma within_continuous_compN {R : realFieldType} {K : numDomainType}
+    {U : pseudoMetricNormedZmodType K} (f : R -> U) (a b : R) :
+  {within `[- b, - a], continuous f} -> {within `[a, b], continuous (f \o -%R)}.
+Proof.
+have [ab|ba _ |-> _] := ltgtP a b; last 2 first.
+  by rewrite set_itv_ge ?bnd_simp -?ltNge//; exact: continuous_subspace0.
+  by rewrite set_itv1; exact: continuous_subspace1.
+move/continuous_within_itvP; rewrite ltrN2 => /(_ ab)[cf fb fa].
+apply/(continuous_within_itvP _ ab); split.
+- move=> t tab.
+  apply: (@cvg_comp _ _ _ -%R f); first exact: oppr_continuous.
+  by apply: cf; rewrite oppr_itvoo !opprK.
+- by rewrite -{1}(opprK a); apply/cvg_at_leftNP; exact: fa.
+- by rewrite -{1}(opprK b); apply/cvg_at_rightNP; exact: fb.
+Qed.
+
+(* TODO: PR to MCA *)
+Lemma nbhs_ge {R : realFieldType} (t x : R) :
+  t < x -> \forall x0 \near nbhs x, t <= x0.
+Proof.
+move=> tx.
+exists ((x - t) / 2).
+  by rewrite /= divr_gt0// subr_gt0.
+move=> y/=.
+have [xy|yx] := lerP x y.
+  rewrite ltrBlDl => H.
+  by rewrite (le_trans (ltW tx)).
+rewrite ltrBlDl -ltrBlDr => /ltW; apply: le_trans.
+rewrite -lerBlDr opprK.
+by rewrite -lerBrDl ler_piMr ?invf_le1 ?ler1n// subr_ge0 ltW.
+Qed.
+
 (* TODO: PR *)
 Section vector_continuous.
 Context {R : realType} {n : nat}.
@@ -73,25 +123,6 @@ Unshelve. all: by end_near. Qed.
 
 End vector_continuous.
 
-Lemma continuous_within_ext {A B : topologicalType} (g h : A -> B) D :
-  {in D, g =1 h} ->
-  {within D, continuous g } -> {within D, continuous h}.
-Proof.
-move=> h1 h2.
-apply subspace_continuousP.
-move => x Dx.
-apply : cvg_trans.
-apply (fmap_within_eq (g := g)) => //.
-apply nbhs_filter.
-move => x' Dx' .
-symmetry.
-by apply h1.
-rewrite <-h1.
-move /subspace_continuousP : h2.
-by apply.
-by rewrite inE.
-Qed.
-
 (* PR to MCA *)
 Section continuous_patch.
 Context {R : realType} {n : nat} {U : normedModType R}.
@@ -115,10 +146,8 @@ have -> : `[a, c] = `[a, b] `|` `[b, c].
   move=> ->; left => /=.
   by rewrite bound_itvE ltW.
 apply: (withinU_continuous (@itv_closed _ _ a b) (@itv_closed _ _ b c)).
-  have eq1 : {in `[a, b], f =1 patch g `[a, b] f }.
-    by move=> r rab; rewrite /patch rab.
-  apply: (continuous_within_ext eq1).
-  exact: cont1.
+  apply: subspace_eq_continuous cont1.
+  by move=> /=r rab; rewrite /from_subspace /patch rab.
 have eq2 : {in `[b, c], g =1 patch g `[a, b] f }.
   move=> r rab.
   rewrite /patch; case: ifPn => [xab | xabnot] => //.
@@ -126,35 +155,10 @@ have eq2 : {in `[b, c], g =1 patch g `[a, b] f }.
   apply: le_anti.
   move: rab xab.
   by rewrite !inE/=!in_itv/= => /andP [-> _] /andP [_ ->].
-apply/continuous_subspaceW/(continuous_within_ext eq2)/cont2.
-by apply: subset_itvl; rewrite bnd_simp.
+exact: (subspace_eq_continuous eq2).
 Qed.
 
 End continuous_patch.
-
-Lemma within_continuousB {K : realType} {V : normedModType K}
-    (A : set K) (f g : _ -> V) :
-  {within A, continuous f} -> {within A, continuous g} ->
-  {within A, continuous (f - g)}.
-Proof.
-by move=> cf cg x; apply: cvgB; [exact: cf|exact: cg].
-Qed.
-
-(* TODO: PR to MCA *)
-Lemma nbhs_ge {R : realFieldType} (t x : R) :
-  t < x -> \forall x0 \near nbhs x, t <= x0.
-Proof.
-move=> tx.
-exists ((x - t) / 2).
-  by rewrite /= divr_gt0// subr_gt0.
-move=> y/=.
-have [xy|yx] := lerP x y.
-  rewrite ltrBlDl => H.
-  by rewrite (le_trans (ltW tx)).
-rewrite ltrBlDl -ltrBlDr => /ltW; apply: le_trans.
-rewrite -lerBlDr opprK.
-by rewrite -lerBrDl ler_piMr ?invf_le1 ?ler1n// subr_ge0 ltW.
-Qed.
 
 Lemma norm_rowmx {K : rcfType} {m n1 n2 : nat}
     (A1 : 'M[K]_(m.+1, n1.+1)) (A2 : 'M[K]_(m.+1, n2.+1)) :
@@ -367,43 +371,6 @@ Proof.
 split => [h x xI| h x xI]; apply h.
   by rewrite inE.
 by rewrite inE in xI.
-Qed.
-
-Lemma within_continuous_comp {R : realType} {K : numDomainType}
-  {U : pseudoMetricNormedZmodType K} a y (g : U -> R) (f : R -> U) :
-  a <= y ->
-  {in f @` `[a, y], continuous g} ->
-  {within `[a, y], continuous (fun x => f x)} ->
-  {within `[a, y], continuous fun x => (g \o f) x}.
-Proof.
-rewrite le_eqVlt => /predU1P[<- _ _|ay cg].
-  by rewrite set_itv1; exact: continuous_subspace1.
-move/(continuous_within_itvP f ay) => -[cf fa fy].
-apply/continuous_within_itvP => //; split => //.
-- move=> z zay; apply: continuous_comp => //.
-    exact: cf.
-  apply/cg/image_f.
-  by rewrite inE/=; apply: subset_itv_oo_cc zay.
-- apply/(cvg_comp f g fa)/cg/image_f.
-  by rewrite inE/= in_itv/= lexx/= ltW.
-- apply/(cvg_comp f g fy)/cg/image_f.
-  by rewrite inE/= in_itv/= lexx/= ltW.
-Qed.
-
-Lemma within_continuous_minus {R : realType} {K : numDomainType}
-    {U : pseudoMetricNormedZmodType K} (f : R -> U) (a b : R) :
-  {within `[- b, - a], continuous f} -> {within `[a, b], continuous f \o -%R}.
-Proof.
-have [ab|ba _ |-> _] := ltgtP a b; last 2 first.
-  by rewrite set_itv_ge ?bnd_simp -?ltNge//; exact: continuous_subspace0.
-  by rewrite set_itv1; exact: continuous_subspace1.
-move/continuous_within_itvP; rewrite ltrN2 => /(_ ab)[cf fb fa].
-apply/(continuous_within_itvP _ ab); split.
-- move=> t tab.
-  apply: (@cvg_comp _ _ _ -%R f); first exact: oppr_continuous.
-  by apply: cf; rewrite oppr_itvoo !opprK.
-- by rewrite -{1}(opprK a); apply/cvg_at_leftNP; exact: fa.
-- by rewrite -{1}(opprK b); apply/cvg_at_rightNP; exact: fb.
 Qed.
 
 Lemma lsubmx_norm_le {K : rcfType} n1 n2 (x : 'rV[K]_(n1.+1 + n2.+1)) :

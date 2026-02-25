@@ -1519,7 +1519,7 @@ rewrite (rowRintegral_itv_split (c := b) (F := (fun x => phi x (patch sol2 `[a, 
                               (fun x0 => phi x0 (patch sol2 `[a, b] sol1 x0))}.
         move => x0 x0ab.
         by rewrite /patch x0ab.
-      apply: (continuous_within_ext eq1).
+      apply: (subspace_eq_continuous eq1).
       exact: cont1.
     move : i.
     apply /within_continuous_coord.
@@ -1531,9 +1531,9 @@ rewrite (rowRintegral_itv_split (c := b) (F := (fun x => phi x (patch sol2 `[a, 
       apply: le_anti.
       move: x0ab xab.
       by rewrite inE/= !in_itv/= => /andP [-> _] /andP [_ ->].
-    apply/continuous_subspaceW/(continuous_within_ext eq2)/cont2.
-    apply: subset_itvl; rewrite bnd_simp.
-    by move : tbc; rewrite in_itv/= => /andP[].
+    apply: (@continuous_subspaceW _ _ _ `[b, c]).
+      by apply: subset_itvl; rewrite bnd_simp (itvP tbc).
+    exact: (subspace_eq_continuous eq2).
   apply: continuous_compact_integrable => //.
   exact: segment_compact.
 Qed.
@@ -2148,7 +2148,7 @@ Proof.
 move => t0ab /= y By.
 move => t.
 apply: continuousN.
-have /within_continuous_minus : {within `[-(-a), - (-t0)], continuous phi^~ y}.
+have /within_continuous_compN : {within `[-(-a), - (-t0)], continuous phi^~ y}.
   rewrite !opprK.
   apply /continuous_subspaceW/cont1 => //.
   apply : subset_itvl.
@@ -2200,7 +2200,7 @@ have cfminus' := And33 solminus.
 rewrite closure_neitv_oo in cfminus'; last by rewrite ltrDl.
 have cfminus : {within `[t0-dminus t0, t0], continuous fminus}.
   rewrite /fminus.
-  apply: within_continuous_minus.
+  apply: within_continuous_compN.
   apply/continuous_subspaceW/cfminus'.
   apply: subset_itvl; rewrite bnd_simp -/dminus.
   by rewrite opprD opprK.
@@ -2240,7 +2240,7 @@ have lip2' : {in `[t0 - dboth t0 ,t0 + dboth t0], forall x, k.-lipschitz_B' (phi
   rewrite -lerBrDl.
   by rewrite !ge_min lexx.
   by split;apply Buneg.
-have contf_minus :   {within `[t0 - dboth t0, t0], continuous fminus}.
+have contf_minus : {within `[t0 - dboth t0, t0], continuous fminus}.
   apply /continuous_subspaceW/cfminus.
   apply: subset_itvr.
   by rewrite bnd_simp /= lerD //= lerNr opprK 3!ge_min lexx !orbT.

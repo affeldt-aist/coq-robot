@@ -28,7 +28,6 @@ tilt_robot.v
 tilt_stability.v
 tilt_lyapunov.v
 tilt_lasalle.v
-ode_wip.v
 
 
 -R . robot

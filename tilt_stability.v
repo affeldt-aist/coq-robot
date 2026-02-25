@@ -490,7 +490,7 @@ have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
   have [t1 /andP[t1_ge0 t1t] phit1r] : exists2 t0, 0 <= t0 <= t & `|f t0| = r.
     have t0 : 0 <= t by rewrite (itvP t0D).
     have norm_phi_cont : {within `[0, t]%classic, continuous (normr \o f)}.
-      apply/(@within_continuous_comp _ _ _ _ _ (@normr _ _) f t0) => //.
+      apply/(@within_continuous_comp _ _ _ `[0, t] f (@normr _ _)) => //.
         by move=> z _; exact: norm_continuous.
       have : {in `[0, D[, continuous f}.
         move=> t'; rewrite inE => t'0D.
