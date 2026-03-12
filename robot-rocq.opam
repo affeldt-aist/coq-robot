@@ -34,7 +34,7 @@ depends: [
 tags: [
   "keyword:robotics"
   "keyword:3D geometry"
-  "logpath:robot-rocq"
+  "logpath:robot"
 ]
 authors: [
   "Reynald Affeldt, AIST"
