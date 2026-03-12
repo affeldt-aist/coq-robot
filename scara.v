@@ -1,5 +1,5 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
+From mathcomp Require Import all_boot ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import sesquilinear.
@@ -8,18 +8,20 @@ Require Import ssr_ext euclidean skew vec_angle rot frame rigid screw.
 From mathcomp Require Import reals.
 Require Import extra_trigo.
 
-(******************************************************************************)
-(*                        SCARA Robot Manipulator                             *)
+(**md**************************************************************************)
+(* # SCARA Robot Manipulator                                                  *)
 (*                                                                            *)
 (* This file addresses the forward kinematics problem for the SCARA robot     *)
 (* manipulator in two ways: (1) it first provides the DH parameters,          *)
 (* (2) using screw motions.                                                   *)
 (*                                                                            *)
+(* ```                                                                        *)
 (* B10,B21,B32,B43 == relative positions of the consecutive frames of the     *)
 (*                    SCARA robot manipulator using DH parameters             *)
 (*     t1,t2,t3,t4 == twists of the SCARA robot manipulator                   *)
 (*              g0 == position of the end-effector using twists               *)
 (*               g == orientation of the end-effector using twists            *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -118,7 +120,7 @@ rewrite /t1 /rjoint_twist.
 rewrite (linearNl _ q1)/=.
 rewrite (linear0r _ w1)/=.
 rewrite oppr0 etwist_Rz; last first.
-  by rewrite -norm_eq0 normeE oner_eq0.
+  by rewrite -enorm_eq0 enormeE oner_eq0.
 by rewrite -Rz_eskew.
 Qed.
 
@@ -126,11 +128,11 @@ Qed.
 Lemma point_axis_twist (d : R) :
   \pt( axis \T((- 'e_2%:R *v row3 d 0 0), 'e_2%:R) ) = row3 d 0 0.
 Proof.
-rewrite {1}/axis ang_tcoorE (negbTE (norm1_neq0 (normeE _ _))) /=.
-rewrite normeE expr1n invr1 scale1r lin_tcoorE.
+rewrite {1}/axis ang_tcoorE (negbTE (norm1_neq0 (enormeE _ _))) /=.
+rewrite enormeE expr1n invr1 scale1r lin_tcoorE.
 rewrite (linearNl _ ((row3 d)``_0))/=.
 rewrite (linearNr _ ('e_2))/=.
-rewrite double_crossmul dotmulvv normeE expr1n scale1r /w2 /q2 e2row.
+rewrite double_crossmul dotmulvv enormeE expr1n scale1r /w2 /q2 e2row.
 rewrite dotmulE sum3E !mxE /=. by Simp.r.
 Qed.
 
@@ -138,8 +140,8 @@ Lemma S2_helper th d :
   `e$(th, \T(- w2 *v row3 d 0 0, w2)) =
   hom (Rz th) (row3 (d * (1 - cos th)) (- d * sin th) 0).
 Proof.
-rewrite etwistE (negbTE (norm1_neq0 (normeE _ _))).
-rewrite pitch_perp ?normeE // mulr0 scale0r add0r.
+rewrite etwistE (negbTE (norm1_neq0 (enormeE _ _))).
+rewrite pitch_perp ?enormeE// mulr0 scale0r add0r.
 rewrite point_axis_twist -Rz_eskew; congr hom.
 rewrite mulmxBr mulmx1 mulmx_row3_col3 !scale0r !addr0 row3Z row3N row3D.
 Simp.r.

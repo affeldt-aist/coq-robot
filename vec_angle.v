@@ -1,5 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import all_boot all_order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex fingroup perm reals interval trigo.
@@ -46,8 +46,8 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Local Open Scope ring_scope.
 
-Lemma norm_le1 [T : rcfType] (u : 'rV[T]_2) :
-  norm u <= 1 -> (- 1 <= u``_ 0 <= 1) /\ (- 1 <= u``_1 <= 1).
+Lemma enorm_le1 [T : rcfType] (u : 'rV[T]_2) :
+  `| u |_e <= 1 -> (- 1 <= u``_ 0 <= 1) /\ (- 1 <= u``_1 <= 1).
 Proof.
 move=> nuL1; rewrite -!ler_norml.
 rewrite -!(expr_le1 (_ : 0 < 2)%N (normr_ge0 _)) //.
@@ -56,22 +56,22 @@ suff sL1 : `|u``_0| ^+ 2 + `|u``_1| ^+ 2 <= 1.
     by rewrite -[X in X <= _]addr0 lerD // sqr_ge0.
   by rewrite -[X in X <= _]add0r lerD // sqr_ge0.
 rewrite !sqr_normr //.
-suff : norm u ^+ 2 <= 1 by rewrite sqr_norm sum2E.
-by apply: exprn_ile1 (norm_ge0 _) _.
+suff : `| u |_e ^+ 2 <= 1 by rewrite sqr_enorm sum2E.
+by apply: exprn_ile1 (enorm_ge0 _) _.
 Qed.
 
-Lemma norm1_cossin (T : realType) (v : 'rV[T]_2) :
-  norm v = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
+Lemma enorm1_cossin (T : realType) (v : 'rV[T]_2) :
+  `| v |_e = 1 -> {a | v``_0 = cos a /\ v``_1 = sin a}.
 Proof.
 move=> nvE.
 exists (if 0 <= v``_1 then acos v``_0 else -acos v``_0).
-have /norm_le1[v0B v1B] : norm v <= 1 by rewrite nvE.
+have /enorm_le1[v0B v1B] : `| v |_e <= 1 by rewrite nvE.
 have [v0_ge0|v0_gt0] := leP 0%R (v``_1).
   rewrite acosK ?in_itv //= sin_acos ?in_itv //=.
-  rewrite -(expr1n T 2) -nvE sqr_norm sum2E [_ + _^+2] addrC addrK.
+  rewrite -(expr1n T 2) -nvE sqr_enorm sum2E [_ + _^+2] addrC addrK.
   by rewrite sqrtr_sqr ger0_norm.
 rewrite cosN sinN acosK ?in_itv //= sin_acos ?in_itv //=.
-rewrite -(expr1n T 2) -nvE sqr_norm sum2E [_ + _^+2] addrC addrK.
+rewrite -(expr1n T 2) -nvE sqr_enorm sum2E [_ + _^+2]addrC addrK.
 by rewrite sqrtr_sqr ltr0_norm ?opprK.
 Qed.
 
@@ -81,7 +81,7 @@ Implicit Types u v : 'rV[T]_3.
 
 Definition vec_angle v w : T :=
   if v == 0 then 0 else
-  if w == 0 then 0 else acos (v *d w / (norm v * norm w)).
+  if w == 0 then 0 else acos (v *d w / (`| v |_e * `| w |_e)).
 
 Lemma vec_anglev0 v : vec_angle v 0 = 0.
 Proof. by rewrite /vec_angle eqxx if_same. Qed.
@@ -93,14 +93,14 @@ Definition vec_angle0 := (vec_anglev0, vec_angle0v).
 
 Lemma vec_angleC v w : vec_angle v w = vec_angle w v.
 Proof.
-by rewrite /vec_angle  dotmulC [norm _ * _]mulrC; do 2 case: eqP.
+by rewrite /vec_angle  dotmulC [`| _ |_e * _]mulrC; do 2 case: eqP.
 Qed.
 
 Lemma vec_anglevZ u v k : 0 < k -> vec_angle u (k *: v) = vec_angle u v.
 Proof.
 move=> k_gt0; rewrite /vec_angle; case: eqP => // /eqP u0.
 rewrite scaler_eq0 (negPf (lt0r_neq0 _)) //=.
-rewrite dotmulvZ normZ gtr0_norm // mulrCA -mulf_div divff ?mul1r //.
+rewrite dotmulvZ enormZ gtr0_norm // mulrCA -mulf_div divff ?mul1r//.
 by rewrite lt0r_neq0.
 Qed.
 
@@ -111,7 +111,7 @@ Lemma vec_anglevZN u v k : k < 0 -> vec_angle u (k *: v) = vec_angle u (- v).
 Proof.
 move=> k_lt0; rewrite /vec_angle; case: eqP => // /eqP u0.
 rewrite scaler_eq0 (negPf (ltr0_neq0 _)) //= oppr_eq0.
-rewrite dotmulvZ normZ ltr0_norm // normN dotmulvN mulrCA -mulf_div.
+rewrite dotmulvZ enormZ ltr0_norm// enormN dotmulvN mulrCA -mulf_div.
 rewrite invrN mulrN divff ?(mulN1r, mulNr) //.
 by rewrite ltr0_neq0.
 Qed.
@@ -123,24 +123,24 @@ Lemma vec_anglevv u : u != 0 -> vec_angle u u = 0.
 Proof.
 move=> u0.
 rewrite /vec_angle /= (negPf u0) dotmulvv -expr2 divff ?acos1 //.
-by rewrite expf_eq0 //= norm_eq0.
+by rewrite expf_eq0 //= enorm_eq0.
 Qed.
 
 Lemma dotmul_div_N11 v w :
-  v != 0 -> w != 0 -> v *d w / (norm v * norm w) \in `[(-1), 1].
+  v != 0 -> w != 0 -> v *d w / (`| v |_e * `| w |_e) \in `[(-1), 1].
 Proof.
 move=> u0 v0.
 rewrite in_itv /= -ler_norml -(expr_le1 (_ : 0 < 2)%N) //.
 rewrite sqr_normr expr_div_n ler_pdivrMr ?mul1r.
-rewrite -subr_ge0 -norm_crossmul' ?exprn_ge0 ?norm_ge0 //.
-by rewrite exprn_gt0 // mulr_gt0 // norm_gt0.
+rewrite -subr_ge0 -enorm_crossmul' ?exprn_ge0 ?enorm_ge0//.
+by rewrite exprn_gt0// mulr_gt0// enorm_gt0.
 Qed.
 
 Lemma cos_vec_angleNv v w : v != 0 -> w != 0 ->
   cos (vec_angle (- v) w) = - cos (vec_angle v w).
 Proof.
 move=> u0 v0.
-rewrite /vec_angle oppr_eq0 (negPf u0) (negPf v0) normN dotmulNv mulNr.
+rewrite /vec_angle oppr_eq0 (negPf u0) (negPf v0) enormN dotmulNv mulNr.
 have H := dotmul_div_N11 u0 v0.
 by rewrite !acosK ?oppr_itvcc ?opprK.
 Qed.
@@ -164,21 +164,21 @@ Proof.
 rewrite /vec_angle oppr_eq0; case: eqP => [//|/eqP uD0].
 case: eqP => [//|/eqP vD0].
 have H := dotmul_div_N11 uD0 vD0; rewrite in_itv in H.
-rewrite normN dotmulvN mulNr !sin_acos ?sqrrN //.
+rewrite enormN dotmulvN mulNr !sin_acos ?sqrrN//.
 by rewrite lerNr opprK lerNl andbC.
 Qed.
 
 Lemma sin_vec_angleNv u v : sin (vec_angle (- u) v) = sin (vec_angle u v).
 Proof. by rewrite vec_angleC [in RHS]vec_angleC [in LHS]sin_vec_anglevN. Qed.
 
-Lemma dotmul_cos u v : u *d v = norm u * norm v * cos (vec_angle u v).
+Lemma dotmul_cos u v : u *d v = `| u |_e * `| v |_e * cos (vec_angle u v).
 Proof.
 wlog /andP[u0 v0] : u v / (u != 0) && (v != 0).
-  case/boolP : (u == 0) => [/eqP ->{u}|u0]; first by rewrite dotmul0v norm0 !mul0r.
-  case/boolP : (v == 0) => [/eqP ->{v}|v0]; first by rewrite dotmulv0 norm0 !(mulr0,mul0r).
-  apply; by rewrite u0.
-rewrite /vec_angle (negPf u0) (negPf v0) acosK; last by apply: dotmul_div_N11.
-by rewrite mulrC divfK // mulf_eq0 negb_or !norm_eq0 u0.
+  have [->|u0] := eqVneq u 0; first by rewrite dotmul0v enorm0 !mul0r.
+  have [->|v0] := eqVneq v 0; first by rewrite dotmulv0 enorm0 !(mulr0,mul0r).
+  by apply; rewrite u0.
+rewrite /vec_angle (negPf u0) (negPf v0) acosK; last exact: dotmul_div_N11.
+by rewrite mulrC divfK // mulf_eq0 negb_or !enorm_eq0 u0.
 Qed.
 
 Lemma dotmul0_vec_angle u v : u != 0 -> v != 0 ->
@@ -189,13 +189,13 @@ by rewrite /vec_angle (negPf u0) (negPf v0) uv0 mul0r acos0 sin_pihalf normr1.
 Qed.
 
 Lemma triine u v :
-  (norm u * norm v * cos (vec_angle u v)) *+ 2 <= norm u ^+ 2 + norm v ^+ 2.
+  (`| u |_e * `| v |_e * cos (vec_angle u v)) *+ 2 <= `| u |_e ^+ 2 + `| v |_e ^+ 2.
 Proof.
-move/eqP: (sqrrD (norm u) (norm v)); rewrite addrAC -subr_eq => /eqP <-.
-rewrite lerBrDr -mulrnDl -{2}(mulr1 (norm u * norm v)) -mulrDr.
-apply (@le_trans _ _ (norm u * norm v * 2%:R *+ 2)).
+move/eqP: (sqrrD `|u|_e `|v|_e); rewrite addrAC -subr_eq => /eqP <-.
+rewrite lerBrDr -mulrnDl -{2}(mulr1 (`|u|_e * `|v|_e)) -mulrDr.
+apply (@le_trans _ _ (`|u|_e * `|v|_e * 2%:R *+ 2)).
   rewrite lerMn2r /=; apply ler_pM => //.
-    by apply mulr_ge0; apply norm_ge0.
+    by apply mulr_ge0; apply: enorm_ge0.
     rewrite -lerBlDr add0r; move: (cos_max (vec_angle u v)).
     by rewrite ler_norml => /andP[].
   rewrite -lerBrDr {2}(_ : 1 = 1%:R) // -natrB //.
@@ -204,43 +204,45 @@ rewrite sqrrD mulr2n addrAC; apply: lerD; last by rewrite mulr_natr.
 by rewrite -subr_ge0 addrAC mulr_natr -sqrrB sqr_ge0.
 Qed.
 
-Lemma normB u v : norm (u - v) ^+ 2 =
-  norm u ^+ 2 + norm u * norm v * cos (vec_angle u v) *- 2 + norm v ^+ 2.
+(* TODO: move? *)
+Lemma enormB u v : `|u - v|_e ^+ 2 =
+  `|u|_e ^+ 2 + `|u|_e * `|v|_e * cos (vec_angle u v) *- 2 + `|v|_e ^+ 2.
 Proof.
-rewrite /norm dotmulD {1}dotmulvv sqr_sqrtr; last first.
+rewrite /enorm dotmulD {1}dotmulvv sqr_sqrtr; last first.
   rewrite !dotmulvN !dotmulNv opprK dotmulvv dotmul_cos.
   by rewrite addrAC mulNrn subr_ge0 triine.
-rewrite sqr_sqrtr ?le0dotmul // !dotmulvv !sqrtr_sqr normN dotmulvN dotmul_cos.
-by rewrite ger0_norm ?norm_ge0 // ger0_norm ?norm_ge0 // mulNrn.
+rewrite sqr_sqrtr ?le0dotmul // !dotmulvv !sqrtr_sqr enormN dotmulvN dotmul_cos.
+by rewrite ger0_norm ?enorm_ge0// ger0_norm ?enorm_ge0// mulNrn.
 Qed.
 
-Lemma normD u v : norm (u + v) ^+ 2 =
-  norm u ^+ 2 + norm u * norm v * cos (vec_angle u v) *+ 2 + norm v ^+ 2.
+(* TODO: move? *)
+Lemma enormD u v : `|u + v|_e ^+ 2 =
+  `|u|_e ^+ 2 + `|u|_e * `|v|_e * cos (vec_angle u v) *+ 2 + `|v|_e ^+ 2.
 Proof.
 rewrite {1}(_ : v = - - v); last by rewrite opprK.
-rewrite normB normN.
-case/boolP: (u == 0) => [/eqP ->|u0].
-  by rewrite !(norm0,expr0n,add0r,vec_angle0,mul0r,mul0rn,oppr0).
-case/boolP: (v == 0) => [/eqP ->|v0].
-  by rewrite norm0 mulr0 oppr0 vec_angle0 cos0 mul0r mul0rn subr0 addr0.
+rewrite enormB enormN.
+have [->|u0] := eqVneq u 0.
+  by rewrite !(enorm0,expr0n,add0r,vec_angle0,mul0r,mul0rn,oppr0).
+have [->|v0] := eqVneq v 0.
+  by rewrite enorm0 mulr0 oppr0 vec_angle0 cos0 mul0r mul0rn subr0 addr0.
 by rewrite [in LHS]cos_vec_anglevN // mulrN mulNrn opprK.
 Qed.
 
 Lemma cosine_law' a b c :
-  norm (b - c) ^+ 2 = norm (c - a) ^+ 2 + norm (b - a) ^+ 2 -
-  norm (c - a) * norm (b - a) * cos (vec_angle (b - a) (c - a)) *+ 2.
+  `|b - c|_e ^+ 2 = `|c - a|_e ^+ 2 + `|b - a|_e ^+ 2 -
+  `|c - a|_e * `|b - a|_e * cos (vec_angle (b - a) (c - a)) *+ 2.
 Proof.
 rewrite -[in LHS]dotmulvv (_ : b - c = b - a - (c - a)); last first.
   by rewrite -!addrA opprB (addrC (- a)) (addrC a) addrK.
 rewrite dotmulD dotmulvv [in X in _ + _ + X = _]dotmulvN dotmulNv opprK.
-rewrite dotmulvv dotmulvN addrAC (addrC (norm (b - a) ^+ _)); congr (_ + _).
-by rewrite dotmul_cos mulNrn (mulrC (norm (b - a))).
+rewrite dotmulvv dotmulvN addrAC (addrC (`|b - a|_e ^+ _)); congr (_ + _).
+by rewrite dotmul_cos mulNrn (mulrC `|b - a|_e).
 Qed.
 
-Lemma cosine_law a b c : norm (c - a) != 0 -> norm (b - a) != 0 ->
+Lemma cosine_law a b c : `|c - a|_e != 0 -> `|b - a|_e != 0 ->
   cos (vec_angle (b - a) (c - a)) =
-  (norm (b - c) ^+ 2 - norm (c - a) ^+ 2 - norm (b - a) ^+ 2) /
-  (norm (c - a) * norm (b - a) *- 2).
+  (`|b - c|_e ^+ 2 - `|c - a|_e ^+ 2 - `|b - a|_e ^+ 2) /
+  (`|c - a|_e * `|b - a|_e *- 2).
 Proof.
 move=> H0 H1.
 rewrite (cosine_law' a b c) -2!addrA addrCA -opprD subrr addr0.
@@ -253,51 +255,51 @@ rewrite -mulrA mulf_eq0 pnatr_eq0/=.
 by rewrite mulf_eq0 negb_or H0 H1.
 Qed.
 
-Lemma norm_crossmul u v :
-  norm (u *v v) = norm u * norm v * `| sin (vec_angle u v) |.
+Lemma enorm_crossmul u v :
+  `|u *v v|_e = `|u|_e * `|v|_e * `| sin (vec_angle u v) |.
 Proof.
-suff /eqP : (norm (u *v v))^+2 = (norm u * norm v * `| sin (vec_angle u v) |)^+2.
-  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm; last by rewrite norm_ge0.
+suff /eqP : `|u *v v|_e ^+ 2 = (`|u|_e * `|v|_e * `| sin (vec_angle u v) |)^+2.
+  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm; last by rewrite enorm_ge0.
   rewrite ger0_norm; first by move/eqP.
-  by rewrite -mulrA mulr_ge0 // ?norm_ge0 // mulr_ge0 // ? norm_ge0.
-rewrite norm_crossmul' dotmul_cos !exprMn.
+  by rewrite -mulrA mulr_ge0 ?enorm_ge0 // mulr_ge0 // enorm_ge0.
+rewrite enorm_crossmul' dotmul_cos !exprMn.
 apply/eqP; rewrite subr_eq -mulrDr.
 rewrite real_normK //; first by rewrite addrC cos2Dsin2 mulr1.
 by rewrite realE; case: ltgtP.
 Qed.
 
-Lemma norm_dotmul_crossmul u v : u != 0 -> v != 0 ->
-  (`|u *d v +i* norm (u *v v)| = (norm u * norm v)%:C)%C.
+Lemma enorm_dotmul_crossmul u v : u != 0 -> v != 0 ->
+  (`|u *d v +i* `|u *v v|_e| = (`|u|_e * `|v|_e)%:C)%C.
 Proof.
 move=> u0 v0 .
-rewrite {1}dotmul_cos {1}norm_crossmul normc_def.
+rewrite {1}dotmul_cos {1}enorm_crossmul normc_def.
 rewrite exprMn (@exprMn _ 2 _ `| sin _ |) -mulrDr.
 rewrite sqrtrM ?sqr_ge0 // sqr_normr cos2Dsin2 sqrtr1 mulr1.
-rewrite sqrtr_sqr normrM; by do 2 rewrite ger0_norm ?norm_ge0 //.
+by rewrite sqrtr_sqr normrM; do 2 rewrite ger0_norm ?enorm_ge0//.
 Qed.
 
 Lemma vec_angle0_inv u v : u != 0 -> v != 0 ->
-  vec_angle u v = 0 -> u = (norm u / norm v) *: v.
+  vec_angle u v = 0 -> u = (`|u|_e / `|v|_e) *: v.
 Proof.
 move=> uD0 vD0 uv0.
-apply/eqP; rewrite -subr_eq0 -norm_eq0.
-rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr0n /= normB.
-rewrite vec_anglevZ; last by rewrite divr_gt0 // norm_gt0.
-rewrite uv0 cos0 mulr1 !normZ ger0_norm; last first.
-  by rewrite divr_ge0 // norm_ge0.
-by rewrite divfK ?norm_eq0 // -expr2 addrAC -mulr2n subrr.
+apply/eqP; rewrite -subr_eq0 -enorm_eq0.
+rewrite -(@eqrXn2 _ 2) ?enorm_ge0// expr0n /= enormB.
+rewrite vec_anglevZ; last by rewrite divr_gt0// enorm_gt0.
+rewrite uv0 cos0 mulr1 !enormZ ger0_norm; last first.
+  by rewrite divr_ge0// enorm_ge0.
+by rewrite divfK ?enorm_eq0// -expr2 addrAC -mulr2n subrr.
 Qed.
 
 Lemma vec_anglepi_inv u v : u != 0 -> v != 0 ->
-  vec_angle u v = pi -> u = - (norm u / norm v) *: v.
+  vec_angle u v = pi -> u = - (`|u|_e / `|v|_e) *: v.
 Proof.
 move=> uD0 vD0 uvpi.
-apply/eqP; rewrite -subr_eq0 -norm_eq0 scaleNr opprK.
-rewrite -(@eqrXn2 _ 2) // ?norm_ge0 // expr0n /= normD.
-rewrite vec_anglevZ; last by rewrite divr_gt0 // norm_gt0.
-rewrite uvpi cospi mulrN1 !normZ ger0_norm; last first.
-  by rewrite divr_ge0 // norm_ge0.
-rewrite mulNrn divfK ?norm_eq0 //.
+apply/eqP; rewrite -subr_eq0 -enorm_eq0 scaleNr opprK.
+rewrite -(@eqrXn2 _ 2) ?enorm_ge0// expr0n /= enormD.
+rewrite vec_anglevZ; last by rewrite divr_gt0// enorm_gt0.
+rewrite uvpi cospi mulrN1 !enormZ ger0_norm; last first.
+  by rewrite divr_ge0// enorm_ge0.
+rewrite mulNrn divfK ?enorm_eq0//.
 by rewrite addrC addrA -expr2 -mulr2n subrr.
 Qed.
 
@@ -309,31 +311,31 @@ have := dotmul_div_N11 uD0 vD0; rewrite in_itv /= => uv_bound.
 by rewrite acos_ge0 // acos_lepi.
 Qed.
 
-Lemma dotmul1_inv u v : norm u = 1 -> norm v = 1 -> u *d v = 1 -> u = v.
+Lemma dotmul1_inv u v : `|u|_e = 1 -> `|v|_e = 1 -> u *d v = 1 -> u = v.
 Proof.
 move=> u1 v1; rewrite dotmul_cos u1 v1 2!mul1r => Huv.
-suff: u = (norm u / norm v) *: v.
+suff: u = (`|u|_e / `|v|_e) *: v.
 rewrite u1 v1 ?divff ?(scale1r, oner_neq0) //.
-apply: vec_angle0_inv; first by rewrite -norm_eq0 u1 oner_neq0.
-  by rewrite -norm_eq0 v1 oner_neq0.
+apply: vec_angle0_inv; first by rewrite -enorm_eq0 u1 oner_neq0.
+  by rewrite -enorm_eq0 v1 oner_neq0.
 apply: cos_inj; rewrite ?in_itv /=; last by rewrite cos0.
   by apply: vec_angle_bound.
 by rewrite lexx pi_ge0.
 Qed.
 
-Lemma dotmulN1_inv u v : norm u = 1 -> norm v = 1 -> u *d v = - 1 -> u = - v.
+Lemma dotmulN1_inv u v : `|u|_e = 1 -> `|v|_e = 1 -> u *d v = - 1 -> u = - v.
 Proof.
 move=> u1 v1 Huv.
-by apply: dotmul1_inv; rewrite ?normN // dotmulvN Huv opprK.
+by apply: dotmul1_inv; rewrite ?enormN// dotmulvN Huv opprK.
 Qed.
 
 Lemma cos_vec_angle a b : a != 0 -> b != 0 ->
-  `| cos (vec_angle a b) | = Num.sqrt (1 - (norm (a *v b) / (norm a * norm b)) ^+ 2).
+  `| cos (vec_angle a b) | = Num.sqrt (1 - (`|a *v b|_e / (`|a|_e * `|b|_e)) ^+ 2).
 Proof.
 move=> Ha Hb.
-rewrite norm_crossmul mulrAC divrr // ?mul1r.
+rewrite enorm_crossmul mulrAC divrr // ?mul1r.
   by rewrite sqr_normr -cos2sin2 sqrtr_sqr.
-by rewrite unitfE mulf_neq0 // norm_eq0.
+by rewrite unitfE mulf_neq0// enorm_eq0.
 Qed.
 
 Lemma orth_preserves_vec_angle M : M \is 'O[T]_3 ->
@@ -343,8 +345,8 @@ move=> MO v w.
 have [->|/eqP vD0]:= v =P 0; first by rewrite mul0mx !vec_angle0.
 have [->|/eqP wD0]:= w =P 0; first by rewrite mul0mx !vec_angle0.
 apply: cos_inj; try by apply: vec_angle_bound.
-have /mulfI : norm v * norm w != 0.
-  by rewrite mulf_eq0 !norm_eq0 negb_or vD0 wD0.
+have /mulfI : `|v|_e * `|w|_e != 0.
+  by rewrite mulf_eq0 !enorm_eq0 negb_or vD0 wD0.
 apply; rewrite -[RHS]dotmul_cos.
 have /orth_preserves_dotmul/(_ v w)<-  := MO.
 by rewrite [RHS]dotmul_cos !orth_preserves_norm.
@@ -515,13 +517,13 @@ Lemma axialcomp0v e : axialcomp 0 e = 0.
 Proof. by rewrite /axialcomp dotmulv0 scale0r. Qed.
 
 Lemma axialcompv0 v : axialcomp v 0 = 0.
-Proof. by rewrite /axialcomp /normalize norm0 invr0 ?(scale0r,dotmul0v). Qed.
+Proof. by rewrite /axialcomp /normalize enorm0 invr0 ?(scale0r,dotmul0v). Qed.
 
-Lemma axialcompE v e : axialcomp v e = (norm e) ^- 2 *: (v *m e^T *m e).
+Lemma axialcompE v e : axialcomp v e = `|e|_e ^- 2 *: (v *m e^T *m e).
 Proof.
-have [/eqP ->|?] := boolP (e == 0); first by rewrite axialcompv0 mulmx0 scaler0.
+have [->|?] := eqVneq e 0; first by rewrite axialcompv0 mulmx0 scaler0.
 rewrite /axialcomp dotmulZv scalerA mulrAC dotmulP mul_scalar_mx dotmulC.
-by rewrite -invrM ?unitfE ?norm_eq0 // -expr2 scalerA.
+by rewrite -invrM ?unitfE ?enorm_eq0// -expr2 scalerA.
 Qed.
 
 Lemma axialcompvN v e : axialcomp v (- e) = axialcomp v e.
@@ -532,9 +534,9 @@ Proof. by rewrite /axialcomp dotmulvN scaleNr. Qed.
 
 Lemma axialcompZ k e : axialcomp (k *: e) e = k *: e.
 Proof.
-rewrite /axialcomp dotmulvZ dotmulC dotmul_normalize_norm.
+rewrite /axialcomp dotmulvZ dotmulC dotmul_normalize_enorm.
 have [/eqP u0|u0] := boolP (e == 0); first by rewrite u0 normalize0 2!scaler0.
-by rewrite scalerA -mulrA divrr ?unitfE ?norm_eq0 // mulr1.
+by rewrite scalerA -mulrA divrr ?unitfE ?enorm_eq0// mulr1.
 Qed.
 
 Lemma axialcomp_dotmul v e : e *d v = 0 -> axialcomp v e = 0.
@@ -559,15 +561,15 @@ rewrite (linearZl_LR _ e)/= (@liexx _ (vec3 T)).
 by rewrite scaler0 (linear0l _ (_ *v v)).
 Qed.
 
-Lemma norm_axialcomp v e : e *d v < 0 ->
-  norm (axialcomp v e) = - (normalize e *d v).
+Lemma enorm_axialcomp v e : e *d v < 0 ->
+  `|axialcomp v e|_e = - (normalize e *d v).
 Proof.
 move=> H.
 have ? : e != 0 by apply: contraTN H => /eqP ->; rewrite dotmul0v ltxx.
-rewrite /axialcomp scalerA normZ ltr0_norm; last first.
-  rewrite pmulr_llt0 ?invr_gt0 ?norm_gt0 //.
-  by rewrite /normalize dotmulZv pmulr_rlt0 // invr_gt0 norm_gt0.
-by rewrite mulNr -(mulrA _ _ (norm e)) mulVr ?mulr1 ?unitfE ?norm_eq0.
+rewrite /axialcomp scalerA enormZ ltr0_norm; last first.
+  rewrite pmulr_llt0 ?invr_gt0 ?enorm_gt0 //.
+  by rewrite /normalize dotmulZv pmulr_rlt0 // invr_gt0 enorm_gt0.
+by rewrite mulNr -(mulrA _ _ `|e|_e) mulVr ?mulr1 ?unitfE ?enorm_eq0.
 Qed.
 
 Lemma axialcomp_mulO Q p e : Q \is 'O[T]_3 -> e *m Q = e ->
@@ -585,8 +587,8 @@ Lemma vec_angle_axialcomp v e : 0 < e *d v ->
 Proof.
 move=> H.
 have ? : e != 0 by apply: contraTN H => /eqP ->; rewrite dotmul0v ltxx.
-rewrite /axialcomp scalerA vec_anglevZ // divr_gt0 // ?norm_gt0 //.
-by rewrite /normalize dotmulZv mulr_gt0 // invr_gt0 norm_gt0.
+rewrite /axialcomp scalerA vec_anglevZ // divr_gt0 ?enorm_gt0//.
+by rewrite /normalize dotmulZv mulr_gt0 // invr_gt0 enorm_gt0.
 Qed.
 
 Definition normalcomp v e := v - axialcomp v e.
@@ -594,7 +596,7 @@ Definition normalcomp v e := v - axialcomp v e.
 Lemma axialnormalcomp v e : v = axialcomp v e + normalcomp v e.
 Proof. by rewrite /axialcomp /normalcomp addrC subrK. Qed.
 
-Lemma normalcompE v e : normalcomp v e = v *m (1 - norm e ^-2 *: (e^T *m e)).
+Lemma normalcompE v e : normalcomp v e = v *m (1 - `|e|_e ^-2 *: (e^T *m e)).
 Proof.
 by rewrite /normalcomp axialcompE -mulmxA scalemxAr -{1}(mulmx1 v) -mulmxBr.
 Qed.
@@ -618,7 +620,7 @@ Lemma normalcompB v1 v2 : normalcomp (v1 - v2) v2 = normalcomp v1 v2.
 Proof.
 apply/esym/eqP.
 rewrite /normalcomp subr_eq /axialcomp -scaleNr -!addrA -scalerDl -dotmulvN.
-rewrite -dotmulDr opprB subrK dotmulC dotmul_normalize_norm.
+rewrite -dotmulDr opprB subrK dotmulC dotmul_normalize_enorm.
 by rewrite norm_scale_normalize addrA subrK.
 Qed.
 
@@ -644,10 +646,10 @@ Qed.
 
 Lemma dotmul_normalcomp v e : normalcomp v e *d e = 0.
 Proof.
-case/boolP : (e == 0) => [/eqP ->|?]; first by rewrite dotmulv0.
+have [->|?] := eqVneq e 0; first by rewrite dotmulv0.
 rewrite /normalcomp dotmulBl !dotmulZv dotmulvv (exprD _ 1 1) expr1.
-rewrite (mulrA (_^-1)) mulVr ?unitfE ?norm_eq0 // mul1r mulrAC.
-by rewrite mulVr ?unitfE ?norm_eq0 // mul1r dotmulC subrr.
+rewrite (mulrA (_^-1)) mulVr ?unitfE ?enorm_eq0// mul1r mulrAC.
+by rewrite mulVr ?unitfE ?enorm_eq0// mul1r dotmulC subrr.
 Qed.
 
 Lemma axialnormal v e : axialcomp v e *d normalcomp v e = 0.
@@ -673,7 +675,7 @@ rewrite -scalemxAr -scalemxAl; congr (_ *: _).
 by rewrite -{1}uQu trmx_mul !mulmxA orthogonal_mul_tr // mul1mx -mulmxA uQu.
 Qed.
 
-Lemma normalcomp_mul_tr e (e1 : norm e = 1) : normalcomp 'e_0 e *m e^T == 0.
+Lemma normalcomp_mul_tr e (e1 : `|e|_e = 1) : normalcomp 'e_0 e *m e^T == 0.
 Proof.
 rewrite /normalcomp mulmxBl -scalemxAl -scalemxAl dotmul1 // dotmulC /dotmul.
 by rewrite e1 invr1 scalemx1 scalemx1 normalizeI // {1}dotmulP subrr.
@@ -685,11 +687,11 @@ Lemma dotmul_orthogonalize v e : e *d orthogonalize v e = 0.
 Proof.
 rewrite /normalcomp /normalize dotmulBr !(dotmulZv, dotmulvZ).
 rewrite mulrACA -invfM -expr2 dotmulvv mulrCA.
-have [->|u_neq0] := eqVneq e 0; first by rewrite norm0 invr0 dotmul0v !mul0r subrr.
+have [->|u_neq0] := eqVneq e 0; first by rewrite enorm0 invr0 dotmul0v !mul0r subrr.
 rewrite norm_normalize // expr1n invr1 mul1r.
 rewrite (mulrC _ (e *d _)).
 rewrite -mulrA (mulrA (_^-1)) -expr2 -exprMn mulVr ?expr1n ?mulr1 ?subrr //.
-by rewrite unitfE norm_eq0.
+by rewrite unitfE enorm_eq0.
 Qed.
 
 End axial_normal_decomposition.
@@ -764,32 +766,32 @@ Lemma cos0sin1 [R : realType] [x : R] : cos x = 0 -> `|sin x| = 1.
 Proof. by move/eqP; rewrite -norm_sin_eq1 => /eqP. Qed.
 
 Lemma triangle_sin_vector_helper v1 v2 : ~~ colinear v1 v2 ->
-  norm v1 ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = norm (normalcomp v1 v2) ^+ 2.
+  `|v1|_e ^+ 2 * sin (vec_angle v1 v2) ^+ 2 = `|normalcomp v1 v2|_e ^+ 2.
 Proof.
 move=> H.
 have v10 : v1 != 0 by apply: contra H => /eqP ->; rewrite colinear0.
 have v20 : v2 != 0 by apply: contra H => /eqP ->; rewrite colinear_sym colinear0.
-rewrite /normalcomp [in RHS]normB.
+rewrite /normalcomp [in RHS]enormB.
 case/boolP : (0 < v2 *d v1) => [v2v1|].
-  rewrite normZ gtr0_norm; last first.
-    by rewrite dotmulZv mulr_gt0 // invr_gt0 norm_gt0.
+  rewrite enormZ gtr0_norm; last first.
+    by rewrite dotmulZv mulr_gt0 // invr_gt0 enorm_gt0.
   rewrite norm_normalize // mulr1 vec_angle_axialcomp //.
   rewrite dotmul_cos norm_normalize // mul1r vec_angleZv; last first.
-    by rewrite invr_gt0 norm_gt0.
+    by rewrite invr_gt0 enorm_gt0.
   rewrite [in RHS]mulrA (vec_angleC v1) -expr2 -mulrA -expr2 exprMn.
   by rewrite mulr2n opprD addrA subrK sin2cos2 mulrBr mulr1.
 rewrite -leNgt le_eqVlt => /orP[|v2v1].
-  rewrite {1}dotmul_cos -mulrA mulf_eq0 norm_eq0 (negbTE v20) /=.
-  rewrite mulf_eq0 norm_eq0 (negbTE v10) /= => /eqP Hcos.
+  rewrite {1}dotmul_cos -mulrA mulf_eq0 enorm_eq0 (negbTE v20) /=.
+  rewrite mulf_eq0 enorm_eq0 (negbTE v10) /= => /eqP Hcos.
   rewrite axialcomp_dotmul; last by rewrite dotmul_cos Hcos mulr0.
-  rewrite norm0 mulr0 mul0r expr0n mul0rn addr0 subr0.
+  rewrite enorm0 mulr0 mul0r expr0n mul0rn addr0 subr0.
   by rewrite -(sqr_normr (sin _)) vec_angleC cos0sin1 ?expr1n ?mulr1.
 rewrite vec_anglevZN //; last first.
-  by rewrite /normalize dotmulZv pmulr_rlt0 // invr_gt0 norm_gt0.
+  by rewrite /normalize dotmulZv pmulr_rlt0 // invr_gt0 enorm_gt0.
 rewrite cos_vec_anglevN // ?normalize_eq0 //.
-rewrite norm_axialcomp // !(mulrN,mulNr,opprK,sqrrN).
-rewrite vec_anglevZ // ?invr_gt0 ?norm_gt0 //.
-rewrite dotmul_cos norm_normalize // mul1r vec_angleZv ?invr_gt0 ?norm_gt0 //.
+rewrite enorm_axialcomp // !(mulrN,mulNr,opprK,sqrrN).
+rewrite vec_anglevZ // ?invr_gt0 ?enorm_gt0//.
+rewrite dotmul_cos norm_normalize // mul1r vec_angleZv ?invr_gt0 ?enorm_gt0//.
 rewrite (vec_angleC v2) -!mulrA -expr2 exprMn addrAC -addrA -mulrA -mulrnAr.
 rewrite -mulrBr mulr2n opprD addrA subrr sub0r.
 rewrite mulrA -expr2 mulrN mulrA -expr2.
@@ -797,27 +799,27 @@ by rewrite sin2cos2 mulrBr mulr1.
 Qed.
 
 Lemma triangle_sin_vector v1 v2 : ~~ colinear v1 v2 ->
-  sin (vec_angle v1 v2) = norm (normalcomp v1 v2) / norm v1.
+  sin (vec_angle v1 v2) = `|normalcomp v1 v2|_e / `|v1|_e.
 Proof.
 move=> H.
 have v10 : v1 != 0 by apply: contra H => /eqP ->; rewrite colinear0.
 have v20 : v2 != 0 by apply: contra H => /eqP ->; rewrite colinear_sym colinear0.
 apply/eqP.
-rewrite -(@eqrXn2 _ 2) // ?divr_ge0 // ?norm_ge0 // ?sin_vec_angle_ge0 //.
+rewrite -(@eqrXn2 _ 2) // ?divr_ge0 ?enorm_ge0// ?sin_vec_angle_ge0 //.
 rewrite exprMn -triangle_sin_vector_helper // mulrAC exprVn divrr ?mul1r //.
-by rewrite unitfE sqrf_eq0 norm_eq0.
+by rewrite unitfE sqrf_eq0 enorm_eq0.
 Qed.
 
 Lemma triangle_sin_point (p1 p2 p : 'rV[T]_3) : ~~ tricolinear p1 p2 p ->
   let v1 := p1 - p in let v2 := p2 - p in
-  sin (vec_angle v1 v2) = norm (normalcomp v1 v2) / norm v1.
+  sin (vec_angle v1 v2) = `|normalcomp v1 v2|_e / `|v1|_e.
 Proof.
 move=> H v1 v2; apply triangle_sin_vector; apply: contra H.
 by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
 Qed.
 
 Lemma law_of_sines_vector v1 v2 : ~~ colinear v1 v2 ->
-  sin (vec_angle v1 v2) / norm (v2 - v1) = sin (vec_angle (v2 - v1) v2) / norm v1.
+  sin (vec_angle v1 v2) / `|v2 - v1|_e = sin (vec_angle (v2 - v1) v2) / `|v1|_e.
 Proof.
 move=> H.
 move: (triangle_sin_vector H) => /= H1.
@@ -826,16 +828,16 @@ have H' : ~~ colinear v2 (v2 - v1).
   rewrite colinear_sym; apply: contra H => H.
   move: (colinear_refl v2); rewrite -colinearNv => /(colinearD H).
   by rewrite addrAC subrr add0r colinearNv.
-have H2 : sin (vec_angle v2 (v2 - v1)) = norm (normalcomp (v2 - v1) v2) / norm (v2 - v1).
+have H2 : sin (vec_angle v2 (v2 - v1)) = `|normalcomp (v2 - v1) v2|_e / `|v2 - v1|_e.
   rewrite vec_angleC; apply triangle_sin_vector; by rewrite colinear_sym.
 rewrite [in RHS]vec_angleC [in RHS]H2.
-by rewrite -normalcompB mulrAC -(opprB v2) normalcompNv normN.
+by rewrite -normalcompB mulrAC -(opprB v2) normalcompNv enormN.
 Qed.
 
 Lemma law_of_sines_point (p1 p2 p : 'rV[T]_3) : ~~ tricolinear p1 p2 p ->
   let v1 := p1 - p in let v2 := p2 - p in
-  sin (vec_angle v1 v2) / norm (p2 - p1) =
-  sin (vec_angle (p2 - p1) (p2 - p)) / norm (p1 - p).
+  sin (vec_angle v1 v2) / `|p2 - p1|_e =
+  sin (vec_angle (p2 - p1) (p2 - p)) / `|p1 - p|_e.
 Proof.
 move=> H v1 v2.
 rewrite (_ : p2 - p1 = v2 - v1); last by rewrite /v1 /v2 opprB addrA subrK.
@@ -1065,7 +1067,7 @@ Variable T : rcfType.
 Let point := 'rV[T]_3.
 
 Definition distance_point_line (p : point) l : T :=
-  norm ((p - \pt( l )) *v \vec( l )) / norm \vec( l ).
+  `|(p - \pt( l )) *v \vec( l )|_e / `|\vec( l )|_e.
 
 Definition distance_between_lines (l1 l2 : Line.t T) : T :=
   if intersects l1 l2 then
@@ -1074,6 +1076,6 @@ Definition distance_between_lines (l1 l2 : Line.t T) : T :=
     distance_point_line \pt( l1 ) l2
   else (* skew lines *)
     let n := \vec( l1 ) *v \vec( l2 ) in
-    `| (\pt( l2 ) - \pt( l1 )) *d n | / norm n.
+    `| (\pt( l2 ) - \pt( l1 )) *d n | / `|n|_e.
 
 End distance_line.

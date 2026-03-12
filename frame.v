@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -57,9 +57,9 @@ Record t : Type := mk {
   i : 'rV[T]_3 ;
   j : 'rV[T]_3 ;
   k : 'rV[T]_3 ;
-  normi : norm i = 1 ;
-  normj : norm j = 1 ;
-  normk : norm k = 1 ;
+  normi : `|i|_e = 1 ;
+  normj : `|j|_e = 1 ;
+  normk : `|k|_e = 1 ;
   idotj : i *d j = 0 ;
   jdotk : j *d k = 0 ;
   idotk : i *d k = 0
@@ -102,8 +102,8 @@ Let vector := 'rV[T]_3.
 Implicit Types p : 'rV[T]_3.
 Variable f : noframe T.
 
-Lemma noframe_norm (k : 'I_3) : norm f|,k = 1.
-Proof. by rewrite rowframeE; apply norm_row_of_O; case: f. Qed.
+Lemma noframe_norm (k : 'I_3) : `| f|,k |_e = 1.
+Proof. by rewrite rowframeE; apply enorm_row_of_O; case: f. Qed.
 
 Lemma noframe_idotj : f~i *d f~j = 0.
 Proof. by rewrite !rowframeE; apply/orthogonalP; case: f. Qed.
@@ -124,9 +124,9 @@ Proof. apply/orthogonal_unit. by case: f. Qed.
 Lemma noframe_inv : (matrix_of_noframe f)^-1 = f^T.
 Proof. rewrite -orthogonal_inv //; by case: f. Qed.
 
-Lemma norm_icrossj : norm (f~i *v f~j) = 1.
+Lemma norm_icrossj : `|f~i *v f~j|_e = 1.
 Proof.
-by rewrite norm_crossmul_normal // ?idotj // ?normi // normj.
+by rewrite enorm_crossmul_normal // ?idotj // ?normi // normj.
 Qed.
 
 Definition noframe_sgn := \det f.
@@ -447,7 +447,7 @@ Qed.
 Module Base1.
 Section base1.
 Variables (T : realType) (i : 'rV[T]_3).
-Hypothesis normi : norm i = 1.
+Hypothesis normi : `|i|_e = 1.
 
 Definition j := if colinear i 'e_0 then 'e_1 else normalize (normalcomp 'e_0 i).
 
@@ -458,7 +458,7 @@ Proof.
 rewrite /j; case: ifPn => [|_]; last first.
   by rewrite dotmulvZ -{3}(normalizeI normi) dotmul_orthogonalize mulr0.
 case/colinearP => [| [_ [k ->]]].
-  by rewrite -norm_eq0 norm_delta_mx (negbTE (oner_neq0 _)).
+  by rewrite -enorm_eq0 enorm_delta_mx (negbTE (oner_neq0 _)).
 by rewrite dotmulZv dote2 mulr0.
 Qed.
 
@@ -468,16 +468,16 @@ Proof. by rewrite /k dot_crossmulC (@liexx _ (vec3 T)) dotmul0v. Qed.
 Lemma jdotk : j *d k = 0.
 Proof. by rewrite /k dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0. Qed.
 
-Lemma normj : norm j = 1.
+Lemma normj : `| j |_e = 1.
 Proof.
-rewrite /j; case: ifPn => iVi; first by rewrite norm_delta_mx.
+rewrite /j; case: ifPn => iVi; first by rewrite enorm_delta_mx.
 rewrite norm_normalize //; apply: contra iVi.
-by rewrite normalcomp_colinear // ?norm1_neq0 // colinear_sym.
+by rewrite normalcomp_colinear ?norm1_neq0// colinear_sym.
 Qed.
 
-Lemma normk : norm k = 1.
+Lemma normk : `| k |_e = 1.
 Proof.
-by rewrite /k norm_crossmul_normal // ?norm_normalize// ?normj// idotj // mulr0.
+by rewrite /k enorm_crossmul_normal // ?norm_normalize// ?normj// idotj // mulr0.
 Qed.
 
 Definition M := col_mx3 i j k.
@@ -522,7 +522,7 @@ Qed.
 End base1_lemmas.
 End Base1.
 
-Canonical base1_is_noframe (T : realType) (u : 'rV[T]_3) (u1 : norm u = 1) :=
+Canonical base1_is_noframe (T : realType) (u : 'rV[T]_3) (u1 : `|u|_e = 1) :=
   NOFrameInterface.mk u1 (Base1.normj u1) (Base1.normk u1)
   (Base1.idotj u1) (Base1.jdotk u) (Base1.idotk u).
 
@@ -536,9 +536,9 @@ Definition i := if u == 0 then 'e_0 else normalize u.
 Definition j := if u == 0 then 'e_1 else Base1.j i.
 Definition k := if u == 0 then 'e_2%:R else Base1.k i.
 
-Lemma normi : norm i = 1.
+Lemma normi : `| i |_e = 1.
 Proof.
-rewrite /i; case: ifP => [_|/eqP/eqP ?]; by rewrite ?normeE // norm_normalize.
+rewrite /i; case: ifP => [_|/eqP/eqP ?]; by rewrite ?enormeE// norm_normalize.
 Qed.
 
 Parameter frame : 'rV[T]_3 -> frame T.
@@ -560,10 +560,10 @@ Qed.
 Lemma frame0E (u0 : u != 0) : (frame u)~i = normalize u.
 Proof. by rewrite -iE /i (negbTE u0). Qed.
 
-Lemma normj : norm j = 1.
-Proof. by rewrite jE rowframeE norm_row_of_O // NOFrame.MO. Qed.
-Lemma normk : norm k = 1.
-Proof. by rewrite kE rowframeE norm_row_of_O // NOFrame.MO. Qed.
+Lemma normj : `| j |_e = 1.
+Proof. by rewrite jE rowframeE enorm_row_of_O // NOFrame.MO. Qed.
+Lemma normk : `| k |_e = 1.
+Proof. by rewrite kE rowframeE enorm_row_of_O // NOFrame.MO. Qed.
 
 Lemma idotj : i *d j = 0.
 Proof. by rewrite iE jE !rowframeE dot_row_of_O // NOFrame.MO. Qed.
@@ -689,7 +689,7 @@ Qed.
 End scalar_neg.
 End scalar.
 
-Lemma j_tr_mul (v : 'rV[T]_3) (v1 : norm v = 1) : j v *m v^T = 0.
+Lemma j_tr_mul (v : 'rV[T]_3) (v1 : `| v |_e = 1) : j v *m v^T = 0.
 Proof.
 rewrite /j (negbTE (norm1_neq0 v1)) /Base1.j.
 case: ifPn => [|_].
@@ -703,7 +703,7 @@ rewrite -scalemxAl scaler_eq0 {2}/i (negbTE (norm1_neq0 v1)) normalizeI //.
 by rewrite normalcomp_mul_tr // orbT.
 Qed.
 
-Lemma k_tr_mul (v : 'rV[T]_3) (v1 : norm v = 1) : k v *m v^T *m v = 0.
+Lemma k_tr_mul (v : 'rV[T]_3) (v1 : `| v |_e = 1) : k v *m v^T *m v = 0.
 Proof.
 rewrite /k (negbTE (norm1_neq0 v1)) /Base1.k /Base1.j.
 case: ifPn => [|_].
@@ -832,12 +832,12 @@ Qed.
 End FromTo_properties.
 
 (* TODO: move? *)
-Lemma sqr_norm_frame (T : realType) (a : frame T) (v : 'rV[T]_3) :
-  norm v ^+ 2 = \sum_(i < 3) (v *d (a |, i%:R))^+2.
+Lemma sqr_enorm_frame (T : realType) (a : frame T) (v : 'rV[T]_3) :
+  `| v |_e ^+ 2 = \sum_(i < 3) (v *d (a |, i%:R))^+2.
 Proof.
-have H : norm v = norm (v *m (can_frame T) _R^ a).
+have H : `| v |_e = `| v *m (can_frame T) _R^ a |_e.
   by rewrite orth_preserves_norm // FromTo_is_O.
-rewrite H sqr_norm [in LHS]sum3E [in RHS]sum3E; congr (_ ^+ 2 + _ ^+ 2 + _ ^+ 2);
+rewrite H sqr_enorm [in LHS]sum3E [in RHS]sum3E; congr (_ ^+ 2 + _ ^+ 2 + _ ^+ 2);
   by rewrite FromTo_from_can mxE_dotmul_row_col -tr_row trmxK row_id NOFrame.rowframeE.
 Qed.
 
@@ -855,27 +855,29 @@ End framed_vector.
 End FramedVect.
 Notation fvec := FramedVect.t.
 
-Notation "`[ v $ F ]" := (FramedVect.mk F v)
-  (at level 5, v, F at next level, format "`[ v  $  F ]").
+Notation "''[' v $ F ]" := (FramedVect.mk F v)
+  (at level 5, v, F at next level, format "''[' v  $  F ]") : frame_scope.
 
 Definition FramedVect_add (T : pzRingType) (F : tframe T) (a b : fvec F) : fvec F :=
-  `[ FramedVect.v a + FramedVect.v b $ F ].
+  '[ FramedVect.v a + FramedVect.v b $ F ].
 
 Notation "a \+f b" := (FramedVect_add a b) (at level 39).
 
-Lemma fv_eq (T : pzRingType) a b : a = b -> forall F : frame T, `[ a $ F ] = `[ b $ F ].
+Lemma fv_eq (T : pzRingType) a b : a = b -> forall F : frame T, '[ a $ F ] = '[ b $ F ].
 Proof. by move=> ->. Qed.
+
+Notation "a \+f b" := (FramedVect_add a b) (at level 39).
 
 Section change_of_coordinate_by_rotation.
 
 Variable T : realType.
 Implicit Types A B : frame T.
 
-Lemma FramedVectvK A (x : fvec A) : `[FramedVect.v x $ A] = x.
+Lemma FramedVectvK A (x : fvec A) : '[FramedVect.v x $ A] = x.
 Proof. by case: x. Qed.
 
 (* change of coordinates: "rotation mapping" from frame A to frame B *)
-Definition rmap A B (x : fvec A) : fvec B := `[FramedVect.v x *m (A _R^ B) $ B].
+Definition rmap A B (x : fvec A) : fvec B := '[FramedVect.v x *m (A _R^ B) $ B].
 
 Lemma rmapK A B (x : fvec A) : rmap A (rmap B x) = x.
 Proof.
@@ -885,15 +887,15 @@ by rewrite divrr ?noframe_is_unit // mulmx1 /= FramedVectvK.
 Qed.
 
 Lemma rmapE A B (x : 'rV[T]_3) :
-  rmap B `[x $ A] = `[x *m A (*A->can*) *m B^T(*can->B*) $ B].
+  rmap B '[x $ A] = '[x *m A (*A->can*) *m B^T(*can->B*) $ B].
 Proof. by rewrite /rmap FromToE noframe_inv mulmxA. Qed.
 
 Lemma rmapE_from_can A (x : 'rV[T]_3) :
-  rmap A `[x $ can_tframe T] = `[x *m A^T $ A].
+  rmap A '[x $ can_tframe T] = '[x *m A^T $ A].
 Proof. by rewrite rmapE can_frame_1 mulmx1. Qed.
 
 Lemma rmapE_to_can A (x : 'rV[T]_3) :
-  rmap (can_tframe T) `[x $ A] = `[x *m A $ can_tframe T].
+  rmap (can_tframe T) '[x $ A] = '[x *m A $ can_tframe T].
 Proof. by rewrite rmapE can_frame_1 trmx1 mulmx1. Qed.
 
 End change_of_coordinate_by_rotation.
@@ -961,22 +963,22 @@ Definition t := (i, j, k).
 Let ac : a != c.
 Proof. by apply: contra abc => /eqP ->; rewrite subrr /colinear linear0r. Qed.
 
-Lemma normi : norm i = 1.
+Lemma normi : `| i |_e = 1.
 Proof. by rewrite /i norm_normalize // subr_eq0 eq_sym. Qed.
 
 Lemma i_neq0 : i != 0.
-Proof. by rewrite -norm_eq0 normi oner_neq0. Qed.
+Proof. by rewrite -enorm_eq0 normi oner_neq0. Qed.
 
-Lemma normj : norm j = 1.
+Lemma normj : `| j |_e = 1.
 Proof.
 rewrite /j norm_normalize // normalcomp_colinear; last first.
-  by rewrite -norm_eq0 normi oner_neq0.
-apply: contra (abc); rewrite colinearvZ invr_eq0 norm_eq0 subr_eq0.
+  by rewrite -enorm_eq0 normi oner_neq0.
+apply: contra (abc); rewrite colinearvZ invr_eq0 enorm_eq0 subr_eq0.
 by rewrite eq_sym (negPf ab) /= colinear_sym.
 Qed.
 
 Lemma j_neq0 : j != 0.
-Proof. by rewrite -norm_eq0 normj oner_neq0. Qed.
+Proof. by rewrite -enorm_eq0 normj oner_neq0. Qed.
 
 Lemma idotj : i *d j = 0.
 Proof. by rewrite /= /i /j dotmulZv dotmulvZ dotmul_orthogonalize 2!mulr0. Qed.
@@ -987,11 +989,11 @@ Proof. by rewrite /k dot_crossmulCA (@liexx _ (vec3 T)) dotmulv0. Qed.
 Lemma idotk : i *d k = 0.
 Proof. by rewrite /k dot_crossmulC (@liexx _ (vec3 T)) dotmul0v. Qed.
 
-Lemma normk : norm k = 1.
-Proof. by rewrite norm_crossmul_normal // ?normi // ?normj // idotj. Qed.
+Lemma normk : `| k |_e = 1.
+Proof. by rewrite enorm_crossmul_normal // ?normi // ?normj // idotj. Qed.
 
 Lemma k_neq0 : k != 0.
-Proof. by rewrite -norm_eq0 normk oner_neq0. Qed.
+Proof. by rewrite -enorm_eq0 normk oner_neq0. Qed.
 
 Lemma is_O : col_mx3 i j k \is 'O[T]_3.
 Proof.

@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -6,8 +6,8 @@ From mathcomp Require Import realalg complex finset fingroup perm.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle rot frame extra_trigo.
 
-(******************************************************************************)
-(*                        Rigid Body Transformations                          *)
+(**md**************************************************************************)
+(* # Rigid Body Transformations                                               *)
 (*                                                                            *)
 (* This file develops the theory of isometries, proving basic properties such *)
 (* as the preservation of the cross-product by derivative maps, the facts     *)
@@ -16,6 +16,7 @@ Require Import ssr_ext euclidean skew vec_angle rot frame extra_trigo.
 (* body transformations are represented by elements of the special Euclidean  *)
 (* group and are shown to preserve norms.                                     *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*      'Iso[T]_n == the type of isometries                                   *)
 (*     'CIso[T]_n == the type of central isometries, i.e., isometries f such  *)
 (*                   that f 0 = 0                                             *)
@@ -38,6 +39,7 @@ Require Import ssr_ext euclidean skew vec_angle rot frame extra_trigo.
 (*                   homogeneous representation                               *)
 (*      Adjoint g == adjoint transformation associated with the homogeneous   *)
 (*                   matrix g                                                 *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -64,7 +66,7 @@ Section isometry.
 Variables (T : rcfType) (n : nat).
 Record t := mk {
   f :> 'rV[T]_n -> 'rV[T]_n ;
-  P : {mono f : a b / norm (a - b)} }.
+  P : {mono f : a b / `|a - b|_e} }.
 End isometry.
 End Iso.
 
@@ -90,17 +92,17 @@ Section central_isometry_n.
 Variable (T : rcfType) (n : nat).
 Implicit Types  f : 'CIso[T]_n.
 
-Lemma central_isometry_preserves_norm f : {mono f : x / norm x}.
+Lemma central_isometry_preserves_enorm f : {mono f : x / `|x|_e}.
 Proof. by case: f => f f0 p; rewrite -(subr0 (f p)) -f0 Iso.P subr0. Qed.
 
 (* [oneill] first part of lemma 1.6, p.100 *)
 Lemma central_isometry_preserves_dotmul f : {mono f : u v / u *d v}.
 Proof.
 case: f => f f0 a b.
-have /eqP : norm (f a - f b) = norm (a - b) by rewrite (Iso.P f).
-rewrite /norm eqr_sqrt ?le0dotmul // !dotmulDl !dotmulDr !dotmulvv !normN.
-rewrite !(central_isometry_preserves_norm (CIso.mk f0)) !addrA.
-rewrite 2!(addrC _ (norm b ^+ 2)) => /eqP/addrI.
+have /eqP : `|f a - f b|_e = `|a - b|_e by rewrite (Iso.P f).
+rewrite /enorm eqr_sqrt ?le0dotmul // !dotmulDl !dotmulDr !dotmulvv !enormN.
+rewrite !(central_isometry_preserves_enorm (CIso.mk f0)) !addrA.
+rewrite 2!(addrC _ (`|b|_e ^+ 2)) => /eqP/addrI.
 rewrite -2!addrA => /addrI.
 rewrite -(dotmulC (f a)) dotmulvN -(dotmulC a) dotmulvN -2!mulr2n => /eqP.
 rewrite -mulr_natr -[in X in _ == X -> _]mulr_natr 2!mulNr eqr_opp.
@@ -119,7 +121,7 @@ Local Open Scope frame_scope.
 Definition frame_central_iso f (F : noframe T) : noframe T.
 apply: (@NOFrame.mk _ (col_mx3 (f F~i) (f F~j) (f F~k))).
 apply/orthogonal3P.
-by rewrite !rowK /= 3!central_isometry_preserves_norm 3!noframe_norm
+by rewrite !rowK /= 3!central_isometry_preserves_enorm 3!noframe_norm
   3!central_isometry_preserves_dotmul idotj noframe_idotk jdotk !eqxx.
 Defined.
 
@@ -163,7 +165,7 @@ Lemma trans_ortho_of_iso f :
 Proof.
 set m := f 0.
 set Tm1f := fun x => f x - m.
-have Tm1f_is_iso : {mono Tm1f : a b / norm (a - b)}.
+have Tm1f_is_iso : {mono Tm1f : a b / `|a - b|_e}.
   move=> ? ?; by rewrite /Tm1f -addrA opprB 2!addrA subrK (Iso.P f).
 have Tm1f0 : Tm1f 0 = 0 by rewrite /Tm1f subrr.
 set c := @CIso.mk _ _ (Iso.mk Tm1f_is_iso) Tm1f0.
@@ -286,7 +288,7 @@ Lemma dmapE f (u : vector) b a :
 Proof. move=> uab; by rewrite /dmap /= uab img_vec_iso. Qed.
 
 Lemma derivative_map_preserves_length f :
-  {mono (fun x : vector => f`* x) : u v / norm (u - v)}.
+  {mono (fun x : vector => f`* x) : u v / `|u - v|_e}.
 Proof.
 move=> u v; rewrite /dmap /= -(mulmxBl u v (ortho_of_iso f)).
 by rewrite orth_preserves_norm // ortho_of_iso_is_O.
@@ -352,7 +354,7 @@ apply (@NOFrame.mk _ (col_mx3 e1 e2 e3)).
   apply/orthogonal3P; rewrite !rowK /=.
   do 3! rewrite orth_preserves_norm ?ortho_of_iso_is_O //.
   rewrite /u1p /u2p /u3p.
-  rewrite !rowframeE !rowE !mulmx1 3!normeE !eqxx /=.
+  rewrite !rowframeE !rowE !mulmx1 3!enormeE !eqxx /=.
   rewrite !(proj2 (orth_preserves_dotmul _)) ?ortho_of_iso_is_O //.
   rewrite /u1p /u2p /u3p.
   by rewrite !rowframeE /= !rowE ?mulmx1 !dote2 //= eqxx.
@@ -1001,8 +1003,8 @@ Qed.
 
 End euclidean_motion.
 
-Lemma motion_vector_preserves_norm (T : realType) (m : t T) :
-  {mono (motion_vector m) : u / norm u}.
+Lemma motion_vector_preserves_enorm (T : realType) (m : t T) :
+  {mono (motion_vector m) : u / `|u|_e}.
 Proof.
 move=> ?; rewrite motion_vectorE orth_preserves_norm // rotation_sub //.
 exact: rotP.
@@ -1026,8 +1028,8 @@ case/boolP : (Aa.angle M == 0) => a0.
 transitivity (u *m M); last first.
   (* TODO: lemma? *)
   by rewrite motion_pointE /= (mul_mx_row u) mulmx0 add_row_mx addr0 add0r to_hpointK.
-have w1 : norm w = 1.
- by rewrite /w aaxis_of // ?Aa.vaxis_neq0 // norm_normalize // Aa.vaxis_neq0.
+have w1 : `|w|_e = 1.
+ by rewrite /w aaxis_of ?Aa.vaxis_neq0// norm_normalize // Aa.vaxis_neq0.
 rewrite rodriguesP //; congr (_ *m _) => {u}.
 by rewrite (angle_axis_eskew_old MSO) // Aa.vaxis_neq0.
 Qed.
@@ -1089,11 +1091,11 @@ by rewrite mul_mx_row mulmx0 add_row_mx add0r to_hpointK.
 Qed.
 
 Lemma SE_preserves_length m :
-  {mono (EuclideanMotion.motion_point m) : a b / norm (a - b)}.
+  {mono (EuclideanMotion.motion_point m) : a b / `|a - b|_e}.
 Proof.
 move=> m0 m1.
 rewrite EuclideanMotion.motion_pointB.
-by rewrite EuclideanMotion.motion_vector_preserves_norm.
+by rewrite EuclideanMotion.motion_vector_preserves_enorm.
 Qed.
 
 Lemma ortho_of_isoE m :

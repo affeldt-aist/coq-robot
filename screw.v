@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -7,8 +7,8 @@ From mathcomp Require Import sesquilinear.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
 
-(******************************************************************************)
-(*                             Screw Motions                                  *)
+(**md**************************************************************************)
+(* # Screw Motions                                                            *)
 (*                                                                            *)
 (* This file develops the theory of screws and twists. It establishes in      *)
 (* particular Chasles' theorem (given a rigid body motion, it shows           *)
@@ -16,6 +16,7 @@ Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
 (* rigid body motion), Mozzi-Chasles' theorem (it shows the existence of a    *)
 (* set of points that undergo just a translation---this is the screw axis).   *)
 (*                                                                            *)
+(* ```                                                                        *)
 (* Module sqLieAlgebra == square matrices form a Lie algebra                  *)
 (*   'se3[R] == the set of twists                                             *)
 (*   wedge t == form a twist in 'se3[R] given twist (coordinates)             *)
@@ -35,6 +36,7 @@ Require Import ssr_ext euclidean skew vec_angle frame rot rigid extra_trigo.
 (* `e$(a, t) == the exponential of a twist t with angle a                     *)
 (* rjoint_twist w p == twist of a revolute joint                              *)
 (* pjoint_twist v == twist of a prismatic joint                               *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -54,7 +56,7 @@ Local Open Scope ring_scope.
 
 (* TODO: move? *)
 Lemma mulmx_tr_uvect (T : rcfType) (w : 'rV[T]_3) :
-  norm w = 1 -> (w^T *m w) ^+ 2 = w^T *m w.
+  `|w|_e = 1 -> (w^T *m w) ^+ 2 = w^T *m w.
 Proof.
 move=> w1; rewrite expr2 -mulmxE -mulmxA (mulmxA w) dotmulP dotmulvv w1 expr1n.
 by rewrite mul1mx.
@@ -623,7 +625,7 @@ rewrite /wedge Twist.ang_of Twist.lin_of spin0.
 by rewrite -idmxE (@scalar_mx_block _ 3 1 1) (add_block_mx 1 0 0 1 0 _ v) !(addr0,add0r).
 Qed.
 
-Lemma p41eq234 w v : norm w = 1 ->
+Lemma p41eq234 w v : `|w|_e = 1 ->
   let g := rigid_trans w v in
   let h := w *d v in
   g^-1 *m wedge \T(v, w) *m g = wedge \T(h *: w, w).
@@ -651,7 +653,7 @@ rewrite !mulrA divrr ?rigid_trans_unit // mul1r -mulrA.
 by rewrite divrr ?mulr1 // rigid_trans_unit.
 Qed.
 
-Lemma p42eq2 w v : norm w = 1 ->
+Lemma p42eq2 w v : `|w|_e = 1 ->
   let g := rigid_trans w v in
   let e' := g^-1 *m wedge \T(v, w) *m g in
   forall k, e' ^+ k.+2 = block_mx (\S( w ) ^+ k.+2) 0 0 0.
@@ -671,7 +673,7 @@ rewrite exprS mulmxA spinE.
 by rewrite (linearZr_LR _ w)/= (@liexx _ (vec3 T)) scaler0 mul0mx.
 Qed.
 
-Lemma emx2_twist w v a : norm w = 1 ->
+Lemma emx2_twist w v a : `|w|_e = 1 ->
   let g := rigid_trans w v in
   let h := w *d v in
   emx (a *: wedge \T(v, w) ) 2 = g *m hom (emx (a *: \S( w)) 2) (h *: (a *: w)) *m g^-1.
@@ -694,7 +696,7 @@ rewrite (linearZl_LR _ (v *v w))/= -scalerDr; congr (_ *: _).
 by rewrite double_crossmul dotmulvv w1 expr1n scale1r -/h addrCA subrr addr0.
 Qed.
 
-Lemma p42eq3 w v a : norm w = 1 ->
+Lemma p42eq3 w v a : `|w|_e = 1 ->
   let g := rigid_trans w v in
   let h := w *d v in
   let e' := g^-1 *m wedge \T(v, w) *m g in
@@ -718,7 +720,7 @@ Definition hom_twist (t : twist T) (a : T) e : 'M[T]_4 :=
   if w == 0 then
     hom 1 (a *: v)
   else
-    hom e ((norm w)^-2 *: ((w *v v) *m (1 - e) + (a *: v) *m (w^T *m w))).
+    hom e ((`|w|_e) ^- 2 *: ((w *v v) *m (1 - e) + (a *: v) *m (w^T *m w))).
 
 (* [murray] eqn 2.36, p.42 *)
 Definition emx_twist a t k : 'M_4 :=
@@ -736,9 +738,9 @@ case/boolP : (w == 0) => [/eqP ->|w0].
   rewrite tcoorZ /= scaler0 emx_twist0E.
   by rewrite /emx_twist /hom_twist ang_tcoorE eqxx lin_tcoorE.
 set w' : 'rV_3 := a *: w.
-rewrite -(norm_scale_normalize w) (_ : v = (norm w) *: ((norm w)^-1 *: v)); last first.
-  by rewrite scalerA divrr ?scale1r // unitfE norm_eq0.
-rewrite -(tcoorZ (norm w) ((norm w)^-1 *: v) (normalize w)).
+rewrite -(norm_scale_normalize w) (_ : v = `|w|_e *: ((`|w|_e)^-1 *: v)); last first.
+  by rewrite scalerA divrr ?scale1r // unitfE enorm_eq0.
+rewrite -(tcoorZ `|w|_e ((`|w|_e)^-1 *: v) (normalize w)).
 rewrite scalerA p42eq235 p42eq3; last by rewrite norm_normalize.
 rewrite -mulmxE.
 rewrite {1}/rigid_trans mulmxE homM mul1r.
@@ -760,19 +762,19 @@ rewrite (linearZl_LR _ w) /=.
 rewrite [in X in _ + _ + X = _]scalerN.
 rewrite [in X in _ + _ + X]scalerA.
 rewrite -[in LHS]scalemxAl -scalerDr -scalerBr; congr (_ *: _).
-  by rewrite -invrM ?unitfE ?norm_eq0.
+  by rewrite -invrM ?unitfE ?enorm_eq0.
 rewrite -/w' /= [in X in _ = X + _]mulmxBr mulmx1.
 rewrite -[in RHS]addrA [in RHS]addrC; congr (_ + _ + _).
 - rewrite lin_tcoorE (@lieC _ (vec3 T)) mulNmx.
-  by rewrite scalerA divrr ?scale1r // ?unitfE ?norm_eq0.
+  by rewrite scalerA divrr ?scale1r ?unitfE ?enorm_eq0.
 - rewrite lin_tcoorE.
-  rewrite (scalerA (norm w)) divrr ?scale1r ?unitfE ?norm_eq0 //.
+  rewrite (scalerA `|w|_e) divrr ?scale1r ?unitfE ?enorm_eq0//.
   rewrite -scalemxAl.
   rewrite mulmxA.
   rewrite dotmulP mul_scalar_mx dotmulC.
   by rewrite scalerA mulrC -scalerA.
 - rewrite (@lieC _ (vec3 T)) opprK; congr (_ *v _).
-  by rewrite lin_tcoorE scalerA divrr ?scale1r ?lin_of_twistE // unitfE norm_eq0.
+  by rewrite lin_tcoorE scalerA divrr ?scale1r ?lin_of_twistE // unitfE enorm_eq0.
 Qed.
 
 (* [murray] proposition 2.8, p. 41 *)
@@ -803,16 +805,16 @@ Local Notation "'`e$(' a ',' t ')'" := (etwist a t) (format "'`e$(' a ','  t ')'
 Lemma etwistv0 (a : T) : `e$(a, \T(0, 0)) = hom 1 0.
 Proof. by rewrite /etwist ang_tcoorE /hom_twist ang_tcoorE eqxx lin_tcoorE scaler0. Qed.
 
-Lemma etwist_is_SE (t : twist T) a : norm \w( t ) = 1 -> `e$(a, t) \is 'SE3[T].
+Lemma etwist_is_SE (t : twist T) a : `|\w( t )|_e = 1 -> `e$(a, t) \is 'SE3[T].
 Proof.
 move=> w1.
 by rewrite /etwist /hom_twist (negbTE (norm1_neq0 w1)) hom_is_SE // eskew_is_SO.
 Qed.
 
 Definition etwist_is_onto_SE_mat (a : T) w :=
-  (a * norm w ^+ 2)%:A
-    + ((1 - cos a) * norm w ^+2) *: \S(w)
-      + (a - sin a) *: \S(w)^+2.
+  (a * `|w|_e ^+ 2)%:A
+    + ((1 - cos a) * `|w|_e ^+ 2) *: \S(w)
+      + (a - sin a) *: \S(w) ^+ 2.
 
 (*******************STOP*****************************)
 Definition etwist_is_onto_SE_mat_inv (a : T) w :=
@@ -820,8 +822,8 @@ Definition etwist_is_onto_SE_mat_inv (a : T) w :=
    - 2%:R^-1 *: \S(w)
      + (a^-1 - 2%:R^-1 * cot (a / 2%:R)) *: \S(w) ^+ 2.
 
-Lemma etwist_is_onto_SE_matP a w 
-  (aB : - pi < a <= pi) (a0 : a != 0) (w1 : norm w = 1) :
+Lemma etwist_is_onto_SE_matP a w
+  (aB : - pi < a <= pi) (a0 : a != 0) (w1 : `|w|_e = 1) :
   etwist_is_onto_SE_mat_inv a w * etwist_is_onto_SE_mat a w = 1.
 Proof.
 rewrite /etwist_is_onto_SE_mat /etwist_is_onto_SE_mat_inv.
@@ -901,11 +903,11 @@ Lemma etwist_is_onto_SE (f : 'M[T]_4) : f \is 'SE3[T] ->
 Proof.
 set p := trans_of_hom f.
 case/boolP: (rot_of_hom f == 1) => rotf fSE.
-case/boolP : ((norm p) == 0) => p0.
+case/boolP : (`|p|_e == 0) => p0.
     exists \T(p, 0), 1.
     rewrite /etwist /hom_twist ang_tcoorE eqxx lin_tcoorE.
     by rewrite scale1r (SE3E fSE) (eqP rotf).
-  exists \T((norm p)^-1 *: p, 0), (norm p).
+  exists \T((`|p|_e)^-1 *: p, 0), `|p|_e.
   rewrite /etwist /hom_twist ang_tcoorE eqxx /= lin_tcoorE.
   rewrite scalerA divff //.
   by rewrite scale1r (SE3E fSE) (eqP rotf).
@@ -915,7 +917,7 @@ have a0 : a != 0.
   apply: contra rotf => /eqP.
   rewrite fexp_skew => ->; by rewrite emx30M.
 set A : 'M_3 := \S(w) *m (1 - rot_of_hom f) + a *: (w^T *m w).
-suff [v Hv] : { v | p = (norm w)^-2 *: (v *m A) }.
+suff [v Hv] : { v | p = (`|w|_e) ^- 2 *: (v *m A) }.
   exists \T(v, w), a.
   rewrite (SE3E fSE) /etwist /hom_twist ang_tcoorE.
   have /negbTE -> : w != 0 by rewrite normalize_eq0 vaxis_euler_neq0 // rot_of_hom_is_SO.
@@ -942,9 +944,9 @@ have HA : A = etwist_is_onto_SE_mat a w.
   by rewrite scaleNr scalerN opprK scalerA.
 suff : { A' : 'M_3 |  A' * A = 1 }.
   case => A' AA'.
-  exists ((norm w) ^+2 *: p *m A').
+  exists ((`|w|_e) ^+ 2 *: p *m A').
   rewrite -mulmxA mulmxE AA' mulmx1 scalerA.
-  rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= norm_eq0.
+  rewrite mulrC divrr ?scale1r // unitfE expf_eq0 /= enorm_eq0.
   apply: contra rotf; rewrite fexp_skew => /eqP ->.
   by rewrite spin0 emx3a0.
 (* NB: corresponds to [murray], exercise 9, p.75 *)
@@ -989,11 +991,11 @@ Definition w : vector := 'e_2%:R.
 
 Let A_inv := etwist_is_onto_SE_mat_inv a w.
 
-Definition v := ((norm w)^+2 *: P20) *m A_inv.
+Definition v := ((`|w|_e) ^+ 2 *: P20) *m A_inv.
 
 Lemma vP : v = row3 ((a1 + a2) * sin a / (2%:R * (1 - cos a))) (- (a1 - a2) / 2%:R) 0 :> vector.
 Proof.
-rewrite /v normeE expr1n scale1r /P20.
+rewrite /v enormeE expr1n scale1r /P20.
 rewrite /A_inv /etwist_is_onto_SE_mat_inv.
 rewrite mulmxDr mulmxBr.
 rewrite mul_mx_scalar row3Z mulr0.
@@ -1053,7 +1055,7 @@ Definition screw_motion s (p : point) : 'rV_3 :=
   let p0 := \pt( l ) in let w := \vec( l ) in
   p0 + (p - p0) *m `e^(a, w) + (h * a) *: w.
 
-Lemma screw_motionE s (p : point) (w1 : norm \vec( Screw.l s) = 1) :
+Lemma screw_motionE s (p : point) (w1 : `| \vec( Screw.l s) |_e = 1) :
   let l := Screw.l s in let a := Screw.a s in let h := Screw.h s in
   let q := \pt( l ) in let w := \vec( l ) in
   screw_motion s p = EuclideanMotion.motion_point
@@ -1114,7 +1116,7 @@ rewrite [in X in _ = _ *: (X + _)]mulmxBl.
 rewrite opprB -addrA.
 rewrite scalerDr.
 rewrite -[in X in _ = X + _]scalemxAl scalerA [in X in _ = X + _]mulrC divrr ?scale1r; last first.
-  by rewrite unitfE expf_eq0 /= norm_eq0.
+  by rewrite unitfE expf_eq0 /= enorm_eq0.
 congr (_ + _).
 rewrite -[in X in _ = _ *: (_ + X)]scalemxAl.
 rewrite mulmxDl.
@@ -1125,7 +1127,7 @@ rewrite scalerDr.
 rewrite 2!scalerA.
 rewrite [in X in _ = X + _]mulrA.
 rewrite [in X in _ = X + _]mulrC.
-rewrite -(mulrA (a * h)) divrr ?mulr1; last by rewrite unitfE expf_eq0 /= norm_eq0.
+rewrite -(mulrA (a * h)) divrr ?mulr1; last by rewrite unitfE expf_eq0 /= enorm_eq0.
 rewrite mulrC -[LHS]addr0.
 congr (_ + _).
 rewrite mulmxBr mulmx1.
@@ -1154,7 +1156,7 @@ Definition axis (t : twist T) : Line.t T :=
   if w == 0 then
     Line.mk 0 v
   else
-    Line.mk ((norm w)^-2 *: (w *v v)) w.
+    Line.mk ((`|w|_e) ^- 2 *: (w *v v)) w.
 
 Lemma point_axis_nolin w : w != 0 -> \pt( axis \T(0, w) ) = 0.
 Proof.
@@ -1165,7 +1167,7 @@ Qed.
 (* [murray] 2.42, p.47 *)
 Definition pitch (t : twist T) : T :=
   let w := \w( t ) in let v := \v( t ) in
-  (norm w)^-2 *: v *d w.
+  (`|w|_e) ^- 2 *: v *d w.
 
 Lemma pitch_nolin (w : 'rV[T]_3) : pitch \T(0, w) = 0.
 Proof. by rewrite /pitch ang_tcoorE lin_tcoorE scaler0 dotmul0v. Qed.
@@ -1174,7 +1176,7 @@ Definition rjoint_twist (w : vector) (q : point) := \T(- w *v q, w).
 
 Definition pjoint_twist (v : vector) := \T(v, 0).
 
-Lemma pitch_perp (w u : 'rV[T]_3) : norm w = 1 -> pitch (rjoint_twist w u) = 0.
+Lemma pitch_perp (w u : 'rV[T]_3) : `|w|_e = 1 -> pitch (rjoint_twist w u) = 0.
 Proof.
 move=> w1; rewrite /pitch ang_tcoorE lin_tcoorE w1 expr1n invr1 scale1r.
 rewrite (@lieC _ (vec3 T))/=.
@@ -1184,34 +1186,34 @@ Qed.
 (* [murray] 2.44, p.48 *)
 Definition magnitude (t : twist T) : T :=
   let w := \w( t ) in let v := \v( t ) in
-  if w == 0 then norm v else norm w.
+  if w == 0 then `|v|_e else `|w|_e.
 
 Lemma magnitudeZ (t : twist T) a : 0 < a ->
   magnitude ((a *: t) : 'M__) = a * magnitude t.
 Proof.
 move=> a_gt0.
 rewrite /magnitude.
-case/boolP : (a == 0) => [/eqP ->|a0].
-  by rewrite scale0r mul0r ang_tcoor0 eqxx lin_tcoor0 norm0.
+have [->|a0] := eqVneq a 0.
+  by rewrite scale0r mul0r ang_tcoor0 eqxx lin_tcoor0 enorm0.
 rewrite ang_tcoorZ scaler_eq0 (negbTE a0) /=.
 case: ifPn => M0.
-  by rewrite lin_tcoorZ normZ gtr0_norm.
-by rewrite normZ gtr0_norm.
+  by rewrite lin_tcoorZ enormZ gtr0_norm.
+by rewrite enormZ gtr0_norm.
 Qed.
 
 (* unit twist: [murray] p.49 (p.48 also) *)
 Definition utwist (t : twist T) := (magnitude t == 1).
 
 Lemma utwistE (t : twist T) : utwist t =
-  (norm \w( t ) == 1) || ((norm \w( t ) == 0) && (norm \v( t ) == 1)).
+  (`| \w( t ) |_e == 1) || ((`| \w( t ) |_e == 0) && (`| \v( t ) |_e == 1)).
 Proof.
 apply/idP/idP.
 - rewrite /utwist /magnitude.
-  case: ifPn => [/eqP -> ->|w0 ->]; by rewrite norm_eq0 ?eqxx /= ?orbT.
+  case: ifPn => [/eqP -> ->|w0 ->]; by rewrite enorm_eq0 ?eqxx /= ?orbT.
 - case/orP => [w1|/andP[w0 v1]].
     rewrite /utwist /magnitude; case: ifPn => [w0| //].
-    by rewrite (eqP w0) norm0 eq_sym (negbTE (@oner_neq0 _)) in w1.
-  by rewrite /utwist /magnitude -{1}norm_eq0 w0.
+    by rewrite (eqP w0) enorm0 eq_sym (negbTE (@oner_neq0 _)) in w1.
+  by rewrite /utwist /magnitude -{1}enorm_eq0 w0.
 Qed.
 
 (* [murray] p. 48
@@ -1279,7 +1281,7 @@ congr hom.
 rewrite lin_tcoorE.
 rewrite -scalemxAl mulmxA dotmulP scalemxAl scalerDr -scalemxAl.
 rewrite (scalerA _ a) (mulrC _ a).
-rewrite -(scalerA a (norm w ^+ 2)^-1).
+rewrite -(scalerA a (`|w|_e ^+ 2)^-1).
 rewrite mul_scalar_mx (scalerA _ (v *d w) w) -(dotmulZv v _ w).
 rewrite (_ : _ *d _ = pitch \T(v, w)); last by rewrite /pitch lin_tcoorE ang_tcoorE.
 rewrite addrC.
@@ -1320,7 +1322,7 @@ Let vaxis0 : Aa.vaxis Q != 0.
 Proof.
 by rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or w0 andbT invr_eq0 mulrn_eq0.
 Qed.
-Let w1 : norm w = 1. Proof. by rewrite norm_normalize. Qed.
+Let w1 : `|w|_e = 1. Proof. by rewrite norm_normalize. Qed.
 
 (* [angeles] theorem 3.2.1, p.97:
    the displacements of all the points of the body have the same projection onto e *)
@@ -1341,32 +1343,32 @@ Qed.
 
 Definition axialdisp p := axialcomp (displacement f p) w.
 
-Lemma axialdispE p : axialdisp p = d0 *: ((norm w)^-2 *: w).
+Lemma axialdispE p : axialdisp p = d0 *: ((`|w|_e) ^- 2 *: w).
 Proof.
 rewrite /axialdisp /axialcomp dotmulC dotmulvZ displacement_proj mulrC -scalerA.
-by rewrite (scalerA (norm w)^-1) -expr2 exprVn.
+by rewrite (scalerA (`|w|_e)^-1) -expr2 exprVn.
 Qed.
 
 Definition normdisp p := normalcomp (displacement f p) w.
 
 Lemma decomp_displacement p :
-  norm (displacement f p) ^+ 2 = norm (d0 *: (norm w ^- 2 *: w)) ^+2 + norm (normdisp p) ^+ 2.
+  `|displacement f p|_e ^+ 2 = `|d0 *: (`|w|_e ^- 2 *: w)|_e ^+2 + `|normdisp p|_e ^+ 2.
 Proof.
-rewrite (axialnormalcomp (displacement f p) w) normD -dotmul_cos axialnormal // mul0rn addr0.
+rewrite (axialnormalcomp (displacement f p) w) enormD -dotmul_cos axialnormal // mul0rn addr0.
 by rewrite -/(normdisp p) -/(axialdisp p) axialdispE.
 Qed.
 
-Lemma MozziChasles_helper p : norm (displacement f p) = d0 -> normdisp p = 0.
+Lemma MozziChasles_helper p : `|displacement f p|_e = d0 -> normdisp p = 0.
 Proof.
 move=> Hp.
-have := lexx (norm (d0 *: w) ^+ 2).
-rewrite {1}normZ w1 mulr1 sqr_normr -{1}Hp decomp_displacement -lerBDl.
+have := lexx (`|d0 *: w|_e ^+ 2).
+rewrite {1}enormZ w1 mulr1 sqr_normr -{1}Hp decomp_displacement -lerBDl.
 rewrite w1 expr1n invr1 scale1r.
-by rewrite subrr le_eqVlt ltNge sqr_ge0 orbF sqrf_eq0 norm_eq0 => /eqP.
+by rewrite subrr le_eqVlt ltNge sqr_ge0 orbF sqrf_eq0 enorm_eq0 => /eqP.
 Qed.
 
 (* [angeles] theorem 3.2.2, p.97 *)
-Lemma MozziChasles p : norm (displacement f p) = d0 ->
+Lemma MozziChasles p : `|displacement f p|_e = d0 ->
   colinear (displacement f p) w.
 Proof.
 move=> H.
@@ -1443,8 +1445,8 @@ rewrite /Aa.vaxis.
 rewrite (negbTE api).
 by rewrite scaler_eq0 negb_or w0 andbT invr_eq0 mulrn_eq0.
 Qed.
-Let w1 : norm w = 1.
-Proof. rewrite norm_normalize //. Qed.
+Let w1 : `|w|_e = 1.
+Proof. by rewrite norm_normalize. Qed.
 
 Lemma wTwQN1 : (w^T *m w) *m (Q - 1)^T = 0.
 Proof.
@@ -1580,7 +1582,7 @@ Qed.
 (* [angeles] Sect. 3.2.1 (the screw of a rigid-body motion) *)
 Lemma screw_axis_pointE p0 q :
   p0 *d w = 0 (* p0 is the closed point to the origin *) ->
-  norm (displacement f p0) = d0 f ->
+  `|displacement f p0|_e = d0 f ->
   p0 = screw_axis_point f q.
 Proof.
 move=> p0e0 fp0e0.
