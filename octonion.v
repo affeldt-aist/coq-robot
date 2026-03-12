@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
@@ -862,8 +862,8 @@ apply/eqP; rewrite eq_oct; apply/andP; split; apply/eqP.
   rewrite [in LHS]/= scaleoctE /=.
   rewrite !{1}(linear0, mul0r, mulr0, sub0r, add0r, subr0).
   rewrite [a.1 + _^*q]addrC addrK -scalerA addr0 -conjqE !mulrA !conjq_comm.
-  rewrite !conjqP /sqrq /= norm0 !expr0n  expr1n /= !add0r !addr0.
-  rewrite !normeE !mul1r expr1n mul1r -3!opprD addrA -!mulr2n scalerN.
+  rewrite !conjqP /sqrq /= enorm0 !expr0n expr1n /= !add0r !addr0.
+  rewrite !enormeE !mul1r expr1n mul1r -3!opprD addrA -!mulr2n scalerN.
   rewrite -mulrnA -scaler_nat !scalerA -scalerBl.
   rewrite -{1}[3%:R^-1]mulr1 -mulrA -mulrBr natrM mulrA mulNr.
   rewrite  mulVf ?(eqr_nat _ _ 0) //.
@@ -874,7 +874,7 @@ apply: etrans (_ : -(2%:R / 3%:R) *: a.2 + -(1 / 3%:R) *: a.2 = _).
   rewrite -scalerDl -opprD -mulrDl -(natrD _ _ 1) mulfV ?scaleN1r //.
   by rewrite (eqr_nat _ _ 0).
 congr (_ + _).
-  rewrite 3!addr0 -scalerA -!{1}mulrA !{1}conjqP /sqrq !normeE /=
+  rewrite 3!addr0 -scalerA -!{1}mulrA !{1}conjqP /sqrq !enormeE /=
           !expr0n !expr1n /=.
   rewrite !add0r !mul1r !mulr1 mulrC -mulrN -scalerA.
   rewrite -addrA -!mulr2n -mulrnA -scaler_nat !scalerA natrM mulrA.

@@ -1,4 +1,4 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
@@ -54,7 +54,7 @@ Implicit Types l : Line.t T.
 
 Definition normalized_plucker_direction l :=
   let p1 := \pt( l ) in let p2 := \pt2( l ) in
-  (norm (p2 - p1))^-1 *: (p2 - p1).
+  (`|p2 - p1|_e)^-1 *: (p2 - p1).
 
 Lemma normalized_plucker_directionP (l : Line.t T) : \vec( l ) != 0 ->
   let e := normalized_plucker_direction l in e *d e == 1.
@@ -62,8 +62,8 @@ Proof.
 move=> l0 /=.
 rewrite /normalized_plucker_direction dotmulZv dotmulvZ dotmulvv.
 rewrite -Line.vectorE.
-rewrite mulrA mulrAC expr2 mulrA mulVr ?unitfE ?norm_eq0 // mul1r.
-by rewrite divrr // unitfE norm_eq0.
+rewrite mulrA mulrAC expr2 mulrA mulVr ?unitfE ?enorm_eq0// mul1r.
+by rewrite divrr // unitfE enorm_eq0.
 Qed.
 
 Definition normalized_plucker_position l :=
@@ -88,22 +88,22 @@ Lemma normalized_pluckerP l :
   let p1 := \pt( l ) in
   let p2 := \pt2( l ) in
   \vec( l ) != 0 ->
-  plucker_of_line l = norm (p2 - p1) *: normalized_plucker l.
+  plucker_of_line l = `|p2 - p1|_e *: normalized_plucker l.
 Proof.
 move=> p1 p2 l0.
 rewrite /normalized_plucker /normalized_plucker_direction /normalized_plucker_position.
 rewrite -/p1 -/p2 (linearZr_LR crossmul) -scale_row_mx scalerA.
-by rewrite divrr ?scale1r // unitfE norm_eq0 /p2 -Line.vectorE.
+by rewrite divrr ?scale1r // unitfE enorm_eq0 /p2 -Line.vectorE.
 Qed.
 
 Lemma plucker_of_lineE l (l0 : \vec( l ) != 0) :
-  plucker_of_line l = norm (\pt2( l ) - \pt( l )) *:
+  plucker_of_line l = `|\pt2( l ) - \pt( l )|_e *:
   (Plucker.mkArray (normalized_plucker_directionP l0) (normalized_plucker_positionP l) : 'M__).
 Proof.
 rewrite /plucker_of_line /plucker_array_mx /=.
 rewrite /normalized_plucker_direction /normalized_plucker_position.
 rewrite (linearZr_LR crossmul) -scale_row_mx.
-by rewrite scalerA divrr ?scale1r // unitfE norm_eq0 -Line.vectorE.
+by rewrite scalerA divrr ?scale1r // unitfE enorm_eq0 -Line.vectorE.
 Qed.
 
 Definition plucker_eqn p l :=
@@ -196,7 +196,7 @@ Variables F0 F1 : tframe T.
 Definition From1To0 := locked (F1 _R^ F0).
 Definition p1_in_0 : 'rV[T]_3 := (\o{F1} - \o{F0}) *m (can_tframe T) _R^ F0.
 
-Goal `[ p1_in_0 $ F0 ] = rmap F0 `[ \o{F1} - \o{F0} $ can_tframe T ].
+Goal '[ p1_in_0 $ F0 ] = rmap F0 '[ \o{F1} - \o{F0} $ can_tframe T ].
 Proof.
 rewrite /p1_in_0.
 by rewrite /rmap.
@@ -218,14 +218,14 @@ have H1 : From1To0 0 2%:R = 0.
   by rewrite !rowframeE.
 have [H2a H2b] : From1To0 0 0 ^+ 2 + From1To0 0 1 ^+ 2 = 1 /\
   From1To0 1 2%:R ^+ 2 + From1To0 2%:R 2%:R ^+ 2 = 1.
-  move: (norm_row_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
+  move: (enorm_row_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
   rewrite expr1n -dotmulvv dotmulE sum3E [_ 0 2%:R]mxE.
   move: (H1); rewrite {1}/From1To0 -lock => ->.
   rewrite  mulr0 addr0 -!expr2 => H1a.
   split.
     rewrite [_ 0 0]mxE [_ 0 1]mxE in H1a.
     by rewrite /From1To0 -lock.
-  move: (norm_col_of_O (FromTo_is_O F1 F0) 2%:R) => /= /(congr1 (fun x => x ^+ 2)).
+  move: (enorm_col_of_O (FromTo_is_O F1 F0) 2%:R) => /= /(congr1 (fun x => x ^+ 2)).
   rewrite expr1n -dotmulvv dotmulE sum3E 2![_ 0 0]mxE.
   move: (H1); rewrite {1}/From1To0 -lock => ->.
   by rewrite mulr0 add0r -!expr2 tr_col [_ 0 1]mxE [_ 0 2%:R]mxE /From1To0 -lock !mxE.
@@ -256,8 +256,8 @@ move: (H22);   rewrite {1}/From1To0 -lock => ->.
 rewrite 2![_ 0 2%:R]mxE => /eqP.
 rewrite addr_eq0 => /eqP H10_H20.
 
-move: (norm_col_of_O (FromTo_is_O F1 F0) 1) => /= /(congr1 (fun x => x ^+ 2)).
-rewrite expr1n sqr_norm sum3E tr_col [_ 0 0]mxE [_ 1 0]mxE.
+move: (enorm_col_of_O (FromTo_is_O F1 F0) 1) => /= /(congr1 (fun x => x ^+ 2)).
+rewrite expr1n sqr_enorm sum3E tr_col [_ 0 0]mxE [_ 1 0]mxE.
 move: (H01); rewrite {1}/From1To0 -lock => ->.
 rewrite [_ 0 1]mxE [_ 1 1]mxE [_ 0 2%:R]mxE [_ 1 2%:R]mxE.
 move/eqP. rewrite -addrA eq_sym addrC -subr_eq -cos2sin2. move/eqP.
@@ -266,8 +266,8 @@ rewrite mulrDr -(@exprMn _ _ (sin alpha) (_ 1 1)) (mulrC _ (_ 1 1)) H11_H21.
 rewrite sqrrN exprMn [in X in _ = X -> _](mulrC (sin alpha ^+ 2)).
 rewrite -mulrDr cos2Dsin2 mulr1 => /esym sqr_H21.
 
-move: (norm_col_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
-rewrite sqr_norm sum3E 2![_ 0 0]mxE.
+move: (enorm_col_of_O (FromTo_is_O F1 F0) 0) => /= /(congr1 (fun x => x ^+ 2)).
+rewrite sqr_enorm sum3E 2![_ 0 0]mxE.
 move: (H00); rewrite {1}/From1To0 -lock => ->.
 rewrite expr1n [_ 0 1]mxE [_ 1 0]mxE [_ 0 2%:R]mxE [_ 2%:R 0]mxE.
 move=> H10_H20_save; move: (H10_H20_save).
@@ -296,8 +296,8 @@ have H4 : From1To0 = dh_rot theta alpha.
     move/eqP : (sa0) => /sin0cos1 /eqP.
     rewrite eqr_norml ler01 andbT.
 
-    move: (norm_row_of_O (FromTo_is_O F1 F0) 1) => /= /(congr1 (fun x => x ^+ 2)).
-    rewrite expr1n sqr_norm sum3E [_ 0 0]mxE [_ 0 1]mxE [_ 0 2%:R]mxE.
+    move: (enorm_row_of_O (FromTo_is_O F1 F0) 1) => /= /(congr1 (fun x => x ^+ 2)).
+    rewrite expr1n sqr_enorm sum3E [_ 0 0]mxE [_ 0 1]mxE [_ 0 2%:R]mxE.
     move: (H12); rewrite {1}/From1To0 -lock => ->; rewrite (eqP sa0) expr0n addr0.
     move=> H10_H11.
 
@@ -457,7 +457,7 @@ Variable T : rcfType.
 Let vector := 'rV[T]_3.
 Record t := mk {
   vaxis : vector ;
-  norm_vaxis : norm vaxis = 1 ;
+  norm_vaxis : `|vaxis|_e = 1 ;
   angle : T (* between to successive X axes *) }.
 End joint.
 End Joint.
@@ -530,7 +530,7 @@ Definition link_offset (frames : frame ^ n.+1) (links : link ^ n.+1) (i : 'I_n) 
   let: (o_succi, x_succi) := let f := frames succi in (\o{f}, f~i) in
   let: (o_i, x_i, z_i) := let f := frames i' in (\o{f}, f~i, f~k) in
   if intersection (zaxis (frames i')) (xaxis (frames succi)) is some o'_i then
-    (norm (o'_i - o_i)(*the Zi-coordiante of o'_i*) == Link.offset (links i')) &&
+    (`|o'_i - o_i|_e(*the Zi-coordiante of o'_i*) == Link.offset (links i')) &&
     (`| Link.offset (links i') | == distance_between_lines (xaxis (frames i')) (xaxis (frames succi)))
   else
     false (* should not happen since Zi always intersects Xi.+1 (see condidion 2.) *).

@@ -1,18 +1,19 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import all_boot ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex finset fingroup perm ring.
 Require Import ssr_ext euclidean vec_angle.
 From mathcomp Require Import reals.
 
-(******************************************************************************)
-(*                         Skew-symmetric matrices                            *)
+(**md**************************************************************************)
+(* # Skew-symmetric matrices                                                  *)
 (*                                                                            *)
 (* This file develops the theory of skew-symmetric matrices to be used in     *)
 (* particular to represent the exponential coordinates of rotation matrices.  *)
 (*                                                                            *)
+(* ```                                                                        *)
 (* 'so[R]_n == the type of skew-symmetric matrices, i.e., matrices M such     *)
 (*              that M = -M^T                                                 *)
 (*    \S(w) == the spin of vector w, i.e., the (row-vector convention)        *)
@@ -20,10 +21,13 @@ From mathcomp Require Import reals.
 (*   symp A == symmetric part of matrix A                                     *)
 (*  antip A == antisymmetric part of matrix A                                 *)
 (*  spin_eigenvalues u == eigenvalues of \S(u)                                *)
+(* ```                                                                        *)
 (*                                                                            *)
 (* Cayley transform:                                                          *)
+(* ```                                                                        *)
 (*    cayley M == (1 - M)^-1 * (1 + M)                                        *)
 (*  uncayley M == (M - 1) * (M + 1)^-1                                        *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -533,7 +537,7 @@ Let vector := 'rV[R]_3.
 Implicit Types u : vector.
 Implicit Types M : 'M[R]_3.
 
-Lemma sqr_spin u : \S( u ) ^+ 2 = u^T *m u - (norm u ^+ 2)%:A.
+Lemma sqr_spin u : \S( u ) ^+ 2 = u^T *m u - (`|u|_e ^+ 2)%:A.
 Proof.
 apply (symP (sqr_spin_is_sym u)); last move=> i j.
   rewrite rpredD//= ?mul_tr_vec_sym//.
@@ -556,18 +560,18 @@ case/boolP : (i == 0) => [/eqP-> _|/ifnot0P/orP[]/eqP->].
   by rewrite -eqr_opp 2!opprB opprK eq_sym subr_eq -dotmulvv dotmulE sum3E -!expr2.
 Qed.
 
-Lemma spin3 u : \S( u ) ^+ 3 = - (norm u) ^+ 2 *: \S( u ).
+Lemma spin3 u : \S( u ) ^+ 3 = - `|u|_e ^+ 2 *: \S( u ).
 Proof.
 rewrite exprS sqr_spin mulrBr -mulmxE mulmxA spin_mul_tr mul0mx add0r.
 by rewrite scalemx1 mul_mx_scalar scaleNr.
 Qed.
 
-Lemma exp_spin u n : \S( u ) ^+ n.+3 = - (norm u) ^+ 2 *: \S( u ) ^+ n.+1.
+Lemma exp_spin u n : \S( u ) ^+ n.+3 = - `|u|_e ^+ 2 *: \S( u ) ^+ n.+1.
 Proof.
-elim: n => [|n IH]; by [rewrite expr1 spin3|rewrite exprS IH -scalerAr -exprS].
+by elim: n => [|n IH]; [rewrite expr1 spin3|rewrite exprS IH -scalerAr -exprS].
 Qed.
 
-Lemma mxtrace_sqr_spin u : \tr (\S( u ) ^+ 2) = - (2%:R * (norm u) ^+ 2).
+Lemma mxtrace_sqr_spin u : \tr (\S( u ) ^+ 2) = - (2%:R * `|u|_e ^+ 2).
 Proof.
 rewrite sqr_spin linearD /= mxtrace_tr_mul linearN /= linearZ /=; apply/eqP.
 by rewrite !mxtrace_scalar subr_eq addrC mulrC -mulrBl -natrB // mul1r.
@@ -592,18 +596,18 @@ case: i => [] [] // [] // i _ /=.
 by rewrite !mxE; Simp.ord.
 Qed.
 
-Lemma char_poly_spin u : char_poly \S( u ) = 'X^3 + norm u ^+2 *: 'X.
+Lemma char_poly_spin u : char_poly \S( u ) = 'X^3 + `|u|_e ^+2 *: 'X.
 Proof.
 rewrite char_poly3 det_spin subr0 trace_anti ?spin_is_so //.
 rewrite scale0r subr0 expr0n add0r mulrN mxtrace_sqr_spin mulrN opprK.
 by rewrite mulrA div1r mulVr ?unitfE ?pnatr_eq0 // mul1r.
 Qed.
 
-Definition spin_eigenvalues u : seq R[i] := [:: 0; 0 +i* norm u ; 0 -i* norm u]%C.
+Definition spin_eigenvalues u : seq R[i] := [:: 0; 0 +i* `|u|_e ; 0 -i* `|u|_e]%C.
 
 Ltac eigenvalue_spin_eval_poly :=
   rewrite /map_poly horner_poly size_polyDl; [ |
-    by rewrite size_polyXn size_scale ?size_polyX // sqrf_eq0 norm_eq0];
+    by rewrite size_polyXn size_scale ?size_polyX // sqrf_eq0 enorm_eq0];
   rewrite size_polyXn sum4E !(coefD,coefXn,coefZ,coefX,expr0,expr1)
                             !(mulr0,mul0r,mul1r,add0r,addr0,mul1r).
 
@@ -628,9 +632,10 @@ case: ifPn => [|Hk].
   rewrite eqxx mulr1 mulrC (exprS _ 2) -mulrDr mulf_eq0 => /orP [/eqP ->|].
     by rewrite inE eqxx.
   rewrite eq_sym addrC -subr_eq add0r -mulN1r -sqr_i => H.
-  have {H}: (norm u)*i%C ^+2 == k ^+2.
-    rewrite -(eqP H) eq_complex. simpc. by rewrite /= !(mulr0,add0r,mul0r,eqxx).
-  rewrite eqf_sqr => /orP [/eqP <-|].
+  have {H}: `|u|_e *i%C ^+2 == k ^+2.
+    rewrite -(eqP H) eq_complex. simpc.
+    by rewrite /= !(mulr0,add0r,mul0r,eqxx).
+  rewrite eqf_sqr => /predU1P[<-|].
     by rewrite !inE eqxx orbC.
   rewrite -eqr_oppLR => /eqP <-.
   rewrite !inE orbA; apply/orP; right.
@@ -695,7 +700,7 @@ Qed.
 Lemma skew_det1BM n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> \det (1 - M) != 0.
 Proof.
 move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxBr mulmx1 subr_eq0.
-apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
+apply: contra v0 => /eqP v1M; rewrite -enorm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
   by have /eqP := skew_dotmulmx v Mso; rewrite -eq_sym dotmulNv eqrNxx.
 Qed.
 
@@ -703,50 +708,50 @@ Qed.
 Lemma skew_det1DM n (M : 'M[R]_n.+1) : M \is 'so[R]_n.+1 -> \det (1 + M) != 0.
 Proof.
 move=> Mso; apply/det0P => -[v v0]; apply/eqP; rewrite mulmxDr mulmx1 addr_eq0.
-apply: contra v0 => /eqP v1M; rewrite -norm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
+apply: contra v0 => /eqP v1M; rewrite -enorm_eq0 -sqrf_eq0 -dotmulvv {2}v1M.
 have /eqP := skew_dotmulmx v Mso.
 by rewrite -eq_sym dotmulNv eqrNxx dotmulvN eqr_oppLR oppr0.
 Qed.
 
 Lemma inv1BM u : (1 - \S(u)) *
-  (1 + (1 + (norm u)^+2)^-1 *: \S(u) + (1 + (norm u)^+2)^-1 *: \S(u)^+2) = 1.
+  (1 + (1 + `|u|_e ^+ 2)^-1 *: \S(u) + (1 + `|u|_e ^+ 2)^-1 *: \S(u)^+2) = 1.
 Proof.
 rewrite mulrDr 2!mulrBl 2!mul1r.
 apply/eqP; rewrite eq_sym addrC -subr_eq; apply/eqP.
 rewrite opprD addrA opprD addrA subrr add0r opprK addrC.
 rewrite mulrDr mulr1 (addrC \S(u)) scalerAr -addrA; congr (_ + _).
 rewrite mulrA -expr2 -scalerAr -exprSr spin3 -{1}(scale1r \S(u)).
-rewrite -{1}(@divff _ (1 + norm u ^+ 2)) ?paddr_eq0 ?oner_eq0 ?sqr_ge0//.
+rewrite -{1}(@divff _ (1 + `|u|_e ^+ 2)) ?paddr_eq0 ?oner_eq0 ?sqr_ge0//.
 rewrite mulrC -scalerA -scalerBr -scalerN scaleNr opprK; congr (_ *: _).
 by rewrite scalerDl scale1r addrAC subrr add0r.
 Qed.
 
 Lemma inv1BME u : (1 - \S(u))^-1 =
-  1 + (1 + (norm u)^+2)^-1 *: \S(u) + (1 + (norm u)^+2)^-1 *: \S(u)^+2.
+  1 + (1 + `|u|_e ^+ 2)^-1 *: \S(u) + (1 + `|u|_e ^+ 2)^-1 *: \S(u)^+2.
 Proof.
 rewrite -[LHS]mulmx1 -[X in _ *m X = _](inv1BM u) mulmxA mulVmx ?mul1mx//.
 by rewrite unitmxE unitfE skew_det1BM // spin_is_so.
 Qed.
 
 (* TODO: move? *)
-Lemma det_sub1spin3E M : M \is 'so[R]_3 -> \det (1 - M) = 1 + norm (unspin M) ^+ 2.
+Lemma det_sub1spin3E M : M \is 'so[R]_3 -> \det (1 - M) = 1 + `|unspin M|_e ^+ 2.
 Proof.
 move=> Mso; rewrite -{1}(unspinK Mso); set v := \S( _ ).
 rewrite det_mx33 [v]lock !mxE /=. Simp.r.
 rewrite -lock /v !spinij subr0. Simp.r.
 rewrite -!addrA; congr (_ + _); rewrite !addrA.
-by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC sqr_norm sum3E.
+by rewrite mulrBr opprB addrA mulrDr addrA mulrCA subrK addrAC sqr_enorm sum3E.
 Qed.
 
 (* TODO: move? *)
-Lemma det_add1spin3E M : M \is 'so[R]_3 -> \det (1 + M) = 1 + norm (unspin M) ^+ 2.
+Lemma det_add1spin3E M : M \is 'so[R]_3 -> \det (1 + M) = 1 + `|unspin M|_e ^+ 2.
 Proof.
 move=> Mso; rewrite -{1}(unspinK Mso); set v := \S( _ ).
 rewrite det_mx33 [v]lock !mxE /=. Simp.r.
 rewrite -lock /v !spinij addr0. Simp.r.
 rewrite -!addrA; congr (_ + _); rewrite !addrA.
-rewrite sqr_norm sum3E -!expr2 -!addrA; congr (_ + _).
-rewrite mulrDr -expr2 (addrC _ (_^+2)) -!addrA addrC; congr (_ + _).
+rewrite sqr_enorm sum3E -!expr2 -!addrA; congr (_ + _).
+rewrite mulrDr -expr2 (addrC _ (_ ^+ 2)) -!addrA addrC; congr (_ + _).
 by rewrite mulrBr opprB -expr2 addrCA mulrCA subrr addr0.
 Qed.
 
@@ -855,11 +860,11 @@ Definition cayley21 (a b c : R) := (b * c + a) *+ 2.
 Definition cayley22 (a b c : R) := 1 - a ^+ 2 - b ^+ 2 + c ^+ 2.
 
 Lemma sqr_norm_row3 (a b c : R) :
-  (norm (row3 a b c)) ^+ 2 = a ^+ 2 + b ^+ 2 + c ^+ 2.
+  `|row3 a b c|_e ^+ 2 = a ^+ 2 + b ^+ 2 + c ^+ 2.
 Proof. by rewrite -dotmulvv dotmulE sum3E !mxE/= -!expr2. Qed.
 
 (* result of the Cayley transform expressed with Rodrigues' parameters *)
-Lemma cayleyE (a b c : R) : let r := euclidean.norm (row3 a b c) in
+Lemma cayleyE (a b c : R) : let r := `|row3 a b c|_e in
   cayley \S((row3 a b c)) = (1 + r ^+ 2)^-1 *: (col_mx3
   (row3 (cayley00 a b c) (cayley01 a b c) (cayley02 a b c))
   (row3 (cayley10 a b c) (cayley11 a b c) (cayley12 a b c))
