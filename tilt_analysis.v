@@ -22,76 +22,6 @@ Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
 
-(* PR to MCA *)
-Section Rintegral.
-Context d {T : measurableType d} {R : realType}.
-Variable mu : {measure set T -> \bar R}.
-Implicit Types (D : set T).
-
-Lemma Rintegral_cst D : d.-measurable D ->
-  forall r, \int[mu]_(_ in D) r = r * fine (mu D).
-Proof.
-move=> mD r; rewrite /Rintegral/= integral_cst//.
-have := leey (mu D); rewrite le_eqVlt => /predU1P[->/=|muy]; last first.
-  by rewrite fineM// ge0_fin_numE.
-rewrite mulr0 mulr_infty/=; have [_|r0|r0] := sgrP r.
-- by rewrite mul0e.
-- by rewrite mul1e.
-- by rewrite mulN1e.
-Qed.
-
-End Rintegral.
-
-Lemma within_continuousB {T : topologicalType} {K : numFieldType}
-    {V : pseudoMetricNormedZmodType K} (A : set T) (f g : T -> V) :
-  {within A, continuous f} -> {within A, continuous g} ->
-  {within A, continuous (f - g)}.
-Proof. by move=> cf cg x; apply: cvgB; [exact: cf|exact: cg]. Qed.
-
-
-Lemma within_continuous_comp {U V W : topologicalType}
-  (A : set V) (f : V -> U) (g : U -> W) :
-  {in f @` A, continuous g} ->
-  {within A, continuous f} ->
-  {within A, continuous (g \o f)}.
-Proof.
-move=> cg /subspace_sigL_continuousP cf; apply/subspace_sigL_continuousP.
-rewrite /sigL -compA => /= x; apply: continuous_comp; first exact: cf.
-by apply/cg/image_f; rewrite inE; exact/set_valP.
-Qed.
-
-Lemma within_continuous_compN {R : realFieldType} {K : numDomainType}
-    {U : pseudoMetricNormedZmodType K} (f : R -> U) (a b : R) :
-  {within `[- b, - a], continuous f} -> {within `[a, b], continuous (f \o -%R)}.
-Proof.
-have [ab|ba _ |-> _] := ltgtP a b; last 2 first.
-  by rewrite set_itv_ge ?bnd_simp -?ltNge//; exact: continuous_subspace0.
-  by rewrite set_itv1; exact: continuous_subspace1.
-move/continuous_within_itvP; rewrite ltrN2 => /(_ ab)[cf fb fa].
-apply/(continuous_within_itvP _ ab); split.
-- move=> t tab.
-  apply: (@cvg_comp _ _ _ -%R f); first exact: oppr_continuous.
-  by apply: cf; rewrite oppr_itvoo !opprK.
-- by rewrite -{1}(opprK a); apply/cvg_at_leftNP; exact: fa.
-- by rewrite -{1}(opprK b); apply/cvg_at_rightNP; exact: fb.
-Qed.
-
-(* TODO: PR to MCA *)
-Lemma nbhs_ge {R : realFieldType} (t x : R) :
-  t < x -> \forall x0 \near nbhs x, t <= x0.
-Proof.
-move=> tx.
-exists ((x - t) / 2).
-  by rewrite /= divr_gt0// subr_gt0.
-move=> y/=.
-have [xy|yx] := lerP x y.
-  rewrite ltrBlDl => H.
-  by rewrite (le_trans (ltW tx)).
-rewrite ltrBlDl -ltrBlDr => /ltW; apply: le_trans.
-rewrite -lerBlDr opprK.
-by rewrite -lerBrDl ler_piMr ?invf_le1 ?ler1n// subr_ge0 ltW.
-Qed.
-
 (* TODO: PR *)
 Section vector_continuous.
 Context {R : realFieldType} {n : nat}.
@@ -139,7 +69,7 @@ have -> : `[a, c] = `[a, b] `|` `[b, c].
   by left.
   by right; exact: subset_itv_oc_cc b0.
   by left.
-  rewrite -setU1itv ?bnd_simp//; last exact: ltW.
+  rewrite -(setU1itv false) ?bnd_simp//; last exact: ltW.
   case; last by right.
   move=> ->; left => /=.
   by rewrite bound_itvE ltW.
@@ -214,95 +144,6 @@ rewrite big_const_ord.
 rewrite iter_addr_0.
 by rewrite /Num.norm/= !mx_normrE.
 Qed.
-
-(* NB: PR to PCA *)
-Section pointwise_derivable.
-Context {R : realFieldType} {V W : normedModType R} {m n : nat}.
-Implicit Types M : V -> 'M[R]_(m, n).
-
-Definition derivable_mx M t v :=
-  forall i j, derivable (fun x => M x i j) t v.
-
-Lemma derivable_mxP M t v : derivable_mx M t v <-> derivable M t v.
-Proof.
-split; rewrite /derivable_mx /derivable.
-- move=> H.
-  apply/cvg_ex => /=.
-  pose l := \matrix_(i < m, j < n) sval (cid ((cvg_ex _).1 (H i j))).
-  exists l.
-  apply/cvgrPdist_le => /= e e0.
-  near=> x.
-  rewrite /Num.Def.normr/= mx_normrE.
-  apply: (bigmax_le _ (ltW e0)) => /= i _.
-  rewrite !mxE/=.
-  move: i.
-  near: x.
-  apply: filter_forall => /= i.
-  exact: ((@cvgrPdist_le _ _ _ _ (dnbhs_filter 0) _ _).1
-    (svalP (cid ((cvg_ex _).1 (H i.1 i.2)))) _ e0).
-- move=> /cvg_ex[/= l Hl] i j.
-  apply/cvg_ex; exists (l i j).
-  apply/cvgrPdist_le => /= e e0.
-  move/cvgrPdist_le : Hl => /(_ _ e0)[/= r r0] H.
-  near=> x.
-  apply: le_trans; last first.
-    apply: (H x).
-    rewrite /ball_/=.
-    rewrite sub0r normrN.
-    near: x.
-    exact: dnbhs0_lt.
-    near: x.
-    exact: nbhs_dnbhs_neq.
-  rewrite [leRHS]/Num.Def.normr/= mx_normrE.
-  apply: le_trans; last exact: le_bigmax.
-  by rewrite /= !mxE.
-Unshelve. all: by end_near. Qed.
-
-End pointwise_derivable.
-
-(* NB: PR to MCA *)
-Section pointwise_derive.
-Local Open Scope classical_set_scope.
-Context {R : realFieldType} {V W : normedModType R} .
-
-Lemma derive_mx {m n : nat} (M : V -> 'M[R]_(m, n)) t v :
-  derivable M t v ->
-  'D_v M t = \matrix_(i < m, j < n) 'D_v (fun t => M t i j) t.
-Proof.
-move=> /cvg_ex[/= l Hl]; apply/cvg_lim => //=.
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : (Hl) => /(_ (e / 2)).
-rewrite divr_gt0// => /(_ isT)[d /= d0 dle].
-near=> x.
-rewrite [in leLHS]/Num.Def.normr/= mx_normrE.
-apply/(bigmax_le _ (ltW e0)) => -[/= i j] _.
-rewrite [in leLHS]mxE/= [X in _ + X]mxE -[X in X - _](subrK (l i j)).
-rewrite -(addrA (_ - _)) (le_trans (ler_normD _ _))// (splitr e) lerD//.
-- rewrite mxE.
-  suff : (h^-1 *: (M (h *: v + t) i j - M t i j)) @[h --> 0^'] --> l i j.
-    move/cvg_lim => /=; rewrite /derive /= => ->//.
-    by rewrite subrr normr0 divr_ge0// ltW.
-  apply/cvgrPdist_le => /= r r0.
-  move/cvgrPdist_le : Hl => /(_ r r0)[/= s s0] sr.
-  near=> y.
-  have : `|l - y^-1 *: (M (y *: v + t) - M t)| <= r.
-    rewrite sr//=; last by near: y; exact: nbhs_dnbhs_neq.
-    by rewrite sub0r normrN; near: y; exact: dnbhs0_lt.
-  apply: le_trans.
-  rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
-  by under eq_bigr do rewrite !mxE; exact: (le_bigmax _ _ (i, j)).
-- rewrite mxE.
-  have : `|l - x^-1 *: (M (x *: v + t) - M t)| <= e / 2.
-    apply: dle => //=; last by near: x; exact: nbhs_dnbhs_neq.
-    by rewrite sub0r normrN; near: x; exact: dnbhs0_lt.
-  apply: le_trans.
-  rewrite [in leRHS]/Num.Def.normr/= mx_normrE/=.
-  under eq_bigr do rewrite !mxE.
-  apply: le_trans; last exact: le_bigmax.
-  by rewrite !mxE.
-Unshelve. all: by end_near. Qed.
-
-End pointwise_derive.
 
 Lemma differentiable_scalar_mx {R : numFieldType} n (r : R) :
   differentiable (@scalar_mx _ n) r.
@@ -417,59 +258,6 @@ Lemma mx_norm_sq_le {K : rcfType} {n} (A : 'M[K]_n.+1) :
 Proof. by rewrite !expr2 mulrA; exact: mx_norm_mul. Qed.
 
 Local Open Scope classical_set_scope.
-(* PR to MCA *)
-Lemma EVT_max_rV (R : realType) n (f : 'rV[R]_n -> R) (A : set 'rV[R]_n) :
-  A !=set0 ->
-  compact A ->
-  {within A, continuous f} -> exists2 c, c \in A &
-  forall t, t \in A -> f t <= f c.
-Proof.
-move=> A0 compactA fcont; set imf := f @` A.
-have imf_sup : has_sup imf.
-  split.
-    case: A0 => a Aa.
-    by exists (f a); apply/imageP.
-  have [M [Mreal imfltM]] : bounded_set (f @` A).
-    exact/compact_bounded/continuous_compact.
-  exists (M + 1) => y /imfltM yleM.
-  by rewrite (le_trans _ (yleM _ _)) ?ler_norm ?ltrDl.
-have [|imf_ltsup] := pselect (exists2 c, c \in A & f c = sup imf).
-  move=> [c cab fceqsup]; exists c => // t tab; rewrite fceqsup.
-  apply/sup_upper_bound => //.
-  exact/imageP/set_mem.
-have {}imf_ltsup t : t \in A -> f t < sup imf.
-  move=> tab; case: (ltrP (f t) (sup imf)) => // supleft.
-  rewrite falseE; apply: imf_ltsup; exists t => //; apply/eqP.
-  rewrite eq_le supleft andbT sup_upper_bound//.
-  exact/imageP/set_mem.
-pose g t : R := (sup imf - f t)^-1.
-have invf_continuous : {within A, continuous g}.
-  rewrite continuous_subspace_in => t tab; apply: cvgV => //=.
-    by rewrite subr_eq0 gt_eqF // imf_ltsup //; rewrite inE in tab.
-  by apply: cvgD; [exact: cst_continuous | apply: cvgN; exact: (fcont t)].
-have /ex_strict_bound_gt0 [k k_gt0 /= imVfltk] : bounded_set (g @` A).
-  by apply/compact_bounded/continuous_compact.
-have [_ [t tab <-]] : exists2 y, imf y & sup imf - k^-1 < y.
-  by apply: sup_adherent => //; rewrite invr_gt0.
-rewrite ltrBlDr -ltrBlDl.
-suff : sup imf - f t > k^-1 by move=> /ltW; rewrite leNgt => /negbTE ->.
-rewrite -[ltRHS]invrK ltf_pV2// ?qualifE/= ?invr_gt0 ?subr_gt0 ?imf_ltsup//; last first.
-  exact/mem_set.
-by rewrite (le_lt_trans (ler_norm _) _) ?imVfltk//; exact: imageP.
-Qed.
-
-(* PR to MCA *)
-Lemma EVT_min_rV (R : realType) n (f : 'rV[R]_n -> R) (A : set 'rV[R]_n) :
-  A !=set0 ->
-  compact A ->
-  {within A, continuous f} -> exists2 c, c \in A &
-  forall t, t \in A -> f c <= f t.
-Proof.
-move=> A0 cA fcont.
-have /(EVT_max_rV A0 cA) [c clr fcmax] : {within A, continuous (- f)}.
-  by move=> ?; apply: continuousN => ?; exact: fcont.
-by exists c => // ? /fcmax; rewrite lerN2.
-Qed.
 
 Section closure_neitv.
 Context {R : realType}.
@@ -659,13 +447,6 @@ move=> r0.
 rewrite closed_ballE// /closed_ball_/= => dxy.
 rewrite ler_distlCDr//.
 by rewrite (le_trans (ler_dist_dist _ _)).
-Qed.
-
-Lemma ball0_le0 (R : realDomainType) (V : pseudoMetricNormedZmodType R) (a : V) (r : R) :
-  ball a r = set0 -> r <= 0.
-Proof.
-rewrite -subset0 => ar0; rewrite leNgt; apply/negP => r0.
-by have /(_ (ballxx _ r0)) := ar0 a.
 Qed.
 
 Lemma closed_ballAE {K : realType} n (e : K) (x : 'rV[K]_n) :

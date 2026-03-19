@@ -6,7 +6,8 @@ From mathcomp Require Import mathcomp_extra unstable boolp classical_sets.
 From mathcomp Require Import contra functions constructive_ereal reals.
 From mathcomp Require Import topology prodnormedzmodule tvs normedtype.
 From mathcomp Require Import landau ereal sequences derive numfun measure.
-From mathcomp Require Import realfun lebesgue_measure lebesgue_integral ftc.
+From mathcomp Require Import realfun lebesgue_measure measurable_realfun.
+From mathcomp Require Import lebesgue_integral ftc.
 Require Import tilt_mathcomp tilt_analysis ode_common ode_contseg.
 
 (**md**************************************************************************)
@@ -1216,11 +1217,10 @@ split.
     rewrite inE/=.
     exact: subset_itv_oo_cc.
   suff hi : forall i, derivable (fun x => sol x ord0 i) t 1 /\
-    (fun x : R => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%E)^`() t ord0 i =
+    (fun x : R => sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))^`() t ord0 i =
       phi t (sol t) ord0 i.
     split.
-      apply /derivable_mxP.
-      rewrite /derivable_mx => i j.
+      apply /derivable_mxP => i j.
       have [? _] := hi j.
       by rewrite ord1.
     apply/rowP => j.
@@ -1247,7 +1247,7 @@ split.
        apply/andP; split.
        - by apply: ltW; near: t'; exact: lt_nbhsr.
        - by apply: ltW; near: t'; exact: lt_nbhsl.
-    have -> : (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%E ord0 j) =
+    have -> : (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s)) ord0 j) =
               cst (sol a ord0 j) +
               (fun x => (\vint[mu]_(s in `[a, x]) (phi s (sol s))) ord0 j).
       by apply funext => x; rewrite mxE.
@@ -1465,7 +1465,7 @@ case: ifPn => [xK | xKnot] => /=.
   rewrite p0s // p0a.
   apply/rowP => i.
   rewrite !mxE.
-  congr (_ + _)%E.
+  congr (_ + _)%R.
   apply eq_Rintegral => /= x xat.
   suff -> : x \in `[a, b]%R by [].
   move : xat xK.
@@ -1480,7 +1480,7 @@ have tbc : t \in `[b, c]%R.
   case => // -> h1 /andP [h2 ->] //.
   by move: h1; rewrite h2.
 transitivity (sol1 a + \vint[lebesgue_measure]_(s in `[a, t])
-    phi s (if (s \in `[a, b])%classic then sol1 s else sol2 s))%E; last first.
+    phi s (if (s \in `[a, b])%classic then sol1 s else sol2 s)); last first.
   by under eq_rowRintegral do rewrite mem_setE.
 rewrite (rowRintegral_itv_split (c := b) (F := (fun x => phi x (patch sol2 `[a, b] sol1 x)))).
 - rewrite p1s//.
@@ -1499,7 +1499,7 @@ rewrite (rowRintegral_itv_split (c := b) (F := (fun x => phi x (patch sol2 `[a, 
     by rewrite xleb.
   rewrite p1a p0s;last by rewrite in_itv/= ltW/=.
   rewrite p0a.
-  congr (u0 + _)%E.
+  congr (u0 + _)%R.
   rewrite /patch.
   by apply eq_rowRintegral => /= x ->.
 - by rewrite ltW //=; move : tbc; rewrite in_itv/= => /andP [-> _].
@@ -1513,7 +1513,7 @@ rewrite (rowRintegral_itv_split (c := b) (F := (fun x => phi x (patch sol2 `[a, 
         move=> []; [by left|right].
         exact: subset_itv_oc_cc b0.
       move=> []; [by left|].
-      rewrite -setU1itv ?bnd_simp//; last first.
+      rewrite -(setU1itv false) ?bnd_simp//; last first.
         by move: tbc; rewrite in_itv/= => /andP[].
       case; [|by right].
       move=> ->; left => /=.
@@ -1978,7 +1978,7 @@ have Eclosed : closed E.
     rewrite not_andP; right => /(_ t).
     by rewrite bound_itvE/= ta => /(_ isT); apply/eqP; case: Et.
   apply/negP; rewrite -leNgt.
-  by near: y; exact: nbhs_ge.
+  by near: y; exact: lt_le_nbhsr.
 have supE : E (sup E).
   by rewrite {1}(closure_id E).1//; apply: closure_sup => //; apply hP.
 have sup_itv : a <= sup E by rewrite sup_upper_bound.
@@ -2036,7 +2036,7 @@ Theorem cauchy_lipschitz_unique f' :
   {in `[a, a + safe_dist]%R, f =1 f'}.
 Proof.
 move =>  sol1.
-have cont1' :  forall y , B y -> {within `[a, (a + safe_dist)%E], continuous phi^~ y}.
+have cont1' :  forall y , B y -> {within `[a, a + safe_dist], continuous phi^~ y}.
   move => y By .
   apply /continuous_subspaceW/cont1.
   apply subset_itvl.
@@ -2254,7 +2254,7 @@ have contf_plus :   {within `[t0, t0+dboth t0], continuous fplus}.
   apply /continuous_subspaceW/cfplus.
   apply: subset_itvl.
   by rewrite bnd_simp /= lerD //= 2!ge_min lexx !orbT.
-have contf :   {within `[t0 - dboth t0, (t0 + dboth t0)%E], continuous f}.
+have contf :   {within `[t0 - dboth t0, t0 + dboth t0], continuous f}.
   apply : within_continuous_patch => //.
   by rewrite gtrBl.
   by rewrite ltrDl.

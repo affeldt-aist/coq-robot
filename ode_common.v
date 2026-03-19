@@ -456,16 +456,16 @@ End cst_continuous_on_subspace.
 (* NB: continuousFunType is defined in subspace_topology.v *)
 
 HB.instance Definition _ (R : realType) (V : topologicalType) (A : set R) :=
-  gen_eqMixin (continuousFunType A [set: V]).
+  gen_eqMixin (continuousSubspaceType A [set: V]).
 
 HB.instance Definition _ (R : realType) (V : topologicalType) (A : set R) :=
-  gen_choiceMixin (continuousFunType A [set: V]).
+  gen_choiceMixin (continuousSubspaceType A [set: V]).
 
 Section contseg_pred.
 Context {R : realType} (a b : R) (V : topologicalType).
 
 Definition contseg : {pred R -> V} :=
-  mem [set f | squashed (@ContinuousFun R V `[a, b] [set: V] f)].
+  mem [set f | squashed (@ContinuousSubspace R V `[a, b] [set: V] f)].
 Definition contseg_key : pred_key contseg. Proof. exact. Qed.
 Canonical contseg_keyed := KeyedPred contseg_key.
 
@@ -474,15 +474,15 @@ Arguments contseg {R} a b {V}.
 
 Section contseg_sub.
 Context {R : realType} (a b : R) {V : topologicalType}.
-Notation T := (continuousFunType `[a, b] [set: V]).
+Notation T := (continuousSubspaceType `[a, b] [set: V]).
 
 Section Sub.
 Context (f : R -> V) (fP : f \in contseg a b).
 
 Definition contseg_Sub_subproof := unsquash (set_mem fP).
 #[local] HB.instance Definition _ := contseg_Sub_subproof.
-Definition contseg_Sub : continuousFunType `[a, b] [set: V] :=
-  {| ContinuousFun.sort := f; ContinuousFun.class := contseg_Sub_subproof |}.
+Definition contseg_Sub : continuousSubspaceType `[a, b] [set: V] :=
+  {| ContinuousSubspace.sort := f; ContinuousSubspace.class := contseg_Sub_subproof |}.
 
 End Sub.
 
@@ -494,7 +494,7 @@ move=> Ksub [f Pf].
 rewrite (_ : K _  = K (contseg_Sub (mem_set (squash Pf))))//.
 rewrite /contseg_Sub /contseg_Sub_subproof /= mem_setK.
 rewrite /unsquash; case : cid => // /= => x _.
-congr (K (ContinuousFun.Pack _)).
+congr (K (ContinuousSubspace.Pack _)).
 move : Pf x => [[H1] [H2]] [[K1] [K2]].
 by rewrite (Prop_irrelevance H1 K1) (Prop_irrelevance H2 K2).
 Qed.
@@ -504,12 +504,12 @@ Proof. by []. Qed.
 
 HB.instance Definition _ := isSub.Build _ _ T contseg_rect contseg_valP.
 
-Lemma contseg_eqP (f g : continuousFunType `[a, b] [set: V]) :
+Lemma contseg_eqP (f g : continuousSubspaceType `[a, b] [set: V]) :
   f = g <-> f =1 g.
 Proof. by split=> [->//|fg]; exact/val_inj/funext. Qed.
 
 (*
-HB.instance Definition _ := [Choice of continuousFunType `[a, b] [set: R] by <:].
+HB.instance Definition _ := [Choice of continuousSubspaceType `[a, b] [set: R] by <:].
 *)
 
 End contseg_sub.
@@ -522,14 +522,14 @@ Section contsegN.
 Context {R : realType}.
 Variables a b : R.
 
-Let g'fun (g : continuousFunType `[a, b] [set: R]) :
+Let g'fun (g : continuousSubspaceType `[a, b] [set: R]) :
   set_fun `[- b, - a] setT (contsegN a b g).
 Proof. by constructor => x/=. Qed.
 
-HB.instance Definition _ (g : continuousFunType `[a, b] [set: R]) :=
+HB.instance Definition _ (g : continuousSubspaceType `[a, b] [set: R]) :=
   @isFun.Build (subspace `[- b, - a]) R `[- b, - a] setT (contsegN a b g) (g'fun g).
 
-Let cg' (g : continuousFunType `[a, b] [set: R]) :
+Let cg' (g : continuousSubspaceType `[a, b] [set: R]) :
   {within `[- b, - a], continuous (contsegN a b g)}.
 Proof.
 have [ab|] := ltP a b; last first.
@@ -551,7 +551,7 @@ move=> cg gR gL; split.
   by rewrite /contsegN/= opprK.
 Qed.
 
-HB.instance Definition _ (g : continuousFunType `[a, b] [set: R]) :=
+HB.instance Definition _ (g : continuousSubspaceType `[a, b] [set: R]) :=
   isContinuous.Build _ _ (contsegN a b g : subspace `[- b, - a] -> R) (@cg' g).
 
 End contsegN.
@@ -565,8 +565,8 @@ split=> [|f g]; rewrite !inE/=.
   exact: cst_continuous.
 - move=> /unsquash cf /unsquash cg.
   apply: squash.
-  pose f' : continuousFunType `[a, b] setT := HB.pack f cf.
-  pose g' : continuousFunType `[a, b] setT := HB.pack g cg.
+  pose f' : continuousSubspaceType `[a, b] setT := HB.pack f cf.
+  pose g' : continuousSubspaceType `[a, b] setT := HB.pack g cg.
   rewrite [f]/(f' : _ -> _).
   rewrite [g]/(g' : _ -> _).
   move: {f g cf cg} f' g' => f g.
@@ -782,7 +782,7 @@ Qed.
 
 (* TODO: PR *)
 Lemma cont_within_cont_comp {R : realType} {W : normedModType R} (f : W -> R)
-  (K : set R) (g : continuousFunType K [set: W]) : {in g @` K, continuous f} ->
+  (K : set R) (g : continuousSubspaceType K [set: W]) : {in g @` K, continuous f} ->
   {within K, continuous (f \o g)}.
 Proof.
 move=> ctf.
@@ -793,7 +793,7 @@ exact: image_f Kx.
 Qed.
 
 Lemma normr_has_sup {R : realType} (a b : R) {W : normedModType R}
-    (f : continuousFunType `[a, b] [set: W]) :
+    (f : continuousSubspaceType `[a, b] [set: W]) :
   a <= b -> has_sup [set (normr \o f) z | z in `[a, b] ].
 Proof.
 move=> /seg_nonempty[c Kc].
@@ -810,7 +810,7 @@ Context {R : realType} {W : normedModType R}.
 Variables a b : R.
 Hypothesis ab : a <= b.
 Let K := `[a, b]%R.
-Local Notation T := (continuousFunType [set` K] [set: W]).
+Local Notation T := (continuousSubspaceType [set` K] [set: W]).
 
 Lemma infty_norm0_le (g : T) (u : R) : {in K, forall x, `| g x | <= u} ->
   infty_norm0 g <= u.

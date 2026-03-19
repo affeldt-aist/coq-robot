@@ -46,29 +46,29 @@ Context {R : realType} (a b : R) (V : normedModType R).
 HB.instance Definition _ := GRing.isZmodClosed.Build _ _
   (contseg_zmod_closed a b V).
 
-Fail Check continuousFunType `[a, b] [set: V] : zmodType.
+Fail Check continuousSubspaceType `[a, b] [set: V] : zmodType.
 
 HB.instance Definition _ :=
-  [SubChoice_isSubZmodule of continuousFunType `[a, b] [set: V] by <:].
+  [SubChoice_isSubZmodule of continuousSubspaceType `[a, b] [set: V] by <:].
 
-Check continuousFunType `[a, b] [set: V] : zmodType.
+Check continuousSubspaceType `[a, b] [set: V] : zmodType.
 
 HB.instance Definition _ := GRing.isScaleClosed.Build _ _
   (contseg a b) (@contfun_scaler_closed R a b V).
 
-Fail Check @continuousFunType R V `[a, b] [set: V] : lmodType _.
+Fail Check @continuousSubspaceType R V `[a, b] [set: V] : lmodType _.
 
 HB.instance Definition _ :=
-  [SubZmodule_isSubLmodule of continuousFunType `[a, b] [set: V] by <:].
+  [SubZmodule_isSubLmodule of continuousSubspaceType `[a, b] [set: V] by <:].
 
-Check continuousFunType `[a, b] [set: V] : lmodType _.
+Check continuousSubspaceType `[a, b] [set: V] : lmodType _.
 
 End contSeg_zlmodtype.
 End ContSeg_zlmodType.
 
 Section submod_contSeg.
 Context {R : realType} (a b : R) {V : normedModType R}.
-Local Notation T := (continuousFunType `[a, b] [set: V]).
+Local Notation T := (continuousSubspaceType `[a, b] [set: V]).
 
 (* NB: point does not need to be 0, so rewrite f \_ K explicitly *)
 Definition patch_contSeg0 : {pred T} :=
@@ -113,7 +113,7 @@ Section contSeg_seminorm.
 Context {R : realType} {W : normedModType R}.
 Variables a b : R.
 Let K := `[a, b].
-Local Notation T := (continuousFunType K [set: W]).
+Local Notation T := (continuousSubspaceType K [set: W]).
 
 Import ContSeg_zlmodType.
 
@@ -169,7 +169,7 @@ Import Quotient.
 Section contSeg_quotient.
 Context {R : realType} (a b : R) {W : normedModType R}.
 
-(*Definition eq_seg (f g : continuousFunType a b) := `[< {in `[a, b], f =1 g} >].
+(*Definition eq_seg (f g : continuousSubspaceType a b) := `[< {in `[a, b], f =1 g} >].
 
 Let eq_seg_refl : reflexive eq_seg.
 Proof. by move=> f; apply/asboolP => r. Qed.
@@ -301,7 +301,7 @@ apply/eqquotP.
 rewrite Quotient.equivE inE; apply: funext => r /=.
 rewrite /patch; case : ifPn => // /set_mem in_itv.
 rewrite 2!fctE.
-have -> : {in `[a, b]%R, repr (0 : `C[a, b]) =1 (0 : @continuousFunType R W `[a, b] setT)}.
+have -> : {in `[a, b]%R, repr (0 : `C[a, b]) =1 (0 : @continuousSubspaceType R W `[a, b] setT)}.
 - apply/eqmod_on_itv.
   by rewrite reprK /GRing.zero /= /Quotient.zero /= -lock.
 - rewrite [LHS]subr0.
@@ -617,8 +617,8 @@ have H (e : R) : e > 0 -> forall t, t \in `[a, b]%R ->
     by near: f; apply: lim_fun_cvg_uniform => //; rewrite divr_gt0.
   move/(continuous_within_itvP _ ab) : (@cts_fun _ _ f ) => [mc lc rc].
   have : t \in `[a, b] by rewrite inE.
-  rewrite -{1}setUitv1/=; last by rewrite bnd_simp ltW.
-  rewrite -{1}setU1itv/=; last by rewrite bnd_simp.
+  rewrite -{1}(setUitv1 true)/=; last by rewrite bnd_simp ltW.
+  rewrite -{1}(setU1itv false)/=; last by rewrite bnd_simp.
   rewrite inE/= in_itv/= => -[[->|tab']|->].
   - near=> t' => t'ab.
     rewrite -(subrKA (f a) (lim_fun FF Fc a)).
@@ -627,7 +627,7 @@ have H (e : R) : e > 0 -> forall t, t \in `[a, b]%R ->
     + rewrite -(subrKA (f t') (f a)).
       rewrite (le_trans (ler_normD _ _))// (splitr (e/2)) lerD//.
       * move: t'ab.
-        rewrite -{1}setU1itv/=; last by rewrite bnd_simp ltW.
+        rewrite -{1}(setU1itv false)/=; last by rewrite bnd_simp ltW.
         rewrite inE/= in_itv/= => -[-> | ].
           by rewrite subrr normr0 ltW// !divr_gt0.
         near: t'.
@@ -662,7 +662,7 @@ have H (e : R) : e > 0 -> forall t, t \in `[a, b]%R ->
     rewrite -(subrKA (f t') (f b)).
     rewrite (le_trans (ler_normD _ _))// (splitr (e / 2)) lerD//.
       move: t'ab.
-      rewrite -{1}setUitv1/=; last by rewrite bnd_simp ltW.
+      rewrite -{1}(setUitv1 true)/=; last by rewrite bnd_simp ltW.
       rewrite inE/= in_itv/= => -[ | -> ]; last first.
         by rewrite subrr normr0 ltW// !divr_gt0.
       near: t'.
@@ -752,7 +752,7 @@ have /(_ _ _)/cauchy_cvg/cvg_app_entourageP cvF :
   apply: ee => /=.
   rewrite -ball_normE /ball_/=.
   by rewrite -quot_contSeg_fctB// h.
-apply/cvg_ex; exists (pi `C[a, b] (@lim_fun F FF Fc : continuousFunType `[a, b] [set: W])).
+apply/cvg_ex; exists (pi `C[a, b] (@lim_fun F FF Fc : continuousSubspaceType `[a, b] [set: W])).
 apply/cvg_V_entourageP => /=.
 move=> A /= entA.
 near=> f.
