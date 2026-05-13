@@ -14,7 +14,7 @@ Require Import tilt_mathcomp.
 (*                                                                            *)
 (* ```                                                                        *)
 (*     contseg a b := pred type for functions continuous on [a; b]            *)
-(*   infty_norm0 f == sup (|f|(K))                                            *)
+(*   pre_infty_norm f == sup (|f|(K))                                         *)
 (*                    f has type {fun K >-> [set: _]}                         *)
 (* ```                                                                        *)
 (******************************************************************************)
@@ -268,27 +268,14 @@ Qed.
 
 End continuous_within_itvP.
 
-
-Lemma within_continuous_comp_norm {R : realType} {U : normedModType R}  a y (f : R -> U) :
-  a <= y ->
-  {within `[a, y], continuous fun x => f x} ->
-  {within `[a, y], continuous fun x => `|f x|}.
+Lemma within_continuous_comp_norm {R : realType} {U : normedModType R} (K : set R) (f : R -> U) :
+  {within K, continuous fun x => f x} ->
+  {within K, continuous fun x => `|f x|}.
 Proof.
-rewrite le_eqVlt => /predU1P[<-|ay].
-  rewrite set_itv1 => _.
-  exact: continuous_subspace1.
-move/continuous_within_itvP => /(_ ay)[H1 H2 H3].
-apply/continuous_within_itvP => //; split => //.
-  move=> z zay.
-  apply: continuous_comp => //.
-    by apply: H1.
-  exact: norm_continuous.
-apply: cvg_comp.
-  apply: H2.
-  by apply: cvg_norm.
-apply: cvg_comp.
-apply: H3.
-by apply: cvg_norm.
+move=> H.
+apply: within_continuous_comp => // y.
+rewrite inE/= => -[x Kx <-].
+exact: norm_continuous.
 Qed.
 
 Lemma lipschitzW {R : realType} {T U W : normedModType R} (A B : set T) C (f : T -> U -> W) k :
@@ -462,32 +449,32 @@ HB.instance Definition _ (R : realType) (V : topologicalType) (A : set R) :=
   gen_choiceMixin (continuousSubspaceType A [set: V]).
 
 Section contseg_pred.
-Context {R : realType} (a b : R) (V : topologicalType).
+Context {R : realType} (K : set R) (V : topologicalType).
 
 Definition contseg : {pred R -> V} :=
-  mem [set f | squashed (@ContinuousSubspace R V `[a, b] [set: V] f)].
+  mem [set f | squashed (@ContinuousSubspace R V K [set: V] f)].
 Definition contseg_key : pred_key contseg. Proof. exact. Qed.
 Canonical contseg_keyed := KeyedPred contseg_key.
 
 End contseg_pred.
-Arguments contseg {R} a b {V}.
+Arguments contseg {R} K {V}.
 
 Section contseg_sub.
-Context {R : realType} (a b : R) {V : topologicalType}.
-Notation T := (continuousSubspaceType `[a, b] [set: V]).
+Context {R : realType} (A : set R) {V : topologicalType}.
+Notation T := (continuousSubspaceType A [set: V]).
 
 Section Sub.
-Context (f : R -> V) (fP : f \in contseg a b).
+Context (f : R -> V) (fP : f \in contseg A).
 
 Definition contseg_Sub_subproof := unsquash (set_mem fP).
 #[local] HB.instance Definition _ := contseg_Sub_subproof.
-Definition contseg_Sub : continuousSubspaceType `[a, b] [set: V] :=
+Definition contseg_Sub : continuousSubspaceType A [set: V] :=
   {| ContinuousSubspace.sort := f; ContinuousSubspace.class := contseg_Sub_subproof |}.
 
 End Sub.
 
 Lemma contseg_rect (K : T -> Type) :
-  (forall f (Pf : f \in contseg a b), K (contseg_Sub Pf)) ->
+  (forall f (Pf : f \in contseg A), K (contseg_Sub Pf)) ->
   forall u : T, K u.
 Proof.
 move=> Ksub [f Pf].
@@ -499,12 +486,12 @@ move : Pf x => [[H1] [H2]] [[K1] [K2]].
 by rewrite (Prop_irrelevance H1 K1) (Prop_irrelevance H2 K2).
 Qed.
 
-Lemma contseg_valP f (Pf : f \in contseg a b) : contseg_Sub Pf = f :> (_ -> _).
+Lemma contseg_valP f (Pf : f \in contseg A) : contseg_Sub Pf = f :> (_ -> _).
 Proof. by []. Qed.
 
 HB.instance Definition _ := isSub.Build _ _ T contseg_rect contseg_valP.
 
-Lemma contseg_eqP (f g : continuousSubspaceType `[a, b] [set: V]) :
+Lemma contseg_eqP (f g : continuousSubspaceType A [set: V]) :
   f = g <-> f =1 g.
 Proof. by split=> [->//|fg]; exact/val_inj/funext. Qed.
 
@@ -514,6 +501,7 @@ HB.instance Definition _ := [Choice of continuousSubspaceType `[a, b] [set: R] b
 
 End contseg_sub.
 
+(* TODO: generalize to any set? *)
 Definition contsegN {R : realType} (a b : R) (g : R -> R) :=
   g \o -%R.
 Arguments contsegN {R} _ _.
@@ -556,8 +544,8 @@ HB.instance Definition _ (g : continuousSubspaceType `[a, b] [set: R]) :=
 
 End contsegN.
 
-Lemma contseg_zmod_closed {R : realType} (a b : R) (V : normedModType R) :
-  zmod_closed (@contseg _ a b V).
+Lemma contseg_zmod_closed {R : realType} (K : set R) (V : normedModType R) :
+  zmod_closed (@contseg _ K V).
 Proof.
 split=> [|f g]; rewrite !inE/=.
 - apply: squash.
@@ -565,20 +553,20 @@ split=> [|f g]; rewrite !inE/=.
   exact: cst_continuous.
 - move=> /unsquash cf /unsquash cg.
   apply: squash.
-  pose f' : continuousSubspaceType `[a, b] setT := HB.pack f cf.
-  pose g' : continuousSubspaceType `[a, b] setT := HB.pack g cg.
+  pose f' : continuousSubspaceType K setT := HB.pack f cf.
+  pose g' : continuousSubspaceType K setT := HB.pack g cg.
   rewrite [f]/(f' : _ -> _).
   rewrite [g]/(g' : _ -> _).
   move: {f g cf cg} f' g' => f g.
-  have isfun_fg : @isFun _ _ `[a, b] setT (f \- g) by constructor.
+  have isfun_fg : @isFun _ _ K setT (f \- g) by constructor.
   have iscontfun_fg : @isContinuous _ _ (f \- g).
     constructor => x.
     by apply: continuousB; exact: cts_fun.
   by split.
 Qed.
 
-Lemma contfun_scaler_closed {R : realType} (a b : R) (V : normedModType R) :
-  GRing.scaler_closed (@contseg _ a b V).
+Lemma contfun_scaler_closed {R : realType} (K : set R) (V : normedModType R) :
+  GRing.scaler_closed (@contseg _ K V).
 Proof.
 move=> r f; rewrite 2!inE/= => /unsquash[[_ cf]].
 apply: squash.
@@ -792,52 +780,51 @@ apply: ctf.
 exact: image_f Kx.
 Qed.
 
-Lemma normr_has_sup {R : realType} (a b : R) {W : normedModType R}
-    (f : continuousSubspaceType `[a, b] [set: W]) :
-  a <= b -> has_sup [set (normr \o f) z | z in `[a, b] ].
+Lemma normr_has_sup {R : realType} {K : set R} {W : normedModType R}
+    (f : continuousSubspaceType K [set: W]) : compact K ->
+  K !=set0 -> has_sup [set (normr \o f) z | z in K ].
 Proof.
-move=> /seg_nonempty[c Kc].
+move=> compactK [c Kc].
 split; first by exists `|f c|, c.
-apply/compact_has_ubound/continuous_compact => //; last exact: segment_compact.
+apply/compact_has_ubound/continuous_compact => //.
 by apply:cont_within_cont_comp => w wK; exact: norm_continuous.
 Qed.
 
-Definition infty_norm0 {R : realType} (K : set R) {W : normedModType R}
+Definition pre_infty_norm {R : realType} (K : set R) {W : normedModType R}
   (f : {fun K >-> [set: W]}) := sup ((Num.norm \o f) @` K).
 
-Section infty_norm0_lemmas.
+Section pre_infty_norm_lemmas.
 Context {R : realType} {W : normedModType R}.
-Variables a b : R.
-Hypothesis ab : a <= b.
-Let K := `[a, b]%R.
-Local Notation T := (continuousSubspaceType [set` K] [set: W]).
+Variable K : set R.
+Hypotheses (K0 : K !=set0) (compactK : compact K).
+Local Notation T := (continuousSubspaceType K [set: W]).
 
-Lemma infty_norm0_le (g : T) (u : R) : {in K, forall x, `| g x | <= u} ->
-  infty_norm0 g <= u.
+Lemma pre_infty_norm_le (g : T) (u : R) : {in K, forall x, `| g x | <= u} ->
+  pre_infty_norm g <= u.
 Proof.
-have [c Kc] := seg_nonempty ab.
-move=> h; rewrite /infty_norm0; apply: ge_sup.
-  by exists `|g c|; exists c => //; rewrite /= in_itv/= lexx.
-by move => _ [x xab] <-;apply h; rewrite inE.
+have [c Kc] := K0.
+move=> h; rewrite /pre_infty_norm; apply: ge_sup.
+  by exists `|g c|; exists c.
+by move => _ [x xab] <-; apply h; rewrite inE.
 Qed.
 
-Lemma infty_norm0_ge (g : T) x : x \in K -> `|g x| <= infty_norm0 g.
+Lemma pre_infty_norm_ge (g : T) x : x \in K -> `|g x| <= pre_infty_norm g.
 Proof.
 move=> xK.
 rewrite sup_upper_bound //=.
-  exact: normr_has_sup.
-by exists x.
+  by apply: normr_has_sup.
+by exists x => //; exact/set_mem.
 Qed.
 
-Lemma infty_norm0_itv_eq (f g : T) : {in K, f =1 g} ->
-  infty_norm0 f = infty_norm0 g.
+Lemma pre_infty_norm_itv_eq (f g : T) : {in K, f =1 g} ->
+  pre_infty_norm f = pre_infty_norm g.
 Proof.
 move=> inK.
-rewrite /infty_norm0 /=; congr (sup _).
+rewrite /pre_infty_norm /=; congr (sup _).
 by apply/seteqP; split; move => _ [ y ? <- ]; exists y; rewrite //= inK // inE.
 Qed.
 
-End infty_norm0_lemmas.
+End pre_infty_norm_lemmas.
 
 Section intermediate_lemma.
 Context {R : realType}.

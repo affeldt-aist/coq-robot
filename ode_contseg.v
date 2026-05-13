@@ -17,7 +17,7 @@ Require Import ode_common.
 (* type.                                                                      *)
 (*                                                                            *)
 (* ```                                                                        *)
-(*         infty_norm f := infty_norm0 (repr f)                               *)
+(*         infty_norm f := pre_infty_norm (repr f)                            *)
 (*   quot_contSeg a b U := quotient of continuous functions over a closed     *)
 (*                         interval [a, b] to some normed module U            *)
 (*                         Notation: `C[a, b] or `C([a, b] U)                 *)
@@ -41,27 +41,27 @@ Open Scope classical_set_scope.
 
 Module ContSeg_zlmodType.
 Section contSeg_zlmodtype.
-Context {R : realType} (a b : R) (V : normedModType R).
+Context {R : realType} (K : set R) (V : normedModType R).
 
 HB.instance Definition _ := GRing.isZmodClosed.Build _ _
-  (contseg_zmod_closed a b V).
+  (contseg_zmod_closed K V).
 
-Fail Check continuousSubspaceType `[a, b] [set: V] : zmodType.
+Fail Check continuousSubspaceType K [set: V] : zmodType.
 
 HB.instance Definition _ :=
-  [SubChoice_isSubZmodule of continuousSubspaceType `[a, b] [set: V] by <:].
+  [SubChoice_isSubZmodule of continuousSubspaceType K [set: V] by <:].
 
-Check continuousSubspaceType `[a, b] [set: V] : zmodType.
+Check continuousFunType K [set: V] : zmodType.
 
 HB.instance Definition _ := GRing.isScaleClosed.Build _ _
-  (contseg a b) (@contfun_scaler_closed R a b V).
+  (contseg K) (@contfun_scaler_closed R K V).
 
-Fail Check @continuousSubspaceType R V `[a, b] [set: V] : lmodType _.
+Fail Check @continuousSubspaceType R V K [set: V] : lmodType _.
 
 HB.instance Definition _ :=
-  [SubZmodule_isSubLmodule of continuousSubspaceType `[a, b] [set: V] by <:].
+  [SubZmodule_isSubLmodule of continuousSubspaceType K [set: V] by <:].
 
-Check continuousSubspaceType `[a, b] [set: V] : lmodType _.
+Check continuousSubspaceType K [set: V] : lmodType _.
 
 End contSeg_zlmodtype.
 End ContSeg_zlmodType.
@@ -111,16 +111,18 @@ End ContSeg_submod.
 
 Section contSeg_seminorm.
 Context {R : realType} {W : normedModType R}.
-Variables a b : R.
-Let K := `[a, b].
+(*Variables a b : R.
+Let K := `[a, b].*)
+Variable K : set R.
+Hypotheses (compactK : compact K).
 Local Notation T := (continuousSubspaceType K [set: W]).
 
 Import ContSeg_zlmodType.
 
 (* NB: require Nmodule properties *)
-Lemma infty_norm0_eq0 : infty_norm0 (0 : T) = 0.
+Lemma pre_infty_norm_eq0 : pre_infty_norm (0 : T) = 0.
 Proof.
-rewrite /infty_norm0.
+rewrite /pre_infty_norm.
 have [K0|K0] := eqVneq K set0.
   by rewrite [X in [set _ | _ in X]](_ : _ = set0)// image_set0// sup0.
 rewrite -(sup1 0); congr sup.
@@ -131,16 +133,15 @@ by exists c => //; rewrite normr0.
 Qed.
 
 (* NB: require Nmodule properties *)
-Lemma infty_norm0rMn (f : T) n : infty_norm0 (f *+ n) = infty_norm0 f *+ n.
+Lemma pre_infty_normrMn (f : T) n : pre_infty_norm (f *+ n) = pre_infty_norm f *+ n.
 Proof.
-rewrite /infty_norm0.
+rewrite /pre_infty_norm.
 have [K0|K0] := eqVneq K set0.
   do 2 rewrite [X in [set _ | _ in X]](_ : _ = set0)// image_set0//.
   by rewrite sup0 mul0rn.
-rewrite -sup_Mn; last first.
-  apply: normr_has_sup.
-  rewrite leNgt; apply: contra K0 => ba.
-  by rewrite /K set_itv_ge// bnd_simp -ltNge.
+rewrite -sup_Mn//; last first.
+  apply: normr_has_sup => //.
+  exact/set0P.
 rewrite image_comp/=; congr (sup _).
 apply: eq_imagel => z Kz /=; rewrite -normrMn /=.
 have /(congr1 (@^~ z)) <- := natmulfctE f n.
@@ -150,9 +151,9 @@ elim: n f => //= n IH f.
 by rewrite !mulrS -IH.
 Qed.
 
-Lemma infty_norm0N (f : T) : infty_norm0 (- f) = infty_norm0 f.
+Lemma pre_infty_normN (f : T) : pre_infty_norm (- f) = pre_infty_norm f.
 Proof.
-rewrite /infty_norm0; congr sup; apply: eq_set => /= x0.
+rewrite /pre_infty_norm; congr sup; apply: eq_set => /= x0.
 apply: propext; split => [[x1 in_itv] | [x1 in_itv]] H; exists x1 => //.
   by rewrite -normrN.
 by rewrite normrN.
@@ -251,7 +252,7 @@ Variables a b : R.
 
 Import ContSeg_quot.
 
-Definition infty_norm (f : `C([a , b] W)) := infty_norm0 (repr f).
+Definition infty_norm (f : `C([a , b] W)) := pre_infty_norm (repr f).
 
 Local Open Scope quotient_scope.
 
@@ -260,13 +261,14 @@ Lemma ler_infty_normD (x y : `C[a, b]) :
 Proof.
 rewrite /infty_norm/=.
 have [K0|K0] := eqVneq `[a, b] set0.
-  rewrite /infty_norm0.
+  rewrite /pre_infty_norm.
   do ! rewrite [X in [set _ | _ in X]](_ : _ = set0)// image_set0//.
   by rewrite sup0 addr0.
 have ab : a <= b.
   rewrite leNgt; apply: contra K0 => ba.
   by rewrite set_itv_ge// bnd_simp -ltNge.
-rewrite -sup_sumE; [|exact: normr_has_sup..].
+move/set0P in K0.
+rewrite -sup_sumE; [|apply: normr_has_sup => //; exact: segment_compact..].
 apply: sup_le.
 - move=> A -[s sab] <-{A}.
   rewrite /down/=.
@@ -281,7 +283,8 @@ apply: sup_le.
       by [].
     by rewrite inE.
   by rewrite Quotient.pi_add !reprK.
-- exact: (normr_has_sup _ _).1.
+- apply: (normr_has_sup _ _ _).1 => //.
+  exact: segment_compact.
 - split.
   + exists (`|x a| + `|repr y a|)=> /=.
     exists (`|repr x a|) => //; [exists a => //; by rewrite in_itv/= lexx ab|].
@@ -289,13 +292,13 @@ apply: sup_le.
   + exists (sup [set `|repr x r| | r in `[a, b]] + sup [set `|repr y r| | r in `[a, b]]).
     apply ubP => _ [x0 xs] [y0 ys] <-.
     rewrite lerD// ub_le_sup//.
-      exact: (normr_has_sup x _).2.
-    exact: (normr_has_sup y _).2.
+      by apply: (normr_has_sup x _ _).2 => //; exact: segment_compact.
+    by apply: (normr_has_sup y _ _).2 => //; exact: segment_compact.
 Qed.
 
 Lemma infty_normr0_eq0 (x : `C[a, b]) : infty_norm x = 0 -> x = 0.
 Proof.
-rewrite /infty_norm /infty_norm0 /= => H.
+rewrite /infty_norm /pre_infty_norm /= => H.
 rewrite -(reprK x) -(reprK 0).
 apply/eqquotP.
 rewrite Quotient.equivE inE; apply: funext => r /=.
@@ -307,7 +310,8 @@ have -> : {in `[a, b]%R, repr (0 : `C[a, b]) =1 (0 : @continuousSubspaceType R W
 - rewrite [LHS]subr0.
   apply/eqP; rewrite -normr_le0.
   have [ab|ab] := leP a b.
-    have := sup_upper_bound (normr_has_sup x ab).
+    have ab0 : `[a, b] !=set0 by exists r.
+    have := sup_upper_bound (normr_has_sup x (@segment_compact _ a b) ab0).
     rewrite H /ubound /=.
     apply.
     by exists r.
@@ -318,9 +322,11 @@ Qed.
 
 Lemma infty_normrMn (x : `C[a, b]) n : infty_norm (x *+ n) = infty_norm x *+ n.
 Proof.
-rewrite /infty_norm -infty_norm0rMn => //.
-apply: infty_norm0_itv_eq => r rab.
-suff : repr (x *+ n) = repr x *+ n %[mod `C[a, b]] by move=> /eqmod_on_itv ->.
+rewrite /infty_norm -pre_infty_normrMn => //; last exact: segment_compact.
+apply: pre_infty_norm_itv_eq => r rab.
+suff : repr (x *+ n) = repr x *+ n %[mod `C[a, b]].
+ move=> /eqmod_on_itv ->//.
+ by rewrite inE in rab.
 elim n; [rewrite !mulr0n // reprK /GRing.zero /= /Quotient.zero /= -lock // | ].
 move => n' IHn'; rewrite reprK !mulrS.
 rewrite reprK in IHn'.
@@ -328,17 +334,20 @@ rewrite Quotient.pi_add reprK.
 by move : IHn' <-.
 Qed.
 
-Let infty_norm_pi0 x : infty_norm (\pi_`C[a, b] x) = infty_norm0 x.
+Require Import tilt_analysis.
+
+Let infty_norm_pi0 x : infty_norm (\pi_`C[a, b] x) = pre_infty_norm x.
 Proof.
 rewrite /infty_norm /=.
 have /eqmod_on_itv Heq : repr (\pi_`C[a, b] x) = x %[mod `C[a, b]] by rewrite reprK.
-exact: infty_norm0_itv_eq.
+apply: pre_infty_norm_itv_eq.
+by apply/in_switch.
 Qed.
 
 Lemma infty_normrN (x : `C[a, b]) : infty_norm (- x) = infty_norm x.
 Proof.
 rewrite -(reprK x) /GRing.opp /= -Quotient.pi_opp !infty_norm_pi0.
-rewrite /infty_norm /infty_norm0; congr sup.
+rewrite /infty_norm /pre_infty_norm; congr sup.
 apply/eq_set => /= x0.
 apply/propext; split => [[x1 in_itv] | [x1 in_itv]] H; exists x1 =>//.
   by rewrite -normrN.
@@ -351,7 +360,7 @@ Fail Check `C[a, b] : normedZmodType R.
 HB.instance Definition _ := @Num.Zmodule_isNormed.Build R `C[a, b]
   infty_norm ler_infty_normD infty_normr0_eq0 infty_normrMn infty_normrN.
 
-Lemma infty_norm_pi x : `|\pi_`C[a, b] x| = infty_norm0 x.
+Lemma infty_norm_pi x : `|\pi_`C[a, b] x| = pre_infty_norm x.
 Proof. by rewrite /Num.norm /= infty_norm_pi0. Qed.
 
 Lemma infty_norm_lt (f : `C[a, b]) e :
@@ -359,7 +368,10 @@ Lemma infty_norm_lt (f : `C[a, b]) e :
 Proof.
 rewrite -{1}(reprK f) infty_norm_pi => h x xab.
 have [ab|ab] := leP a b.
-  exact/le_lt_trans/h/infty_norm0_ge.
+  apply/le_lt_trans/h/pre_infty_norm_ge => //.
+  by exists a => /=; rewrite bound_itvE.
+  exact: segment_compact.
+  by rewrite inE.
 move: xab; rewrite in_itv/= => /andP[/le_trans /[apply]].
 by rewrite leNgt ab.
 Qed.
@@ -369,7 +381,10 @@ Lemma infty_norm_le (f : `C[a, b]) e :
 Proof.
 rewrite -{1}(reprK f) infty_norm_pi => h x xab.
 have [ab|ab] := leP a b.
-  exact/le_trans/h/infty_norm0_ge.
+  apply/le_trans/h/pre_infty_norm_ge => //.
+  by exists a => /=; rewrite bound_itvE.
+  exact: segment_compact.
+  by rewrite inE.
 move: xab; rewrite in_itv/= => /andP[/le_trans /[apply]].
 by rewrite leNgt ab.
 Qed.
@@ -378,9 +393,11 @@ Lemma infty_norm_le2 (f : `C[a, b]) e : 0 <= e ->
   {in `[a, b]%R, forall x : R, `|f x| <= e} -> `| f | <= e.
 Proof.
 move=> e0 h; have [ab|ba] := leP a b.
-  by rewrite -(reprK f) infty_norm_pi infty_norm0_le.
+  rewrite -(reprK f) infty_norm_pi pre_infty_norm_le//.
+  by exists a => /=; rewrite bound_itvE.
+  exact/in_switch.
 rewrite [leLHS](_ : _ = 0)//.
-rewrite /Num.norm/= /infty_norm /infty_norm0.
+rewrite /Num.norm/= /infty_norm /pre_infty_norm.
 rewrite [X in [set _ | _ in X]](_ : _ = set0) ?image_set0 ?sup0//.
 by rewrite set_itv_ge// bnd_simp -ltNge.
 Qed.
@@ -497,7 +514,7 @@ Lemma is_pmnormedZmod_contFunBallType :
   PseudoMetricNormedZmod_Lmodule_isNormedModule R `C([r, s] W).
 Proof.
 constructor => l x.
-rewrite /Num.norm/= /infty_norm /infty_norm0 /=.
+rewrite /Num.norm/= /infty_norm /pre_infty_norm /=.
 have [rs|sr] := leP r s; last first.
   rewrite /=.
   have rs1 : `[r, s] = set0 by rewrite set_itv_ge// bnd_simp -ltNge.
@@ -515,18 +532,25 @@ apply/eqP; rewrite eq_le; apply/andP; split.
   move=> _/= [a ars] <-.
   rewrite repr_mult; last by rewrite inE.
   rewrite normrZ ler_wpM2l// ub_le_sup//.
-    exact: (normr_has_sup _ _).2.
+    apply: (normr_has_sup _ _ _).2 => //.
+    exact: segment_compact.
+    by exists a.
   by exists a.
-rewrite -sup_mult => //; last by apply normr_has_sup.
-apply sup_le; [ | | by apply normr_has_sup].
-  move => _  [_ [x0 x0rs] <- <-].
+rewrite -sup_mult => //; last first.
+  apply: normr_has_sup => //.
+  exact: segment_compact.
+  by exists r =>/=; rewrite bound_itvE.
+apply sup_le; [ | | apply normr_has_sup]; last first.
+- by exists r =>/=; rewrite bound_itvE.
+  exact: segment_compact.
+- exists `|l *: x r|, `|repr x r|.
+    by exists r => //=; rewrite bound_itvE.
+  by rewrite normrZ.
+- move => _  [_ [x0 x0rs] <- <-].
   exists (`|l| * `|repr x x0|); split=> //=; exists x0.
     by rewrite inE.
   rewrite repr_mult; last by rewrite inE.
   by rewrite normrZ.
-exists `|l *: x r|, `|repr x r|.
-  by exists r => //=; rewrite bound_itvE.
-by rewrite normrZ.
 Qed.
 
 HB.instance Definition _ := is_pmnormedZmod_contFunBallType.

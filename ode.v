@@ -6,7 +6,7 @@ From mathcomp Require Import mathcomp_extra unstable boolp classical_sets.
 From mathcomp Require Import contra functions constructive_ereal reals.
 From mathcomp Require Import topology prodnormedzmodule tvs normedtype.
 From mathcomp Require Import landau ereal sequences derive numfun measure.
-From mathcomp Require Import realfun lebesgue_measure measurable_realfun.
+From mathcomp Require Import realfun measurable_realfun lebesgue_measure.
 From mathcomp Require Import lebesgue_integral ftc.
 Require Import tilt_mathcomp tilt_analysis ode_common ode_contseg.
 
@@ -500,13 +500,14 @@ move=> ab; rewrite closed_ballE//.
 apply: eq_set => /= f; apply propext; split => h.
 - rewrite -(@reprK _ C f).
   rewrite /GRing.opp /= -Quotient.pi_opp /GRing.add /= -Quotient.pi_add.
-  rewrite infty_norm_pi infty_norm0_le//.
-    by rewrite /= lerDl ltW// safe_dist_gt0.
+  rewrite infty_norm_pi pre_infty_norm_le//.
+    by exists a => /=; rewrite bound_itvE lerDl ltW// safe_dist_gt0.
   move=> x adx.
   move /(_ (f x)) : h.
   rewrite closed_ballE//.
   apply.
-  by exists x.
+  exists x => //=.
+  by rewrite inE in adx.
 - move => _ [x xad] <-.
   rewrite closed_ballE// /closed_ball_ /=.
   have -> : u0 - f x = ((pi C (cst u0)) - f : C) x.
@@ -516,7 +517,11 @@ apply: eq_set => /= f; apply propext; split => h.
   rewrite -(@reprK _ C f).
   rewrite /GRing.opp /= -Quotient.pi_opp /GRing.add /= -Quotient.pi_add.
   rewrite eval_mod_on_itv; last by rewrite inE.
-  apply: (le_trans (infty_norm0_ge (leDl_safe_dist phi ab u0 r k0 rho) _ xad)).
+  move/mem_set in xad.
+  apply: (le_trans (pre_infty_norm_ge _ _  _ xad)).
+    by exists a => /=; rewrite bound_itvE lerDl ltW// safe_dist_gt0.
+  by apply: segment_compact.
+(*  (leDl_safe_dist phi ab u0 r k0 rho) *)
   rewrite -infty_norm_pi.
   by rewrite Quotient.pi_add Quotient.pi_opp reprK.
 Qed.
@@ -825,7 +830,6 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
         rewrite set_itv_ge// ?bnd_simp -?ltNge//.
         exact: continuous_subspace0.
       apply: within_continuous_comp_norm.
-        by rewrite ltW.
       by apply cont1;rewrite inE; exact: closed_ballxx.
     exists (M + 1) => _ [x0 x0ab] <- /=.
     rewrite -normr_id.
@@ -991,7 +995,7 @@ move=> /= [/= x y] [Vrx Vry].
 rewrite /picard/=.
 rewrite !piE/=.
 rewrite infty_norm_pi/=.
-rewrite /infty_norm0/=.
+rewrite /pre_infty_norm/=.
 apply: ge_sup => //=.
   set u := _ \o _; exists (u a) => /=; exists a => //.
   by rewrite in_itv/= lexx leDl_safe_dist.
@@ -1093,7 +1097,11 @@ rewrite (@le_trans _ _ (k * \int[mu]_(t0 in `[a, t]) `|x - y| ))//.
   have -> : x x0 - y x0 = (x - y : C) x0.
     apply (@eqmod_on_itv _ _ _ _ (repr x - repr y)) => //.
     by rewrite Quotient.pi_add Quotient.pi_opp !reprK.
-  by rewrite infty_norm0_ge// leDl_safe_dist.
+  rewrite pre_infty_norm_ge//.
+  by exists a => /=; rewrite bound_itvE// lerDl ltW// safe_dist_gt0.
+  exact: segment_compact.
+  by rewrite inE.
+(* leDl_safe_dist.*)
 rewrite (@le_trans _ _ (k * `|x - y| * (t - a)))//.
   rewrite -mulrA ler_wpM2l//; first exact: ltW.
   rewrite Rintegral_cst// ler_pM//.
@@ -1217,7 +1225,7 @@ split.
     rewrite inE/=.
     exact: subset_itv_oo_cc.
   suff hi : forall i, derivable (fun x => sol x ord0 i) t 1 /\
-    (fun x : R => sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))^`() t ord0 i =
+    (fun x : R => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%R)^`() t ord0 i =
       phi t (sol t) ord0 i.
     split.
       apply /derivable_mxP => i j.
@@ -1247,7 +1255,7 @@ split.
        apply/andP; split.
        - by apply: ltW; near: t'; exact: lt_nbhsr.
        - by apply: ltW; near: t'; exact: lt_nbhsl.
-    have -> : (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s)) ord0 j) =
+    have -> : (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%R ord0 j) =
               cst (sol a ord0 j) +
               (fun x => (\vint[mu]_(s in `[a, x]) (phi s (sol s))) ord0 j).
       by apply funext => x; rewrite mxE.
@@ -1480,7 +1488,7 @@ have tbc : t \in `[b, c]%R.
   case => // -> h1 /andP [h2 ->] //.
   by move: h1; rewrite h2.
 transitivity (sol1 a + \vint[lebesgue_measure]_(s in `[a, t])
-    phi s (if (s \in `[a, b])%classic then sol1 s else sol2 s)); last first.
+    phi s (if (s \in `[a, b])%classic then sol1 s else sol2 s))%R; last first.
   by under eq_rowRintegral do rewrite mem_setE.
 rewrite (rowRintegral_itv_split (c := b) (F := (fun x => phi x (patch sol2 `[a, b] sol1 x)))).
 - rewrite p1s//.
@@ -1676,7 +1684,7 @@ move/(@integral_sol_iff_sol _ _ _ _ _ _ _ _ r k0') => []//.
   by move => _ [t tad] <-;apply: bnd.
   by apply le_closed_ball.
 move=> f'au0 h1 t tab.
-have fc : contseg a (a + safe_dist) f' by exact: mem_set.
+have fc : contseg `[a, a + safe_dist] f' by exact: mem_set.
 have pieq : \pi_V%qT f = \pi_V%qT (contseg_Sub fc).
   rewrite reprK.
   apply: picard_fix_unique.
@@ -1718,7 +1726,6 @@ Proof.
 move /(continuous_within_itvP _ ab)  => [cc cl cr] g0.
 have : {within `[a,b], continuous (fun t => `| u0 - g t |) }.
   apply: within_continuous_comp_norm.
-    by rewrite ltW.
   apply/continuous_within_itvP => //=.
   split.
   - move => t tab.
@@ -1940,7 +1947,7 @@ have Eclosed : closed E.
     subst t.
     set g := fun x => `|f x - f' x|.
     have contg : {within `[a, b], continuous g}.
-      apply/(within_continuous_comp_norm (ltW ab))/within_continuousB.
+      apply/within_continuous_comp_norm/within_continuousB.
       - by have := And33 sol1; rewrite (closure_neitv_oo ab).
       - by have := And33 sol2; rewrite (closure_neitv_oo ab).
     have g0x : g x > 0 by rewrite normr_gt0 subr_eq0; case: Et.
@@ -2099,9 +2106,8 @@ Proof.
   by rewrite xs.
 Qed.
 
-
-Let r2 := (r%:num/2)%:pos.
-Let r4 := (r%:num/4)%:pos.
+Let r2 := (r%:num / 2)%:pos.
+Let r4 := (r%:num / 4)%:pos.
 
 Let ler4 : r4%:num <= r%:num.
 Proof. by rewrite /r4/= ler_pdivrMr // ler_pMr // lerDl. Qed.
@@ -2285,7 +2291,7 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)],
     rewrite !r42.
     move => c2.
     by apply: (closed_ball_split _ c2) =>//.
-  - have : (fplus t) \in closed_ball u0 (r2%:num/2).
+  - have : fplus t \in closed_ball u0 (r2%:num / 2).
     rewrite -r42.
      have ht' : t \in `[t0, t0 + dboth t0].
        have := tad.

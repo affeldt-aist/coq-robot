@@ -102,13 +102,13 @@ have Bnonempty t : B t !=set0.
   exists (f t); apply/subset_closure/set_mem/image_f.
   by rewrite inE/= in_itv/= lexx.
 have Bmon s t : s <= t -> B t `<=` B s.
-  move=> st; apply/closure_subset/image_subset.
+  move=> st; apply/closureS/image_subset.
   by apply: subset_itvr; rewrite bnd_simp.
 have Bcom t : 0 <= t -> compact (B t).
   move=> t0; apply: (subclosed_compact _  compactf).
     exact: closed_closure.
   rewrite (closure_id A).1; last exact: compact_closed.
-  apply: closure_subset => _ [x tx] <-.
+  apply: closureS => _ [x tx] <-.
   apply/set_mem/imagef.
   by move: tx; rewrite /= in_itv/= andbT; exact: le_trans.
 have -> : cluster (f t @[t --> +oo]) = \bigcap_(t in [set t | 0 <= t]) B t.
@@ -120,7 +120,7 @@ have -> : cluster (f t @[t --> +oo]) = \bigcap_(t in [set t | 0 <= t]) B t.
   - apply: sub_bigcap => b /= [t0 [_ /= h]].
     apply: (subset_trans (bigcap_inf (i := Num.max 0 (t0 + 1)) _)) => //=.
       by rewrite le_max lexx.
-    apply: closure_subset => _ /= [x xt] <-.
+    apply: closureS => _ /= [x xt] <-.
     apply h.
     move: xt; rewrite in_itv/= andbT; apply: lt_le_trans.
     by rewrite lt_max ltrDl ltr01 orbT.
@@ -604,9 +604,8 @@ have sublevelUpsilon1q : sublevelUpsilon1 p q.
     rewrite in_itv/=ltW//.
     rewrite (closure_id (sublevelUpsilon1 p)).1; last first.
       by apply compact_closed =>//; apply compact_sublevelUpsilon1.
-  apply closure_subset.
-  move => /= _ [t +] <-.
-  rewrite in_itv/= => /andP[t0 _].
+  apply: closureS => /= _ [t +] <-.
+  rewrite /= in_itv/= andbT => t0.
   apply invariant_sublevelUpsilon1 => //.
   exact/set_mem/mem_sublevelUpsilon1/set_mem.
 have [M [Mr Mp]] : bounded_set (sublevelUpsilon1 p).
@@ -643,7 +642,7 @@ apply: (compact_cluster_set1 _ cV ) => //.
   exists V; last by apply subset_closure.
   split => //.
   by apply VsublevelUpsilon1.
-apply: (filterS (closure_subset VsublevelUpsilon1)).
+apply: (filterS (closureS VsublevelUpsilon1)).
 exists 0; split => //= x /ltW x0.
 rewrite -(closure_id (sublevelUpsilon1 p)).1;last first.
   by apply compact_closed =>//; apply compact_sublevelUpsilon1.
