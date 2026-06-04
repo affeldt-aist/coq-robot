@@ -291,7 +291,7 @@ Qed.
 Section lip_implies_cont.
 Context {R : realType}.
 Variables (f : R -> R -> R) (a t1 : R).
-Hypothesis a1 : a < t1.
+Hypothesis a1 : a <= t1.
 Variable k : R.
 Variables (u0 : R) (r : {posnum R}).
 Let B := closed_ball u0 r%:num.
