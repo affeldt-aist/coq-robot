@@ -502,45 +502,45 @@ HB.instance Definition _ := [Choice of continuousSubspaceType `[a, b] [set: R] b
 End contseg_sub.
 
 (* TODO: generalize to any set? *)
-Definition contsegN {R : realType} (a b : R) (g : R -> R) :=
+Definition contsegN {R : realType} (K : set R) (g : R -> R) :=
   g \o -%R.
 Arguments contsegN {R} _ _.
 
 Section contsegN.
 Context {R : realType}.
-Variables a b : R.
+Variables K : set R.
 
-Let g'fun (g : continuousSubspaceType `[a, b] [set: R]) :
-  set_fun `[- b, - a] setT (contsegN a b g).
+Let g'fun (g : continuousSubspaceType K [set: R]) :
+  set_fun (-%R @` K) setT (contsegN K g).
 Proof. by constructor => x/=. Qed.
 
-HB.instance Definition _ (g : continuousSubspaceType `[a, b] [set: R]) :=
-  @isFun.Build (subspace `[- b, - a]) R `[- b, - a] setT (contsegN a b g) (g'fun g).
+HB.instance Definition _ (g : continuousSubspaceType K [set: R]) :=
+  @isFun.Build (subspace (-%R @` K)) R (-%R @` K) setT (contsegN K g) (g'fun g).
 
-Let cg' (g : continuousSubspaceType `[a, b] [set: R]) :
-  {within `[- b, - a], continuous (contsegN a b g)}.
+Let cg' (g : continuousSubspaceType K [set: R]) :
+  {within (-%R @` K), continuous (contsegN K g)}.
 Proof.
-have [ab|] := ltP a b; last first.
-  rewrite le_eqVlt => /predU1P[ba|ba].
-    subst b.
-    rewrite set_itv1.
-    exact: continuous_subspace1.
-  rewrite set_itv_ge ?bnd_simp ?leNgt ?ltrN2 ?negbK//.
-  exact: continuous_subspace0.
-apply/continuous_within_itvP.
-  by rewrite ltrN2.
-have /continuous_within_itvP[] := @cts_fun _ _ g.
-  by [].
-move=> cg gR gL; split.
-- move=> x xdd; apply: continuous_comp; first exact: continuousN.
-  by apply: cg; rewrite oppr_itvoo.
-- by apply/cvg_at_leftNP; rewrite /contsegN/= opprK.
-- move/cvg_at_rightNP : gR.
-  by rewrite /contsegN/= opprK.
+move=>/=x.
+apply : cvg_comp; last by apply g.
+rewrite /nbhs_subspace/=.
+case : ifPn;last first.
+  rewrite notin_setE /nbhs/= => h A.
+  rewrite -(@nbhs_subspace_out _ _ (-x)) /=; first by move => h0 x0 ->; apply h0.
+  move : h.
+  apply: contra_not.
+  move => Kx.
+  by exists (-x); rewrite // opprK.
+move => h.
+have Kx : K (-x).
+  move : h.
+  by rewrite inE => [[y h <-]]; rewrite opprK.
+apply /subspace_cvgP => //.
+rewrite withinN.
+by rewrite nbhs_subspace_in//=; exists (-x); rewrite // opprK.
 Qed.
 
-HB.instance Definition _ (g : continuousSubspaceType `[a, b] [set: R]) :=
-  isContinuous.Build _ _ (contsegN a b g : subspace `[- b, - a] -> R) (@cg' g).
+HB.instance Definition _ (g : continuousSubspaceType K [set: R]) :=
+  isContinuous.Build _ _ (contsegN K g : subspace (-%R @` K) -> R) (@cg' g).
 
 End contsegN.
 
