@@ -383,16 +383,47 @@ Definition picard_fun
 
 End picard_fun.
 
+HB.lock Definition sup_phi {R : realType} {n : nat}
+  (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R) (u0 : U)
+  : R := sup [set `|phi t u0| | t in `[a, b]].
+Canonical sup_phi_unlockable := Unlockable sup_phi.unlock.
+
 Section sup_phi.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
 Variables (phi : R -> U -> U) (a b : R).
 Variables (u0 : U).
 
-Definition sup_phi : R := sup [set `|phi t u0| | t in `[a, b]].
+Lemma sup_phi_ge0 : 0 <= sup_phi phi a b u0.
+Proof. by rewrite unlock/= /sup_phi sup_ge0//= => x [y _ <-]. Qed.
 
-Lemma sup_phi_ge0 : 0 <= sup_phi.
-Proof. by rewrite /sup_phi sup_ge0//= => x [y _ <-]. Qed.
+Variable r : {posnum R}.
+Let B := closed_ball u0 r%:num : set U.
+Hypothesis cont1 : {in B, forall y : U, {within `[a, b], continuous phi^~ y}}.
+
+Lemma normr_phi_sup_phi x : x \in `[a, b]%R ->
+  `|phi x u0| <= sup_phi phi a b u0.
+Proof.
+move=> xab.
+rewrite unlock/= ub_le_sup//.
+  have [M [Mb1 Mb2]] : bounded_set [set `|phi t u0| | t in `[a,b]].
+    apply/compact_bounded/continuous_compact; last exact: segment_compact.
+    have [ab|] := ltP a b; last first.
+      rewrite le_eqVlt => /predU1P[ab|ab].
+        rewrite [X in {within X, continuous _}](_ : _ = [set a]); last first.
+          by rewrite ab set_itv1.
+        exact: continuous_subspace1.
+      rewrite set_itv_ge// ?bnd_simp -?ltNge//.
+      exact: continuous_subspace0.
+    apply: within_continuous_comp_norm.
+    by apply cont1;rewrite inE; exact: closed_ballxx.
+  exists (M + 1) => _ [x0 x0ab] <- /=.
+  rewrite -normr_id.
+  apply Mb2.
+    by rewrite ltrDl.
+  by exists x0.
+by exists x.
+Qed.
 
 End sup_phi.
 
@@ -407,26 +438,22 @@ Lemma sup_phiS a b c d : {within `[a, b], continuous (phi ^~ u0)} ->
   sup_phi phi c d u0 <= sup_phi phi a b u0.
 Proof.
 move=> cf ab cdab.
-rewrite /sup_phi.
+rewrite unlock/=.
 have [cd|dc] := leP c d.
   apply: sup_le => //.
   - move=> _/= [r rcd <-].
-    red.
-    simpl.
+    rewrite /down/=.
     exists `|phi r u0|; split => //.
-    exists r => //.
-    by apply: cdab.
+    by exists r => //; exact: cdab.
   - exists `|phi c u0| => /=.
-    exists c => //.
-    by rewrite in_itv/= lexx cd.
+    by exists c => //; rewrite bound_itvE.
   - split.
-      exists `|phi a u0| => //=.
-      exists a => //.
-      by rewrite in_itv/= lexx ab.
+      exists `|phi a u0| => /=.
+      by exists a => //; rewrite bound_itvE.
     have : {within `[a, b], continuous fun t : R => `|phi t u0|}.
-      by apply: within_continuous_comp_norm => //.
-    move/(@EVT_max R (fun t => `|phi t u0|) _ _ ab) => [e eab Hmax].
-    exists (`|phi e u0|) => x/= [r rab <-//].
+      exact: within_continuous_comp_norm.
+    move=> /(EVT_max ab)[e eab Hmax].
+    exists (`|phi e u0|) => x/= [r rab <-].
     exact: Hmax.
 rewrite set_itv_ge ?bnd_simp/= -?ltNge// image_set0 sup0.
 by apply: sup_ge0 => x/= [y _ <-//].
@@ -803,8 +830,7 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
   move=> x xay.
   rewrite lerD//.
     have xaaDelta : x \in `[a, a + safe_dist]%R.
-      move: x xay.
-      apply: subset_itvl; rewrite bnd_simp.
+      apply: subset_itvl xay; rewrite bnd_simp.
       by rewrite (itvP yaaDelta).
     move/(lip2_safe_dist lip2) : xaaDelta.
     rewrite lipschitz_componentE//; last exact: ltW.
@@ -813,34 +839,15 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
     split => /=.
       apply: invariant => /=.
       exists x => //.
-      move : xay.
-      apply: subset_itvl; rewrite bnd_simp.
+      apply: subset_itvl xay; rewrite bnd_simp.
       by rewrite (itvP yaaDelta).
     exact: closed_ballxx.
   apply: (@le_trans _ _ `|phi x u0|) => //.
     by rewrite /Num.norm/= mx_normrE /= (le_bigmax _ _ (ord0, i)).
-  rewrite /sup_phi ub_le_sup//.
-    have [M [Mb1 Mb2]] : bounded_set [set `|phi t u0| | t in `[a,b]].
-      apply/compact_bounded/continuous_compact; last exact: segment_compact.
-      have [ab|] := ltP a b; last first.
-        rewrite le_eqVlt => /predU1P[ab|ab].
-          rewrite [X in {within X, continuous _}](_ : _ = [set a]); last first.
-            by rewrite ab set_itv1.
-          exact: continuous_subspace1.
-        rewrite set_itv_ge// ?bnd_simp -?ltNge//.
-        exact: continuous_subspace0.
-      apply: within_continuous_comp_norm.
-      by apply cont1;rewrite inE; exact: closed_ballxx.
-    exists (M + 1) => _ [x0 x0ab] <- /=.
-    rewrite -normr_id.
-    apply Mb2.
-      by rewrite ltrDl.
-    by exists x0.
-  exists x => //.
-  move: xay; rewrite in_itv/= in_itv/= => /andP[] -> /=.
-  move/le_trans; apply.
-  move : yaaDelta; rewrite in_itv /= => /andP[].
-  move => _ /le_trans; apply.
+  apply: (@normr_phi_sup_phi _ _ _ _ _ _ r) => //.
+  apply: subset_itvl xay; rewrite bnd_simp.
+  move : yaaDelta; rewrite in_itv /= => /andP[_].
+  move=> /le_trans; apply.
   by rewrite -lerBrDl safe_dist_itv.
 rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * r%:num + sup_phi)))//.
   apply: le_Rintegral => //=.
@@ -2899,4 +2906,3 @@ have sol_cont_i :
 Admitted.
 
 End sol_to_integral_sol.
-
