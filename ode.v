@@ -461,6 +461,14 @@ Qed.
 
 End sup_phi_lemmas.
 
+HB.lock Definition safe_dist {R : realType} {n : nat}
+  (U := 'rV[R]_n) (phi : R -> U -> U) (a b k : R) (u0 : U)
+  (r rho : {posnum R})
+  := Num.min (b - a)
+                       (Num.min (r%:num / (k * r%:num + sup_phi phi a b u0))
+                                (rho%:num / k)).
+Canonical safe_dist_unlockable := Unlockable safe_dist.unlock.
+
 Section safe_dist.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
@@ -470,26 +478,29 @@ Variables (u0 : U) (r : {posnum R}).
 Hypothesis k0 : 0 < k.
 Variable rho : {posnum R}. (* rho < 1 *)
 
+Local Notation safe_dist := (safe_dist phi a b k u0 r rho).
 Local Notation sup_phi := (sup_phi phi a b u0).
-
-Definition safe_dist := Num.min (b - a)
-                       (Num.min (r%:num / (k * r%:num + sup_phi))
-                                (rho%:num / k)).
 
 Lemma safe_dist_gt0 : 0 < safe_dist.
 Proof.
-rewrite lt_min subr_gt0 ab/= lt_min mulr_gt0 ?divr_gt0//.
+rewrite unlock/= lt_min subr_gt0 ab/= lt_min mulr_gt0 ?divr_gt0//.
 by rewrite invr_gt0// ltr_wpDr ?sup_phi_ge0// mulr_gt0.
 Qed.
 
 Lemma ltDl_safe_dist : a < a + safe_dist.
-Proof. by rewrite ltrDl safe_dist_gt0. Qed.
+Proof. by rewrite ltrDl// safe_dist_gt0. Qed.
 
 Lemma leDl_safe_dist : a <= a + safe_dist.
 Proof. by rewrite ltW// ltDl_safe_dist. Qed.
 
 Lemma safe_dist_itv : safe_dist <= b - a.
-Proof. by rewrite /safe_dist ge_min lexx. Qed.
+Proof. by rewrite unlock/= ge_min lexx. Qed.
+
+Lemma safe_dist_le_sup_phiV : safe_dist <= r%:num / (k * r%:num + sup_phi).
+Proof. by rewrite unlock/= 2!ge_min mulrC lexx/= orbT. Qed.
+
+Lemma safe_dist_le_rho : k * safe_dist <= rho%:num.
+Proof. by rewrite mulrC -ler_pdivlMr// unlock/= !ge_min lexx !orbT. Qed.
 
 End safe_dist.
 
@@ -903,7 +914,7 @@ rewrite (@le_trans _ _ ((k * r%:num + sup_phi) * safe_dist))//.
   by rewrite ay//= lerBlDl.
 rewrite -ler_pdivlMl//; last first.
   by rewrite ltr_pwDl ?mulr_gt0// sup_phi_ge0.
-by rewrite 2!ge_min mulrC lexx/= orbT.
+by rewrite mulrC safe_dist_le_sup_phiV.
 Qed.
 
 Fail Check picard_to_cont : {fun [set: V] >-> [set: V]}.
@@ -1118,9 +1129,8 @@ rewrite (@le_trans _ _ (k * `|x - y| * (t - a)))//.
   by rewrite /= (lebesgue_measure_itv `[a,t]%R) /= lte_fin => ->.
 rewrite [leLHS]mulrAC ler_wpM2r//.
 move: tNdd; rewrite in_itv/= => /andP[Ndt].
-rewrite -lerBlDl.
-rewrite /safe_dist !le_min => /andP[_ /andP[_]].
-by rewrite ler_pdivlMr// mulrC.
+rewrite -lerBlDl -[in X in X -> _](@ler_pM2l _ k)// => /le_trans; apply.
+by rewrite safe_dist_le_rho.
 Qed.
 
 End is_contraction_picard.
@@ -1794,10 +1804,11 @@ suff [rho [D [Hrho [Db P1 P2]]]] : exists rho D : {posnum R},
 have [d1 D1] := continuous_confined r2 ab cf (And31 sol1).
 have [d2 D2] := continuous_confined r2 ab cf' (And31 sol2).
 have [rho [drho1 drho2]] : exists rho, dmax rho <= (Num.min d1%:num d2%:num) /\ rho%:num < 1.
-  rewrite /dmax/safe_dist.
+  rewrite /dmax.
   have posk : 0 < Num.min rho_max%:num (Num.min (k * rho_max%:num) (k * (Num.min d1%:num d2%:num))).
     by rewrite lt_min/= invr_gt0// ltr0n/= lt_min divr_gt0//= mulr_gt0.
   exists (PosNum posk); split => //=.
+    rewrite unlock/=.
     rewrite !ge_min/= minA; apply/orP; right.
     rewrite !minr_pMl//=; [|by rewrite ltW// invr_gt0..].
     do 2 rewrite ge_min; apply/orP; right.
@@ -2243,7 +2254,7 @@ have Buneg : closed_ball uneg (r%:num / 2) `<=` closed_ball u0 r%:num.
     by rewrite (natrD _ 2 2) lerDl ler0n.
   apply/mem_set/cminus.
   rewrite in_itv/= opprB lerDr ltW //= addrC lerD//.
-  by rewrite /dboth /dplus 3!ge_min lexx !orbT.
+  by rewrite /dboth /dplus !ge_min lexx !orbT.
 have f01intersect : fminus t0 = fplus t0.
   by rewrite /fminus/= (And31 solminus) (And31 solplus).
 have fa : cauchy_lipschitz_f_sym t0 = u0.
@@ -2254,22 +2265,22 @@ set B' := closed_ball uneg (r2%:num).
 have lip2' : {in `[t0 - dboth t0 ,t0 + dboth t0], forall x, k.-lipschitz_B' (phi x)}.
   move => /= t tab [x1 x2] [Bx1 Bx2].
   apply lip2 => //.
-  move : tab.
-  rewrite mem_setE.
-  apply: subset_itv; rewrite bnd_simp.
-  rewrite lerBrDl -lerBrDr.
-  by rewrite !ge_min opprK (addrC t0) lexx /= !orbT.
-  rewrite -lerBrDl.
-  by rewrite !ge_min lexx.
-  by split;apply Buneg.
+    move: tab.
+    rewrite mem_setE.
+    apply: subset_itv; rewrite bnd_simp.
+      rewrite lerBrDl -lerBrDr /dboth /dplus /dminus/= unlock/=.
+      by rewrite !ge_min opprK (addrC t0) lexx /= !orbT.
+    rewrite -lerBrDl.
+    by rewrite !ge_min lexx.
+  by split; exact: Buneg.
 have contf_minus : {within `[t0 - dboth t0, t0], continuous fminus}.
   apply /continuous_subspaceW/cfminus.
-  apply: subset_itvr.
-  by rewrite bnd_simp /= lerD //= lerNr opprK 3!ge_min lexx !orbT.
+  apply: subset_itvr; rewrite bnd_simp.
+  by rewrite lerD2l lerN2 /dboth /dminus !ge_min lexx !orbT.
 have contf_plus :   {within `[t0, t0+dboth t0], continuous fplus}.
   apply /continuous_subspaceW/cfplus.
-  apply: subset_itvl.
-  by rewrite bnd_simp /= lerD //= 2!ge_min lexx !orbT.
+  apply: subset_itvl; rewrite bnd_simp/=.
+  by rewrite lerD2l /dboth 2!ge_min lexx !orbT.
 have contf :   {within `[t0 - dboth t0, t0 + dboth t0], continuous cauchy_lipschitz_f_sym}.
   apply : within_continuous_patch => //.
   by rewrite gtrBl.
@@ -2288,15 +2299,14 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)],
        by rewrite inE/= !closed_ballE/closed_ball_/= // distrC .
      apply/mem_set/cminus.
      rewrite !in_itv/= lerNr lerNl opprD !opprK gerBl ltW//= lerB//.
-     by rewrite /dboth/dminus 3!ge_min lexx !orbT.
+     by rewrite /dboth !ge_min lexx !orbT.
   rewrite r42 => c1.
   case : ifP => ht.
   - have : fminus t \in closed_ball u0 r4%:num.
     apply/mem_set/cminus.
     move: ht.
     rewrite inE/=!in_itv/= lerNr lerNl opprD !opprK => /andP[h1 ->//=].
-    apply: (le_trans _ h1).
-    by rewrite lerB // 3!ge_min lexx !orbT.
+    by rewrite (le_trans _ h1)// lerD2l lerN2 /safe_dist_sym !ge_min lexx !orbT.
     rewrite inE.
     rewrite !r42.
     move => c2.
@@ -2320,96 +2330,80 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)],
 split => //.
 suff h : is_sol_oo phi (cauchy_lipschitz_f_sym (t0-dboth t0)) (t0-dboth t0) (t0+dboth t0) cauchy_lipschitz_f_sym by apply (And32 h).
 have kn0 : k != 0 by apply lt0r_neq0.
+have ? : a <= t0 - dboth t0.
+  rewrite lerBrDl -lerBrDr.
+  by rewrite /dboth /dminus /dplus !unlock/= !ge_min opprK (addrC t0) lexx /= !orbT.
+have ? : t0 + dboth t0 <= b.
+  rewrite -lerBrDl.
+  by rewrite !ge_min lexx.
 apply /(integral_sol_iff_sol (r := r2) kn0) => //.
-  by rewrite ler_ltD // gtrN.
-  move => t tab /= x Bx.
+- by rewrite ler_ltD // gtrN.
+- move => t tab /= x Bx.
   apply: lip2.
-  move : tab.
-  apply: subset_itv; rewrite bnd_simp.
-  rewrite lerBrDl -lerBrDr.
-  by rewrite !ge_min opprK (addrC t0) lexx /= !orbT.
-  rewrite -lerBrDl.
-  by rewrite !ge_min lexx.
+    by apply: subset_itv tab; rewrite bnd_simp.
   split.
-  apply Buneg.
-  by apply: Bx.1.
-  apply Buneg.
-  by apply: Bx.2.
-  move => t tab.
-  apply /continuous_subspaceW/cont1.
-  apply: subset_itv; rewrite bnd_simp.
-  rewrite lerBrDl -lerBrDr.
-  by rewrite !ge_min opprK (addrC t0) lexx /= !orbT.
-  rewrite -lerBrDl.
-  by rewrite !ge_min lexx.
-  apply mem_set.
-  apply Buneg.
-  by apply set_mem.
-  move => _ [t tp] <-.
-  rewrite {1}/cauchy_lipschitz_f_sym patch_in;last first.
+    by apply: Buneg; exact: Bx.1.
+  by apply: Buneg; exact: Bx.2.
+- move=> t tab.
+  apply/continuous_subspaceW/cont1.
+    by apply: subset_itv; rewrite bnd_simp.
+  by apply/mem_set/Buneg/set_mem.
+- move => _ [t tp] <-.
+  rewrite {1}/cauchy_lipschitz_f_sym patch_in; last first.
     by rewrite inE/=in_itv/= lexx //= gerBl ltW.
   by apply fc; rewrite inE.
 apply: is_integral_sol_patch => //.
 - by rewrite gtrBl.
 - apply: (within_continuous_lipschitz _ kn0 (u0 := u0) (r:=r)).
-    exact: contf_minus.
-    move => x bx.
-    apply lip2.
-    move : bx.
-    apply: subset_itv; rewrite bnd_simp.
-    rewrite lerBrDl -lerBrDr.
-    by rewrite !ge_min opprK (addrC t0) lexx /= !orbT.
-    move : t0ab.
-    by rewrite in_itv/=  => /andP[_ /ltW//].
+  + exact: contf_minus.
+  + move=> x bx.
+    apply: lip2.
+      apply: subset_itv bx; rewrite bnd_simp//.
+      move: t0ab.
+      by rewrite in_itv/=  => /andP[_ /ltW//].
     move => t tab.
-    apply /continuous_subspaceW/cont1.
-    apply: subset_itv; rewrite bnd_simp.
-    rewrite lerBrDl -lerBrDr.
-    by rewrite !ge_min opprK (addrC t0) lexx /= !orbT.
+    apply/continuous_subspaceW/cont1.
+    apply: subset_itv; rewrite bnd_simp//.
     by rewrite (itvP t0ab).
     exact: tab.
-    move => _ [/= t' tp] <-.
-    apply (le_closed_ball (e1:=r4%:num)) => //.
+  + move => _ [/= t' tp] <-.
+    apply: (le_closed_ball (e1:=r4%:num)) => //.
     suff : (fminus t') \in closed_ball u0 r4%:num by rewrite inE.
     apply mem_set; apply cminus.
     move : tp.
     rewrite !in_itv/=lerNl opprK => /andP[h0 ->//=].
     rewrite lerNl opprD opprK //=.
     apply: (le_trans _ h0).
-    by rewrite lerB // 3!ge_min lexx !orbT.
-- apply : (within_continuous_lipschitz _ kn0 (u0 := u0) (r:=r)).
+    rewrite lerD2l lerN2 /dboth /dplus /dminus.
+    by rewrite !ge_min lexx !orbT.
+  + apply : (within_continuous_lipschitz _ kn0 (u0 := u0) (r:=r)).
     exact: contf_plus.
-    move => x bx.
-    apply lip2.
-    move : bx.
-    apply: subset_itv; rewrite bnd_simp.
+  + move=> x bx.
+    apply: lip2.
+    apply: subset_itv bx; rewrite bnd_simp.
     by rewrite (itvP t0ab).
     by rewrite -lerBrDl ge_min lexx.
     move => t tab.
     apply/continuous_subspaceW/cont1.
-    apply: subset_itv; rewrite bnd_simp.
+    apply: subset_itv; rewrite bnd_simp//.
     by rewrite (itvP t0ab).
-    by rewrite -lerBrDl ge_min lexx.
     exact: tab.
     move => _ [/= t' tp] <-.
     apply (le_closed_ball (e1:=r4%:num)) => //.
     suff : (fplus t') \in closed_ball u0 r4%:num by rewrite inE.
-    apply mem_set;apply cplus.
-    move: tp.
-    apply: subset_itvl; rewrite bnd_simp lerD2l.
+    apply/mem_set; apply cplus.
+    apply: subset_itvl tp; rewrite bnd_simp lerD2l.
     by rewrite /dboth /dplus 2!ge_min lexx !orbT.
 - apply /(integral_sol_iff_sol (r:=r2) kn0).
   + by rewrite gtrBl.
   + move => x bx.
-    apply lip2'.
+    apply: lip2'.
     rewrite inE.
     apply: subset_itvl bx; rewrite bnd_simp.
     by rewrite lerDl ltW.
   + move => t tab.
-    apply /continuous_subspaceW/cont1.
-    apply: subset_itv; rewrite bnd_simp.
-    rewrite lerBrDl -lerBrDr.
-    by rewrite !ge_min opprK (addrC t0) lexx !orbT.
+    apply/continuous_subspaceW/cont1.
+    apply: subset_itv; rewrite bnd_simp//.
     by rewrite (itvP t0ab).
     exact/mem_set/Buneg/set_mem.
   + by [].
@@ -2431,7 +2425,7 @@ apply: is_integral_sol_patch => //.
            move : tad.
            rewrite -/dminus /=!in_itv/= ltrNr ltrNl opprD !opprK => /andP[h1 ->//=].
            apply: (le_lt_trans _ h1).
-           by rewrite lerB// 3!ge_min lexx !orbT.
+           by rewrite lerD2l lerN2 !ge_min lexx !orbT.
          move => h1 h2.
          have hd : derivable fminus t 1.
            rewrite /fminus/=.
