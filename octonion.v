@@ -1,6 +1,6 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import all_boot all_order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import sesquilinear.
@@ -15,7 +15,7 @@ Require Import ssr_ext euclidean vec_angle frame rot quaternion.
 (* octonions and that octionions form a ZmodType and a LmodType. It also      *)
 (* defines the multiple that is neither commutative nor associative           *)
 (*                                                                            *)
-(*       oct R == type of octonions over the ringType R                       *)
+(*       oct R == type of octonions over the pzRingType R                     *)
 (*         x.1 == left part of the octonion x                                 *)
 (*         x.2 == right part of the octonion x                                *)
 (*        x^*o == conjugate of octonion x                                     *)
@@ -42,7 +42,7 @@ Local Open Scope ring_scope.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Section octonion0.
-Variable R : ringType.
+Variable R : pzRingType.
 
 Record oct := mkOct {octl : quat R ; octr : quat R }.
 
