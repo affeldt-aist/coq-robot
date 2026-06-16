@@ -1168,6 +1168,7 @@ Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
 Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
 
+(*Todo: is this a good way to define it with the extra sol a = u0G?  *)
 Definition is_integral_sol := sol a = u0 /\
   forall t, t \in `[a, b]%R -> sol t = sol a + (\vint[mu]_(s in `[a, t]) phi s (sol s))%R.
 
@@ -2507,3 +2508,262 @@ Qed.
 End cauchy_lipschitz_sym.
 
 End cauchy_lipschitz_symmetric.
+Section integral_sol_between.
+Local Notation mu := lebesgue_measure.
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+
+Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
+
+Hypothesis int_phi_sol : forall i,
+  mu.-integrable `[a, b]
+    (EFin \o (fun x : R => phi x (sol x) ord0 i)).
+
+Lemma integral_sol_between :
+  is_integral_sol phi u0 a b sol ->
+  forall s t,
+    s \in `[a, b]%R ->
+    t \in `[s, b]%R ->
+    sol t =
+      sol s + \vint[mu]_(x in `[s, t]) phi x (sol x).
+Proof.
+move=> [sola Hsol] s t sab tsb.
+have as' : a <= s by move: sab; rewrite in_itv /= => /andP[].
+have st : s <= t by move: tsb; rewrite in_itv /= => /andP[].
+have tb : t <= b by move: tsb; rewrite in_itv /= => /andP[].
+
+have tab : t \in `[a, b]%R.
+  by rewrite in_itv /= (le_trans as' st) tb.
+
+have ast : a <= s <= t by rewrite as' st.
+
+have int_phi_sol_at i :
+  mu.-integrable `[a, t]
+    (EFin \o (fun x : R => phi x (sol x) ord0 i)).
+   apply: (@integrableS _ _ _ mu `[a, b] `[a, t]) => //. 
+  by apply: subset_itvl. 
+
+rewrite (Hsol t tab) (Hsol s sab).
+rewrite (rowRintegral_itv_split
+  (F := fun x => phi x (sol x)) ast int_phi_sol_at).
+by rewrite addrA.
+Qed.
+
+End integral_sol_between.
+
+
+(* Extending to infinite time *)
+
+Lemma continuous_within_ext {A B : topologicalType} (g h : A -> B) D :
+  {in D, g =1 h} ->
+  {within D, continuous g } -> {within D, continuous h}.
+Proof.
+move=> h1 h2.
+apply subspace_continuousP.
+move => x Dx.
+apply : cvg_trans.
+apply (fmap_within_eq (g := g)) => //.
+apply nbhs_filter.
+move => x' Dx' .
+symmetry.
+by apply h1.
+rewrite <-h1.
+move /subspace_continuousP : h2.
+by apply.
+by rewrite inE.
+Qed.
+
+
+(* Goal: if the rhs function is bounded, it is Lipschitz *)
+Section bounded_rhs_lipschitz.
+Local Notation mu := lebesgue_measure.
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+
+Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
+Variable M : R.
+
+Hypothesis M0 : 0 <= M.
+
+Hypothesis int_phi_sol : forall i,
+  mu.-integrable `[a, b]
+    (EFin \o (fun x : R => phi x (sol x) ord0 i)).
+
+Hypothesis rhs_bound :
+  {in `[a, b]%R, forall x, `| phi x (sol x) | <= M}.
+
+(* TODO: PR? *)
+Lemma integrable_cst D (c : R) : measurable D ->   (mu D < +oo)%E
+ ->  mu.-integrable D (EFin \o cst c).
+Proof.
+  move => h1 h2.
+  apply: measurable_bounded_integrable => //=.
+  exact: bounded_cst.
+Qed.
+
+(*Todo: PR? *)
+Lemma norm_rowRintegral_le_cst s t :
+  s \in `[a, b]%R ->
+  t \in `[s, b]%R ->
+  `| \vint[mu]_(x in `[s, t]) phi x (sol x) | <= M * (t - s).
+Proof.
+move => sab tsb.
+have as' : a <= s by move: sab; rewrite in_itv /= => /andP[].
+have st : s <= t by move: tsb; rewrite in_itv /= => /andP[].
+have tb : t <= b by move: tsb; rewrite in_itv /= => /andP[].
+have st_ab : `[s, t] `<=` `[a, b].
+  move=> x.
+  rewrite /= !in_itv /=.
+  move=> /andP[sx xt].
+  by rewrite (le_trans as' sx) (le_trans xt tb).
+rewrite /Num.norm /= mx_normrE.
+apply: bigmax_le => //=.
+  by rewrite mulr_ge0 // subr_ge0.
+move=> -[i j] _ /=.
+rewrite {i}(ord1 i) /=.
+rewrite rowRintegralE.
+rewrite (le_trans (le_normr_Rintegral _ _)) //=.
+  by apply: (@integrableS _ _ _ mu `[a, b] `[s, t]) => //.
+apply (@le_trans _ _ (\int[mu]_(x in `[s, t]) M)) => //=.
+  apply (le_Rintegral ) => //=.
+    apply: (@integrableS _ _ _ mu `[a, b] `[s, t]) => //; first by apply integrable_norm.
+    apply integrable_cst => //=.
+      by rewrite lebesgue_measure_itv /=; case: ifPn => //=;rewrite  ltry.
+    move => x xst.
+    apply (@le_trans _ _ `| phi x (sol x) |); last by apply (rhs_bound (st_ab _ xst)).
+    rewrite {2}/Num.norm /= mx_normrE /=.
+    by apply: (le_bigmax _ _ (ord0, j)).
+rewrite Rintegral_cst //= lebesgue_measure_itv /= ler_wpM2l//.
+case: ifPn => //= _.
+by rewrite subr_ge0.
+Qed.
+
+(* where is this needed? *)
+Lemma is_integral_sol_lipschitz :
+  is_integral_sol phi u0 a b sol ->
+  forall s t,
+    s \in `[a, b]%R ->
+    t \in `[s, b]%R ->
+    `| sol t - sol s | <= M * (t - s).
+Proof.
+move=> Hsol s t sab tsb.
+rewrite (@integral_sol_between R n phi u0 a b sol int_phi_sol Hsol s t sab tsb).
+rewrite addrC addrA (addrC _ (sol s)) subrr add0r. 
+exact: norm_rowRintegral_le_cst.
+Qed.
+End bounded_rhs_lipschitz.
+
+Section lipschitz_left_limit.
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+Variables (a b k : R) (f : R -> U).
+Hypothesis ab : a < b.
+Hypothesis k0 : 0 <= k.
+Hypothesis f_lip :
+  forall s t,
+    s \in `[a, b[%R ->
+    t \in `[a, b[%R ->
+    `| f t - f s | <= k * `|t - s|.
+
+Lemma lipschitz_has_left_limit :
+  exists y : U, f @ b^'- --> y.
+Proof.
+Admitted.
+
+End lipschitz_left_limit.
+
+
+Section extend_interval_sol.
+Local Notation mu := lebesgue_measure.
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+Variables (phi : R -> U -> U) (u0 u1 : U) (a b c k : R) (sol : R -> U) (r : {posnum R}).
+Let B := closed_ball u1 r%:num.
+Hypothesis bc : b < c.
+Hypothesis k0 : 0 < k.
+Hypothesis cont1 : {in B, forall y, {within `[b, c], continuous phi ^~ y}}.
+Hypothesis lip2 : {in `[b, c]%R, forall x, k.-lipschitz_B (phi x)}.
+(* solution on max interval [a, b) *)
+Hypothesis is_integral_sol_co : forall b', a <= b' < b -> is_integral_sol phi u0 a b' sol.
+Variable rho : {posnum R}. 
+Hypothesis rho1 : (rho%:num < 1).
+Search is_sol_sym.
+Local Notation safe_dist := (@safe_dist R n phi b c k u1 r rho).
+
+Hypothesis has_left_limit : sol @ b^'- --> u1.
+Let sol2 := repr (picard_fix bc k0 lip2 cont1 rho1).
+
+Let sol_extended := (patch sol2 `[a, b] sol).
+Lemma solution_extends : is_integral_sol phi u0 a (b+safe_dist) sol_extended. 
+Proof.
+apply is_integral_sol_patch.
+Admitted.
+End extend_interval_sol.
+
+(* todo: clean *)
+Section sol_to_integral_sol.
+Local Notation mu := lebesgue_measure.
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+
+Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
+Hypothesis ab : a < b.
+
+Hypothesis rhs_cont :
+  {within `[a, b], continuous (fun t => phi t (sol t))}.
+
+Lemma sol_to_integral_sol :
+  is_sol_oo phi u0 a b sol ->
+  is_integral_sol phi u0 a b sol.
+Proof.
+move=> [hinit hder hcont].
+split=> // t tab.
+have /= := tab; rewrite in_itv /= => /andP[ta tb].
+apply/rowP=> i.
+rewrite mxE rowRintegralE.
+
+move: ta; rewrite le_eqVlt => /predU1P[<-|ta].
+  by rewrite set_itv1 Rintegral_set1 addr0.
+
+rewrite /Rintegral.
+have rhs_cont_i :
+  {within `[a, b], continuous (fun x => phi x (sol x) ord0 i)}.
+  by move: i; apply/within_continuous_coord.
+
+have rhs_cont_i_at :
+  {within `[a, t], continuous (fun x => phi x (sol x) ord0 i)}.
+  apply: continuous_subspaceW; last exact: rhs_cont_i.
+  exact: subset_itvl.
+
+have sol_cont_i :
+  {within `[a, b], continuous (fun x => sol x ord0 i)}.
+  admit.
+  (* by move: i; apply/within_continuous_coord. *)
+
+(* rewrite (@continuous_FTC2 _ (fun x => phi x (sol x) ord0 i) *)
+(*     (fun x => sol x ord0 i) _ _ ta). *)
+(* - by rewrite -EFinB subrKC hinit. *)
+(* - exact: rhs_cont_i_at. *)
+(* - split. *)
+(*   + move=> t' tx'. *)
+(*     have /hder [/derivable_mxP Hder _] : *)
+(*       t' \in `]a, b[%R. *)
+(*       exact/subset_itvl/tx'. *)
+(*     by exact: Hder. *)
+(*   + have /(continuous_within_itvP _ ab) := sol_cont_i. *)
+(*     by case=> _ + _. *)
+(*   + have sol_cont_i_at : *)
+(*       {within `[a, t], continuous (fun x => sol x ord0 i)}. *)
+(*       apply: continuous_subspaceW; last exact: sol_cont_i. *)
+(*       exact: subset_itvl. *)
+(*     have /(continuous_within_itvP _ ta) := sol_cont_i_at. *)
+(*     by case=> _ _ +. *)
+(* - move=> x xt. *)
+(*   have /hder [_ H] : x \in `]a, b[%R. *)
+(*     exact/subset_itvl/xt. *)
+(*   by rewrite !derive1E derive_mx //= H mxE. *)
+(* Unshelve. all: by end_near. *)
+Admitted.
+
+End sol_to_integral_sol.
+
