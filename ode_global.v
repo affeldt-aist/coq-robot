@@ -180,6 +180,9 @@ rewrite (@continuous_FTC2 _ (fun x => phi x (sol x) ord0 i) (fun x => sol x ord0
   by rewrite !derive1E derive_mx//= => <-; rewrite mxE.
 Unshelve. all: by end_near. Admitted.
 
+Hypothesis cont_sol :   {within `[a, b], continuous sol}.
+
+
 End sol_integral_sol2.
 
 
@@ -212,7 +215,7 @@ Qed.
 
 End safe_dist_sym_props.
 
-Section extend_integral_sol.
+Section extend_sol.
 Local Notation mu := lebesgue_measure.
 
 Context {R : realType} {n : nat}.
@@ -225,8 +228,26 @@ Hypothesis k0 : 0 < k.
 Hypothesis cont1 : {in B, forall y, {within `[a, c], continuous phi ^~ y}}.
 Hypothesis lip2 : {in `[a, c]%R, forall x, k.-lipschitz_B (phi x)}.
 
-(* solution on max interval [a, b) *)
-Hypothesis is_integral_sol_co : forall b', b' \in `[a,b[%R -> is_integral_sol phi u0 a b' sol.
+Let cont1_restr : {in B, forall y, {within `[b, c], continuous phi ^~ y}}.
+Proof.
+move => x xb.
+apply /continuous_subspaceW/cont1 => //.
+apply: subset_itvr.
+by rewrite ltW.
+Qed.
+
+Let lip2_restr : {in `[b, c]%R, forall x, k.-lipschitz_B (phi x)}.
+Proof.
+move => x xb.
+apply lip2.
+move : xb.
+by rewrite !in_itv/= => /andP[h ->]; rewrite (le_trans _ h) // ltW.
+Qed.
+
+(* (* solution on max interval [a, b) *) *)
+(* Hypothesis is_integral_sol_co : forall b', b' \in `[a,b[%R -> is_integral_sol phi u0 a b' sol. *)
+
+Hypothesis sol_oo : forall b', b' \in `[a,b[%R -> is_sol_oo phi u0 a b' sol.
 
 Hypothesis int_phi_sol : 
  forall b', b' \in `[a,b[%R -> forall i, mu.-integrable `[a, b]
@@ -238,131 +259,144 @@ Hypothesis has_left_limit : sol @ b^'- --> u1.
 Variable rho : {posnum R}. 
 Hypothesis rho1 : (rho%:num < 1).
 
+
+Let sol0 : sol a = u0.
+Proof.
+have h0 : a \in `[a, b[%R.
+  by rewrite in_itv/= lexx.
+have [+ _ _] :=  (sol_oo h0).
+apply.
+Qed.
+
+
+Let sol_deriv t : t \in `]a,b[%R -> derivable sol t 1 /\  sol^`() t = phi t (sol t).
+Proof.
+move => tab.
+have [t' [tt' t'ab]] : exists t', t < t' /\ t' \in `[a, b[%R.
+  move : tab.
+  rewrite in_itv/= => /andP[at0 tb0].
+  exists ((t + b) / 2); split.
+   by rewrite ltr_pdivlMr // mulr2n mulrDr mulr1 ltrD2l.
+  rewrite in_itv /=; apply/andP; split.
+      by rewrite ltW // (lt_trans at0) // ltr_pdivlMr // mulr2n mulrDr mulr1 ltrD2l.
+      by rewrite ltr_pdivrMr // mulr2n mulrDr mulr1 ltrD2r.
+have [_ + _ ] := (sol_oo t'ab).
+apply.
+move : tab.
+by rewrite !in_itv/= => /andP[-> +].
+Qed.
+
+Let sol_continuous t : t \in `]a,b[%R -> continuous_at t sol.
+Proof.
+move=>tab.
+have [t' [tt' t'ab]] : exists t', t < t' /\ t' \in `[a, b[%R.
+  move : tab.
+  rewrite in_itv/= => /andP[at0 tb0].
+  exists ((t + b) / 2); split.
+   by rewrite ltr_pdivlMr // mulr2n mulrDr mulr1 ltrD2l.
+  rewrite in_itv /=; apply/andP; split.
+      by rewrite ltW // (lt_trans at0) // ltr_pdivlMr // mulr2n mulrDr mulr1 ltrD2l.
+      by rewrite ltr_pdivrMr // mulr2n mulrDr mulr1 ltrD2r.
+have [_ _ + ] := (sol_oo t'ab).
+have at' : a < t'.
+  apply/lt_trans/tt'.
+  move : tab.
+  by rewrite in_itv/= => /andP[].
+rewrite closure_neitv_oo//.
+move /(continuous_within_itvP _ at')=>[+ _ _];apply.
+rewrite in_itv/= tt'.
+move : tab.
+by rewrite in_itv/= => /andP[-> _].
+Qed.
+
+Let sol_continuous_left : sol x @[x --> a^'+] --> sol a.
+Proof.
+have [t' [t'a t'ab]] : exists t', a < t' /\ t' \in `[a, b[%R.
+  exists ((a + b) / 2).
+  suff : (a+b)/2 \in `]a,b[%R by rewrite !in_itv/= => /andP[h1 h2];split => //;rewrite ltW//.
+  rewrite in_itv/=.
+  by rewrite ltr_pdivlMr // ltr_pdivrMr // mulr2n !mulrDr !mulr1  ltrD2l ab ltrD2r.
+have [_ _  +] := sol_oo t'ab.
+rewrite closure_neitv_oo//.
+by move /(continuous_within_itvP _ t'a) => [_ + _].
+Qed.
+
+Let sol_extended0 := (patch sol [set b] (cst u1)).
+
+Lemma sol_extends_pt : is_sol_oo phi u0 a b sol_extended0.
+Proof.
+rewrite /sol_extended0.
+split; first by rewrite patchC // in_setC in_set1 lt_eqF //.
+  move => t tab.
+  have := tab.
+  rewrite in_itv/= => /andP[at0 tb0].
+  have  hn:   {near t, sol =1 patch sol [set b] (cst u1)}.
+    near=>x.
+    rewrite patchC //in_setC in_set1 lt_eqF //.
+    near:x.
+    by apply: lt_nbhsl.
+  split; first by apply/(near_eq_derivable (f:=sol) ) => //; apply sol_deriv.
+  rewrite derive1E.
+  rewrite (near_eq_derive (g:=sol)).
+    by rewrite patchC // ?in_setC ?in_set1 ?lt_eqF // -derive1E; apply sol_deriv.
+  by near=>t0;symmetry;near:t0.
+rewrite closure_neitv_oo//.
+apply/continuous_within_itvP => //; split.
+- move=> x xab.
+  have := xab; rewrite in_itv/= => /andP[ax xb].
+  apply : cvg_trans.
+    apply: (near_eq_cvg (f:=sol)).
+    near=>t.
+    rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //.
+    near:t.
+    by apply: lt_nbhsl.
+  by rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //;apply sol_continuous.
+- rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //.
+  apply: cvg_trans; last by apply sol_continuous_left.
+  apply: (near_eq_cvg (f:=sol)).
+  near=>t.
+  rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //.
+- rewrite patch_in ?in_set1 //.
+  apply: cvg_trans; last by apply has_left_limit.
+  apply: (near_eq_cvg (f:=sol)).
+  near=>t.
+  rewrite patchC // in_setC in_set1 //.
+ Unshelve. all: by end_near. Qed.
+
 (* solution exists in (b-safe_dist, b+safe_dist ) *)
-Local Notation safe_dist := (@safe_dist_sym R n phi k u1 r a c b).
+Local Notation safe_dist := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho).
+
+Let sol2 := cauchy_lipschitz_f bc k0 lip2_restr cont1_restr rho1. 
+
+Let sol_extended := patch sol2 `[a,b] sol_extended0.
+
+
+Lemma sol_extended_continuous : {within `[a, b+safe_dist], continuous sol_extended}.
+Proof.
+apply: within_continuous_patch => //; first by rewrite ltrDl safe_dist_gt0.
+  by have [_ _ +] := sol_extends_pt; rewrite closure_neitv_oo//.
+  by apply : solution_continuous.
+have [-> _ _] : is_sol_oo phi u1 b (b+safe_dist) sol2 by apply is_sol_cauchy_lipschitz_f.
+by rewrite /sol_extended0 patch_in ?in_set1.
+Qed.
+
+Let sol_extended_init : sol_extended a = u0.
+Proof.
+rewrite /sol_extended /sol_extended0 patch_in ?patchC ?in_setC ?in_set1 ?lt_eqF //.
+by rewrite inE /=in_itv/= lexx ltW.
+Qed.
+
 Local Lemma bac : b \in `]a,c[%R.
 Proof.
 by rewrite in_itv /= ab bc.
 Qed.
 
-(* give local solution (symmetric) starting at b *)
-Let sol2 := cauchy_lipschitz_f_sym k0 cont1 lip2 bac.
-
-Lemma sol2_integral_sol : is_integral_sol phi (sol2 (b-safe_dist/2)) (b-safe_dist/2) (b+safe_dist/2) sol2.
+Lemma solution_extends : is_sol_oo phi u0 a (b + safe_dist) sol_extended.
 Proof.
-apply/(sol_integral_sol).
-rewrite ltrBlDr -addrA ltrDl -splitr safe_dist_sym_gt0 //.
-have [init1 dsol] := cauchy_lipschitz_sym k0 cont1 lip2 bac.
-split => //.
-  move => t th.
-  apply dsol.
-  move  : th.
-  rewrite !in_itv /=.
-  move => /andP [th1 th2].
-  apply /andP; split.
-    apply /lt_trans/th1.
-    rewrite ler_ltB // ltr_pdivrMr // ltr_pMr ?safe_dist_sym_gt0 // ltr1n //.  
-  by rewrite (lt_le_trans th2)// lerD2l ger_pMr ?safe_dist_sym_gt0 // invf_le1// ler1n.
-rewrite closure_neitv_oo; last by rewrite ltrD2l gtrN // divr_gt0//safe_dist_sym_gt0.
-apply: derivable_within_continuous.
-move => x xb.
-apply dsol.
-move : x xb.
-apply /subitvP.
-by rewrite subitvE !bnd_simp !ltrD2l ltrN2 andbb gtr_pMr // ?safe_dist_sym_gt0 // invf_lt1 // ltr1n.
-Qed.
-
-Let sol_extended := (patch sol2 `[a, b-safe_dist/2] sol).
-
-Lemma solutions_coincide : sol (b-safe_dist/2) = sol2 (b-safe_dist/2).
-Proof.
-apply : locally_cauchy_lipschitz_unique.
-have b0b : b-safe_dist \in `[a, b[%R.
+split => //; last first.
+  by rewrite closure_neitv_oo ?(lt_trans ab) // ?ltrDl ?safe_dist_gt0//; apply sol_extended_continuous.
 admit.
-
-have bt := (integral_sol_between (int_phi_sol b0b)).
 Admitted.
 
-Lemma solution_extends : is_integral_sol phi u0 a (b+safe_dist/2) sol_extended. 
-Proof.
-have safe_dist2_ab :   a < b - safe_dist / 2 .
-  by rewrite ltrBrDl -ltrBrDr (@lt_le_trans _ _ safe_dist) // ?safe_dist_sym_itv1 // ltr_pdivrMr // ltr_pMr ?safe_dist_sym_gt0 // ltr1n.
-apply is_integral_sol_patch => //.
--  
-admit.
-admit.
-- exact: solutions_coincide.
-- apply is_integral_sol_co.
-  by rewrite in_itv/= ltW// gtrBl divr_gt0 // safe_dist_sym_gt0.
-rewrite solutions_coincide.
-exact: sol2_integral_sol.
-Admitted.
+End extend_sol.
 
-End extend_integral_sol.
-
-(* todo: clean *)
-Section sol_to_integral_sol.
-Local Notation mu := lebesgue_measure.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-
-Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
-Hypothesis ab : a < b.
-
-Hypothesis rhs_cont :
-  {within `[a, b], continuous (fun t => phi t (sol t))}.
-
-Lemma sol_to_integral_sol :
-  is_sol_oo phi u0 a b sol ->
-  is_integral_sol phi u0 a b sol.
-Proof.
-move=> [hinit hder hcont].
-split=> // t tab.
-have /= := tab; rewrite in_itv /= => /andP[ta tb].
-apply/rowP=> i.
-rewrite mxE rowRintegralE.
-
-move: ta; rewrite le_eqVlt => /predU1P[<-|ta].
-  by rewrite set_itv1 Rintegral_set1 addr0.
-
-rewrite /Rintegral.
-have rhs_cont_i :
-  {within `[a, b], continuous (fun x => phi x (sol x) ord0 i)}.
-  by move: i; apply/within_continuous_coord.
-
-have rhs_cont_i_at :
-  {within `[a, t], continuous (fun x => phi x (sol x) ord0 i)}.
-  apply: continuous_subspaceW; last exact: rhs_cont_i.
-  exact: subset_itvl.
-
-have sol_cont_i :
-  {within `[a, b], continuous (fun x => sol x ord0 i)}.
-  admit.
-  (* by move: i; apply/within_continuous_coord. *)
-
-(* rewrite (@continuous_FTC2 _ (fun x => phi x (sol x) ord0 i) *)
-(*     (fun x => sol x ord0 i) _ _ ta). *)
-(* - by rewrite -EFinB subrKC hinit. *)
-(* - exact: rhs_cont_i_at. *)
-(* - split. *)
-(*   + move=> t' tx'. *)
-(*     have /hder [/derivable_mxP Hder _] : *)
-(*       t' \in `]a, b[%R. *)
-(*       exact/subset_itvl/tx'. *)
-(*     by exact: Hder. *)
-(*   + have /(continuous_within_itvP _ ab) := sol_cont_i. *)
-(*     by case=> _ + _. *)
-(*   + have sol_cont_i_at : *)
-(*       {within `[a, t], continuous (fun x => sol x ord0 i)}. *)
-(*       apply: continuous_subspaceW; last exact: sol_cont_i. *)
-(*       exact: subset_itvl. *)
-(*     have /(continuous_within_itvP _ ta) := sol_cont_i_at. *)
-(*     by case=> _ _ +. *)
-(* - move=> x xt. *)
-(*   have /hder [_ H] : x \in `]a, b[%R. *)
-(*     exact/subset_itvl/xt. *)
-(*   by rewrite !derive1E derive_mx //= H mxE. *)
-(* Unshelve. all: by end_near. *)
-Admitted.
-
-End sol_to_integral_sol.

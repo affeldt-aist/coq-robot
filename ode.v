@@ -2216,7 +2216,19 @@ Let fplus := @cauchy_lipschitz_f R n phi t0
 Definition safe_dist_sym := (dboth t0).
 Definition cauchy_lipschitz_f_sym := patch fplus `[t0 - safe_dist_sym, t0] fminus.
 
-Lemma cauchy_lipschitz_sym : is_sol_sym u0 t0 safe_dist_sym cauchy_lipschitz_f_sym.
+Lemma cauchy_lipschitz_f_sym_left t :
+  t \in `[t0 - safe_dist_sym, t0]%R ->
+  cauchy_lipschitz_f_sym t = fminus t.
+Proof.
+move=> ht.
+by rewrite /cauchy_lipschitz_f_sym patch_in // inE.
+Qed.
+
+Lemma cauchy_lipschitz_sym_oo :  is_sol_oo phi
+    (cauchy_lipschitz_f_sym (t0 - safe_dist_sym))
+    (t0 - safe_dist_sym)
+    (t0 + safe_dist_sym)
+    cauchy_lipschitz_f_sym.
 Proof.
 have solplus :=
   cauchy_lipschitz_ex t0b k0 (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
@@ -2327,7 +2339,7 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)],
     rewrite inE.
      move => c2.
     by apply: (closed_ball_split _ c2).
-split => //.
+split => //; last by rewrite closure_neitv_oo // /safe_dist_sym // ler_ltD // gtrN.
 suff h : is_sol_oo phi (cauchy_lipschitz_f_sym (t0-dboth t0)) (t0-dboth t0) (t0+dboth t0) cauchy_lipschitz_f_sym by apply (And32 h).
 have kn0 : k != 0 by apply lt0r_neq0.
 have ? : a <= t0 - dboth t0.
@@ -2506,6 +2518,21 @@ apply: is_integral_sol_patch => //.
     rewrite closure_neitv_oo;last by rewrite ltrDl.
     apply: subset_itvl; rewrite bnd_simp lerD2l.
     by rewrite /dboth /dplus 2!ge_min lexx !orbT.
+Qed.
+
+Lemma cauchy_lipschitz_sym : is_sol_sym u0 t0 safe_dist_sym cauchy_lipschitz_f_sym.
+Proof.
+split; last by apply cauchy_lipschitz_sym_oo.
+have dminus0 : 0 < dminus t0 by exact: safe_dist_gt0.
+have solminus :=
+  cauchy_lipschitz_ex amin1 k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
+have dboth0 : 0 < dboth t0.
+  rewrite lt_min; apply /andP;split; last first.
+    by rewrite lt_min safe_dist_gt0 //= lt_min dminus0.
+  by rewrite subr_gt0 (itvP t0ab).
+rewrite /cauchy_lipschitz_f_sym patch_in /fminus /=.
+apply solminus.
+by rewrite inE/= in_itv/= lexx gerBl ltW.
 Qed.
 
 End cauchy_lipschitz_sym.
