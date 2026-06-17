@@ -21,6 +21,38 @@ Open Scope ring_scope.
 Open Scope classical_set_scope.
 
 
+(*todo: move *)
+Lemma safe_dist_r_le {R : realType} {n : nat} phi (a b : R) k (u0 : 'rV[R]_n) r r' rho : 0 < k -> r <= r' -> safe_dist phi a b k u0 r rho <= safe_dist phi a b k u0 r' rho.
+Proof.
+move => k0 rhorho'.
+rewrite unlock/=!le_min !ge_min !lexx /= !orbT /= ler_pdivlMr. 
+Admitted.
+
+Lemma safe_dist_rho_le {R : realType} {n : nat} phi (a b : R) k (u0 : 'rV[R]_n) r rho rho': 0 < k -> rho%:num <= rho'%:num -> safe_dist phi a b k u0 r rho <= safe_dist phi a b k u0 r rho'.
+Proof.
+move => k0 rhorho'.
+by rewrite unlock/=!le_min !ge_min !lexx /= !orbT /= ler_pdivlMr // ler_pM2r ?rhorho' ?orbT// invr_gt0.
+Qed.
+
+Lemma is_sol_oo_subset {R: realType} {n : nat} phi (u0 : 'rV[R]_n) (a b c d : R) sol : c < d -> a <= c -> d <= b-> is_sol_oo phi u0 a b sol -> is_sol_oo phi (sol c) c d sol.
+Proof.
+move => cd ac bd isSol.
+split=>//.
+move => x xcd.
+apply isSol.
+move : xcd.
+rewrite !in_itv/= => /andP[cx xd].
+  apply /andP;split.
+  by apply /le_lt_trans/cx.
+  by apply /lt_le_trans/bd.
+have [_ _ +] := isSol.
+apply /continuous_subspaceW.
+rewrite !closure_neitv_oo//.
+by apply: subset_itv.
+apply /lt_le_trans/bd.
+by apply /le_lt_trans/cd.
+Qed.
+
 (* Extending to infinite time *)
 
 Lemma continuous_within_ext {A B : topologicalType} (g h : A -> B) D :
@@ -256,8 +288,10 @@ Hypothesis int_phi_sol :
 (* limit at the right boundary is u1 and u1 is in safe area *)
 Hypothesis has_left_limit : sol @ b^'- --> u1.
 
-Variable rho : {posnum R}. 
-Hypothesis rho1 : (rho%:num < 1).
+Let rho : {posnum R} := 2^-1%:pos.
+
+Let rho1 : rho%:num < 1.
+Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 
 
 Let sol0 : sol a = u0.
@@ -363,20 +397,50 @@ apply/continuous_within_itvP => //; split.
   rewrite patchC // in_setC in_set1 //.
  Unshelve. all: by end_near. Qed.
 
-(* solution exists in (b-safe_dist, b+safe_dist ) *)
-Local Notation safe_dist := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho).
+(* Local Notation safe_dist := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho). *)
+Local Notation safe_dist_fwd := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho). 
+Local Notation safe_dist := (@safe_dist_sym R n phi k  u1 r a c b). 
+Let safe_dist_fwd_gt : safe_dist <= safe_dist_fwd.
+Proof.
+rewrite /safe_dist /= /rho.
+rewrite !ge_min.
+rewrite safe_dist_r_le//= ?orbT// .
+change (((r%:num / 4 / 2) <= (r%:num / 2))%R).
+by rewrite  -mulrA ler_wpM2l // ler_pdivrMr // mulVf // invf_le1 // ler1n.
+Qed.
 
-Let sol2 := cauchy_lipschitz_f bc k0 lip2_restr cont1_restr rho1. 
+
+Local Lemma bac : b \in `]a,c[%R.
+Proof.
+by rewrite in_itv /= ab bc.
+Qed.
+
+Let sol2 := cauchy_lipschitz_f_sym  k0 cont1 lip2 bac.
+
+Let sol2_sol : is_sol_oo phi (sol2 (b-safe_dist)) (b-safe_dist) (b + safe_dist) sol2.
+Proof. by apply cauchy_lipschitz_sym_oo. Qed.
+
+(* Let sol2_sol_fwd : is_sol_oo phi (sol2 (b-safe_dist_fwd)) (b-safe_dist_fwd) (b + safe_dist_fwd) sol2. *)
+(* Proof.  *)
+(* apply /is_sol_oo_subset/sol2_sol. *)
+(* by rewrite ltrD2 gtrN// safe_dist_gt0. *)
+(* rewrite lerB //. *)
+Let sol2_init : sol2 b = u1.
+Proof. by apply cauchy_lipschitz_sym. Qed.
 
 Let sol_extended := patch sol2 `[a,b] sol_extended0.
-
+Let ac : a < c.
+Proof. by apply (lt_trans ab). Qed.
 
 Lemma sol_extended_continuous : {within `[a, b+safe_dist], continuous sol_extended}.
 Proof.
-apply: within_continuous_patch => //; first by rewrite ltrDl safe_dist_gt0.
+apply: within_continuous_patch => //; first by rewrite ltrDl safe_dist_sym_gt0 //.
   by have [_ _ +] := sol_extends_pt; rewrite closure_neitv_oo//.
-  by apply : solution_continuous.
-have [-> _ _] : is_sol_oo phi u1 b (b+safe_dist) sol2 by apply is_sol_cauchy_lipschitz_f.
+  have [_ _ +] := sol2_sol.
+  apply /continuous_subspaceW.
+  rewrite closure_neitv_oo ?ler_ltD ?gtrN ?safe_dist_sym_gt0 //.
+  apply: subset_itvr.
+  by rewrite bnd_simp gerBl ltW // safe_dist_sym_gt0.
 by rewrite /sol_extended0 patch_in ?in_set1.
 Qed.
 
@@ -386,17 +450,97 @@ rewrite /sol_extended /sol_extended0 patch_in ?patchC ?in_setC ?in_set1 ?lt_eqF 
 by rewrite inE /=in_itv/= lexx ltW.
 Qed.
 
-Local Lemma bac : b \in `]a,c[%R.
+Let sol_extended_near_b : {near b, sol2 =1 sol_extended  }.
 Proof.
-by rewrite in_itv /= ab bc.
-Qed.
+near=>t.
+rewrite /sol_extended/patch.
+case: ifP => //.
+move => tab.
+Admitted.
 
 Lemma solution_extends : is_sol_oo phi u0 a (b + safe_dist) sol_extended.
 Proof.
 split => //; last first.
-  by rewrite closure_neitv_oo ?(lt_trans ab) // ?ltrDl ?safe_dist_gt0//; apply sol_extended_continuous.
-admit.
-Admitted.
+   by rewrite closure_neitv_oo ?(lt_trans ab) // ?ltrDl ?safe_dist_sym_gt0//; apply sol_extended_continuous.
+ move => x xab.
+ have := xab.
+ rewrite in_itv/= => /andP[xa _].
+ case: (ltgtP x b) => Hxb.
+   have xab' : x \in `]a,b[%R.
+     by rewrite /=in_itv/=;apply /andP;split.
+   split.
+   apply:(near_eq_derivable (f:=sol)).
+   near=>x0.
+   rewrite /sol_extended patch_in /sol_extended0 ?patchC// ?in_setC ?in_set1 ?lt_eqF//.
+   near:x0.
+   by apply: lt_nbhsl.
+   rewrite inE/=in_itv/=;apply /andP;split; rewrite ltW//.
+   by near:x0;apply: lt_nbhsr.
+   by near:x0;apply: lt_nbhsl.
+   by apply sol_deriv; rewrite in_itv/= xa.
+   rewrite derive1E.
+   rewrite (near_eq_derive (g:=sol)).
+   rewrite -derive1E.
+   rewrite /sol_extended patch_in /sol_extended0 ?patchC// ?in_setC ?in_set1 ?lt_eqF//.
+   apply sol_deriv => //.
+   by rewrite inE;apply: subset_itv_oo_cc.
+   near=>x0.
+   rewrite /sol_extended patch_in /sol_extended0 ?patchC// ?in_setC ?in_set1 ?lt_eqF//.
+   by near:x0; apply: lt_nbhsl.
+   rewrite inE/=in_itv/=;apply /andP;split; rewrite ltW//.
+   by near:x0;apply: lt_nbhsr.
+   by near:x0;apply: lt_nbhsl.
+
+   split.
+   apply:(near_eq_derivable (f:=sol2)).
+   near=>x0.
+   rewrite /sol_extended ?patchC// ?in_setC ?notin_setE ?inE /= ?in_itv /= .
+   rewrite !leNgt;apply /negP; rewrite negb_and;apply /orP;right;apply /negPn.
+   near: x0; by apply: lt_nbhsr.
+   have [_ + _]:= sol2_sol.
+   move /(_ x) => []//.
+   move : xab.
+   rewrite !in_itv/= => /andP[_ ->].
+   rewrite andbT.
+   apply /lt_trans/Hxb.
+   by rewrite gtrBl safe_dist_sym_gt0.
+   rewrite derive1E.
+   rewrite (near_eq_derive (g:=sol2)).
+   rewrite -derive1E.
+   rewrite /sol_extended ?patchC// ?in_setC ?notin_setE ?inE /= ?in_itv /= .
+   apply sol2_sol.
+   move : xab.
+   rewrite !in_itv/= => /andP[_ ->].
+   rewrite andbT.
+   apply /lt_trans/Hxb.
+   by rewrite gtrBl safe_dist_sym_gt0.
+   by rewrite !leNgt;apply /negP; rewrite negb_and;apply /orP;right;apply /negPn.
+   near=>x0.
+   rewrite /sol_extended ?patchC// ?in_setC ?notin_setE ?inE /= ?in_itv /= .
+   rewrite !leNgt;apply /negP; rewrite negb_and;apply /orP;right;apply /negPn.
+   by near:x0; apply: lt_nbhsr.
+
+rewrite Hxb.
+split.
+apply:(near_eq_derivable (f:=sol2)).
+apply: sol_extended_near_b.
+have [_ + _]:= sol2_sol.
+move /(_ b) => []//.
+rewrite in_itv/=; apply /andP;split.
+by rewrite gtrBl safe_dist_sym_gt0.
+by rewrite ltrDl safe_dist_sym_gt0.
+rewrite {2}/sol_extended patch_in /sol_extended0 ?patch_in ?in_set1 //=.
+rewrite -sol2_init derive1E (near_eq_derive (g:=sol2)).
+rewrite -derive1E.
+have [_ + _]:= sol2_sol.
+move /(_ b) => []//.
+rewrite in_itv/=; apply /andP;split.
+by rewrite gtrBl safe_dist_sym_gt0.
+by rewrite ltrDl safe_dist_sym_gt0.
+near=>t;symmetry;near:t.
+apply: sol_extended_near_b.
+by rewrite inE/=in_itv/=lexx//=andbT ltW //.
+Unshelve. all: by end_near. Qed.
 
 End extend_sol.
 
