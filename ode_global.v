@@ -204,18 +204,47 @@ Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
 Variables (a b k : R) (f : R -> U).
 Hypothesis ab : a < b.
-Hypothesis k0 : 0 <= k.
+Hypothesis k0 : 0 < k.
 Hypothesis f_lip :
   forall s t,
     s \in `[a, b[%R ->
     t \in `[a, b[%R ->
     `| f t - f s | <= k * `|t - s|.
 
-(* Lemma lipschitz_has_left_limit : *)
-(*   exists y : U, f @ b^'- --> y. *)
-(* Proof. *)
-(* Admitted. *)
+Lemma lipschitz_has_left_limit :
+  f @ b^'- --> lim (f @ b^'-).
+Proof.
+apply /cauchy_cvgP.
+apply /cauchyP => eps eps0 /=.
+have e2k0 : 0 < eps / k / 2.
+  by rewrite divr_gt0 // divr_gt0.
+near b^'- => s.
+exists (f s).
+near=>t. 
+rewrite /= -ball_normE /=.
+apply: le_lt_trans; first apply f_lip.
+  rewrite in_itv/=;apply /andP;split.
+  apply ltW; near:t.
+  apply: cvg_at_left_filter; first by apply cvg_id.
+  by apply: lt_nbhsr.
+  by near:t;exact: nbhs_left_lt.
 
+  rewrite in_itv/=;apply /andP;split.
+  apply ltW; near:s.
+  apply: cvg_at_left_filter; first by apply cvg_id.
+  by apply: lt_nbhsr.
+  by near:s;exact: nbhs_left_lt.
+rewrite mulrC -ltr_pdivlMr //.
+rewrite -(subrKA b) (le_lt_trans  (ler_normD _ _)) // (splitr (eps / k)) ltrD //.
+  suff: ball b (eps/ k /2) s by rewrite -ball_normE /ball_ /= distrC.
+  near:s.
+  apply: cvg_at_left_filter; first by apply cvg_id.
+  by apply: nbhsx_ballx.
+suff: ball b (eps/ k /2) t by rewrite -ball_normE /ball_ /= distrC.
+near:t.
+apply: cvg_at_left_filter; first by apply cvg_id.
+by apply: nbhsx_ballx.
+Unshelve. all: by end_near. Qed.
 End lipschitz_left_limit.
 
 
@@ -557,3 +586,24 @@ Unshelve. all: by end_near. Qed.
 
 End extend_sol.
 
+Section compact_rhs_bound.
+
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+
+Variables (phi : R -> U -> U) (a b : R) (sol : R -> U).
+Variable K : set U.
+
+Hypothesis ab : a < b.
+Hypothesis compactK : compact K.
+Hypothesis solK : sol @` `[a, b[ `<=` K.
+Hypothesis rhs_cont :
+  {within `[a, b[, continuous (fun t => phi t (sol t))}.
+
+Lemma rhs_bounded_on_solution :
+  exists M : R, 0 <= M /\
+    {in `[a, b[%R, forall t, `| phi t (sol t) | <= M}.
+Proof.
+Admitted.
+
+End compact_rhs_bound.
