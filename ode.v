@@ -2520,6 +2520,21 @@ apply: is_integral_sol_patch => //.
     by rewrite /dboth /dplus 2!ge_min lexx !orbT.
 Qed.
 
+Lemma cauchy_lipschitz_sym_rev_oo :
+  is_sol_oo (fun t x => - phi (- t) x) u0
+    (- t0) (- t0 + dminus t0) fminus0.
+Proof.
+exact: cauchy_lipschitz_ex.
+Qed.
+
+Lemma cauchy_lipschitz_sym_left t :
+  t \in `[t0 - safe_dist_sym, t0]%R ->
+  cauchy_lipschitz_f_sym t = fminus0 (- t).
+Proof.
+move=> ht.
+by rewrite cauchy_lipschitz_f_sym_left.
+Qed.
+
 Lemma cauchy_lipschitz_sym : is_sol_sym u0 t0 safe_dist_sym cauchy_lipschitz_f_sym.
 Proof.
 split; last by apply cauchy_lipschitz_sym_oo.

@@ -21,13 +21,6 @@ Open Scope ring_scope.
 Open Scope classical_set_scope.
 
 
-(*todo: move *)
-Lemma safe_dist_r_le {R : realType} {n : nat} phi (a b : R) k (u0 : 'rV[R]_n) r r' rho : 0 < k -> r <= r' -> safe_dist phi a b k u0 r rho <= safe_dist phi a b k u0 r' rho.
-Proof.
-move => k0 rhorho'.
-rewrite unlock/=!le_min !ge_min !lexx /= !orbT /= ler_pdivlMr. 
-Admitted.
-
 Lemma safe_dist_rho_le {R : realType} {n : nat} phi (a b : R) k (u0 : 'rV[R]_n) r rho rho': 0 < k -> rho%:num <= rho'%:num -> safe_dist phi a b k u0 r rho <= safe_dist phi a b k u0 r rho'.
 Proof.
 move => k0 rhorho'.
@@ -51,6 +44,58 @@ rewrite !closure_neitv_oo//.
 by apply: subset_itv.
 apply /lt_le_trans/bd.
 by apply /le_lt_trans/cd.
+Qed.
+
+Lemma is_sol_oo_rev {R : realType} {n : nat}
+    (phi : R -> 'rV[R]_n -> 'rV[R]_n)
+    (a b : R) (f : R -> 'rV[R]_n) :
+  a < b ->
+  is_sol_oo phi (f a) a b f ->
+  is_sol_oo (fun t x => - phi (- t) x) (f b) (- b) (- a) (f \o -%R).
+Proof.
+move => ab [_ hd].
+split => /=; first by rewrite opprK.
+  move => x.
+  rewrite -oppr_itvoo => -xba.
+  have [Df Hf] := hd _ xba.
+  have D : derivable (f \o -%R) x 1.
+    apply/derivable1_diffP.
+    apply differentiable_comp => //.
+    by apply /derivable1_diffP.
+  split => //.
+  apply/rowP=> i.
+  rewrite mxE derive1E derive_mx //= mxE -derive1E /=.
+   have -> : (fun t0 : R => f (- t0) ord0 i) = ((fun t => f t ord0 i) \o -%R) by apply funext.
+   rewrite  derive1_comp//=.
+   rewrite !derive1N//=derive1_id/=.
+   move /rowP : Hf =>  /(_ i).
+      rewrite !derive1E /=!derive_mx.
+      rewrite /=!mxE => ->.
+      by rewrite mulrN1.
+      apply Df.
+  by move /derivable_mxP: Df.
+  rewrite closure_neitv_oo; last by rewrite ltrN2.
+  apply: within_continuous_compN.
+  rewrite !opprK.
+  rewrite -closure_neitv_oo//.
+Qed.
+
+Lemma is_sol_oo_rev_iff {R : realType} {n : nat}
+    (phi : R -> 'rV[R]_n -> 'rV[R]_n)
+    (a b : R) (f : R -> 'rV[R]_n) :
+  a < b ->
+  is_sol_oo phi (f a) a b f <->
+  is_sol_oo (fun t x => - phi (- t) x) (f b) (- b) (- a) (f \o -%R).
+Proof.
+move => ab.
+split; first by apply is_sol_oo_rev.
+move => h.
+suff : is_sol_oo (fun t x => - - (phi (- - t) x)) ((f \o -%R) (- a)) (- - a) (- - b) ((f \o -%R) \o -%R).
+  rewrite /= !opprK.
+  have -> : ((f \o -%R) \o -%R) = f by rewrite -compA; apply/funext=> x; rewrite /= opprK.
+  suff -> : (fun t x => - - (phi (- - t) x)) = phi by [].
+  by apply /funext => t; apply funext => x; rewrite !opprK.
+by apply (@is_sol_oo_rev _ _ (fun t x => (-(phi (-t) x)))); rewrite ?ltrN2 //= opprK.
 Qed.
 
 (* Extending to infinite time *)
@@ -166,56 +211,12 @@ Hypothesis f_lip :
     t \in `[a, b[%R ->
     `| f t - f s | <= k * `|t - s|.
 
-Lemma lipschitz_has_left_limit :
-  exists y : U, f @ b^'- --> y.
-Proof.
-Admitted.
+(* Lemma lipschitz_has_left_limit : *)
+(*   exists y : U, f @ b^'- --> y. *)
+(* Proof. *)
+(* Admitted. *)
 
 End lipschitz_left_limit.
-
-(*todo: replace iff by both directions in previous parts *)
-Section sol_integral_sol2.
-Local Notation mu := lebesgue_measure.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
-(* Variables (r : {posnum R}). *)
-(* Let B := closed_ball u1 r%:num. *)
-Hypothesis ab : a < b.
-Lemma sol_integral_sol :
-  is_sol_oo phi u0 a b sol -> is_integral_sol phi u0 a b sol.
-Proof.
-move => [hinit h]; split => // t tab.
-have /= := tab; rewrite in_itv/= => /andP[ta tb].
-apply/rowP => i.
-rewrite mxE rowRintegralE.
-move: ta; rewrite le_eqVlt => /predU1P[<-|ta].
-  by rewrite set_itv1 Rintegral_set1 addr0.
-rewrite /Rintegral.
-have cont_soli : {within `[a, b], continuous (fun x => sol x ord0 i)}.
-  move: i.
-  apply /within_continuous_coord.
-  rewrite -closure_neitv_oo //.
-rewrite (@continuous_FTC2 _ (fun x => phi x (sol x) ord0 i) (fun x => sol x ord0 i) _ _ ta).
-- by rewrite -EFinB subrKC.
-- admit. 
-- split.
-  + move=> t' tx'.
-    by have /h[/derivable_mxP] : t' \in `]a, b[%R by exact/subset_itvl/tx'.
-  + by move /(continuous_within_itvP _ ab) : cont_soli => [_ + _].
-  + have cont_phii' : {within `[a, t], continuous fun x0 : R => sol x0 ord0 i}.
-      apply: continuous_subspaceW; last exact: cont_soli.
-      exact: subset_itvl.
-    by move/(continuous_within_itvP _ ta) : cont_phii' => [_ _ +].
-- move=> x xt.
-  have /h[? +] : x \in `]a, b[%R by exact/subset_itvl/xt.
-  by rewrite !derive1E derive_mx//= => <-; rewrite mxE.
-Unshelve. all: by end_near. Admitted.
-
-Hypothesis cont_sol :   {within `[a, b], continuous sol}.
-
-
-End sol_integral_sol2.
 
 
 Section safe_dist_sym_props.
@@ -400,15 +401,6 @@ apply/continuous_within_itvP => //; split.
 (* Local Notation safe_dist := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho). *)
 Local Notation safe_dist_fwd := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho). 
 Local Notation safe_dist := (@safe_dist_sym R n phi k  u1 r a c b). 
-Let safe_dist_fwd_gt : safe_dist <= safe_dist_fwd.
-Proof.
-rewrite /safe_dist /= /rho.
-rewrite !ge_min.
-rewrite safe_dist_r_le//= ?orbT// .
-change (((r%:num / 4 / 2) <= (r%:num / 2))%R).
-by rewrite  -mulrA ler_wpM2l // ler_pdivrMr // mulVf // invf_le1 // ler1n.
-Qed.
-
 
 Local Lemma bac : b \in `]a,c[%R.
 Proof.
@@ -456,7 +448,28 @@ near=>t.
 rewrite /sol_extended/patch.
 case: ifP => //.
 move => tab.
-Admitted.
+have := tab; rewrite inE /= in_itv/= => -/andP[_ tb].
+have :=  sol_extends_pt.
+have <- : sol_extended0 a = u0 by apply sol_extends_pt.
+move /(is_sol_oo_rev ab) => hext0.
+rewrite /sol2 cauchy_lipschitz_sym_left /=.
+have -> : sol_extended0 t = (sol_extended0 \o -%R) (-t) by rewrite /= opprK.
+apply: cauchy_lipschitz_unique.
+have <- : (sol_extended0 \o -%R) (- b) = u1 by rewrite /= opprK /sol_extended0 patch_in //= in_set1.
+apply /is_sol_oo_subset/hext0=>//.
+  by rewrite ltrDl safe_dist_gt0 // ltrN2.
+  by rewrite -lerBDl;apply safe_dist_itv.
+  rewrite oppr_itv/= opprD !opprK in_itv/= tb andbT.
+  apply ltW.
+  near:t.
+  apply: lt_nbhsr.
+  by rewrite gtrBl safe_dist_gt0 // ltrN2.
+rewrite in_itv/=tb andbT ltW //=.
+near:t.
+apply: lt_nbhsr.
+by rewrite gtrBl safe_dist_sym_gt0 // ltrN2.
+Unshelve. all: by end_near. Qed.
+
 
 Lemma solution_extends : is_sol_oo phi u0 a (b + safe_dist) sol_extended.
 Proof.
