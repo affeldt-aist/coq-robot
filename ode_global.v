@@ -98,6 +98,59 @@ suff : is_sol_oo (fun t x => - - (phi (- - t) x)) ((f \o -%R) (- a)) (- - a) (- 
 by apply (@is_sol_oo_rev _ _ (fun t x => (-(phi (-t) x)))); rewrite ?ltrN2 //= opprK.
 Qed.
 
+Lemma bounded_derivative_lipschitz {R : realType} {n : nat}
+    (a b M : R) (f : R -> 'rV[R]_n) :
+  0 <= M ->
+  {within `[a, b], continuous f} ->
+  {in `]a, b[%R, forall x,
+     derivable f x 1 /\ `| f^`() x | <= M} ->
+   {in `]a, b[%R&, forall s t,
+  `| f t - f s | <= M * `|t - s|}.
+Proof.
+move => M0 cont /= deri s t sab tab.
+rewrite {1}/Num.norm /= mx_normrE.
+apply: bigmax_le; first by rewrite mulr_ge0 // normr_ge0.
+move => /=  [i0 i] _.
+rewrite ord1 !mxE /=.
+wlog st : s t sab tab / s <= t.
+  move => H.
+  have [st|ts] := leP s t.
+  exact: H.
+  rewrite distrC (distrC t).
+  apply H => //.
+  by apply ltW.
+have [ | |c cst ->]:= @MVT_segment _ (fun t => f t ord0 i) ('D_1 (fun t => f t ord0 i)) _ _ st.
+  move => x xst.
+  have xab : x \in `]a,b[%R.
+    move : xst.
+    apply : subset_itv; rewrite bnd_simp ltW //.
+    by move : sab;rewrite in_itv/= => /andP[].
+    by move : tab;rewrite in_itv/= => /andP[].
+  apply /derivableP.
+  have [/derivable_mxP + _] := (deri x xab).
+  apply.
+
+  move /within_continuous_coord : cont.
+  move /(_ i).
+  apply: continuous_subspaceW.
+  apply : subset_itv; rewrite bnd_simp ltW//.
+  by move : sab;rewrite in_itv/= => /andP[].
+  by move : tab;rewrite in_itv/= => /andP[].
+rewrite -derive1E/= normrM ler_wpM2r //.
+have cab: c \in `]a,b[%R.
+  move : cst.
+  apply : subset_itv; rewrite bnd_simp.
+  by move : sab;rewrite in_itv/= //= => /andP[].
+  by move : tab;rewrite in_itv/= => /andP[].
+have [_  + ] := (deri c cab).
+rewrite {1}/Num.norm /= mx_normrE.
+apply: le_trans.
+suff -> : (fun t0 : R => f t0 ord0 i)^`() c =  f^`() c ord0 i by exact: (le_bigmax _ _ (ord0, i)).
+rewrite !derive1E !derive_mx //= ?mxE //.
+by apply deri.                                    
+Qed.
+
+
 (* Extending to infinite time *)
 
 Lemma continuous_within_ext {A B : topologicalType} (g h : A -> B) D :
@@ -205,10 +258,10 @@ Notation U := 'rV[R]_n.
 Variables (a b k : R) (f : R -> U).
 Hypothesis ab : a < b.
 Hypothesis k0 : 0 < k.
-Hypothesis f_lip :
+Hypothesis f_lip sol: 
   forall s t,
-    s \in `[a, b[%R ->
-    t \in `[a, b[%R ->
+    s \in `]a, b[%R ->
+    t \in `]a, b[%R ->
     `| f t - f s | <= k * `|t - s|.
 
 Lemma lipschitz_has_left_limit :
@@ -222,15 +275,15 @@ near b^'- => s.
 exists (f s).
 near=>t. 
 rewrite /= -ball_normE /=.
-apply: le_lt_trans; first apply f_lip.
+ apply: le_lt_trans; first apply f_lip.
   rewrite in_itv/=;apply /andP;split.
-  apply ltW; near:t.
+  near:t.
   apply: cvg_at_left_filter; first by apply cvg_id.
   by apply: lt_nbhsr.
   by near:t;exact: nbhs_left_lt.
 
   rewrite in_itv/=;apply /andP;split.
-  apply ltW; near:s.
+  near:s.
   apply: cvg_at_left_filter; first by apply cvg_id.
   by apply: lt_nbhsr.
   by near:s;exact: nbhs_left_lt.
@@ -278,7 +331,6 @@ Qed.
 End safe_dist_sym_props.
 
 Section extend_sol.
-Local Notation mu := lebesgue_measure.
 
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
@@ -310,10 +362,6 @@ Qed.
 (* Hypothesis is_integral_sol_co : forall b', b' \in `[a,b[%R -> is_integral_sol phi u0 a b' sol. *)
 
 Hypothesis sol_oo : forall b', b' \in `[a,b[%R -> is_sol_oo phi u0 a b' sol.
-
-Hypothesis int_phi_sol : 
- forall b', b' \in `[a,b[%R -> forall i, mu.-integrable `[a, b]
-    (EFin \o (fun x : R => phi x (sol x) ord0 i)).
 
 (* limit at the right boundary is u1 and u1 is in safe area *)
 Hypothesis has_left_limit : sol @ b^'- --> u1.
@@ -449,7 +497,7 @@ Proof. by apply cauchy_lipschitz_sym_oo. Qed.
 Let sol2_init : sol2 b = u1.
 Proof. by apply cauchy_lipschitz_sym. Qed.
 
-Let sol_extended := patch sol2 `[a,b] sol_extended0.
+Definition sol_extended := patch sol2 `[a,b] sol_extended0.
 Let ac : a < c.
 Proof. by apply (lt_trans ab). Qed.
 
@@ -586,24 +634,200 @@ Unshelve. all: by end_near. Qed.
 
 End extend_sol.
 
-Section compact_rhs_bound.
+(* maybe not useful? *)
+Section extend_from_lipschitz.
 
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
 
-Variables (phi : R -> U -> U) (a b : R) (sol : R -> U).
+Variables (phi : R -> U -> U) (u0 : U) (a b c : R) (sol : R -> U).
+
+Hypothesis ab : a < b.
+Hypothesis bc : b < c.
+
+Hypothesis sol_oo :
+  forall b', b' \in `[a, b[%R -> is_sol_oo phi u0 a b' sol.
+
+Variable k : R.
+Hypothesis k0 : 0 < k.
+
+Variable r : {posnum R}.
+Let u1 : U := lim (sol @ b^'-).
+Let B := closed_ball u1 r%:num.
+
+Hypothesis cont1 :
+  {in B, forall y, {within `[a, c], continuous phi ^~ y}}.
+
+Hypothesis lip2 :
+  {in `[a, c]%R, forall x, k.-lipschitz_B (phi x)}.
+Hypothesis sol_lip :
+  forall s t,
+    s \in `]a, b[%R ->
+    t \in `]a, b[%R ->
+    `| sol t - sol s | <= k * `|t - s|.
+
+
+Let has_left_limit : sol @ b^'- --> u1.
+Proof.
+rewrite /u1.
+by apply /lipschitz_has_left_limit/sol_lip.
+Qed.
+
+Local Notation sol_extended := (sol_extended sol ab bc k0 cont1 lip2 ).
+Local Notation safe_dist := (@safe_dist_sym R n phi k u1 r a c b).
+
+Lemma solution_extends_from_lipschitz : is_sol_oo phi u0 a (b + safe_dist) sol_extended.
+Proof. by apply : solution_extends. Qed.
+
+End extend_from_lipschitz.
+
+
+Section extend_from_compact_containment.
+
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+
+Variables (phi : R -> U -> U) (u0 : U) (a b c : R) (sol : R -> U).
+
 Variable K : set U.
 
 Hypothesis ab : a < b.
+Hypothesis bc : b < c.
+
+Hypothesis sol_oo :
+  forall b', b' \in `[a, b[%R -> is_sol_oo phi u0 a b' sol.
+
 Hypothesis compactK : compact K.
-Hypothesis solK : sol @` `[a, b[ `<=` K.
-Hypothesis rhs_cont :
-  {within `[a, b[, continuous (fun t => phi t (sol t))}.
+
+Hypothesis solK :
+  sol @` `[a, b[ `<=` K.
+
+
+Hypothesis phi_loc_lip :
+  forall y0, y0 \in K ->
+    exists r k : {posnum R}, 
+          {in `[a, c]%R, forall t,
+         k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)} /\
+         {in closed_ball y0 r%:num, forall y,
+            {within `[a, c], continuous phi ^~ y}}.
+
+(* should be derivable from the previous *)
+Hypothesis phi_cont :
+  {within `[a,c] `*` K,
+    continuous (fun p : (R * U)%type => phi p.1 p.2)}.
+
+Let u1 :=  lim (sol @ b^'-).
+
 
 Lemma rhs_bounded_on_solution :
-  exists M : R, 0 <= M /\
-    {in `[a, b[%R, forall t, `| phi t (sol t) | <= M}.
+  bounded_set [set `| phi t (sol t) | | t in `[a, b[].
 Proof.
-Admitted.
+suff [M [h1 h2]] :   bounded_set [set `| phi p.1 p.2 | | p in (`[a, c] `*` K)].
+  exists M;split=>// x Mx /= x0 [t tab h].
+  apply h2 => //.
+  exists (t, sol t) => //=.
+  split; first by move : tab;apply: subset_itvl; rewrite bnd_simp ltW.
+  by apply solK.
+apply compact_bounded.
+apply continuous_compact;last by apply compact_setX => //; exact: segment_compact.
+apply : within_continuous_comp.
+  by move=> ? ?; apply: norm_continuous.
+simpl.
+exact: phi_cont.
+Qed.
 
-End compact_rhs_bound.
+Lemma sol_is_lipschitz :  exists M, 0 < M /\ forall s t : R, s \in `]a, b[%R -> t \in `]a, b[%R -> `|sol t - sol s| <= M * `|t - s|.
+Proof.
+have [M [mr h]] := rhs_bounded_on_solution;exists (`| M|+1); split => [ | s t asb tab].
+  apply (@lt_le_trans _ _ 1) => //.
+  by rewrite lerDr normr_ge0.
+wlog st : s t asb tab / s <= t.
+  move => H.
+  have [st|ts] := leP s t.
+  exact: H.
+  rewrite distrC (distrC t).
+  apply H => //.
+  by apply ltW.
+set b' := t + (b-t)/2.
+have bb' : b' < b.
+  rewrite /b' -ltrBrDl ltr_pdivrMr // mulr2n mulrDr mulr1 ltrDl subr_gt0.
+  by move: tab; rewrite in_itv /= => /andP[_ ->].
+have tb' : t < b'.
+  rewrite /b' ltrDl divr_gt0 // subr_gt0.
+  by move: tab; rewrite in_itv /= => /andP[_ +].
+have b'ab : b' \in `[a,b[%R.
+  rewrite in_itv/= bb' andbT.
+  move : tab.
+  rewrite in_itv/= => /andP[/ltW + _].
+  move /le_trans;apply.
+  by rewrite ltW.
+have atb' : t \in `]a,b'[%R.
+  move : tab.
+  by rewrite !in_itv/= tb' andbT => /andP[].
+have sab' : s \in `]a,b'[%R.
+  move : asb.
+  rewrite !in_itv/= => /andP[-> _]/=.
+  by apply (le_lt_trans st).
+apply/bounded_derivative_lipschitz/atb'/sab'.
+  by rewrite addr_ge0 //.
+  have [_ _ +] := sol_oo b'ab.
+  rewrite closure_neitv_oo//.
+  apply /lt_trans/tb'.
+  by move : tab;rewrite in_itv/= => /andP[].
+move => x xab.
+have [_ + _] := sol_oo b'ab.
+move /(_ _ xab) => [hd ->].
+split=>//.
+have MM' : M < `|M| + 1.
+  apply: (le_lt_trans (ler_norm _)).
+  by rewrite ltrDl.
+have:= h _ MM' `|phi x (sol x)| .
+rewrite /=normr_id;apply.
+exists x => //.
+move : xab.
+rewrite !in_itv/= => /andP[/ltW -> /=].
+by move /lt_trans;apply.
+Qed.
+
+Lemma sol_has_left_limit : sol @ b^'- --> u1.
+Proof.
+rewrite /u1.
+have [/= M [M0 lip]]:= sol_is_lipschitz. 
+by apply/lipschitz_has_left_limit/lip.
+Qed.
+
+
+Lemma left_limit_in_K : u1 \in K.
+Proof.
+rewrite inE.
+apply: closed_cvg sol_has_left_limit.
+by exact: compact_closed.
+near=>t.
+apply solK => /=.
+exists t => //.
+  rewrite in_itv/=;apply /andP;split.
+  apply ltW; near:t.
+  apply: cvg_at_left_filter; first by apply cvg_id.
+  by apply: lt_nbhsr.
+  by near:t;exact: nbhs_left_lt.
+Unshelve. all: by end_near. Qed.
+
+Lemma solution_extends_from_compact :
+  exists d : {posnum R}, exists sol' : R -> U,
+    is_sol_oo phi u0 a (b + d%:num) sol' /\
+    {in `[a, b[%R, sol =1 sol'}.
+Proof.
+have [r [k [lip2 cont1]]]:= (phi_loc_lip  left_limit_in_K).
+have k0 : 0 < k%:num by [].
+exists (PosNum (safe_dist_sym_gt0 phi u1 r ab bc k0)).
+exists (sol_extended sol ab bc k0 cont1 lip2).
+split.
+  apply: solution_extends => //.
+  exact: sol_has_left_limit.
+move => t tab.
+rewrite /sol_extended patch_in; last by rewrite inE;apply: subset_itv_co_cc.
+by rewrite patchC // in_setC in_set1 /= lt_eqF //; move : tab; rewrite in_itv/= => /andP[].
+Qed.
+
+End extend_from_compact_containment.
+
