@@ -869,10 +869,61 @@ Hypothesis phi_loc_lip :
          {in closed_ball y0 r%:num, forall y,
             continuous (phi ^~ y)}.
 
-(* should be derivable from the previous *)
-Hypothesis phi_cont :
+
+Local Lemma phi_cont :
   {within setT `*` K,
     continuous (fun p : (R * U)%type => phi p.1 p.2)}.
+Proof.
+apply: continuous_subspaceT.
+move => [/= t0 y0].
+apply/cvg_ballP => eps eps0 /=.
+have [r [k [Hlip Hcont]]] := phi_loc_lip y0.
+have y0B : y0 \in closed_ball y0 r%:num by rewrite inE/=;apply closed_ballxx.
+have e20 : 0 < eps / 2 by rewrite divr_gt0.
+(* todo: improve proof *)
+have c1 :
+  \forall p \near (t0, y0),
+    `| phi t0 y0 - phi p.1 y0 | < eps / 2.
+  have /cvgrPdist_lt := Hcont y0 y0B t0.
+  move => /(_ _ e20) [e0 e00 H].
+  exists (ball t0 e0 , [set: U]) => /=.
+  split => //=.
+  by apply: nbhsx_ballx.
+  exact: filterT.
+  move => [t1 t2] [b1 b2].
+  by apply: H.
+have c2 :
+  \forall p \near (t0, y0),
+    `| phi p.1 y0 - phi p.1 p.2 | < eps / 2.
+  near=>p.
+  have  B0 : ((closed_ball y0 r%:num `*` closed_ball y0 r%:num) (y0, p.2)).
+    split; first by apply closed_ballxx.
+    near:p.
+    exists ([set:R], ball y0 r%:num) => /=.
+    split => //=.
+    exact: filterT.
+    by apply: nbhsx_ballx.
+    move => [t1 t2] [b1 b2 /=].
+    by apply subset_closed_ball.
+  move : (Hlip p.1 (y0, p.2) B0).
+  move/le_lt_trans;apply.
+  rewrite -ltr_pdivlMl//= mulrC.
+  suff : ball y0 (eps/2/k%:num) p.2 by rewrite -ball_normE.
+  near:p.
+  exists ([set:R], ball y0 (eps/2/k%:num)) => /=.
+  split => //=.
+  exact: filterT.
+  apply: nbhsx_ballx.
+  by rewrite divr_gt0.
+  move => [t1 t2] [b1 b2 /=].
+  exact b2.
+near=> t.
+rewrite -ball_normE/=.
+rewrite -(subrKA (phi t.1 y0 ) (phi t0 y0)) (le_lt_trans (ler_normD _ _))  // (splitr eps) ltrD//.
+by near:t;exact: c1.
+by near:t;exact: c2.
+Unshelve. all: end_near. Qed.
+
 Definition bset := [set b | b >= a /\ exists sol, is_sol_oo phi u0 a b sol].
 
 Let rho : {posnum R} := 2^-1%:pos.
@@ -1158,6 +1209,48 @@ exists sol.
 have <- :  sol a = u0 by apply solp.
 apply /is_sol_oo_subset/solp => //.
 by rewrite ltW.
+Qed.
+Lemma compact_containment_no_sup :
+  (forall b sol, is_sol_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) ->
+                                                  ~ has_sup bset.
+Proof.               
+move => H Hsup.
+have [sol Hsol] := max_sol Hsup.
+suff [d [sol' [H1 _]]]:  exists (d : {posnum R}) (sol' : R -> 'rV_n),
+     is_sol_oo phi u0 a (sup bset + d%:num) sol' /\ {in `[a, sup bset[%R, sol =1 sol'}.
+  have Hb : bset (sup bset + d%:num).
+    split; last by exists sol'.
+    by rewrite ltW// (lt_le_trans  (asup_lt Hsup))// lerDl.
+  have := sup_upper_bound Hsup Hb.
+  by apply/negP;rewrite -ltNge ltrDl.
+
+apply: (solution_extends_from_compact (c := sup bset + 1) (K:=K)) => //.
+  by apply asup_lt.
+  by rewrite ltrDl.
+  by move => b'; rewrite in_itv/= => /andP[_ b'lt];apply Hsol.
+  move => _ [x /= + <-].
+  rewrite in_itv/= => /andP[ha hb].
+  apply: (H ((x+sup bset)/2) sol).
+    by apply Hsol;rewrite ltr_pdivrMr // mulr2n mulrDr mulr1 ltrD2r.
+    exists x => //=.
+    by rewrite in_itv/=ha/=ltr_pdivlMr // mulr2n mulrDr mulr1 ltrD2l.
+  move =>  y Ky.
+  have [r [k [hrk1 hrk2]]]:= (phi_loc_lip y).
+  exists r,k;split => //.
+  move => /= y0 Hy0.
+  apply: continuous_subspaceT.
+  by apply hrk2.
+by apply /continuous_subspaceW/phi_cont;apply setSX.
+Qed.
+
+Lemma compact_containment_global_sol :
+  (forall b sol, is_sol_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) -> exists sol, is_sol_obnd phi u0 a (BInfty R false) sol.
+Proof.
+move => H.                                                
+apply no_ub_global_sol.
+suff : ~ has_sup bset.
+  by apply contra_not => hub;split=>//;apply bset_nonempty.
+exact: compact_containment_no_sup.
 Qed.
 
 End max_solution.
