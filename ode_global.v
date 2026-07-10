@@ -5,7 +5,7 @@ From mathcomp Require Import interval_inference.
 From mathcomp Require Import mathcomp_extra unstable boolp classical_sets.
 From mathcomp Require Import contra functions constructive_ereal reals.
 From mathcomp Require Import topology prodnormedzmodule tvs normedtype.
-From mathcomp Require Import landau ereal sequences derive numfun measure.
+From mathcomp Require Import landau ereal sequences exp derive numfun measure.
 From mathcomp Require Import realfun measurable_realfun lebesgue_measure.
 From mathcomp Require Import lebesgue_integral ftc.
 Require Import tilt_mathcomp tilt_analysis ode_common ode_contseg ode.
@@ -1179,7 +1179,8 @@ apply: (locally_cauchy_lipschitz_unique  (phi:=phi) ab _ (u0 := u0)) => //.
 by move : tab;rewrite inE.
 Qed.
 
-Lemma no_ub_global_sol : ~ has_ubound bset ->  exists sol, is_sol_obnd phi u0 a (BInfty R false) sol.
+Lemma no_ub_global_sol : ~ has_ubound bset ->
+  exists sol, is_sol_obnd phi u0 a +oo%O sol.
 Proof.
 move => h.
 apply all_sols_global_sol.
@@ -1210,10 +1211,11 @@ have <- :  sol a = u0 by apply solp.
 apply /is_sol_oo_subset/solp => //.
 by rewrite ltW.
 Qed.
+
 Lemma compact_containment_no_sup :
   (forall b sol, is_sol_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) ->
                                                   ~ has_sup bset.
-Proof.               
+Proof.
 move => H Hsup.
 have [sol Hsol] := max_sol Hsup.
 suff [d [sol' [H1 _]]]:  exists (d : {posnum R}) (sol' : R -> 'rV_n),
@@ -1243,10 +1245,12 @@ apply: (solution_extends_from_compact (c := sup bset + 1) (K:=K)) => //.
 by apply /continuous_subspaceW/phi_cont;apply setSX.
 Qed.
 
+(* Thm 3.3 in Khalil *)
 Lemma compact_containment_global_sol :
-  (forall b sol, is_sol_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) -> exists sol, is_sol_obnd phi u0 a (BInfty R false) sol.
+  (forall b sol, is_sol_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) ->
+  exists sol, is_sol_obnd phi u0 a (BInfty R false) sol.
 Proof.
-move => H.                                                
+move => H.
 apply no_ub_global_sol.
 suff : ~ has_sup bset.
   by apply contra_not => hub;split=>//;apply bset_nonempty.
@@ -1254,3 +1258,180 @@ exact: compact_containment_no_sup.
 Qed.
 
 End max_solution.
+
+Lemma within_continuousM {T : topologicalType} {K : (*numFieldType*)realType}
+    (V := (*pseudoMetricNormedZmodType*) K) (A : set T) (f g : T -> V) :
+  {within A, continuous f} -> {within A, continuous g} ->
+  {within A, continuous (f \* g)}.
+Proof. by move=> cf cg x; apply: cvgM; [exact: cf|exact: cg]. Qed.
+
+Section gronwall.
+Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu : R -> R)
+  (lambda_cont : {within `[a, b], continuous lambda})
+  (mu_cont : {within `[a, b], continuous mu})
+  (mu_ge0 : forall x, x \in `[a, b] -> 0 <= mu x)
+  (y : R -> R)
+  (y_cont : {within `[a, b], continuous y}).
+
+Let lm := @lebesgue_measure R.
+
+From mathcomp Require Import ring.
+
+Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
+  (forall t, t \in `]a, b[ -> 'D_1 z t = mu t * z t + f t) ->
+  let phi t s := expR (\int[lm]_(tau in `[s, t]) mu tau) in
+  forall t, t \in `]a, b[ ->
+    z t = \int[lm]_(s in `[a, t]) (phi t s * f s).
+Proof.
+move=> za0 eqn phi t tab.
+rewrite /Rintegral.
+rewrite integral_itv_bndoo//=; last admit.
+have {}eqn : forall t : R, t \in `]a, b[ ->
+    ('D_1 z t - mu t * z t) * (phi t a)^-1 = f t * (phi t a)^-1.
+  admit.
+have H : forall t : R, t \in `]a, b[ ->
+  ('D_1 z t - mu t * z t) * (phi t a)^-1 =
+  'D_1 (fun t : R => z t * (phi t a)^-1) t.
+  move=> u uab/=.
+  rewrite deriveM//=; last 2 first.
+    admit.
+    admit.
+  rewrite [in RHS]addrC.
+  rewrite mulrBl.
+  rewrite [X in X - _]mulrC.
+  congr (_ + _).
+  rewrite mulrAC mulrC.
+  rewrite -mulrN.
+  congr (_ * _).
+  rewrite [in RHS]/phi.
+  rewrite [X in 'D_1 X u](_ : _ =
+    (fun x : R => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
+    apply/funext => w.
+    by rewrite expRN.
+  rewrite -derive1E derive1_comp//; last admit.
+  admit.
+have {}eqn : forall t : R,
+    t \in `]a, b[ -> 'D_1 (fun t0 : R => z t0 / phi t0 a) t = f t / phi t a.
+  move=> u uab.
+  rewrite -eqn//.
+  rewrite deriveM/=; last 2 first.
+    admit.
+    admit.
+  rewrite mulrBl.
+  rewrite addrC.
+  rewrite [X in X + _ = _]mulrC.
+  congr (_ + _).
+  rewrite -[in RHS]mulrA.
+  rewrite [in RHS]mulrCA.
+  rewrite -[in RHS]mulrN.
+  congr (_ * _).
+  rewrite [X in 'D_1 X u](_ : _ =
+    (fun x : R => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
+    apply/funext => w.
+    by rewrite expRN.
+  rewrite -derive1E derive1_comp//; last admit.
+  admit.
+suff: z t / phi a t =
+     fine (\int[lebesgue_measure]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
+  admit.
+transitivity (
+  \int[lm]_(z0 in `]a, t[)
+    'D_1 (fun t0 : R => z t0 / phi t0 a) z0).
+  admit.
+transitivity (
+  (\int[lebesgue_measure]_(z0 in `]a, t[) ((phi t z0 * f z0) / phi t a))); last admit.
+apply: eq_Rintegral => u uat.
+rewrite eqn; last admit.
+rewrite mulrAC mulrC.
+congr (_ * _).
+rewrite /phi.
+rewrite -expRB.
+rewrite -expRN.
+congr expR.
+rewrite -opprB.
+congr (- _).
+Admitted.
+
+Lemma gronwall :
+  (forall t, t \in `]a, b[ ->
+    y t <= lambda t + \int[lm]_(s in `[a, t]) (mu s * y s)) ->
+  forall t, t \in `]a, b[ ->
+    y t <= lambda t +
+  \int[lm]_(s in `[a, t]) (lambda s * mu s * expR (\int[lm]_(tau in `[s, t]) mu tau)).
+Proof.
+move=> lambdamuy t tab.
+pose z t := \int[lm]_(s in `[a, t]) (mu s * y s).
+pose v t := z t + lambda t - y t.
+have v_ge0 : forall x, x \in `]a, b[ -> 0 <= v x.
+  move=> x xab.
+  rewrite /v subr_ge0 (le_trans (lambdamuy _ _))//.
+  by rewrite  addrC lerD2l.
+have FTC1z : forall x, x \in `]a, b[ ->
+    derivable
+      (fun x0 => \int[lm]_(t0 in `[a, x0]) (mu t0 * y t0)) x 1 /\
+    (fun x0 => \int[lm]_(t0 in `[a, x0]) (mu t0 * y t0))^`() x =
+  mu x * y x.
+  move=> x xab.
+  apply: (@continuous_FTC1_closed _ (fun s => mu s * y s) a x b _ _ _).
+  by move: xab; rewrite inE => /itvP ->.
+  apply: continuous_compact_integrable.
+  exact: segment_compact.
+  exact: within_continuousM.
+  by move: xab; rewrite inE => /itvP ->.
+  apply: continuousM.
+    apply: (@within_continuous_continuous _ _ _ a b) => //.
+    by rewrite inE in xab.
+  apply: (@within_continuous_continuous _ _ _ a b) => //.
+  by rewrite inE in xab.
+have derivez : forall x, x \in `]a, b[ ->
+    derive z x 1 = mu x * z x + mu x * lambda x - mu x * v x.
+  move=> x xab.
+  rewrite -derive1E.
+  rewrite (FTC1z _ _).2//.
+  rewrite /v.
+  by field.
+pose phi (t s : R) := expR (\int[lm]_(tau in `[s, t]) mu tau).
+have za0 : z a = 0 by rewrite /z set_itv1// Rintegral_set1.
+have zE : forall x, x \in `]a, b[ ->
+    z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
+  move=> x xab.
+  apply: solve_diff_equa => //.
+  by move=> u uab; rewrite derivez// addrA.
+have phimuv : forall x, x \in `]a, b[ ->
+      0 <= \int[lm]_(s in `[a, x]) (phi t s * mu s * v s).
+  move=> x xab.
+  rewrite /Rintegral integral_itv_bndoo//=; last first.
+    admit.
+  apply: Rintegral_ge0 => //= u uab.
+  rewrite -mulrA mulr_ge0// ?expR_ge0// mulr_ge0 ?v_ge0//.
+    rewrite mu_ge0// inE; apply: subset_itv uab; rewrite bnd_simp//.
+    rewrite inE in xab; move/itvP in xab.
+    by rewrite xab.
+  rewrite inE.
+  apply: subset_itvl uab; rewrite bnd_simp.
+  rewrite inE in xab; move/itvP in xab.
+  by rewrite xab.
+rewrite (le_trans (lambdamuy _ _))// lerD2l -/(z t).
+rewrite zE//.
+apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
+                   - \int[lm]_(s in `[a, t]) (phi t s * mu s * v s))).
+  rewrite -RintegralB//=; last 2 first.
+    admit.
+    admit.
+  apply: le_Rintegral => //=.
+    admit.
+    admit.
+  move=> u uat.
+  rewrite mulrBr.
+  rewrite le_eqVlt; apply/orP; left; apply/eqP.
+  by field.
+rewrite lerBlDl.
+rewrite ler_wpDl//.
+  by apply: phimuv.
+rewrite le_eqVlt; apply/orP; left; apply/eqP.
+apply: eq_Rintegral => //= u uat.
+rewrite -/(phi t u).
+by field.
+Admitted.
+
+End gronwall.
