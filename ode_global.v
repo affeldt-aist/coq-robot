@@ -1434,4 +1434,78 @@ rewrite -/(phi t u).
 by field.
 Admitted.
 
+Lemma gronwall_LAMBDA LAMBDA :
+  (forall t, t \in `]a, b[ ->
+    y t <= LAMBDA + \int[lm]_(s in `[a, t]) (mu s * y s)) ->
+  forall t, t \in `]a, b[ ->
+    y t <= LAMBDA * expR (\int[lm]_(tau in `[a, t]) mu tau).
+Proof.
+Admitted.
+
+Lemma gronwall_MU LAMBDA MU :
+  (forall t, t \in `]a, b[ ->
+    y t <= LAMBDA + \int[lm]_(s in `[a, t]) (MU * y s)) ->
+  forall t, t \in `]a, b[ ->
+    y t <= LAMBDA * expR (MU * (t - a)).
+Proof.
+Admitted.
+
+
 End gronwall.
+
+Section thm34.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.
+Variables (phi psi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
+Variables (u0 v0 : U) (r : {posnum R}) (r1 : r%:num < 1) .
+Let B : set U := closed_ball u0 r%:num. (* open connected set? *)
+Hypothesis (k0 : 0 < k)
+  (lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)})
+  (cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}).
+Variables y z : R -> U.
+Hypothesis soly : is_sol_oo phi u0 a b y.
+Hypothesis solz : is_sol_oo (phi \+ psi) v0 a b z.
+Hypothesis By : y @` `[a, b] `<=` B.
+Hypothesis Bz : z @` `[a, b] `<=` B.
+Variable mu : {posnum R}.
+Hypothesis mu_ub : forall t x, t \in `[a, b] -> x \in B ->
+ `| psi t x | <= mu%:num.
+
+Let gamma := `|u0 - v0|.
+Lemma thm34 t : t \in `[a, b] ->
+  `|y t - z t| <= gamma * expR (k * (t - a)) + mu%:num / k * (expR (k * (t - a)) - 1).
+Proof.
+move=> tab.
+(*have := cauchy_lipschitz_f ab k0 lip2 cont1 r1.*)
+have yint : forall t, y t = u0 + \vint[lebesgue_measure]_(s in `[a, t]) phi s (y s).
+  admit.
+have zint : forall t, z t = v0 +
+    \vint[lebesgue_measure]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
+  admit.
+pose gronwall_y t := `|y t - z t|.
+rewrite -/(gronwall_y t).
+have : gronwall_y t <= gamma + mu%:num * (t - a) +
+    \int[lebesgue_measure]_(s in `[a, t])
+      (k * (gamma + mu%:num * (s - a)) * expR (k * (t - s))).
+  have H : gronwall_y t <= (gamma + mu%:num * (t - a) +
+      \int[lebesgue_measure]_(s in `[a, t]) (k * `|y s - z s|)).
+    apply: (@le_trans _ _ (gamma +
+      \int[lebesgue_measure]_(s in `[a, t]) `|phi s (y s) - psi s (z s)| +
+      \int[lebesgue_measure]_(s in `[a, t]) `|psi s (z s)|)).
+      admit.
+    admit.
+  pose lambda t := gamma + mu%:num * (t - a).
+  pose mu' (s : R) : R := k.
+  have := @gronwall _ _ _ ab lambda mu' _ _ _ gronwall_y.
+  admit.
+move/le_trans; apply.
+apply: (@le_trans _ _
+  (gamma + mu%:num * (t - a) - gamma - mu%:num * (t - a) +
+    gamma * expR (k * (t - a)) +
+    \int[lebesgue_measure]_(s in `[a, t]) (mu%:num * expR (k * (t - s))))).
+  admit. (* ipp *)
+rewrite le_eqVlt; apply/orP; left; apply/eqP.
+admit.
+Admitted.
+
+End thm34.
