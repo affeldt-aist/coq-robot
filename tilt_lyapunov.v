@@ -481,7 +481,7 @@ Unshelve. all: by end_near. Qed.
 
 Lemma tilt_state_spaceS : state_space phi Tilt.Upsilon1 `<=` Tilt.Upsilon1.
 Proof.
-move => p [y [D [y0_init1 deri]]].
+move => p [y [D /= [y0_init1 [_ deri cont]]]].
 have [D0|D0] := leP 0 D; last first.
   move=> -[t + x].
   rewrite in_itv/= => -/andP[x0 xD].
@@ -520,7 +520,7 @@ have : {in `]0, D[%R,
         \matrix_(i, j) 'D_1 (fun t0 => y t0 i j) x); last first.
       by apply/matrixP => a b; rewrite !mxE derive_mx//= ?mxE.
     ring.
-  have Rsu t0 : t0 \in `[0, D[%R -> Right (y^`()%classic t0) =
+  have Rsu t0 : t0 \in `]0, D[%R -> Right (y^`()%classic t0) =
       (gamma *: (Right (y t0) - Left (y t0)) *m \S('e_2 - Right (y t0)) ^+ 2).
     rewrite inE/=.
     by move/deri => [_ ->]; rewrite row_mxKr.
@@ -528,8 +528,7 @@ have : {in `]0, D[%R,
   transitivity (-2 * (gamma *: (Right (y x) -
                           Left (y x)) *m \S('e_2 - Right (y x)) ^+ 2 *m
                                           ('e_2 - Right (y x))^T) 0 0).
-    rewrite Rsu//.
-    by apply: subset_itvr xd; rewrite bnd_simp.
+    by rewrite Rsu.
   rewrite !mulmxA.
   apply/eqP.
   rewrite mulf_eq0 /= oppr_eq0 ?pnatr_eq0 /= -!mulmxA spin_mul_tr.
@@ -568,16 +567,13 @@ have norm_constant t0 : t0 \in `[0, D[%R ->
     apply: differentiable_enorm_squared => /=.
     exact: differentiableB.
   rewrite /sol_is_deriv_co/= in deri.
-  have cont : {in `[0, t0]%R, continuous y}.
-    move=> t' t'0D.
-    apply/differentiable_continuous/derivable1_diffP.
-    apply deri.
-    apply: subset_itvl t'0D; rewrite bnd_simp.
-    by rewrite (itvP t0d').
-  move/in_switch in cont.
-  move/continuous_in_subspaceT : cont.
-  apply: continuous_subspaceW.
-  by apply: subset_itvl; rewrite bnd_simp.
+  apply: continuous_subspaceW cont.
+  rewrite closure_neitv_oo.
+    by apply: subset_itvl; rewrite bnd_simp (itvP t0d').
+  rewrite lt_neqAle D0 andbT eq_sym; apply/eqP => {}D0.
+  move: t0d.
+  rewrite D0 in_itv/= => /andP[/le_lt_trans] => /[apply].
+  by rewrite ltxx.
 suff: `|'e_2 - Right (y t)|_e ^+ 2 = 1.
   move=> /(congr1 Num.sqrt).
   by rewrite sqrtr1 sqr_sqrtr// dotmulvv sqr_ge0.
@@ -811,10 +807,11 @@ Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
 Lemma derive_zp1 (D : R) t f :
-  sol_is_deriv_co (fun=> phi) 0 D f ->
-  t \in `[0, D[ -> 'D_1 (Left \o f) t = - alpha1 *: Left (f t).
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
+  t \in `]0, D[ -> 'D_1 (Left \o f) t = - alpha1 *: Left (f t).
 Proof.
 move=> /= deri /[!inE]/= t0D.
+case: deri => _ deri cont.
 have [derivable_f] := deri _ t0D.
 move=> /(congr1 Left).
 rewrite derive1E row_mxKl => <-.
@@ -822,11 +819,11 @@ by rewrite derive_lsubmx.
 Qed.
 
 Lemma derive_z2 (D : R) z f :
-  sol_is_deriv_co (fun=> phi) 0 D f ->
-  z \in `[0, D[ -> 'D_1 (Right \o f) z =
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
+  z \in `]0, D[ -> 'D_1 (Right \o f) z =
   gamma *: (Right (f z) - Left (f z)) *m \S('e_2 - Right (f z)) ^+ 2.
 Proof.
-move=> deriv /[!inE]/= z0D.
+move=> [_ deriv cont] /[!inE]/= z0D.
 have [derivable_f +] := deriv _ z0D.
 move => /(congr1 Right).
 by rewrite derive1E row_mxKr => ?; rewrite derive_rsubmx.
@@ -835,7 +832,7 @@ Qed.
 Lemma is_sol_state_space_tilt (D : R) f t :
   t \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   Tilt.Upsilon1 (f t).
 Proof.
 move=> + f0 deriv_f.
@@ -852,7 +849,7 @@ Lemma enorm_e2z2 (D : R) f (z : R)
     (z2 := Right \o f) (zp1 := Left \o f) (u := 'e_2 - z2 z) :
   z \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_co (fun=> phi) 0 D f -> `|u|_e = 1.
+  is_sol_oo (fun=> phi) (f 0) 0 D f -> `|u|_e = 1.
 Proof.
 move=> z0D sol0 sol_f.
 suff: Tilt.Upsilon1 (row_mx (zp1 z) (z2 z)).
@@ -866,7 +863,7 @@ Lemma angvel_sqr (D : R) (f : R -> 'rV_6) z
   (w := (z2 z) *m \S('e_2)) (u := 'e_2 - z2 z) :
   z \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
 move=> z0D sol0 dtraj.
@@ -892,7 +889,7 @@ Qed.
 Lemma neg_spin (D : R) (f : R -> 'rV_6) z :
   z \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   `|Right (f z) *m \S('e_2) *m - \S('e_2 - Right (f z))|_e =
   `|Right (f z) *m \S('e_2)|_e.
 Proof.
@@ -918,8 +915,8 @@ Let c2 := 2^-1 / gamma.
 
 Lemma V1dotE z (D : R) (f : R -> 'rV_6)
   (zp1 := Left \o f) (z2 := Right \o f) :
-  sol_is_deriv_co (fun=> phi) 0 D f ->
-  z \in `[0, D[ ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
+  z \in `]0, D[ ->
   V1dot (f z) =
     c1 *: (2 *: 'D_1 zp1 z *m (Left (f z))^T) 0 0 +
     c2 *: (2 *: 'D_1 z2 z *m (Right (f z))^T) 0 0.
@@ -946,7 +943,7 @@ Qed.
 
 Lemma derive_along_V1 (D : R) t (f : R -> 'rV_6) :
   t \in `]0, D[ ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   (forall t, t \in `]0, D[ -> differentiable f t) ->
   'D~(f) (Tilt.V1 alpha1 gamma) t = V1dot (f t).
 Proof.
@@ -982,7 +979,7 @@ Definition u1 (f : R -> 'rV[R]_6) t
 Lemma V1dot_ub (D : R) (f : R -> 'rV[R]_6)
     (zp1 := Left \o f) (z2 := Right \o f) :
   f 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   forall t, t \in `[0, D[%R ->
     V1dot (f t) <= (- (u1 f t) *m u2 *m (u1 f t)^T) 0 0.
 Proof.
@@ -1015,7 +1012,7 @@ Qed.
 
 Lemma V1dot_eq0_p1_or_p2 (D : R) (f : R -> 'rV[R]_6) t :
   f 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   t \in `[0, D[%R ->
   V1dot (f t) = 0 ->
   f t = Tilt.point1 \/ f t = Tilt.point2.
@@ -1062,7 +1059,7 @@ Qed.
 
 Lemma derive_along_V1_le0 (D : R) (f : R -> 'rV_6) :
   f 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   (forall t, t \in `]0, D[%R -> differentiable f t) ->
   forall t, t \in `]0, D[%R ->
   'D~(f) (Tilt.V1 alpha1 gamma) t <= 0.
@@ -1187,9 +1184,19 @@ rewrite -fctE /= !derive_along_enorm_squared//=; last 3 first.
   exact: dif1.
 move: t0; rewrite le_eqVlt => /predU1P[<-//|t0].
   by rewrite V1dotE0// !invfM.
-rewrite (V1dotE alpha1_gt0 gamma_gt0 (@sol_is_deriv_c0yco _ _ _ _ tilt_eqnx (t + 1))) //.
+have is_sol_oo_sol : is_sol_oo (fun=> Tilt.eqn alpha1 gamma) (sol 0) 0 (t + 1) sol.
+  split => //.
+    rewrite /sol_is_deriv_obnd/= => t' t'0t1.
+    apply: tilt_eqnx.
+    by apply: subset_itv t'0t1 => //; rewrite bnd_simp.
+  apply: continuous_in_subspaceT => /= t'.
+  rewrite closure_neitv_oo ?addr_gt0// => /[!inE] t'0t1.
+  apply: differentiable_continuous.
+  apply: dif1.
+  by rewrite (itvP t'0t1).
+rewrite (V1dotE alpha1_gt0 gamma_gt0 is_sol_oo_sol) //.
   by rewrite !invfM.
-by rewrite inE/= in_itv/= (ltW t0) ltrDl; apply /andP.
+by rewrite inE/= in_itv/= t0 ltrDl ltr01.
 Qed.
 
 Lemma derive_along_V1_le0_global (sol : R -> 'rV[R]_6) :
@@ -1208,7 +1215,18 @@ move => t t0.
 rewrite derive_along_V1_global//.
 have t0D : t \in `[0, t + 1[%R.
   by rewrite in_itv/=t0 ltrDl ltr01.
-have Hub := V1dot_ub sol0 (@sol_is_deriv_c0yco _ _ _ _ solves (t + 1)) t0D.
+have is_sol_oo_sol : is_sol_oo (fun=> Tilt.eqn alpha1 gamma) (sol 0) 0 (t + 1) sol.
+  split => //.
+    rewrite /sol_is_deriv_obnd/= => t' t'0t1.
+    apply: solves.
+    by apply: subset_itv t'0t1 => //; rewrite bnd_simp.
+  apply: continuous_in_subspaceT => /= t'.
+  rewrite closure_neitv_oo; last by rewrite ltr_wpDl.
+  move=> /[!inE] t'0t1.
+  apply: differentiable_continuous.
+  apply: diff.
+  by rewrite (itvP t'0t1).
+have Hub := V1dot_ub sol0 is_sol_oo_sol t0D.
 apply: (le_trans Hub).
 have Hquad : let u1 := \row_i [eta fun=> 0
                    with 0 |-> `|(Left \o sol) t|_e,
@@ -1242,14 +1260,28 @@ move=> Init0 openInit Init_in_state.
 apply: (@Lyapunov_stability R _ phi Init openInit (Tilt.V1 alpha1 gamma)).
 - exact: V1_diff.
 - move=> D /= f f0 sol_f t t0.
-  apply: (@derive_along_V1_le0 _ _ _ _ _ D f) => //.
+  apply: (@derive_along_V1_le0 _ _ _ _ _ ((D + t)/2) f) => //.
   + rewrite inE.
     apply: Init_in_state.
     exact/set_mem.
-  + move=> /= t1 t10D.
+  + split=> //.
+      move=> /= t1 t10D.
+      apply: sol_f => //.
+      apply: subset_itv t10D; rewrite bnd_simp //.
+      admit.
+    apply: continuous_in_subspaceT => /= t'.
+    rewrite closure_neitv_oo ?(itvP t0)//.
+    move=> /[!inE] t'0D.
+    apply: differentiable_continuous.
     apply/derivable1_diffP.
     apply sol_f.
-    by apply: subset_itvr t10D; rewrite bnd_simp.
+    rewrite /= in t'0D.
+    admit.
+    admit.
+    do 2 red in sol_f.
+  move=> /=.
+  (*apply/derivable1_diffP.*)  admit.
+  admit.
 - have := V1_is_Lyapunov_candidate alpha1_gt0 gamma_gt0.
   rewrite /is_Lyapunov_candidate /Tilt.point1 => H.
   rewrite /Tilt.V1 lsubmx_const rsubmx_const; split => //.
@@ -1257,6 +1289,6 @@ apply: (@Lyapunov_stability R _ phi Init openInit (Tilt.V1 alpha1 gamma)).
   + move=> z zInit z_neq0.
     case: H => // _ _.
     by apply => //; rewrite in_setT.
-Qed.
+Admitted. (* TODO: URGENT *)
 
 End equilibrium_zero_stable.

@@ -207,7 +207,7 @@ Let U := 'rV[R]_n.
 Variable phi : U -> U.
 
 Definition state_space (Init : set U) : set U :=
-  [set x | exists f D, [/\ f 0 \in Init, sol_is_deriv_co (fun=> phi) 0 D f &
+  [set x | exists f D, [/\ f 0 \in Init, is_sol_oo (fun=> phi) (f 0) 0 D f &
     exists2 t, t \in `[0, D[%R & x = f t]].
 
 End state_space.
