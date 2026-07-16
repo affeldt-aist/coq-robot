@@ -159,6 +159,8 @@ Proof. by []. Qed.
 
 End sublevel.
 
+Require Import ode_global.
+
 Section LaSalle_tilt.
 Context {K : realType}.
 Let U := 'rV[K]_6.
@@ -168,31 +170,12 @@ Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
 Let phi := Tilt.eqn alpha1 gamma.
 
-Hypothesis solP : forall y, y 0 \in Tilt.Upsilon1 ->
-  lasalle.is_sol phi y <-> y = sol (y 0).
-
-Hypothesis initp : forall p, sol p 0 = p.
-
-Let isSol p : p \in Tilt.Upsilon1 -> sol_is_deriv_c0y phi (sol p).
-Proof.
-move=> Kp.
-apply/sol_is_deriv_c0yP.
-have : lasalle.is_sol phi (sol p) by apply/solP; rewrite ?initp.
-move=> [/= _ H] t t0.
-split.
-  by apply: ex_derive; exact: H.
-by rewrite derive1E; apply H.
-Qed.
-
 Definition sublevelUpsilon1 (p : U) :=
   sublevel (Tilt.V1 alpha1 gamma) (Tilt.V1 alpha1 gamma p) `&` Tilt.Upsilon1.
 
 Lemma mem_sublevelUpsilon1 p : Tilt.Upsilon1 p ->
   p \in sublevelUpsilon1 p.
 Proof. by rewrite /sublevelUpsilon1 /sublevel/= inE/=. Qed.
-
-(* continuity in initial value: assumption needed for LaSalle *)
-Hypothesis cont_sol : forall p t, {within sublevelUpsilon1 p, continuous sol^~ t}.
 
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
@@ -248,6 +231,109 @@ apply: continuousB.
 exact: continuous_rsubmx.
 Qed.
 
+Lemma compact_Upsilon1 : compact (@Tilt.Upsilon1 K).
+Proof.
+rewrite /Tilt.Upsilon1.
+(* TODO: I think we already proved that inside a proof *)
+Abort.
+
+(*Lemma invariant_sublevelUpsilon1_new b (y : K -> U) :
+  y 0 \in Tilt.Upsilon1 ->
+  is_sol_oo (fun=> phi) (y 0) 0 b y ->
+  [set y x | x in `[0, b[] `<=` sublevelUpsilon1 (y 0).
+Proof.
+move => y0Upsilon1 /= is_sol_oo_y _/= [t t0b <-].
+split; last first.
+  apply/(@tilt_state_spaceS  _ alpha1 gamma).
+  exists y, b => /=. (* use large enough time *)
+  split => //.
+  - rewrite -/phi.
+
+    have [_ + _] := is_sol_oo x (t + 1).
+    rewrite /sol_is_deriv_obnd /sol_is_deriv_co /sol_is_deriv_cbnd/=.
+    
+    apply isSol => //.
+    by rewrite inE.
+  - exists t => //.
+    by rewrite /= in_itv/=t0/=ltrDl.
+move/mem_set : (Kx) => /isSol /sol_is_deriv_c0yP solA.
+rewrite /sublevel/=.
+rewrite (le_trans _ Vx)//.
+rewrite -[in leRHS](@initp x).
+have : {in `[0, t + 1[, forall t : K, derivable (sol x) t 1}.
+  move=> t'.
+  rewrite in_itv/= => /andP[t0' _].
+  by apply solA.
+move/V_nincr => /= => /(_ (Tilt.V1 alpha1 gamma)).
+apply.
+- exact: V1_diff.
+- move => t1 tt1.
+  apply: (@derive_along_V1_le0 _ _ _ _ _ (t + 1)) => //.
+  + by rewrite initp inE.
+  + apply: sol_is_deriv_c0yco => //.
+    apply/sol_is_deriv_c0yP.
+    by apply solA.
+  + move=> t2 /andP[t2' _].
+    apply/derivable1_diffP.
+    apply solA.
+    by rewrite ltW.
+- by rewrite ltrDl.
+- by rewrite lexx.
+Qed.*)
+
+Local Lemma solP' (y : K -> U) : y 0 \in Tilt.Upsilon1 ->
+  exists sol, is_sol_obnd (fun => phi) (y 0) 0 (BInfty K false) sol.
+Proof.
+move=> y0Upsilon1.
+apply: (@compact_containment_global_sol _ _ _ _ (sublevelUpsilon1 (y 0))) => /=.
+- exact: compact_sublevelUpsilon1.
+- move=> y0.
+  have [r [k y0r]] := @tilt_eqn_locally_lipschitz K alpha1 _ gamma_gt0 y0.
+  exists r, k; split => //.
+  move=> v vy0r.
+  (* TODO: prove Tilt.eqn continuous*)
+  admit.
+- move=> t y' [y'y0].
+  rewrite /sol_is_deriv_obnd/= => Hy' conty'.
+  move=> _/= -[x x0t] <-.
+  split.
+Abort.
+
+(* NB: was hypo in the first version *)
+Lemma solP : forall y, y 0 \in Tilt.Upsilon1 ->
+  lasalle.is_sol phi y <-> y = sol (y 0).
+Proof.
+move=> /= y y0Upsilon.
+(* using thm 3.3 *)
+(*have /= := @compact_containment_global_sol K 6 0 (fun=> phi)
+  (sublevelUpsilon1 (y 0)) (@compact_sublevelUpsilon1 (y 0)).*)
+(* TODO *)
+Admitted.
+
+(* NB: was hypo in the first version *)
+Lemma initp : forall p, sol p 0 = p.
+Proof.
+(* TODO *)
+Admitted.
+
+Let isSol p : p \in Tilt.Upsilon1 -> sol_is_deriv_c0y phi (sol p).
+Proof.
+move=> Kp.
+apply/sol_is_deriv_c0yP.
+have : lasalle.is_sol phi (sol p) by apply/solP; rewrite ?initp.
+move=> [/= _ H] t t0.
+split.
+  by apply: ex_derive; exact: H.
+by rewrite derive1E; apply H.
+Qed.
+
+(* continuity in initial value: assumption needed for LaSalle *)
+(* NB: was hypo in the first version *)
+Lemma cont_sol : forall p t, {within sublevelUpsilon1 p, continuous sol^~ t}.
+Proof.
+(* TODO: using thm 3.4 *)
+Admitted.
+
 Lemma invariant_sublevelUpsilon1 p :
   lasalle.is_invariant sol (sublevelUpsilon1 p).
 Proof.
@@ -269,7 +355,7 @@ move/mem_set : (Kx) => /isSol /sol_is_deriv_c0yP solA.
 rewrite /sublevel/=.
 rewrite (le_trans _ Vx)//.
 rewrite -[in leRHS](@initp x).
-have : {in `[0, t + 1[, forall t : K, derivable (sol x) t 1}.
+have : {in `[0, t + 1[%R, forall t : K, derivable (sol x) t 1}.
   move=> t'.
   rewrite in_itv/= => /andP[t0' _].
   by apply solA.
@@ -326,6 +412,7 @@ Proof.
 move => sp t.
 have [issol0 issol1]: lasalle.is_sol phi (sol p).
   apply: (lasalle.sol_is_sol (sol := sol) (K:=Tilt.Upsilon1)) => //.
+  by apply: initp.
   move => y Ky.
   by apply /solP;rewrite inE.
   move : sp.
@@ -364,6 +451,8 @@ have H : lasalle.limS sol (sublevelUpsilon1 p) `<=`
   - apply: (@lasalle.stable_limS _ _ _ _ (@compact_sublevelUpsilon1 p) _ _
         lasalle_sol _ (@invariant_sublevelUpsilon1 p)
         (Tilt.V1 alpha1 gamma)) => //=.
+    + exact: initp.
+    + exact: cont_sol.
     + apply/continuous_subspaceT => x xK.
       apply: differentiable_continuous.
       exact: V1_diff.
@@ -644,7 +733,7 @@ apply: (compact_cluster_set1 _ cV ) => //.
   by apply VsublevelUpsilon1.
 apply: (filterS (closureS VsublevelUpsilon1)).
 exists 0; split => //= x /ltW x0.
-rewrite -(closure_id (sublevelUpsilon1 p)).1;last first.
+rewrite -(closure_id (sublevelUpsilon1 p)).1; last first.
   by apply compact_closed =>//; apply compact_sublevelUpsilon1.
 apply invariant_sublevelUpsilon1 => //.
 by apply/set_mem/mem_sublevelUpsilon1/set_mem.

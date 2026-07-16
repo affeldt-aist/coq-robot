@@ -1265,6 +1265,51 @@ Lemma within_continuousM {T : topologicalType} {K : (*numFieldType*)realType}
   {within A, continuous (f \* g)}.
 Proof. by move=> cf cg x; apply: cvgM; [exact: cf|exact: cg]. Qed.
 
+
+Lemma parameterized_integralN {R : realType}
+    x b (f : R -> R) : (x <= b) ->
+  {within `[x, b], continuous f} ->
+  parameterized_integral lebesgue_measure x b f =
+  parameterized_integral lebesgue_measure (- b) (- x) (f \o -%R).
+Proof.
+move=> xb cf.
+rewrite /parameterized_integral /Rintegral.
+rewrite -(@integration_by_substitution_oppr _ f (- b) (- x)) ?opprK//.
+by rewrite lerN2.
+Qed.
+
+Section parameterized_integral_continuous.
+Context {R : realType}.
+Notation mu := (@lebesgue_measure R).
+
+Let int := (parameterized_integral mu).
+
+(* TODO: PR *)
+Lemma parameterized_integralr_continuous a b (f : R -> R) : a <= b ->
+  {within `[a, b], continuous f} ->
+  {within `[a, b], continuous (fun x => int x b f)}.
+Proof.
+move=> ab abf.
+rewrite /int.
+suff:
+  {within `[a, b], continuous ((fun x => parameterized_integral lebesgue_measure (-b) x (f \o -%R)) \o -%R) }.
+  apply: continuous_within_ext => x /[!inE] xab/=.
+  rewrite -parameterized_integralN//.
+    by rewrite (itvP xab).
+  apply: continuous_subspaceW abf.
+  by apply: subset_itvr; rewrite bnd_simp (itvP xab).
+apply: within_continuous_compN.
+have := @parameterized_integral_continuous _ (- b) (- a) (f \o -%R).
+apply.
+  by rewrite lerN2.
+apply: continuous_compact_integrable => //.
+  exact: segment_compact.
+apply: within_continuous_compN.
+by rewrite !opprK.
+Qed.
+
+End parameterized_integral_continuous.
+
 Section gronwall.
 Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu : R -> R)
   (lambda_cont : {within `[a, b], continuous lambda})
@@ -1278,23 +1323,34 @@ Let lm := @lebesgue_measure R.
 From mathcomp Require Import ring.
 
 Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
+  {in `]a, b[, forall x, derivable z x 1} ->
   (forall t, t \in `]a, b[ -> 'D_1 z t = mu t * z t + f t) ->
   let phi t s := expR (\int[lm]_(tau in `[s, t]) mu tau) in
   forall t, t \in `]a, b[ ->
     z t = \int[lm]_(s in `[a, t]) (phi t s * f s).
 Proof.
-move=> za0 eqn phi t tab.
-rewrite /Rintegral.
-rewrite integral_itv_bndoo//=; last admit.
+move=> za0 derivable_z eqn phi t /[!inE] tab.
+rewrite /Rintegral integral_itv_bndoo//=; last first.
+  apply/measurable_EFinP/measurable_funM => //.
+    apply/measurableT_comp => //=.
+    apply: subspace_continuous_measurable_fun => //.
+    apply: (@continuous_subspaceW _ _ _ `[a, t]) => //.
+      exact: subset_itv_oo_cc.
+    apply: parameterized_integralr_continuous.
+      by rewrite (itvP tab).
+    apply: continuous_subspaceW mu_cont.
+    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+  admit.
 have {}eqn : forall t : R, t \in `]a, b[ ->
     ('D_1 z t - mu t * z t) * (phi t a)^-1 = f t * (phi t a)^-1.
-  admit.
+  move=> x xab.
+  by rewrite eqn// addrAC subrr add0r.
 have H : forall t : R, t \in `]a, b[ ->
   ('D_1 z t - mu t * z t) * (phi t a)^-1 =
   'D_1 (fun t : R => z t * (phi t a)^-1) t.
   move=> u uab/=.
   rewrite deriveM//=; last 2 first.
-    admit.
+    exact: derivable_z.
     admit.
   rewrite [in RHS]addrC.
   rewrite mulrBl.
@@ -1308,14 +1364,15 @@ have H : forall t : R, t \in `]a, b[ ->
     (fun x : R => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
     apply/funext => w.
     by rewrite expRN.
-  rewrite -derive1E derive1_comp//; last admit.
+  rewrite -derive1E derive1_comp//; last first.
+    admit.
   admit.
 have {}eqn : forall t : R,
     t \in `]a, b[ -> 'D_1 (fun t0 : R => z t0 / phi t0 a) t = f t / phi t a.
   move=> u uab.
   rewrite -eqn//.
   rewrite deriveM/=; last 2 first.
-    admit.
+    exact: derivable_z.
     admit.
   rewrite mulrBl.
   rewrite addrC.
@@ -1329,7 +1386,8 @@ have {}eqn : forall t : R,
     (fun x : R => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
     apply/funext => w.
     by rewrite expRN.
-  rewrite -derive1E derive1_comp//; last admit.
+  rewrite -derive1E derive1_comp//; last first.
+    admit.
   admit.
 suff: z t / phi a t =
      fine (\int[lebesgue_measure]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
@@ -1338,10 +1396,13 @@ transitivity (
   \int[lm]_(z0 in `]a, t[)
     'D_1 (fun t0 : R => z t0 / phi t0 a) z0).
   admit.
-transitivity (
-  (\int[lebesgue_measure]_(z0 in `]a, t[) ((phi t z0 * f z0) / phi t a))); last admit.
+transitivity ((\int[lebesgue_measure]_(z0 in `]a, t[)
+  ((phi t z0 * f z0) / phi t a))); last first.
+  admit.
 apply: eq_Rintegral => u uat.
-rewrite eqn; last admit.
+rewrite eqn; last first.
+  rewrite 2!inE in uat *.
+  by apply: subset_itvl uat; rewrite bnd_simp (itvP tab).
 rewrite mulrAC mulrC.
 congr (_ * _).
 rewrite /phi.
@@ -1357,7 +1418,8 @@ Lemma gronwall :
     y t <= lambda t + \int[lm]_(s in `[a, t]) (mu s * y s)) ->
   forall t, t \in `]a, b[ ->
     y t <= lambda t +
-  \int[lm]_(s in `[a, t]) (lambda s * mu s * expR (\int[lm]_(tau in `[s, t]) mu tau)).
+      \int[lm]_(s in `[a, t])
+        (lambda s * mu s * expR (\int[lm]_(tau in `[s, t]) mu tau)).
 Proof.
 move=> lambdamuy t tab.
 pose z t := \int[lm]_(s in `[a, t]) (mu s * y s).
@@ -1396,6 +1458,7 @@ have zE : forall x, x \in `]a, b[ ->
     z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
   move=> x xab.
   apply: solve_diff_equa => //.
+  admit.
   by move=> u uab; rewrite derivez// addrA.
 have phimuv : forall x, x \in `]a, b[ ->
       0 <= \int[lm]_(s in `[a, x]) (phi t s * mu s * v s).
@@ -1440,7 +1503,7 @@ Lemma gronwall_LAMBDA LAMBDA :
   forall t, t \in `]a, b[ ->
     y t <= LAMBDA * expR (\int[lm]_(tau in `[a, t]) mu tau).
 Proof.
-Admitted.
+Abort.
 
 Lemma gronwall_MU LAMBDA MU :
   (forall t, t \in `]a, b[ ->
@@ -1448,8 +1511,7 @@ Lemma gronwall_MU LAMBDA MU :
   forall t, t \in `]a, b[ ->
     y t <= LAMBDA * expR (MU * (t - a)).
 Proof.
-Admitted.
-
+Abort.
 
 End gronwall.
 
@@ -1476,7 +1538,6 @@ Lemma thm34 t : t \in `[a, b] ->
   `|y t - z t| <= gamma * expR (k * (t - a)) + mu%:num / k * (expR (k * (t - a)) - 1).
 Proof.
 move=> tab.
-(*have := cauchy_lipschitz_f ab k0 lip2 cont1 r1.*)
 have yint : forall t, y t = u0 + \vint[lebesgue_measure]_(s in `[a, t]) phi s (y s).
   admit.
 have zint : forall t, z t = v0 +
