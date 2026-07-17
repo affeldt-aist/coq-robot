@@ -42,23 +42,15 @@ move => k0 rhorho'.
 by rewrite unlock/=!le_min !ge_min !lexx /= !orbT /= ler_pdivlMr // ler_pM2r ?rhorho' ?orbT// invr_gt0.
 Qed.
 
-Lemma is_sol_oo_subset {R: realType} {n : nat} phi (u0 : 'rV[R]_n) (a b c d : R) sol : c < d -> a <= c -> d <= b-> is_sol_oo phi u0 a b sol -> is_sol_oo phi (sol c) c d sol.
+Lemma is_sol_oo_subset {R : realType} {n : nat} phi (u0 : 'rV[R]_n)
+    (a b c d : R) sol : c < d -> a <= c -> d <= b ->
+  is_sol_oo phi u0 a b sol -> is_sol_oo phi (sol c) c d sol.
 Proof.
-move => cd ac bd isSol.
-split=>//.
-move => x xcd.
-apply isSol.
-move : xcd.
-rewrite !in_itv/= => /andP[cx xd].
-  apply /andP;split.
-  by apply /le_lt_trans/cx.
-  by apply /lt_le_trans/bd.
-have [_ _ +] := isSol.
-apply /continuous_subspaceW.
-rewrite !closure_neitv_oo//.
-by apply: subset_itv.
-apply /lt_le_trans/bd.
-by apply /le_lt_trans/cd.
+move=> cd ac bd isSol; split => //.
+- move=> x xcd; apply isSol.
+  by apply: subset_itv xcd; rewrite bnd_simp.
+- have [_ _ +] := isSol.
+  exact/continuous_subspaceW/closure_subset/subset_itv.
 Qed.
 
 Lemma is_sol_oo_rev {R : realType} {n : nat}
@@ -1345,72 +1337,96 @@ have {}eqn : forall t : R, t \in `]a, b[ ->
     ('D_1 z t - mu t * z t) * (phi t a)^-1 = f t * (phi t a)^-1.
   move=> x xab.
   by rewrite eqn// addrAC subrr add0r.
-have H : forall t : R, t \in `]a, b[ ->
-  ('D_1 z t - mu t * z t) * (phi t a)^-1 =
-  'D_1 (fun t : R => z t * (phi t a)^-1) t.
-  move=> u uab/=.
-  rewrite deriveM//=; last 2 first.
+have derivable_int_mu u : u \in `]a, b[ ->
+    derivable (fun x => \int[lm]_(tau in `[a, x]) mu tau) u 1.
+  move=> uab.
+  apply: (@continuous_FTC1 _ mu (BLeft a) u b _ _ _ _).1 => /=.
+  - by move: uab; rewrite inE => /itvP ->.
+  - by apply: continuous_compact_integrable mu_cont; exact: segment_compact.
+  - by rewrite lte_fin; move: uab; rewrite inE => /itvP ->.
+  - by move: uab; rewrite inE; exact: within_continuous_continuous.
+have derivablephiV u : u \in `]a, b[ ->
+    derivable (fun x : R => (phi x a)^-1) u 1.
+  move=> uab.
+  apply: derivableV => //; first by rewrite expR_eq0.
+  apply: diff_derivable. (* TODO: lemma derivable_comp *)
+  apply: differentiable_comp => /=; last first.
+    exact/derivable1_diffP/derivable_expR.
+  exact/derivable1_diffP/derivable_int_mu.
+have H u : u \in `]a, b[ ->
+  ('D_1 z u - mu u * z u) * (phi u a)^-1 =
+  'D_1 (fun t0 => z t0 * (phi t0 a)^-1) u.
+  move=> uab/=.
+  rewrite [in RHS]deriveM//=; last 2 first.
     exact: derivable_z.
-    admit.
+    exact: derivablephiV.
   rewrite [in RHS]addrC.
-  rewrite mulrBl.
-  rewrite [X in X - _]mulrC.
-  congr (_ + _).
-  rewrite mulrAC mulrC.
-  rewrite -mulrN.
-  congr (_ * _).
-  rewrite [in RHS]/phi.
+  rewrite [in LHS]mulrBl [X in X - _]mulrC; congr (_ + _).
+  rewrite mulrAC mulrC -mulrN; congr (_ * _).
   rewrite [X in 'D_1 X u](_ : _ =
-    (fun x : R => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
-    apply/funext => w.
-    by rewrite expRN.
+    (fun x => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
+    by apply/funext => w; rewrite expRN.
   rewrite -derive1E derive1_comp//; last first.
-    admit.
-  admit.
-have {}eqn : forall t : R,
-    t \in `]a, b[ -> 'D_1 (fun t0 : R => z t0 / phi t0 a) t = f t / phi t a.
-  move=> u uab.
+    exact/derivableN/derivable_int_mu.
+  rewrite derive1E derive1_comp//; last exact: derivable_int_mu.
+  rewrite derive1N// derive1_id mulN1r/=.
+  rewrite (@continuous_FTC1 _ _ (BLeft a) _ b _ _ _ _).2 //=; first last.
+  - by move: uab; rewrite inE; exact: within_continuous_continuous.
+  - by rewrite lte_fin; move: uab; rewrite inE => /itvP ->.
+  - by apply: continuous_compact_integrable mu_cont; exact: segment_compact.
+  - by move: uab; rewrite inE => /itvP ->.
+  rewrite -mulNr [in RHS]mulrC; congr (_ * _).
+  by rewrite -expRN -[in LHS]derive_expR.
+have {}eqn u : u \in `]a, b[ ->
+    'D_1 (fun t0 => z t0 / phi t0 a) u = f u / phi u a.
+  move=> uab.
   rewrite -eqn//.
   rewrite deriveM/=; last 2 first.
     exact: derivable_z.
-    admit.
-  rewrite mulrBl.
-  rewrite addrC.
-  rewrite [X in X + _ = _]mulrC.
-  congr (_ + _).
-  rewrite -[in RHS]mulrA.
-  rewrite [in RHS]mulrCA.
-  rewrite -[in RHS]mulrN.
-  congr (_ * _).
+    exact: derivablephiV.
+  rewrite [in RHS]mulrBl.
+  rewrite [in LHS]addrC [X in X + _ = _]mulrC; congr (_ + _).
+  rewrite -[in RHS]mulrA [in RHS]mulrCA -[in RHS]mulrN; congr (_ * _).
   rewrite [X in 'D_1 X u](_ : _ =
-    (fun x : R => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
-    apply/funext => w.
-    by rewrite expRN.
-  rewrite -derive1E derive1_comp//; last first.
-    admit.
+      (fun x => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
+    by apply/funext => w; rewrite expRN.
+  rewrite -derive1E derive1_comp//; last exact/derivableN/derivable_int_mu.
   admit.
 suff: z t / phi a t =
-     fine (\int[lebesgue_measure]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
+     fine (\int[lm]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
   admit.
-transitivity (
-  \int[lm]_(z0 in `]a, t[)
-    'D_1 (fun t0 : R => z t0 / phi t0 a) z0).
+transitivity (\int[lm]_(z0 in `]a, t[)
+    'D_1 (fun t0 => z t0 / phi t0 a) z0) => /=.
   admit.
-transitivity ((\int[lebesgue_measure]_(z0 in `]a, t[)
-  ((phi t z0 * f z0) / phi t a))); last first.
+transitivity ((\int[lm]_(z0 in `]a, t[)
+    ((phi t z0 * f z0) / phi t a))); last first.
+  rewrite RintegralZr//=.
   admit.
 apply: eq_Rintegral => u uat.
 rewrite eqn; last first.
   rewrite 2!inE in uat *.
   by apply: subset_itvl uat; rewrite bnd_simp (itvP tab).
-rewrite mulrAC mulrC.
-congr (_ * _).
-rewrite /phi.
-rewrite -expRB.
-rewrite -expRN.
-congr expR.
-rewrite -opprB.
-congr (- _).
+rewrite mulrAC mulrC; congr (_ * _).
+rewrite /phi -expRB -expRN; congr expR.
+rewrite -opprB; congr (- _).
+apply/esym/eqP; rewrite subr_eq.
+rewrite [in X in _ + X]/Rintegral -integral_itv_obnd_cbnd//=; last first.
+  apply/measurable_EFinP.
+  admit.
+rewrite -[X in _ + X]/(Rintegral lm _ _) -Rintegral_setU//.
+- rewrite inE in uat.
+  by rewrite -itv_bndbnd_setU// ?bnd_simp// (itvP uat).
+- apply: continuous_compact_integrable => //.
+  + rewrite inE in uat.
+    rewrite -itv_bndbnd_setU// ?bnd_simp ?(itvP uat)//.
+    exact: segment_compact.
+  + rewrite inE in uat.
+    rewrite -itv_bndbnd_setU// ?bnd_simp ?(itvP uat)//.
+    apply: continuous_subspaceW mu_cont.
+    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+  + apply: lt_disjoint => v w/=.
+    rewrite !in_itv/= => /andP[av vu] /andP[uw wt].
+    by rewrite (le_lt_trans vu).
 Admitted.
 
 Lemma gronwall :
