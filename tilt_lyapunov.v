@@ -1260,28 +1260,13 @@ move=> Init0 openInit Init_in_state.
 apply: (@Lyapunov_stability R _ phi Init openInit (Tilt.V1 alpha1 gamma)).
 - exact: V1_diff.
 - move=> D /= f f0 sol_f t t0.
-  apply: (@derive_along_V1_le0 _ _ _ _ _ ((D + t)/2) f) => //.
+  apply: (@derive_along_V1_le0 _ _ _ _ _ D f) => //.
   + rewrite inE.
     apply: Init_in_state.
     exact/set_mem.
-  + split=> //.
-      move=> /= t1 t10D.
-      apply: sol_f => //.
-      apply: subset_itv t10D; rewrite bnd_simp //.
-      admit.
-    apply: continuous_in_subspaceT => /= t'.
-    rewrite closure_neitv_oo ?(itvP t0)//.
-    move=> /[!inE] t'0D.
-    apply: differentiable_continuous.
-    apply/derivable1_diffP.
-    apply sol_f.
-    rewrite /= in t'0D.
-    admit.
-    admit.
-    do 2 red in sol_f.
-  move=> /=.
-  (*apply/derivable1_diffP.*)  admit.
-  admit.
+ + move=> /= t1 t10D.
+   have [_ d _] := sol_f.
+   by apply/derivable1_diffP;apply d.
 - have := V1_is_Lyapunov_candidate alpha1_gt0 gamma_gt0.
   rewrite /is_Lyapunov_candidate /Tilt.point1 => H.
   rewrite /Tilt.V1 lsubmx_const rsubmx_const; split => //.
@@ -1289,6 +1274,6 @@ apply: (@Lyapunov_stability R _ phi Init openInit (Tilt.V1 alpha1 gamma)).
   + move=> z zInit z_neq0.
     case: H => // _ _.
     by apply => //; rewrite in_setT.
-Admitted. (* TODO: URGENT *)
+Qed.
 
 End equilibrium_zero_stable.

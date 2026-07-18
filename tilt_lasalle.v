@@ -7,7 +7,7 @@ From mathcomp Require Import matrix_normedtype.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
 Require Import lasalle (* to at least get the structure of filters on sets *).
-Require Import ode tilt_stability tilt_lyapunov.
+Require Import ode ode_common tilt_stability tilt_lyapunov.
 
 (**md**************************************************************************)
 (* # Formalization of [benallegue2023itac] (2/2)                              *)
@@ -164,7 +164,6 @@ Require Import ode_global.
 Section LaSalle_tilt.
 Context {K : realType}.
 Let U := 'rV[K]_6.
-Variable sol : U -> K -> U.
 Variables gamma alpha1 : K.
 Hypothesis gamma_gt0 : 0 < gamma.
 Hypothesis alpha1_gt0 : 0 < alpha1.
@@ -237,94 +236,222 @@ rewrite /Tilt.Upsilon1.
 (* TODO: I think we already proved that inside a proof *)
 Abort.
 
-(*Lemma invariant_sublevelUpsilon1_new b (y : K -> U) :
-  y 0 \in Tilt.Upsilon1 ->
-  is_sol_oo (fun=> phi) (y 0) 0 b y ->
-  [set y x | x in `[0, b[] `<=` sublevelUpsilon1 (y 0).
-Proof.
-move => y0Upsilon1 /= is_sol_oo_y _/= [t t0b <-].
-split; last first.
-  apply/(@tilt_state_spaceS  _ alpha1 gamma).
-  exists y, b => /=. (* use large enough time *)
-  split => //.
-  - rewrite -/phi.
-
-    have [_ + _] := is_sol_oo x (t + 1).
-    rewrite /sol_is_deriv_obnd /sol_is_deriv_co /sol_is_deriv_cbnd/=.
-    
-    apply isSol => //.
-    by rewrite inE.
-  - exists t => //.
-    by rewrite /= in_itv/=t0/=ltrDl.
-move/mem_set : (Kx) => /isSol /sol_is_deriv_c0yP solA.
-rewrite /sublevel/=.
-rewrite (le_trans _ Vx)//.
-rewrite -[in leRHS](@initp x).
-have : {in `[0, t + 1[, forall t : K, derivable (sol x) t 1}.
-  move=> t'.
-  rewrite in_itv/= => /andP[t0' _].
-  by apply solA.
-move/V_nincr => /= => /(_ (Tilt.V1 alpha1 gamma)).
-apply.
-- exact: V1_diff.
-- move => t1 tt1.
-  apply: (@derive_along_V1_le0 _ _ _ _ _ (t + 1)) => //.
-  + by rewrite initp inE.
-  + apply: sol_is_deriv_c0yco => //.
-    apply/sol_is_deriv_c0yP.
-    by apply solA.
-  + move=> t2 /andP[t2' _].
-    apply/derivable1_diffP.
-    apply solA.
-    by rewrite ltW.
-- by rewrite ltrDl.
-- by rewrite lexx.
-Qed.*)
-
-Local Lemma solP' (y : K -> U) : y 0 \in Tilt.Upsilon1 ->
-  exists sol, is_sol_obnd (fun => phi) (y 0) 0 (BInfty K false) sol.
+Let solP' y0 : y0 \in Tilt.Upsilon1 ->
+  exists sol, is_sol_obnd (fun => phi) y0 0 (BInfty K false) sol.
 Proof.
 move=> y0Upsilon1.
-apply: (@compact_containment_global_sol _ _ _ _ (sublevelUpsilon1 (y 0))) => /=.
+apply: (@compact_containment_global_sol _ _ _ _ (sublevelUpsilon1 y0)) => /=.
 - exact: compact_sublevelUpsilon1.
-- move=> y0.
-  have [r [k y0r]] := @tilt_eqn_locally_lipschitz K alpha1 _ gamma_gt0 y0.
+- move=> y1.
+  have [r [k y0r]] := @tilt_eqn_locally_lipschitz K alpha1 _ gamma_gt0 y1.
   exists r, k; split => //.
   move=> v vy0r.
-  (* TODO: prove Tilt.eqn continuous*)
-  admit.
-- move=> t y' [y'y0].
-  rewrite /sol_is_deriv_obnd/= => Hy' conty'.
-  move=> _/= -[x x0t] <-.
-  split.
-Abort.
-
+  apply: cst_continuous.
+- move=> t y' [init solp cont] y1 [t0 /= t0t <-].
+  split;last first.
+    apply/(@tilt_state_spaceS  _ alpha1 gamma).
+    exists y', t; split; rewrite ?init//.
+      by exists t0.
+rewrite /sublevel/=.
+rewrite -init.
+apply: (V_nincr (D:=t)) => //=.
+- move=> t' itvt'.
+  by apply solp.
+-  apply /continuous_subspaceW/cont.
+  rewrite closure_neitv_oo.
+    by apply : subset_itvl; rewrite bnd_simp.
+    move  : t0t.
+    by rewrite in_itv/= => /andP[];apply /le_lt_trans.
+- exact: V1_diff.
+- apply: (@derive_along_V1_le0 _ _ _ _ _ t) => //.
+    by rewrite init.
+  move => t1 t1t.
+  apply/derivable1_diffP.
+  by apply solp.
+- by move : t0t;rewrite in_itv/= => /andP[].
+- by apply /andP;split=>//;move :t0t; rewrite /in_itv/= => /andP[].
+Qed.
 (* NB: was hypo in the first version *)
-Lemma solP : forall y, y 0 \in Tilt.Upsilon1 ->
-  lasalle.is_sol phi y <-> y = sol (y 0).
-Proof.
-move=> /= y y0Upsilon.
-(* using thm 3.3 *)
-(*have /= := @compact_containment_global_sol K 6 0 (fun=> phi)
-  (sublevelUpsilon1 (y 0)) (@compact_sublevelUpsilon1 (y 0)).*)
-(* TODO *)
-Admitted.
 
-(* NB: was hypo in the first version *)
-Lemma initp : forall p, sol p 0 = p.
+Lemma solP : exists sol, (forall p, sol p 0 = p) /\  forall y, y 0 \in Tilt.Upsilon1 ->
+  (lasalle.is_sol phi y <-> y = sol (y 0)).
 Proof.
-(* TODO *)
-Admitted.
+have /choice [sol0 sol0P] : forall y0, exists sol, sol 0 = y0 /\ (y0 \in Tilt.Upsilon1 -> is_sol_obnd (fun => phi) y0 0 +oo%O sol).
+  move => y0.
+  case hy : (y0 \in Tilt.Upsilon1); last by exists (fun t => y0);split.
+  have [sol solp]:= (solP' hy).
+  exists sol;split=>//.
+  by apply solp.
+set sol := fun y0 t => if (t < 0) then 2 *: y0 - sol0 y0 (-t) else sol0 y0 t.
+exists sol. 
+split => //.
+  move => p.
+  rewrite /sol ltxx.
+  by have [+ _] := (sol0P p).
+move => y yp.
+split;last first.
+- move => ->.
+  split=>// t tp.
+    rewrite /sol tp /= ltxx ltrNl oppr0 ltNge ltW ?tp//=.
+    suff {1}-> : (y 0) = (sol0 (y 0) 0) by [].
+    by have [-> _] := sol0P (y 0).
+  rewrite /sol ltNge tp/=.
+  move: tp.
+  rewrite le_eqVlt.
+  move/orP => [/eqP <-| tp];last first.
+  + apply: (near_eq_is_derive (f := (sol0 (y 0)))).
+      near=>t0.
+      rewrite ltNge.
+      suff -> : 0 <= t0 by [].
+      near:t0.
+      by apply: lt_le_nbhsr.
+   have [_ +] := sol0P (y 0).
+   move /(_ yp).
+   move => [_ + _].
+   rewrite /sol_is_deriv_obnd.
+   move /(_ t).
+   by move => h;split; rewrite -?derive1E;apply h; rewrite in_itv/=tp.
+ + rewrite /is_sol_obnd/sol_is_deriv_obnd/= in sol0P.
+   have [init d c] := (sol0P (y 0)).2 yp.
+   set f := sol0 (y 0).
+   set F := fun t => if t < 0 then 2 *: y 0 - f (- t) else f t.
+   set v := phi (f 0).
+   
+   suff cvg:  (fun (h : K)  => h^-1 *: (F h - F 0)) @ 0^' --> v.
+   apply: DeriveDef.
+    apply /cvgP.
+    by under eq_fun do rewrite /= addr0 scaler1;apply cvg.
+    apply: cvg_lim => //.
+    by under eq_fun do rewrite /= addr0 scaler1;apply cvg.
+   rewrite /F ltxx.
+   have -> : (fun h => h^-1 *: ((if h < 0 then 2 *: y 0 - f (- h) else f h) - f 0)) = fun h => `|h|^-1 *: (f `|h| - f 0).
+     apply funext.
+     move => h.
+     case: ifP => h0.
+       rewrite ltr0_norm// invrN scaleNr -scalerN opprD opprK.
+       congr (_ *: _).
+       have -> : f 0 = y 0 by apply sol0P.
+       by rewrite scaler_nat/= mulr2n -!addrA (addrC (- f (-h)) (y 0)) subrKC.
+     rewrite ger0_norm//.
+     move : h0.
+     rewrite ltNge.
+     by move/negbT/negPn.
+     have cvg_right : ( h^-1 *: (f h - f 0)) @[h --> 0^'+] --> v.
+       rewrite /f.
+     admit.
+     rewrite (cvgrPdist_lt _ _) => /= eps eps0.
+     have /cvgrPdist_lt := cvg_right.
+     move /(_ _ eps0).
+     move=> H.
+     have [/= e e0 B]:= H.
+     near=> t0.
+     have [lt0 | ge0] := ltP t0 0.
+     - rewrite ltr0_norm ?oppr_lt0 //.
+       apply B; last by rewrite oppr_gt0.
+       rewrite /ball_/= opprK add0r.
+       near:t0.
+       by apply: dnbhs0_lt.
+     - rewrite ger0_norm  //.
+       have gt0 : 0 < t0.
+         rewrite lt_neqAle ge0 andbT eq_sym.
+         near:t0.
+         apply: nbhs_dnbhs_neq.
+       apply B => //.
+       rewrite /ball_/= ball_norm_sym/ball_/=// subr0.
+       near:t0.
+       by apply: dnbhs0_lt.
+move => is_sol.
+suff h: forall t, t >= 0 -> y t = sol0 (y 0) t.
+  apply funext => /= t.
+  rewrite /sol.
+  case: ifP => t0.
+    have [+ _] := is_sol.
+    move /(_ _ t0) => ->.
+    congr (_ - _).
+    by rewrite h// lerNr oppr0 ltW.
+  apply h. 
+  by rewrite leNgt t0.
+move => /= t t0.
+have [_ +]:= is_sol.
+move /(_ _ t0) => h.
+move: t0.
+rewrite le_eqVlt.
+move/orP => [/eqP <-| tp]; first by have [-> _] := (sol0P (y 0)).
+have hs : is_sol_oo (fun => phi) (sol0 (y 0) 0) 0 t (sol0 (y 0)).
+  split=>//.
+  move => t0 t0t.
+  apply sol0P => //.
+  move : t0t.
+  by rewrite !in_itv/= => /andP[-> _].
+  have [_ +] := sol0P (y 0).
+  move /(_ yp).
+  move => [_ _ +].
+  apply: continuous_subspaceW.
+  apply: closure_subset.
+  by apply subset_itvl.
+apply: (locally_cauchy_lipschitz_unique _ _ hs) => //.
+  split => //.
+    by have [-> _] := sol0P (y 0).
+    move => t0 t0t.
+    rewrite derive1E.
+    by split; apply is_sol;rewrite ltW//;move : t0t; rewrite in_itv/= => /andP[].
+    rewrite closure_neitv_oo//.
+  apply: continuous_in_subspaceT => /= t0 t0t.
+  apply: differentiable_continuous.
+  apply /derivable1_diffP.
+  apply is_sol => //.
+  by move : t0t; rewrite inE/=in_itv/= => /andP[].
+move => t0 t00 t0t.
+have [r [k y0r]] := @tilt_eqn_locally_lipschitz K alpha1 _ gamma_gt0 (y t0).
+  exists r, k; split => //.
+  move=> v vy0r.
+  apply: cst_continuous.
+by rewrite in_itv/= lexx ltW.
+Unshelve. all: by end_near. Admitted.
+
+Let sol := proj1_sig (cid solP).
+Let sol_spec := proj2_sig (cid solP).
+(* NB: was hypo in the first version *)
+
+Lemma initp : forall p,  sol p 0 = p.
+Proof.
+move => p.
+by apply sol_spec.
+Qed.
 
 Let isSol p : p \in Tilt.Upsilon1 -> sol_is_deriv_c0y phi (sol p).
 Proof.
 move=> Kp.
 apply/sol_is_deriv_c0yP.
-have : lasalle.is_sol phi (sol p) by apply/solP; rewrite ?initp.
+have : lasalle.is_sol phi (sol p) by apply sol_spec; rewrite ?initp.
 move=> [/= _ H] t t0.
 split.
   by apply: ex_derive; exact: H.
 by rewrite derive1E; apply H.
+Qed.
+
+Let isSol_oo p t : p \in Tilt.Upsilon1 -> is_sol_oo (fun => phi) (sol p 0) 0 t (sol p).
+Proof.
+move => ph.
+split => //.
+  split => //.
+  apply isSol => //.
+  by move : H;rewrite !in_itv/= => /andP[h _];rewrite ltW.
+  apply isSol => //.
+  by move : H;rewrite !in_itv/= => /andP[h _];rewrite ltW.
+  apply: continuous_in_subspaceT.
+  move => t0 t0p.
+  apply: differentiable_continuous.
+  apply /derivable1_diffP.
+  apply isSol => //.
+  suff h: 0 < t.
+    rewrite in_itv/= andbT.
+    move : t0p.
+    by rewrite closure_neitv_oo// inE/= in_itv/= => /andP[].
+    rewrite ltNge.
+    move : t0p.
+    apply contraPN => h0.
+    by rewrite set_itv_ge ?closure0 ?in_set0 // bnd_simp -leNgt.
 Qed.
 
 (* continuity in initial value: assumption needed for LaSalle *)
@@ -346,33 +473,35 @@ split; last first.
   split => //.
   + rewrite initp.
     exact/mem_set.
-  + apply sol_is_deriv_c0yco.
-    apply isSol => //.
-    by rewrite inE.
+    by apply isSol_oo;rewrite inE.
   + exists t => //.
     by rewrite /= in_itv/=t0/=ltrDl.
 move/mem_set : (Kx) => /isSol /sol_is_deriv_c0yP solA.
 rewrite /sublevel/=.
 rewrite (le_trans _ Vx)//.
 rewrite -[in leRHS](@initp x).
-have : {in `[0, t + 1[%R, forall t : K, derivable (sol x) t 1}.
-  move=> t'.
-  rewrite in_itv/= => /andP[t0' _].
-  by apply solA.
-move/V_nincr => /= => /(_ (Tilt.V1 alpha1 gamma)).
-apply.
+apply : (V_nincr (D := (t+1))).
+- move=> t' itvt'.
+  apply isSol => //.
+    by rewrite inE.
+    by move: itvt'; rewrite !in_itv /= => /andP[t'0 _]; rewrite ltW.
+- apply: continuous_in_subspaceT.
+  move => t' t'p.
+  apply: differentiable_continuous.
+  apply /derivable1_diffP.
+  apply solA.
+  move : t'p.
+  by rewrite inE/=in_itv/= => /andP[].
 - exact: V1_diff.
 - move => t1 tt1.
   apply: (@derive_along_V1_le0 _ _ _ _ _ (t + 1)) => //.
   + by rewrite initp inE.
-  + apply: sol_is_deriv_c0yco => //.
-    apply/sol_is_deriv_c0yP.
-    by apply solA.
+  + by apply isSol_oo; rewrite inE.
   + move=> t2 /andP[t2' _].
     apply/derivable1_diffP.
     apply solA.
     by rewrite ltW.
-- by rewrite ltrDl.
+- by rewrite ltrDl. 
 - by rewrite lexx.
 Qed.
 
@@ -414,7 +543,7 @@ have [issol0 issol1]: lasalle.is_sol phi (sol p).
   apply: (lasalle.sol_is_sol (sol := sol) (K:=Tilt.Upsilon1)) => //.
   by apply: initp.
   move => y Ky.
-  by apply /solP;rewrite inE.
+  by apply sol_spec; rewrite inE.
   move : sp.
   by rewrite inE.
 apply : differentiable_continuous.
@@ -441,7 +570,7 @@ move => ps.
 have lasalle_sol (y : K -> 'rV_6) :
   sublevelUpsilon1 p (y 0) -> lasalle.is_sol phi y <-> y = sol (y 0).
   move=> Ky.
-  apply/solP.
+  apply sol_spec.
   rewrite inE.
   by apply Ky.
 have H : lasalle.limS sol (sublevelUpsilon1 p) `<=`
@@ -485,8 +614,7 @@ have H : lasalle.limS sol (sublevelUpsilon1 p) `<=`
     have qs (t : K) : 0 <= t -> state_space phi (sublevelUpsilon1 q) (sol q t).
       move=> t0; exists (sol q), (t + 1); split.
       + by rewrite initp; apply: mem_sublevelUpsilon1; case: qKsub.
-      + apply: sol_is_deriv_c0yco.
-        by apply isSol; rewrite inE; apply qKsub.
+        by apply isSol_oo;rewrite inE;apply qKsub.
       + exists t => //.
         by rewrite/=in_itv/= t0 ltrDl ltr01.
     have lim_sp : (sol q x @[x --> +oo]) (sublevelUpsilon1 q).
@@ -532,7 +660,7 @@ have -> : Tilt.points = [set x : 'rV[K]_6 | V1dot  x = 0] `&` Tilt.Upsilon1.
     apply: sol_is_deriv_c0yco.
     by apply isSol.
   rewrite /Tilt.points/=.
-  apply: (V1dot_eq0_p1_or_p2 _ sol') => //.
+  apply: (V1dot_eq0_p1_or_p2 _ (isSol_oo 1 h2 )) => //.
     rewrite hi.
     exact/mem_set.
   by rewrite bound_itvE ltr01.

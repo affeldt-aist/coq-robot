@@ -250,23 +250,23 @@ Variable Init : set U.
 
 Definition is_stable_at (x : U) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
-  forall f D, f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
+  forall f D, f 0 \in Init -> is_sol_oo (fun=> phi) (f 0) 0 D f ->
     `| f 0 - x | < d -> forall t, t \in `[0, D[%R -> `| f t - x | < eps.
 
 (* assuming solution exists for all time *)
-Definition is_global_time_stable_at (x : U) :=
-  forall eps, eps > 0 -> exists2 d, d > 0 &
-  forall f, f 0 \in Init -> sol_is_deriv_c0y phi f ->
-    `| f 0 - x | < d -> forall t, 0 <= t -> `| f t - x | < eps.
+(* Definition is_global_time_stable_at (x : U) := *)
+(*   forall eps, eps > 0 -> exists2 d, d > 0 & *)
+(*   forall f, f 0 \in Init -> sol_is_deriv_c0y phi f -> *)
+(*     `| f 0 - x | < d -> forall t, 0 <= t -> `| f t - x | < eps. *)
 
-Lemma stable_global_time : is_stable_at `<=` is_global_time_stable_at.
-Proof.
-move=> x H e /H [d d0 stable].
-exists d => // z0 z0Init zglob zd /= t t0.
-apply: (stable _ (t + 1)) => //.
-  exact: sol_is_deriv_c0yco.
-by rewrite in_itv/= t0/= ltrDl.
-Qed.
+(* Lemma stable_global_time : is_stable_at `<=` is_global_time_stable_at. *)
+(* Proof. *)
+(* move=> x H e /H [d d0 stable]. *)
+(* exists d => // z0 z0Init zglob zd /= t t0. *)
+(* apply: (stable _ (t + 1)) => //. *)
+(*   exact: sol_is_deriv_c0yco. *)
+(* by rewrite in_itv/= t0/= ltrDl. *)
+(* Qed. *)
 
 Definition is_asymptotically_stable_at (x : U) (f : R -> U) : Prop :=
   exists2 d, d > 0 & `| f 0 - x | < d -> f t @[t --> +oo] --> x.
@@ -279,7 +279,8 @@ Let U := 'rV[R]_n.+1.
 Variable phi : U -> U.
 Variable D : R.
 Variable f : R -> U.
-Hypothesis derivable_f : {in `[0, D[%R, forall t, derivable f t 1}.
+Hypothesis derivable_f : {in `]0, D[%R, forall t, derivable f t 1}.
+Hypothesis within_cont_f : {within `[0, D[, continuous f}.
 
 Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
@@ -305,28 +306,14 @@ apply: (@ler0_derive1_le_cc _ (V \o f) 0 b) => //=.
     have -> : b = 0 by apply/eqP; rewrite eq_le b0 (le_trans a_ge0).
     rewrite set_itv1.
     exact: continuous_subspace1.
-  apply/continuous_within_itvP => //; split.
+  apply: within_continuous_comp => //.
+  (* apply/continuous_within_itvP => //; split. *)
   + move=> z z0b.
     apply: continuous_comp; last exact: differentiable_continuous.
     apply: differentiable_continuous => //.
-    rewrite -derivable1_diffP; apply: derivable_f.
-    by apply: subset_itv z0b; rewrite bnd_simp// ltW.
-  + have d0 : 0 < D by exact/lt_trans/bD.
-    have cont : {in `[0, D[%R, continuous f}.
-      move=> t t0D.
-      apply: differentiable_continuous.
-      exact/derivable1_diffP/derivable_f.
-    apply: cvg_comp.
-      apply: cvg_at_right_filter.
-      apply: cont.
-      by rewrite bound_itvE.
-    exact: (differentiable_continuous (Vdiff (f 0))).
-  + apply: cvg_at_left_filter.
-    apply: differentiable_continuous => //.
-    apply: differentiable_comp.
-      rewrite -derivable1_diffP; apply: derivable_f.
-      by rewrite in_itv/= (ltW b0)// bDelta.
-    exact: Vdiff.
+  + apply/continuous_subspaceW/within_cont_f.
+    apply: subset_itvl.
+    by rewrite bnd_simp.
 - by rewrite bound_itvE (le_trans a_ge0).
 - by rewrite in_itv/= ab andbT.
 Qed.
@@ -405,7 +392,7 @@ Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
 Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis DV_le0 : forall D f, f 0 \in Init ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 (* khalil theorem 4.1 *)
@@ -461,7 +448,7 @@ have Omega_beta_Br : Omega_beta `<=` (B r)°.
     by have := lt_le_trans beta_alpha (le_trans alphaVy Vybeta); rewrite ltxx.
 (* any trajectory starting in Omega_beta at t = 0
    stays in Omega_beta for all t >= 0 *)
-have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
+have Df_Omega_beta D f : f 0 \in Init -> is_sol_oo (fun=> phi) (f 0) 0 D f ->
    f 0 \in Omega_beta -> forall t, t \in `[0, D[%R -> f t \in Omega_beta.
   move=> f0 solf f0_Omega.
   have /= V_nincr_consequence t : t \in `]0, D[%R -> forall u, 0 <= u <= t ->
@@ -469,7 +456,13 @@ have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
     move=> /= t0D u ut Vle0l; apply/andP; split.
     - move: f0_Omega; rewrite inE /Omega_beta/= => -[Brphi0 Vphi0beta].
       apply: (@V_nincr _ _ D f).
-      + by move=> t' t'0D; apply solf.
+      + by move=> t' t'0D; have [_ d _] := solf; apply d.
+      + have [_ _ solc] := solf.
+        apply /continuous_subspaceW/solc; rewrite closure_neitv_oo.
+        by apply: subset_itvl;rewrite bnd_simp.
+        move  : t0D.
+        rewrite in_itv/= => /andP[].
+        by apply /lt_trans.
       + by move=> t'; exact: Vdiff.
       + exact: DV_le0.
       + by rewrite (itvP t0D).
@@ -492,12 +485,13 @@ have Df_Omega_beta D f : f 0 \in Init -> sol_is_deriv_co (fun=> phi) 0 D f ->
     have norm_phi_cont : {within `[0, t]%classic, continuous (normr \o f)}.
       apply/(@within_continuous_comp _ _ _ `[0, t] f (@normr _ _)) => //.
         by move=> z _; exact: norm_continuous.
-      have : {in `[0, D[, continuous f}.
-        move=> t'; rewrite inE => t'0D.
-        by apply/differentiable_continuous/derivable1_diffP; apply solf.
-      move/continuous_in_subspaceT.
-      apply: continuous_subspaceW.
+      have [_ _ cont] := solf.
+      apply /continuous_subspaceW/cont.
+      rewrite closure_neitv_oo.
       by apply: subset_itvl; rewrite bnd_simp (itvP t0D).
+      move  : t0D.
+      rewrite in_itv/= => /andP[].
+      by apply /lt_trans.
     have : Num.min `|f 0| `|f t| <= r <= Num.max `|f 0| `|f t|.
       by rewrite ge_min f0r/= le_max (ltW rft) orbT.
     move=> /(IVT t0 norm_phi_cont)[c cI norm_phi_c].
@@ -596,6 +590,21 @@ rewrite subrK derive1E deriveB//; last by apply H.
 by rewrite derive_cst subr0 -derive1E; apply H.
 Qed.
 
+Lemma is_sol_oo_substitution D f x :
+ is_sol_oo (fun=> phi) (f 0) 0 D f ->
+ is_sol_oo (fun _ y => phi (y + x)) (f 0 - x) 0 D (f \- cst x).
+Proof.
+move  => /= [init sol cont ];split => //.
+  split=>//.
+  apply: derivableB => //.
+  by apply sol.
+rewrite subrK derive1E deriveB//; last by apply sol.
+by rewrite derive_cst subr0 -derive1E; apply sol.
+apply : within_continuousB => //.
+apply: continuous_subspaceT.
+exact: cst_continuous.
+Qed.
+
 Lemma is_stable_at_substitution x :
   is_stable_at (fun y => phi (y + x)) [set y - x | y in Init] 0 ->
   is_stable_at phi Init x.
@@ -608,7 +617,7 @@ rewrite -[_ - _]subr0.
 rewrite -[f t - x]/((f \- cst x) t).
 apply: (H _ D) => //.
 - exact/image_f.
-- exact: sol_is_deriv_co_substitution.
+- exact: is_sol_oo_substitution.
 - by rewrite /= subr0.
 Qed.
 
@@ -661,7 +670,7 @@ Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis V'_le0 : forall D (f : R -> U),
   f 0 \in Init ->
-  sol_is_deriv_co (fun=> phi) 0 D f ->
+  is_sol_oo (fun=> phi) (f 0) 0 D f ->
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 Theorem Lyapunov_stability :
@@ -680,12 +689,13 @@ apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
     by apply: filter_filter; exact: mx_nbhs_filter. (* TODO: should be automatic! *)
   by apply: cvg_cst; apply: filter_filter; exact: mx_nbhs_filter.
 - by move=> t; exact: differentiable_comp.
-- move=> /= D sol sol0 sol0Init /= t t0D.
+- move=> /= D sol sol0Init solp /= t t0D.
   rewrite [leLHS](_ : _ =  ('D~((fun y => y + x) \o sol) V) t); last first.
     rewrite derive_along_derive; last 2 first.
       exact: differentiable_comp.
       apply/derivable1_diffP.
-      apply sol0Init.
+      have [_ d _] := solp.
+      apply d.
       by apply: subset_itvr t0D; rewrite bnd_simp.
     have -> : (fun y => V (y + x)) \o sol = V \o (+%R^~ x \o sol).
       exact/funext.
@@ -693,19 +703,28 @@ apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
       exact: differentiable_comp.
       apply: differentiable_comp => //.
       apply/derivable1_diffP.
-      apply sol0Init.
+      have [_ d _] := solp.
+      apply d.
       by apply: subset_itvr t0D; rewrite bnd_simp.
     by [].
   apply: (@V'_le0 D); last by assumption.
   - rewrite inE/=.
-    move: sol0; rewrite inE/= => -[x0 x0Init <-].
+    move: sol0Init; rewrite inE/= => -[x0 x0Init <-].
     by rewrite subrK.
-  - move=> /= z z0D; split.
+  - split => //=.
+    have [_ d _] := solp.
+    move=> /= z z0D; split.
       apply/derivable1_diffP/differentiable_comp => //.
-      by apply/derivable1_diffP; apply sol0Init.
-    rewrite derive1E deriveD//; last by apply sol0Init.
+      apply/derivable1_diffP.
+      by apply d.
+    rewrite derive1E deriveD//; last by apply d.
     rewrite derive_cst addr0 -derive1E.
-    by apply sol0Init.
+    by apply d.
+    apply: within_continuous_comp.
+    move => x0 x0p.
+    apply: continuousD => //.
+    apply: cst_continuous.
+    by have [_ _ +] := solp.
 exact: is_Lyapunov_candidate_substitution.
 Qed.
 
