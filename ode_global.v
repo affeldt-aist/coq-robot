@@ -10,6 +10,7 @@ From mathcomp Require Import realfun measurable_realfun lebesgue_measure.
 From mathcomp Require Import lebesgue_integral ftc.
 Require Import tilt_mathcomp tilt_analysis ode_common ode_contseg ode.
 
+From mathcomp Require Import ring.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -853,10 +854,8 @@ Hypothesis phi_loc_lip :
 
 
 Local Lemma phi_cont :
-  {within setT `*` K,
-    continuous (fun p : (R * U)%type => phi p.1 p.2)}.
+    continuous (fun p : (R * U)%type => phi p.1 p.2).
 Proof.
-apply: continuous_subspaceT.
 move => [/= t0 y0].
 apply/cvg_ballP => eps eps0 /=.
 have [r [k [Hlip Hcont]]] := phi_loc_lip y0.
@@ -1224,23 +1223,130 @@ apply: (solution_extends_from_compact (c := sup bset + 1) (K:=K)) => //.
   move => /= y0 Hy0.
   apply: continuous_subspaceT.
   by apply hrk2.
-by apply /continuous_subspaceW/phi_cont;apply setSX.
+by apply /continuous_subspaceT/phi_cont.
 Qed.
 
 (* Thm 3.3 in Khalil *)
 Lemma compact_containment_global_sol :
   (forall b sol, is_sol_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) ->
-  exists sol, is_sol_obnd phi u0 a (BInfty R false) sol.
+  exists sol, is_sol_obnd phi u0 a (BInfty R false) sol /\ ( h^-1 *: (sol (a+h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
 Proof.
 move => H.
+suff [sol [init d cont]]:  exists sol, is_sol_obnd phi u0 a (BInfty R false) sol.
+   exists sol; split=>//. 
+   apply /cvgrPdist_le.
+   move => eps eps0.
+   rewrite closure_neitv_coo in cont.
+   have := cont.
+   move /continuous_within_itvcyP => [_ cr].
+ have phi_sol_cont : {within `[a, +oo[, continuous (fun t=> (phi t (sol t)))}.
+    have -> : (fun t => phi t (sol t)) = (fun t => phi t.1 t.2) \o (fun t => (t, sol t)).
+      by apply funext.
+    apply: within_continuous_comp.        
+      by move => t tp; apply phi_cont.
+    apply /continuous_within_itvcyP; split.
+      move => t ta.
+      rewrite /continuous_at.
+      have /continuous_within_itvcyP [+ _] := cont.
+      move /(_ _ ta) => c0.
+      by apply (cvg_pair cvg_id c0).
+    have /continuous_within_itvcyP [_ +] := cont => c0.
+    have ca : x @[x --> a^'+] --> a.
+       move => S [e /= e0 Be].
+       exists e => // x0 bx0 _.
+       by apply Be.
+    by apply (cvg_pair ca c0).
+  have hphi : phi t (sol t) @[t --> a^'+] --> phi a (sol a).
+    by have /continuous_within_itvcyP [_ +] := phi_sol_cont.
+  have heps2 : 0 < eps / 2 /2 by rewrite !divr_gt0.
+  have heps20 : 0 < eps / 2 by rewrite !divr_gt0.
+  move /cvgrPdist_le : hphi.
+  move /(_ _ heps2) => /nbhs_right0P hphi.
+  have [e [e0 he]] : exists e, 0 < e /\ forall e', e' < e -> 0 < e' -> `|phi a (sol a) - phi (a + e') (sol (a + e'))| <= eps / 2 / 2.
+     move : hphi.
+     rewrite nearE.
+     move => [e [e0 ep]].
+     exists e; split=>//.
+     move => e' e'e e'0.
+     apply ep=>//.
+     by rewrite /ball_/= ball_norm_sym/ball_//= subr0  gtr0_norm ?divr_gt0. 
+  near=>h.
+  have h0 : 0 < h.
+     by near:h; exact: nbhs_right_gt.
+   rewrite -(subrKA (phi (a+h) (sol (a+h)))) (le_trans  (ler_normD _ _)) // (splitr eps) lerD//.
+      apply: le_trans.
+      apply he => //.
+      by rewrite !ler_pM// ?divr_ge0// ?ler_pdivrMr// ?ltW// mulrDr mulr1 ltrDl.
+      rewrite -(@ler_pM2l _ h)//  -{1}(gtr0_norm h0) -normrZ scalerBr scalerA divff// scale1r distrC.
+     rewrite /Num.norm/= !mx_normrE.
+     apply /bigmax_leP; split; first by rewrite ltW// mulr_gt0.
+     move=> /= [i j] _/=.
+     rewrite {i}ord1.
+     pose f := fun t => (sol t - sol a - (t - a) *: phi (a + h) (sol (a + h))) ord0 j.
+     suff : `|f (a+h)| <= h * (eps/2).
+       by rewrite /f;apply le_trans; rewrite -(addrA a) subrKC.
+     have ah: a < a + h by rewrite ltrDl.
+     have fa0 : f a = 0.
+       by rewrite /f !subrr scale0r subrr mxE.
+     have df :  forall x : R, x \in `]a, a+h[%R -> is_derive x 1 f ((phi x (sol x) - phi (a + h) (sol (a +h))) ord0 j).  
+       move => x xah.
+       rewrite /f !mxE.
+       under eq_fun do rewrite !mxE.
+       apply: is_deriveB.
+       rewrite -(subr0 (phi _ _)) !mxE.
+       apply: is_deriveB.
+       have [| deri1 d1] := (d x) .
+         by move : xah; rewrite !in_itv/= => /andP[-> _].
+       have /derivable_mxP deri1' := deri1.
+       split => //.
+       have := d1.
+       rewrite derive1E !derive_mx  //=.
+       move =>/rowP /(_ j).
+       by rewrite mxE.
+       apply: is_derive_cst.
+       under eq_fun do rewrite mulrBl.
+       rewrite -{3}(subr0 ((phi (a+h) _) )) !mxE.
+       apply: is_deriveB.
+       set c := phi (a + h) (sol (a + h)) ord0 j.
+       have {2}-> : c = x *: 0 +  c *: 1.
+         by rewrite scaler0 scaler1 add0r.
+       apply : is_deriveM.
+       apply: is_derive_cst.
+     have [| c cah] := MVT ah df.
+       rewrite /f.
+       suff /within_continuous_coord: {within `[a, a + h], continuous fun t : R =>
+                                  (sol t - sol a - (t - a) *: phi (a + h) (sol (a + h)))} by [].
+       apply: within_continuousB.
+       apply: within_continuousB.
+       apply /continuous_subspaceW/cont.
+       by apply: subset_itvl.
+       by apply /continuous_subspaceT/cst_continuous.
+       rewrite /=.
+       under [X in {within _, continuous X}] eq_fun do rewrite scalerBl.
+       apply: within_continuousB.
+       apply /continuous_subspaceT/scalel_continuous.
+       apply /continuous_subspaceT/cst_continuous.
+    rewrite -(addrA a) subrKC fa0 subr0 => ->.
+    rewrite mulrC normrM gtr0_norm// ler_pM //.
+   suff: `|(phi c (sol c) - phi (a + h) (sol (a + h)))| <= eps / 2.
+     apply /le_trans. 
+     rewrite {2}/Num.norm/= !mx_normrE.
+     by apply: le_bigmax (ord0, _).
+   rewrite -(subrKA (phi a (sol a))) (le_trans  (ler_normD _ _)) // (splitr (eps / 2)) lerD//.
+     rewrite distrC.
+     have -> : c = a + (c - a) by ring.
+     apply: he => //.
+     apply (@lt_trans _ _ h) => //.
+     by rewrite ltrBlDl;move : cah;rewrite in_itv/= => /andP[_ ->].
+     by rewrite subr_gt0;move : cah;rewrite in_itv/= => /andP[-> _].
+     by apply: he => //.
 apply no_ub_global_sol.
 suff : ~ has_sup bset.
   by apply contra_not => hub;split=>//;apply bset_nonempty.
 exact: compact_containment_no_sup.
-Qed.
+Unshelve. all: by end_near. Qed.
 
 End max_solution.
-
 Lemma within_continuousM {T : topologicalType} {K : (*numFieldType*)realType}
     (V := (*pseudoMetricNormedZmodType*) K) (A : set T) (f g : T -> V) :
   {within A, continuous f} -> {within A, continuous g} ->
@@ -1302,7 +1408,6 @@ Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu : R -> R)
 
 Let lm := @lebesgue_measure R.
 
-From mathcomp Require Import ring.
 
 Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
   {in `]a, b[, forall x, derivable z x 1} ->

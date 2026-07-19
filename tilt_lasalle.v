@@ -237,9 +237,12 @@ rewrite /Tilt.Upsilon1.
 Abort.
 
 Let solP' y0 : y0 \in Tilt.Upsilon1 ->
-  exists sol, is_sol_obnd (fun => phi) y0 0 (BInfty K false) sol.
+  exists sol, is_sol_obnd (fun => phi) y0 0 (BInfty K false) sol /\ (h^-1 *: (sol h - sol 0)) @[h --> 0^'+] --> phi (sol 0).
 Proof.
 move=> y0Upsilon1.
+suff [sol [solP1 solP2]]:  exists sol, is_sol_obnd (fun => phi) y0 0 (BInfty K false) sol /\ (h^-1 *: (sol (0+h) - sol 0)) @[h --> 0^'+] --> phi (sol 0).
+  move : solP2;under eq_fun do rewrite add0r;move=>solP2.
+  by exists sol.
 apply: (@compact_containment_global_sol _ _ _ _ (sublevelUpsilon1 y0)) => /=.
 - exact: compact_sublevelUpsilon1.
 - move=> y1.
@@ -271,15 +274,15 @@ apply: (V_nincr (D:=t)) => //=.
 - by move : t0t;rewrite in_itv/= => /andP[].
 - by apply /andP;split=>//;move :t0t; rewrite /in_itv/= => /andP[].
 Qed.
-(* NB: was hypo in the first version *)
 
+(* NB: was hypo in the first version *)
 Lemma solP : exists sol, (forall p, sol p 0 = p) /\  forall y, y 0 \in Tilt.Upsilon1 ->
   (lasalle.is_sol phi y <-> y = sol (y 0)).
 Proof.
-have /choice [sol0 sol0P] : forall y0, exists sol, sol 0 = y0 /\ (y0 \in Tilt.Upsilon1 -> is_sol_obnd (fun => phi) y0 0 +oo%O sol).
+have /choice [sol0 sol0P ] : forall y0, exists sol, sol 0 = y0 /\ (y0 \in Tilt.Upsilon1 -> is_sol_obnd (fun => phi) y0 0 +oo%O sol /\ (h^-1 *: (sol h - sol 0)) @[h --> 0^'+] --> phi (sol 0)).
   move => y0.
   case hy : (y0 \in Tilt.Upsilon1); last by exists (fun t => y0);split.
-  have [sol solp]:= (solP' hy).
+  have [sol [solp solpr]]:= (solP' hy).
   exists sol;split=>//.
   by apply solp.
 set sol := fun y0 t => if (t < 0) then 2 *: y0 - sol0 y0 (-t) else sol0 y0 t.
@@ -307,12 +310,12 @@ split;last first.
       by apply: lt_le_nbhsr.
    have [_ +] := sol0P (y 0).
    move /(_ yp).
-   move => [_ + _].
+   move => [[_ + _] _].
    rewrite /sol_is_deriv_obnd.
    move /(_ t).
    by move => h;split; rewrite -?derive1E;apply h; rewrite in_itv/=tp.
  + rewrite /is_sol_obnd/sol_is_deriv_obnd/= in sol0P.
-   have [init d c] := (sol0P (y 0)).2 yp.
+   have [init d c] := ((sol0P (y 0)).2 yp).1.
    set f := sol0 (y 0).
    set F := fun t => if t < 0 then 2 *: y 0 - f (- t) else f t.
    set v := phi (f 0).
@@ -337,8 +340,8 @@ split;last first.
      rewrite ltNge.
      by move/negbT/negPn.
      have cvg_right : ( h^-1 *: (f h - f 0)) @[h --> 0^'+] --> v.
-       rewrite /f.
-     admit.
+       rewrite /f/v.
+       by apply sol0P.
      rewrite (cvgrPdist_lt _ _) => /= eps eps0.
      have /cvgrPdist_lt := cvg_right.
      move /(_ _ eps0).
@@ -389,6 +392,10 @@ have hs : is_sol_oo (fun => phi) (sol0 (y 0) 0) 0 t (sol0 (y 0)).
   apply: continuous_subspaceW.
   apply: closure_subset.
   by apply subset_itvl.
+have [_ _ c]:= ((sol0P (y 0)).2 yp).1.
+apply /continuous_subspaceW/c.
+apply: closure_subset.
+by apply subset_itvl.
 apply: (locally_cauchy_lipschitz_unique _ _ hs) => //.
   split => //.
     by have [-> _] := sol0P (y 0).
@@ -407,7 +414,7 @@ have [r [k y0r]] := @tilt_eqn_locally_lipschitz K alpha1 _ gamma_gt0 (y t0).
   move=> v vy0r.
   apply: cst_continuous.
 by rewrite in_itv/= lexx ltW.
-Unshelve. all: by end_near. Admitted.
+Unshelve. all: by end_near. Qed.
 
 Let sol := proj1_sig (cid solP).
 Let sol_spec := proj2_sig (cid solP).
