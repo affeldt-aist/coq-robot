@@ -23,6 +23,7 @@ Mathematical Components library.
   - Cyril Cohen, Inria (initial)
   - Laurent Théry, Inria
 - License: [LGPL-2.1-or-later](LICENSE)
+- Compatible Rocq/Coq versions: Rocq 9.0--9.3
 - Additional dependencies:
   - [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
   - [MathComp ssreflect](https://math-comp.github.io)

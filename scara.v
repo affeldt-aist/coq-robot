@@ -119,7 +119,7 @@ Proof.
 rewrite /t1 /rjoint_twist.
 rewrite (linearNl _ q1)/=.
 rewrite (linear0r _ w1)/=.
-rewrite oppr0 etwist_Rz; last first.
+rewrite oppr0 etwist_Rz.
   by rewrite -enorm_eq0 enormeE oner_eq0.
 by rewrite -Rz_eskew.
 Qed.

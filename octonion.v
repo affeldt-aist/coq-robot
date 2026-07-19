@@ -624,7 +624,7 @@ Proof.
 case: a b => [a0 a1] [b0 b1]; congr mkOct => /=; last first.
   rewrite !(linearB, linearD, mulrBl, mulrDl, mulrBr, mulrDr) /= conjqI.
 rewrite !(mulNr, opprK) [-(a1 * _) - _]addrC {1}subrK.
-rewrite [_ - b1 * _]addrC subrK; first by rewrite addrC.
+rewrite [_ - b1 * _]addrC subrK; last by rewrite addrC.
 rewrite !(linearN, linearB, mulrBl, mulrDl, mulrBr, mulrDr) /=
           !conjqM /= !conjqI opprK.
 rewrite [b0 * _ + _]addrC addrK [_ * a0 + _]addrC addrK.
@@ -855,7 +855,7 @@ Lemma conjoE (a : oct R) :
                        + 1%:or *o a *o 1%:or
                        + `ir *o a *o `ir + `jr *o a *o `jr + `kr *o a *o `kr).
 Proof.
-rewrite (_  : - (1/6%:R) = ((1/3%:R) * -(1/2%:R))); last first.
+rewrite (_  : - (1/6%:R) = ((1/3%:R) * -(1/2%:R))).
   by rewrite mulrN !mulrA mulr1 -mulrA -invfM -natrM.
 rewrite -3!addrA scalerDr.
 apply/eqP; rewrite eq_oct; apply/andP; split; apply/eqP.
@@ -1001,8 +1001,8 @@ Qed.
 Lemma normoV (a : oct R) : normo (invo a) = normo a / sqro a.
 Proof.
 rewrite /invo normoZ normoc ger0_norm.
-  by rewrite mulrC mul1r.
-by rewrite mul1r invr_ge0 sqro_ge0.
+  by rewrite mul1r invr_ge0 sqro_ge0.
+by rewrite mulrC mul1r.
 Qed.
 
 End octonion1.

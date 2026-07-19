@@ -3,7 +3,8 @@ From HB Require Import structures.
 From mathcomp Require Import all_boot ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
-From mathcomp Require Import realalg complex finset fingroup perm ring.
+From mathcomp Require Import realalg complex finset fingroup perm.
+From mathcomp Require Import ring_tactic field_tactic.
 Require Import ssr_ext euclidean vec_angle.
 From mathcomp Require Import reals.
 
@@ -494,7 +495,7 @@ Proof. by rewrite -(spin_axial M) spinK. Qed.
 
 Lemma axial_vecP (M : 'M[R]_3) u : axial M *v u  = u *m (2%:R *: antip M).
 Proof.
-rewrite axialE -spinE (_ : _ - _ = 2%:R *: antip M); last first.
+rewrite axialE -spinE (_ : _ - _ = 2%:R *: antip M).
   by rewrite scalerA mulrC divfK ?scale1r // (eqr_nat _ 2 0).
 by rewrite unspinZ spinZ unspinK ?antip_is_so.
 Qed.
@@ -606,8 +607,8 @@ Qed.
 Definition spin_eigenvalues u : seq R[i] := [:: 0; 0 +i* `|u|_e ; 0 -i* `|u|_e]%C.
 
 Ltac eigenvalue_spin_eval_poly :=
-  rewrite /map_poly horner_poly size_polyDl; [ |
-    by rewrite size_polyXn size_scale ?size_polyX // sqrf_eq0 enorm_eq0];
+  rewrite /map_poly horner_poly size_polyDl; [
+    by rewrite size_polyXn size_scale ?size_polyX // sqrf_eq0 enorm_eq0 | ];
   rewrite size_polyXn sum4E !(coefD,coefXn,coefZ,coefX,expr0,expr1)
                             !(mulr0,mul0r,mul1r,add0r,addr0,mul1r).
 
@@ -771,7 +772,7 @@ rewrite {3}(skew_anti Mso) linearN /= trmxK.
 rewrite trmxV linearD /= trmx1 linearN /=.
 rewrite {4}(skew_anti Mso) !linearN /= trmxK opprK.
 rewrite -!mulmxE.
-rewrite mulmxA -(mulmxA _^-1) -mul1B1D_comm mulmxA mulVmx ?mul1mx; last first.
+rewrite mulmxA -(mulmxA _^-1) -mul1B1D_comm mulmxA mulVmx ?mul1mx.
   by rewrite unitmxE unitfE skew_det1BM.
 by rewrite mulmxV // unitmxE unitfE skew_det1DM.
 Qed.
@@ -792,11 +793,11 @@ Definition uncayley n (M : 'M[R]_n.+1) := (M - 1) * (M + 1)^-1.
 Lemma ortho_N1eigen_comm n (M : 'M[R]_n.+1) : M \is 'O[R]_n.+1 ->
   -1 \notin eigenvalue M -> M * (M + 1)^-1 = (M + 1)^-1 * M.
 Proof.
-move=> MO MN1; rewrite -{1}(invrK M) -invrM; last 2 first.
+move=> MO MN1; rewrite -{1}(invrK M) -invrM.
   by rewrite ortho_N1eigen_invertible.
   by rewrite orthogonal_inv // unitr_trmx ?orthogonal_unit.
 rewrite mulrDl divrr ?orthogonal_unit // div1r (orthogonal_inv MO).
-rewrite -{1}(orthogonal_tr_mul MO) -{2}(mulr1 M^T) -mulrDr invrM; last 2 first.
+rewrite -{1}(orthogonal_tr_mul MO) -{2}(mulr1 M^T) -mulrDr invrM.
   by rewrite unitr_trmx orthogonal_unit.
   by rewrite ortho_N1eigen_invertible.
 by rewrite -trmxV (orthogonal_inv MO) trmxK.
@@ -811,9 +812,9 @@ rewrite {1}mulrBl mul1r ortho_N1eigen_comm // -[X in _ - X]mulr1 -mulrBr.
 rewrite trmx_mul mulmxE trmxV !linearD /= linearN /= trmx1.
 rewrite /uncayley -(mulr1 (M - 1)) -[X in _ * X / _](orthogonal_tr_mul MO).
 rewrite mulrA mulrDl mulNr mul1r -(orthogonal_inv MO) divrr ?orthogonal_unit//.
-rewrite -mulrA -[X in _ * (X * _)](invrK M) -invrM; last 2 first.
-  by rewrite ortho_N1eigen_invertible.
-  by rewrite unitrV orthogonal_unit.
+rewrite -mulrA -[X in _ * (X * _)](invrK M) -invrM.
+- by rewrite ortho_N1eigen_invertible.
+- by rewrite unitrV orthogonal_unit.
 rewrite (mulrDl _ _ M^-1) divrr ?orthogonal_unit// mul1r (addrC 1 M^-1).
 by rewrite -mulNr opprB.
 Qed.

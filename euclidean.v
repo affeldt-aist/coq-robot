@@ -253,7 +253,7 @@ Proof. rewrite dotmulE sumr_ge0 // => i _; by rewrite -expr2 sqr_ge0. Qed.
 Lemma dotmulvv0 u : (u *d u == 0) = (u == 0).
 Proof.
 apply/idP/idP; last by move/eqP ->; rewrite dotmul0v.
-rewrite dotmulE psumr_eq0; last by move=> i _; rewrite -expr2 sqr_ge0.
+rewrite dotmulE psumr_eq0; first by move=> i _; rewrite -expr2 sqr_ge0.
 move/allP => H; apply/eqP/rowP => i.
 apply/eqP; by rewrite mxE -sqrf_eq0 expr2 -(implyTb ( _ == _)) H.
 Qed.
@@ -378,7 +378,7 @@ Proof. by move=> v1; rewrite /normalize v1 invr1 scale1r. Qed.
 
 Lemma norm_normalize v : v != 0 -> `| normalize v |_e = 1.
 Proof.
-move=> v0; rewrite enormZ ger0_norm; last by rewrite invr_ge0// enorm_ge0.
+move=> v0; rewrite enormZ ger0_norm ?invr_ge0 ?enorm_ge0//.
 by rewrite mulVr// unitfE enorm_eq0.
 Qed.
 
@@ -604,7 +604,7 @@ HB.instance Definition _ := GRing.isDivClosed.Build _ (@rotation_pred n T) rotat
 Lemma rotation_mulr_2closed : GRing.mulr_2closed 'SO[T]_n.
 Proof.
 move=> M N MSO NSO.
-rewrite rotationE rpredM//=; last 2 first.
+rewrite rotationE rpredM//=.
   exact: rotation_sub.
   exact: rotation_sub.
 by rewrite detM rotation_det// rotation_det// mulr1.
@@ -661,7 +661,7 @@ have : \sum_(i < n.+1) v``_i * (v``_i)^* = 0.
   move/eqP/matrixP : H =>/(_ 0 0).
   rewrite !mxE => H; rewrite -{2}H.
   apply/eq_bigr => /= i _; by rewrite !mxE.
-move/eqP; rewrite psumr_eq0 /= => [/allP K|]; last first.
+move/eqP; rewrite psumr_eq0 /= => [|/allP K].
   move=> i _; by rewrite -sqr_normc exprn_ge0.
 apply/eqP/rowP => i.
 move: (K i); rewrite /index_enum -enumT mem_enum inE => /(_ isT).
@@ -678,8 +678,8 @@ case/eigenvalueP => v kv v0.
 move/(congr1 trmx)/(congr1 (fun x => map_mx conjc x)) : (kv).
 rewrite trmx_mul map_mxM linearZ /= map_mxZ map_trmx.
 move/(congr1 (fun x => (k *: v) *m x)).
-rewrite -{1}kv -mulmxA (mulmxA (map_mx _ M)) (_ : map_mx _ M *m _ = 1%:M); last first.
-  rewrite (_ : map_mx conjc _ = map_mx (fun x => x%:C%C) M^T); last first.
+rewrite -{1}kv -mulmxA (mulmxA (map_mx _ M)) (_ : map_mx _ M *m _ = 1%:M).
+  rewrite (_ : map_mx conjc _ = map_mx (fun x => x%:C%C) M^T).
     apply/matrixP => i j; by rewrite !mxE conjc_real.
   rewrite orthogonalE in MSO.
   by rewrite -map_mxM mulmxE (eqP MSO) map_mx1.
@@ -758,12 +758,12 @@ have Mdiag i : M i i = 1.
   apply/eqP/negPn/negP => Mii; move: tr3; apply/eqP.
   rewrite lt_eqF // /mxtrace.
   rewrite (bigD1 i) //=.
-  rewrite (eq_bigr (fun i : 'I_n.+1 => M (inord i) (inord i))); last first.
+  rewrite (eq_bigr (fun i : 'I_n.+1 => M (inord i) (inord i))).
     by move=> j _; congr (M _ _); apply val_inj => /=; rewrite inordK.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => M (inord i) (inord i))).
   rewrite -[in n.+1%:R](card_ord n.+1) -sum1_card (bigD1 i) //= natrD.
   rewrite ltr_leD //; first by rewrite lt_neqAle Mii /= ler_norml1 // Oij_ub.
-  rewrite [in X in _ <= X](@big_morph _ _ _ 0 (fun x y => x + y)%R) //; last first.
+  rewrite [in X in _ <= X](@big_morph _ _ _ 0 (fun x y => x + y)%R) //.
     by move=> x y; rewrite natrD.
   rewrite -(big_mkord [pred x : nat | x != i] (fun i => 1)).
   apply ler_sum => j ji; by rewrite ler_norml1 // Oij_ub.
@@ -772,7 +772,7 @@ case/boolP : (i == j) => [/eqP ->|ij]; first by move : Mdiag => /(_ j).
 move: (MO' i) => /(congr1 (fun x => x ^+ 2)).
 rewrite expr1n sqr_enorm (bigD1 i) //= mxE.
 move: Mdiag => /(_ i) -> /eqP.
-rewrite expr1n addrC eq_sym -subr_eq subrr eq_sym psumr_eq0 /=; last first.
+rewrite expr1n addrC eq_sym -subr_eq subrr eq_sym psumr_eq0 /=.
   by move=> *; rewrite sqr_ge0.
 by move/allP => /(_ j (mem_index_enum _)); rewrite eq_sym ij implyTb mxE sqrf_eq0 => /eqP.
 Qed.
@@ -798,9 +798,9 @@ have bumpD (i k1 : 'I_n') : bump (bump 0 i0) i = (1 + k1)%N -> i0 != k1.
 apply: (@determinant_multilinear _ _ _ _ _ (fintype.lift 0 i0)).
 -apply/rowP => i; rewrite !mxE; case: fintype.splitP; first by do 2 case.
   move=> k1 H; rewrite (_ : k1 = i0).
-    by move/rowP : rABC => /(_ i); rewrite !mxE.
-  apply/val_eqP/eqP=> /=.
-  by rewrite /= /bump !add1n in H; case: H.
+    apply/val_eqP/eqP=> /=.
+    by rewrite /= /bump !add1n in H; case: H.
+  by move/rowP : rABC => /(_ i); rewrite !mxE.
 - apply/matrixP => i j; rewrite !mxE /=; case: fintype.splitP => // k1 /= H1.
   have /unlift_some[k2 k2E _] := bumpD i k1 H1.
   by move/matrixP : rBA => /(_ k2 j); rewrite !mxE k2E.
@@ -814,7 +814,7 @@ Lemma dot_cross (u : 'rV[R]_n) (V : 'M[R]_(n', n)) :
 Proof.
 rewrite dotmulE (expand_det_row _ 0); apply: eq_bigr => k _; rewrite !mxE /=.
 case: fintype.splitP => j //=; rewrite ?ord1 //= => _ {j}; congr (_ * _).
-rewrite (expand_det_row _ 0) (bigD1 k) //= big1 ?addr0; last first.
+rewrite (expand_det_row _ 0) (bigD1 k) //= big1 ?addr0.
   move=> i neq_ik; rewrite !mxE; case: fintype.splitP=> //= j.
   by rewrite ord1 mxE (negPf neq_ik) mul0r.
 rewrite !mxE; case: fintype.splitP => //= j _; rewrite ord1 !mxE !eqxx mul1r.
@@ -865,7 +865,7 @@ Proof. by apply/rowP => k; rewrite (ord1 k) !mxE /= mulr1n. Qed.
 Lemma row_mx_colE n (M : 'M[R]_(n, 3)) :
   row_mx (col 0 M) (row_mx (col 1 M) (col 2%:R M)) = M.
 Proof.
-rewrite -[in RHS](@hsubmxK _ n 1 2 M) (_ : lsubmx _ = col 0 M); last first.
+rewrite -[in RHS](@hsubmxK _ n 1 2 M) (_ : lsubmx _ = col 0 M).
   apply/colP => i; rewrite !mxE /= (_ : lshift 2 0 = 0) //; exact/val_inj.
 rewrite (_ : rsubmx _ = row_mx (col 1 M) (col 2%:R M)) //.
 set a := rsubmx _; rewrite -[in LHS](@hsubmxK _ n 1 1 a); congr row_mx.
@@ -1019,9 +1019,9 @@ Proof.
 rewrite -[LHS]col_mx3_row; apply/row_matrixP => i; rewrite !rowK /=.
 case: ifPn => [|/ifnot0P/orP[]]/eqP->.
 - by rewrite (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
-- rewrite (_ : 1 = @rshift 1 _ 0) ?(@rowKd _ 1); last exact: val_inj.
+- rewrite (_ : 1 = @rshift 1 _ 0) ?(@rowKd _ 1); first exact: val_inj.
   by rewrite  (_ : 0 = @lshift 1 _ 0) ?(@rowKu _ 1) ?row_id //; exact: val_inj.
-- rewrite (_ : 2%:R = @rshift 1 _ 1) ?(@rowKd _ 1); last exact: val_inj.
+- rewrite (_ : 2%:R = @rshift 1 _ 1) ?(@rowKd _ 1); first exact: val_inj.
   by rewrite (_ : 1 = @rshift 1 1 0) ?(@rowKd _ 1) ?row_id //; exact: val_inj.
 Qed.
 
@@ -1134,7 +1134,7 @@ have neq_iSSi:  (i + 2%:R != i) && (i + 2%:R != i + 1).
    by case: i neq_iSi => [[|[|[|?]]] ? //=].
 do ![rewrite dotmulE (bigD1 i) // (bigD1 (i + 1)) // (bigD1 (i + 2%:R)) //=;
      rewrite big1 ?mul0r ?addr0 ?mulrDl ?opprD;
-   last by move: i {neq_iSi neq_iSSi}; do 2![move => [[|[|[|?]]] ? //=]]].
+   first by move: i {neq_iSi neq_iSSi}; do 2![move => [[|[|[|?]]] ? //=]]].
 rewrite addrACA mulrAC subrr add0r addrACA -!mulrA -!mulrBr ![w``__ * _]mulrC.
 by congr (_ + _); rewrite -[RHS]mulrN opprB.
 Qed.
@@ -1240,11 +1240,11 @@ Proof.
 pose M (k : 'I_3) : 'M_3 := col_mx3 ('e_k) v w.
 pose Mu12 := col_mx3 (u``_1 *: 'e_1 + u``_2%:R *: 'e_2%:R) v w.
 rewrite (@determinant_multilinear _ _ _ (M 0) Mu12 0 (u``_0) 1) ?mul1r
-        ?row'_col_mx3 //; last first.
+        ?row'_col_mx3 //.
   apply/matrixP => i j; rewrite !mxE !eqxx /tnth /=.
   by case: j => [[|[|[]]]] ? //=; Simp.ord; repeat Simp.r => /=.
 rewrite [\det Mu12](@determinant_multilinear _ _ _
-  (M 1) (M 2%:R) 0 (u``_1) (u``_2%:R)) ?row'_col_mx3 //; last first.
+  (M 1) (M 2%:R) 0 (u``_1) (u``_2%:R)) ?row'_col_mx3 //.
   apply/matrixP => i j; rewrite !mxE !eqxx.
   by case: j => [[|[|[]]]] ? //=; Simp.ord; Simp.r.
 rewrite dotmulE !big_ord_recl big_ord0 addr0 /=.
@@ -1329,11 +1329,11 @@ have [->|neq_ij] := altP (i =P j); rewrite (mulr0n,mulr1n).
   by rewrite scale0r (@liexx _ (vec3 T)).
 apply/rowP => k'; case: (I3P k' neq_ij); rewrite /crossmul; unlock; rewrite !mxE.
 - rewrite (@determinant_alternate _ _ _ 0 1) //=.
-    by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
-  by move=> k''; rewrite !mxE.
+    by move=> k''; rewrite !mxE.
+  by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
 - rewrite (@determinant_alternate _ _ _ 0 2%:R) //=.
-    by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
-  by move=> k''; rewrite !mxE.
+    by move=> k''; rewrite !mxE.
+  by move: i j @k neq_ij => [[|[|[|?]]] ?] [[|[|[|?]]] ?] //=; rewrite mulr0.
 rewrite !eqxx mulr1 -[_ ^ _](@det_perm T) {k k'}; congr (\det _).
 apply/matrixP => a b; rewrite !mxE permE ffunE /=.
 by move: a b i j neq_ij; do 4![move=> [[|[|[|?]]] ?]; rewrite ?mxE //=].
@@ -1358,8 +1358,7 @@ Implicit Types u v w : 'rV[T]_3.
 
 Lemma crossmul_normal u v : u _|_ (u *v v).
 Proof.
-rewrite normalvv crossmul_triple.
-rewrite (determinant_alternate (oner_neq0 _)) => [|i] //.
+rewrite normalvv crossmul_triple (determinant_alternate (oner_neq0 _))=> [i|]//.
 by rewrite !mxE.
 Qed.
 
@@ -1473,19 +1472,19 @@ transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
   set C := u0 * v1. set C' := u1 * v0.
   set U0 := u0 ^+ 2. set U1 := u1 ^+ 2. set U2 := u2 ^+ 2.
   set V0 := v0 ^+ 2. set V1 := v1 ^+ 2. set V2 := v2 ^+ 2.
-  rewrite (_ : u0 * v0 * (u1 * v1) = C * C'); last first.
+  rewrite (_ : u0 * v0 * (u1 * v1) = C * C').
     rewrite /C /C' -2!mulrA; congr (_ * _).
     rewrite mulrA mulrC; congr (_ * _); by rewrite mulrC.
   rewrite mulrDl.
-  rewrite (_ : u0 * v0 * (u2 * v2) = B * B'); last first.
+  rewrite (_ : u0 * v0 * (u2 * v2) = B * B').
     rewrite /B /B' [in RHS]mulrC -!mulrA; congr (_ * _).
     rewrite mulrA -(mulrC v2); congr (_ * _); by rewrite mulrC.
-  rewrite (_ : u1 * v1 * (u2 * v2) = A * A'); last first.
+  rewrite (_ : u1 * v1 * (u2 * v2) = A * A').
     rewrite /A /A' -!mulrA; congr (_ * _).
     rewrite mulrA -(mulrC v2); congr (_ * _); by rewrite mulrC.
-  rewrite (_ : (u0 * v0) ^+ 2 = U0 * V0); last by rewrite exprMn.
-  rewrite (_ : (u1 * v1) ^+ 2 = U1 * V1); last by rewrite exprMn.
-  rewrite (_ : (u2 * v2) ^+ 2 = U2 * V2); last by rewrite exprMn.
+  rewrite (_ : (u0 * v0) ^+ 2 = U0 * V0); first by rewrite exprMn.
+  rewrite (_ : (u1 * v1) ^+ 2 = U1 * V1); first by rewrite exprMn.
+  rewrite (_ : (u2 * v2) ^+ 2 = U2 * V2); first by rewrite exprMn.
   rewrite 4![in RHS]opprD.
   (* U0 * V0 *)
   rewrite -3!(addrA (U0 * V0)) -3![in X in _ = _ + X](addrA (- (U0 * V0))).
@@ -1500,12 +1499,12 @@ transitivity (((u``_0)^+2 + (u``_1)^+2 + (u``_2%:R)^+2)
   (* C * C' ^+ 2 *)
   rewrite (addrC (C ^+ 2 - _)) ![in LHS]addrA.
   rewrite (addrC (C * C' *- 2)) ![in RHS]addrA; congr (_ - _).
-  rewrite (_ : U0 * V2 = B' ^+ 2); last by rewrite exprMn.
-  rewrite (_ : U1 * V2 = A ^+ 2); last by rewrite exprMn.
-  rewrite (_ : U0 * V1 = C ^+ 2); last by rewrite exprMn.
-  rewrite (_ : U1 * V0 = C' ^+ 2); last by rewrite exprMn.
-  rewrite (_ : U2 * V0 = B ^+ 2); last by rewrite exprMn.
-  rewrite (_ : U2 * V1 = A' ^+ 2); last by rewrite exprMn.
+  rewrite (_ : U0 * V2 = B' ^+ 2); first by rewrite exprMn.
+  rewrite (_ : U1 * V2 = A ^+ 2); first by rewrite exprMn.
+  rewrite (_ : U0 * V1 = C ^+ 2); first by rewrite exprMn.
+  rewrite (_ : U1 * V0 = C' ^+ 2); first by rewrite exprMn.
+  rewrite (_ : U2 * V0 = B ^+ 2); first by rewrite exprMn.
+  rewrite (_ : U2 * V1 = A' ^+ 2); first by rewrite exprMn.
   (* B' ^+ 2, A ^+ 2 *)
   rewrite -(addrC (B' ^+ 2)) -!addrA; congr (_ + (_ + _)).
   rewrite !addrA.
@@ -1547,9 +1546,9 @@ Lemma dotmul_eq0_crossmul_neq0 (u v : 'rV[T]_3) : u != 0 -> v != 0 ->
 Proof.
 move=> u0 v0 uv0.
 rewrite -enorm_eq0 -(@eqrXn2 _ 2) ?enorm_ge0// exprnP expr0n -exprnP.
-rewrite enorm_crossmul' (eqP uv0) expr0n subr0 -expr0n eqrXn2 //.
-  by rewrite mulf_eq0 negb_or 2!enorm_eq0 u0.
-by rewrite mulr_ge0 ?enorm_ge0.
+rewrite enorm_crossmul' (eqP uv0) expr0n subr0 -expr0n eqrXn2//.
+  by rewrite mulr_ge0 ?enorm_ge0.
+by rewrite mulf_eq0 negb_or 2!enorm_eq0 u0.
 Qed.
 
 End norm3.
@@ -1682,10 +1681,10 @@ rewrite !mulNr !mulrN !opprK.
 rewrite !coefD.
 (* 1 *)
 rewrite [X in X + _ + _](_ : _ = M 0 0 * (M 2%:R 2%:R + M 1 1) +
-   (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R)); last first.
+   (M 1 1 * M 2%:R 2%:R - M 2%:R 1 * M 1 2%:R)).
   rewrite coefM sum2E coefD coefX add0r coefN coefC [- _]/=.
   rewrite subn0 coefD coefB.
-  rewrite coefM sum2E subn0 coefD coefX add0r coefN (_ : _`_0 = M 1 1); last by rewrite coefC.
+  rewrite coefM sum2E subn0 coefD coefX add0r coefN (_ : _`_0 = M 1 1); first by rewrite coefC.
   rewrite coefD coefX coefN coefC subr0 mulr1.
   rewrite coefD coefN coefX coefN coefC subr0 mul1r.
   rewrite subnn coefD coefX add0r coefN coefC [in X in - M 1 1 - X]/=.
@@ -1695,7 +1694,7 @@ rewrite [X in X + _ + _](_ : _ = M 0 0 * (M 2%:R 2%:R + M 1 1) +
   rewrite coefD coefX add0r coefN coefC mulrN !mulNr opprK.
   rewrite coefM sum1E coefC coefC [in X in M 1 1 * _ - X]/=.
   by rewrite -opprB mulrN 2!opprK.
-rewrite [X in _ + X + _](_ : _ = - M 0 1 * M 1 0); last first.
+rewrite [X in _ + X + _](_ : _ = - M 0 1 * M 1 0).
   rewrite coefN coefM sum2E coefC [in X in X * _]/= subnn.
   rewrite coefD subn0 coefM sum2E.
   rewrite subn0 subnn coefC coefC mulr0 add0r.
@@ -1703,7 +1702,7 @@ rewrite [X in _ + X + _](_ : _ = - M 0 1 * M 1 0); last first.
   rewrite coefM sum2E subn0 subnn coefC coefD coefX coefN coefC subr0 mulr1.
   rewrite coefC mul0r addr0 coefC mul0r addr0.
   by rewrite mulNr.
-rewrite [X in _ + _ + X](_ : _ = - M 0 2%:R * M 2%:R 0); last first.
+rewrite [X in _ + _ + X](_ : _ = - M 0 2%:R * M 2%:R 0).
   rewrite coefN coefM sum2E subn0 subnn coefC.
   rewrite [in X in X * _]/=.
   rewrite coefD coefM sum2E subn0 coefC coefC mulr0 add0r.
@@ -1755,7 +1754,7 @@ case; last first.
   (* coef3 *)
   rewrite coef_poly !coef_add_poly !coef_opp_poly !coefZ !coefX !coefXn.
   rewrite mulr0 subr0 mulr0 addr0 coefC subr0; apply/eqP.
-  rewrite (_ : _`_3 = lead_coef (char_poly M)); last first.
+  rewrite (_ : _`_3 = lead_coef (char_poly M)).
     by rewrite lead_coefE size_char_poly.
   by rewrite -monicE char_poly_monic.
 (* coef1 *)

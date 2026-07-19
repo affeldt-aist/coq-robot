@@ -442,7 +442,7 @@ move/eqP.
 move/(congr1 (fun x => x *m F0^T)).
 rewrite [in X in _ = X -> _]mulmxDl -scalemxAl.
 rewrite rowframeE (rowE 2%:R F0) -mulmxA mulmxE -{2}noframe_inv divrr ?mulmx1 ?noframe_is_unit //.
-rewrite -scalemxAl (@dh_rot_i _ _ _ theta alpha); last first.
+rewrite -scalemxAl (@dh_rot_i _ _ _ theta alpha).
   by rewrite {1}/From1To0 -lock in H4.
 rewrite add0r => <-.
 by rewrite -FromTo_from_can.

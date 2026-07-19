@@ -141,12 +141,12 @@ Proof.
 move=> abpi.
 have -> : sin b = cos a.
   rewrite -[b](subrK a) sinD abpi mul1r [cos (_ - _)]sin1cos0.
-    by rewrite mul0r addr0.
-  by rewrite abpi normr1.
+    by rewrite abpi normr1.
+  by rewrite mul0r addr0.
 have -> : cos b = - sin a.
   rewrite -[b](subrK a) cosD abpi mul1r [cos (_ - _)]sin1cos0.
-    by rewrite mul0r sub0r.
-  by rewrite abpi normr1.
+    by rewrite abpi normr1.
+  by rewrite mul0r sub0r.
 move=> ->; exists (norm_angle a); first by apply: norm_angle_bound.
 by rewrite /RO cos_norm_angle sin_norm_angle.
 Qed.
@@ -179,12 +179,12 @@ Proof.
 move=> abpi.
 have -> : sin b = - cos a.
   rewrite -[a](subrK b) cosD abpi mul1r [cos (_ - _)]sin1cos0.
-    by rewrite mul0r sub0r opprK.
-  by rewrite abpi normr1.
+    by rewrite abpi normr1.
+  by rewrite mul0r sub0r opprK.
 have -> : cos b = sin a.
   rewrite -[a](subrK b) sinD abpi mul1r [cos (_ - _)]sin1cos0.
-    by rewrite mul0r addr0.
-  by rewrite abpi normr1.
+    by rewrite abpi normr1.
+  by rewrite mul0r addr0.
 move=> ->; exists (norm_angle a); first exact: norm_angle_bound.
 by rewrite /RO' cos_norm_angle sin_norm_angle.
 Qed.
@@ -244,10 +244,10 @@ Qed.
 
 Lemma Rx_RO a : Rx a = block_mx (1 : 'M_1) 0 0 (RO a).
 Proof.
-rewrite -(@submxK _ 1 2 1 2 (Rx a)) (_ : ulsubmx _ = 1); last first.
+rewrite -(@submxK _ 1 2 1 2 (Rx a)) (_ : ulsubmx _ = 1).
   apply/rowP => i; by rewrite (ord1 i) !mxE /=.
-rewrite (_ : ursubmx _ = 0); last by apply/rowP => i; rewrite !mxE.
-rewrite (_ : dlsubmx _ = 0); last first.
+rewrite (_ : ursubmx _ = 0); first by apply/rowP => i; rewrite !mxE.
+rewrite (_ : dlsubmx _ = 0).
   apply/colP => i; rewrite !mxE /=.
   case: ifPn; [by rewrite !mxE | by case: ifPn; rewrite !mxE].
 rewrite (_ : drsubmx _ = RO a) //; by apply/matrix2P; rewrite !mxE /= !eqxx.
@@ -272,10 +272,10 @@ Definition Rx' a := col_mx3
 
 Lemma Rx'_RO a : Rx' a = block_mx (1 : 'M_1) 0 0 (RO' a).
 Proof.
-rewrite -(@submxK _ 1 2 1 2 (Rx' a)) (_ : ulsubmx _ = 1); last first.
+rewrite -(@submxK _ 1 2 1 2 (Rx' a)) (_ : ulsubmx _ = 1).
   apply/rowP => i; by rewrite (ord1 i) !mxE /=.
-rewrite (_ : ursubmx _ = 0); last by apply/rowP => i; rewrite !mxE.
-rewrite (_ : dlsubmx _ = 0); last first.
+rewrite (_ : ursubmx _ = 0); first by apply/rowP => i; rewrite !mxE.
+rewrite (_ : dlsubmx _ = 0).
   apply/colP => i; rewrite !mxE /=.
   case: ifPn; first by rewrite !mxE.
   by case: ifPn; rewrite !mxE.
@@ -310,10 +310,10 @@ Definition Rz a := col_mx3
 
 Lemma Rz_RO a : Rz a = block_mx (RO a) 0 0 (1 : 'M_1).
 Proof.
-rewrite -(@submxK _ 2 1 2 1 (Rz a)) (_ : drsubmx _ = 1); last first.
+rewrite -(@submxK _ 2 1 2 1 (Rz a)) (_ : drsubmx _ = 1).
   apply/rowP => i; by rewrite (ord1 i) !mxE.
-rewrite (_ : ulsubmx _ = RO a); last by apply/matrix2P; rewrite !mxE !eqxx.
-rewrite (_ : ursubmx _ = 0); last first.
+rewrite (_ : ulsubmx _ = RO a); first by apply/matrix2P; rewrite !mxE !eqxx.
+rewrite (_ : ursubmx _ = 0).
   apply/colP => i; case/boolP : (i == 0) => [|/ifnot01P]/eqP->; by rewrite !mxE.
 rewrite (_ : dlsubmx _ = 0) //; apply/rowP => i; rewrite !mxE /=.
 by case/boolP : (i == 0) => [|/ifnot01P]/eqP->.
@@ -497,11 +497,11 @@ rewrite (invariant_colinear u0 H1) ?colinear_frame0 //.
 move/(_ erefl erefl erefl) => fRx.
 have HfRx : M^-1 = (col_mx3 (Base.frame u)|,0 (Base.frame u)|,1 (Base.frame u)|,2%:R)^T *m
    (Rx (- a))^-1 *m col_mx3 (Base.frame u)|,0 (Base.frame u)|,1 (Base.frame u)|,2%:R.
-  rewrite fRx invrM /=; last 2 first.
+  rewrite fRx invrM /=.
     rewrite unitrMr orthogonal_unit // ?(rotation_sub (Rx_is_SO _)) //.
     by rewrite rotation_inv ?Base.is_SO // rotation_sub // rotationV Base.is_SO.
     by rewrite orthogonal_unit // rotation_sub // Base.is_SO.
-  rewrite invrM; last 2 first.
+  rewrite invrM.
     rewrite rotation_inv ?Base.is_SO // orthogonal_unit // rotation_sub //.
     by rewrite rotationV // Base.is_SO.
     by rewrite orthogonal_unit // ?(rotation_sub (Rx_is_SO _)).
@@ -509,16 +509,16 @@ have HfRx : M^-1 = (col_mx3 (Base.frame u)|,0 (Base.frame u)|,1 (Base.frame u)|,
 apply/isRotP; split => /=.
 - by rewrite -{1}H1 -mulmxA mulmxV // mulmx1.
 - rewrite HfRx !mulmxA.
-  rewrite (_ : (Base.frame u)|,1 *m _ = 'e_1); last first.
+  rewrite (_ : (Base.frame u)|,1 *m _ = 'e_1).
     by rewrite mul_tr_col_mx3 dotmulC dotmulvv normj // expr1n idotj // jdotk // e1row.
-  rewrite (_ : 'e_1 *m _ = row3 0 (cos (- a)) (sin a)); last first.
+  rewrite (_ : 'e_1 *m _ = row3 0 (cos (- a)) (sin a)).
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx mul_tr_col_mx3.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
   by rewrite mulmx_row3_col3 scale0r add0r cosN.
 - rewrite HfRx !mulmxA.
-  rewrite (_ : (Base.frame u)|,2%:R *m _ = 'e_2%:R); last first.
+  rewrite (_ : (Base.frame u)|,2%:R *m _ = 'e_2%:R).
     by rewrite mul_tr_col_mx3 dotmulC idotk // dotmulC jdotk // dotmulvv normk // expr1n e2row.
-  rewrite (_ : 'e_2%:R *m _ = row3 0 (- sin a) (cos a)); last first.
+  rewrite (_ : 'e_2%:R *m _ = row3 0 (- sin a) (cos a)).
     rewrite (rotation_inv (Rx_is_SO (- a))) /Rx mul_tr_col_mx3.
     rewrite dote2 /= 2!dotmulE 2!sum3E !mxE /= cosN sinN opprK. by Simp.r.
   by rewrite mulmx_row3_col3 scale0r add0r.
@@ -662,7 +662,7 @@ rewrite addrC ![in LHS]addrA addrK.
 rewrite -![in LHS]addrA addrC scalerBl scale1r scalerBr opprB scalerA -![in LHS]addrA.
 rewrite [in RHS]addrA [in RHS]addrC; congr (_ + _).
 rewrite addrCA ![in LHS]addrA subrK -scalerCA -2!scalerAl -exprD.
-rewrite (_ : M ^+ 4 = - M ^+ 2); last by rewrite exprS cube_u mulrN -expr2.
+rewrite (_ : M ^+ 4 = - M ^+ 2); first by rewrite exprS cube_u mulrN -expr2.
 rewrite 2!scalerN scalerA.
 rewrite addrC -scaleNr -2!scalerDl -scalerBl; congr (_ *: _).
 rewrite -!addrA; congr (_ + _).
@@ -675,11 +675,11 @@ Lemma inv_emx3 a M : M ^+ 4 = - M ^+ 2 -> `e(a, M) * `e(a, - M) = 1.
 Proof.
 move=> aM.
 case/boolP : (cos a == 1) => [/eqP|] ca; rewrite /emx3.
-  rewrite ca subrr (_ : sin a = 0) ; last by rewrite cos1sin0 // ca normr1.
+  rewrite ca subrr (_ : sin a = 0) ; first by rewrite cos1sin0 // ca normr1.
   by rewrite !scale0r !addr0 mulr1.
 rewrite !mulrDr !mulrDl !mulr1 !mul1r -[RHS]addr0 -!addrA; congr (_ + _).
 rewrite !addrA sqrrN -!addrA (addrCA (_ *: M ^+ 2)) !addrA scalerN subrr add0r.
-rewrite (_ : (1 - _) *: _ * _ = - (sin a *: M * ((1 - cos a) *: M ^+ 2))); last first.
+rewrite (_ : (1 - _) *: _ * _ = - (sin a *: M * ((1 - cos a) *: M ^+ 2))).
   rewrite mulrN; congr (- _).
   by rewrite -2!scalerAr -!scalerAl -exprS -exprSr 2!scalerA mulrC.
 rewrite -!addrA (addrCA (- (sin a *: _ * _))) !addrA subrK.
@@ -733,7 +733,7 @@ Proof.
 move=> w1.
 rewrite 2!mxtraceD !mxtraceZ /= mxtrace1.
 rewrite (trace_anti (spin_is_so w)) mulr0 addr0 mxtrace_sqr_spin w1.
-rewrite (_ : - (_ * _) = - 2%:R); last by rewrite expr1n mulr1.
+rewrite (_ : - (_ * _) = - 2%:R); first by rewrite expr1n mulr1.
 by rewrite mulrDl addrA mul1r -natrB // mulrC mulrN -mulNr opprK.
 Qed.
 
@@ -759,7 +759,7 @@ pose va := 1 - cos a. pose ca := cos a. pose sa := sin a.
 move=> w1; apply/matrix3P/and9P; split; apply/eqP.
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !spinij; Simp.r => /=.
   rewrite sqr_spin' !mxE /=.
-  rewrite (_ : - _ - _ = u``_0 ^+ 2 - 1); last first.
+  rewrite (_ : - _ - _ = u``_0 ^+ 2 - 1).
     rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
   by rewrite !opprD !addrA subrr add0r addrC.
 - rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
@@ -772,7 +772,7 @@ move=> w1; apply/matrix3P/and9P; split; apply/eqP.
   by rewrite sqr_spin' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !spinij; Simp.r => /=.
   rewrite sqr_spin' !mxE /=.
-  rewrite (_ : - _ - _ = u``_1 ^+ 2 - 1); last first.
+  rewrite (_ : - _ - _ = u``_1 ^+ 2 - 1).
     rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
     by rewrite 2!opprD addrCA addrA subrK addrC.
   rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
@@ -785,7 +785,7 @@ move=> w1; apply/matrix3P/and9P; split; apply/eqP.
   by rewrite sqr_spin' !mxE /= addrC mulrC (mulrC sa).
 - rewrite 2![in RHS]mxE /= [in LHS]mxE -/sa -/va 3!mxE /= !spinij; Simp.r => /=.
   rewrite sqr_spin' !mxE /=.
-  rewrite (_ : - _ - _ = u``_2%:R ^+ 2 - 1); last first.
+  rewrite (_ : - _ - _ = u``_2%:R ^+ 2 - 1).
     rewrite -[in X in _ = _ - X](expr1n _ 2%N) -w1 -dotmulvv dotmulE sum3E -3!expr2.
     by rewrite 2!opprD [in RHS]addrC subrK addrC.
   rewrite mulrBr mulr1 addrCA mulrC; congr (_ + _).
@@ -808,7 +808,7 @@ Proof.
 move=> w1.
 move/orthogonal_det/eqP : (eskew_is_O (a / 2%:R) w1).
 rewrite -(@eqrXn2 _ 2) // expr1n sqr_normr expr2 -det_mulmx.
-rewrite mulmxE emx3M; last by rewrite spin3 w1 expr1n scaleN1r.
+rewrite mulmxE emx3M; first by rewrite spin3 w1 expr1n scaleN1r.
 by move/eqP; rewrite -splitr.
 Qed.
 
@@ -837,9 +837,9 @@ rewrite inE eigenvalue_root_char -map_char_poly.
 rewrite /= !inE.
 rewrite  char_poly3 /= trace_eskew // det_eskew //.
 rewrite [`e(_,_) ^+ _]expr2 eskewM // trace_eskew //.
-rewrite (_ : _ - _ = (1 + cos a *+ 2) *+ 2); last first.
+rewrite (_ : _ - _ = (1 + cos a *+ 2) *+ 2).
   rewrite opprD addrA cosD -2!expr2 sin2cos2 opprB addrA -mulr2n mulrDr mulrN1.
-  rewrite opprB addrA -(addrA _ (-1)) (_ : -1 + 2 = 1)//; last first.
+  rewrite opprB addrA -(addrA _ (-1)) (_ : -1 + 2 = 1)//.
     by rewrite addrC; apply/eqP; rewrite subr_eq.
   rewrite -addrA mulr_natl; apply/eqP.
   rewrite eq_sym [eqbRHS]addrC -subr_eq.
@@ -850,7 +850,7 @@ rewrite (_ : _ - _ = (1 + cos a *+ 2) *+ 2); last first.
 rewrite -[(_ + _) *+ _]mulr_natl mulrA divfK ?(eqr_nat _ 2 0) // mul1r.
 rewrite linearB /= map_polyC /= !(linearB, linearD, linearZ) /=.
 rewrite !map_polyXn map_polyX.
-rewrite (_ : _ - _ = ('X - 1) * ('X - (expi a)%:P) * ('X - (expi (-a))%:P)).
+rewrite (_ : _ - _ = ('X - 1) * ('X - (expi a)%:P) * ('X - (expi (-a))%:P)); last first.
   rewrite 2!rootM orbA; congr (_ || _ || _).
   by rewrite root_XsubC.
   by rewrite root_XsubC.
@@ -927,12 +927,12 @@ apply/isRotP; split => /=.
   rewrite dotmul_normalize_enorm scalerA -mulrA divrr ?mulr1 ?unitfE ?enorm_eq0//.
   by rewrite subrK (linearZl_LR _ w)/= (@liexx _ (vec3 T)) 2!scaler0 addr0.
 - rewrite -rodriguesP // /rodrigues dotmulC norm_normalize // expr1n scale1r.
-  rewrite (_ : normalize w = Base.i w) (*NB: lemma?*); last by rewrite /Base.i (negbTE w0).
+  rewrite (_ : normalize w = Base.i w) (*NB: lemma?*); first by rewrite /Base.i (negbTE w0).
   rewrite -Base.jE -Base.kE.
   rewrite Base.idotj // mulr0 scale0r addr0 -Base.icrossj /=  scalerBl scale1r.
   by rewrite opprB addrCA subrr addr0.
 - rewrite -rodriguesP /rodrigues dotmulC norm_normalize // expr1n scale1r.
-  rewrite (_ : normalize w = Base.i w) (*NB: lemma?*); last by rewrite /Base.i (negbTE w0).
+  rewrite (_ : normalize w = Base.i w) (*NB: lemma?*); first by rewrite /Base.i (negbTE w0).
   rewrite -Base.jE -Base.kE.
   rewrite Base.idotk // mulr0 scale0r addr0 scalerBl scale1r opprB addrCA subrr.
   rewrite addr0 addrC; congr (_ + _).
@@ -985,7 +985,7 @@ Lemma normalcomp_double_crossmul p (e : 'rV[T]_3) : `| e |_e = 1 ->
   normalcomp p e *v ((Base.frame e)|,2%:R *v (Base.frame e)|,1) = e *v p.
 Proof.
 move=> u1.
-rewrite 2!rowframeE (@lieC _ (vec3 T) (row _ _)) /= SO_jcrossk; last first.
+rewrite 2!rowframeE (@lieC _ (vec3 T) (row _ _)) /= SO_jcrossk.
   by rewrite -(col_mx3_row (NOFrame.M (Base.frame e))) -!rowframeE Base.is_SO.
 rewrite -rowframeE Base.frame0E ?norm1_neq0 //.
 rewrite normalizeI // {2}(axialnormalcomp p e) linearD /=.
@@ -1000,7 +1000,7 @@ move=> u1 H.
 set v := normalcomp p u.
 move: (orthogonal_expansion (Base.frame u) v).
 set p0 := _|,0. set p1 := _|,1. set p2 := _|,2%:R.
-rewrite (_ : (v *d p0) *: _ = 0) ?add0r; last first.
+rewrite (_ : (v *d p0) *: _ = 0) ?add0r.
   by rewrite /p0 Base.frame0E ?norm1_neq0 // normalizeI // dotmul_normalcomp scale0r.
 move=> ->.
 rewrite mulmxDl -2!scalemxAl.
@@ -1020,10 +1020,10 @@ Lemma isRot_eskew_unit_inv a Q u : `| u |_e = 1 ->
   isRot a u (mx_lin1 Q) -> Q = eskew_unit a u.
 Proof.
 move=> u1 H; apply/eqP/mulmxP => p.
-rewrite (axialnormalcomp (p *m Q) u) axialcomp_mulO; last 2 first.
+rewrite (axialnormalcomp (p *m Q) u) axialcomp_mulO.
   exact/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
   exact: isRot_axis H.
-rewrite normalcomp_mulO //; last 2 first.
+rewrite normalcomp_mulO //.
   exact/rotation_sub/(isRot_SO (norm1_neq0 u1) H).
   exact: isRot_axis H.
 rewrite axialcompE u1 expr1n invr1 scale1r.
@@ -1041,9 +1041,9 @@ Qed.
 
 Lemma axial_skew_unit (e : vector) a : axial (eskew_unit a e) = sin a *: e *+ 2.
 Proof.
-rewrite /eskew_unit 2!axialD (_ : axial _ = 0) ?add0r; last first.
+rewrite /eskew_unit 2!axialD (_ : axial _ = 0) ?add0r.
   apply/eqP; by rewrite -axial_sym mul_tr_vec_sym.
-rewrite (_ : axial _ = 0) ?add0r; last first.
+rewrite (_ : axial _ = 0) ?add0r.
   apply/eqP; rewrite -axial_sym sym_scaler_closed (* TODO: declare the right canonical to be able to use rpredZ *) //.
   by rewrite rpredD // ?sym_cst // rpredN mul_tr_vec_sym.
 rewrite axialZ axialE scalerMnr; congr (_ *: _).
@@ -1080,7 +1080,7 @@ Definition angle M := acos ((\tr M - 1) / 2%:R).
 
 Lemma angle1 : angle 1 = 0.
 Proof.
-rewrite /angle mxtrace1 (_ : 3%:R - 1 = 2%:R); last first.
+rewrite /angle mxtrace1 (_ : 3%:R - 1 = 2%:R).
   by apply/eqP; rewrite subr_eq -(natrD _ 2 1).
 by rewrite divrr ?unitfE ?pnatr_eq0 // acos1.
 Qed.
@@ -1091,7 +1091,7 @@ Lemma anglepi (n : vector) (n1 : `| n |_e = 1) :
   angle (n^T *m n *+ 2 - 1) = pi.
 Proof.
 rewrite /angle mxtraceD linearN /= mxtrace1 mulr2n linearD /=.
-rewrite mxtrace_tr_mul n1 expr1n (_ : _ - 1 = - 2%:R); last first.
+rewrite mxtrace_tr_mul n1 expr1n (_ : _ - 1 = - 2%:R).
   by apply/eqP; rewrite -opprB eqr_opp opprB (_ : 1 + 1 = 2%:R) // -natrB.
 by rewrite -mulr_natl mulNr divrr ?mulr1 ?unitfE ?pnatr_eq0 // acosN1.
 Qed.
@@ -1112,8 +1112,7 @@ Lemma isRot_angleN M u a : u != 0 -> - pi <= a <= 0 ->
   isRot a u (mx_lin1 M) -> a = - angle M.
 Proof.
 move=> u0 Ha /(mxtrace_isRot u0); rewrite /angle=> ->.
-rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divff; last first.
-  by rewrite pnatr_eq0.
+rewrite addrAC subrr add0r -(mulr_natr (cos a)) -mulrA divff ?pnatr_eq0//.
 by rewrite mulr1 cosKN // opprK.
 Qed.
 
@@ -1138,7 +1137,7 @@ have := sin0cos1 Hs; case: (ler0P (cos a)) => _ Hc; move: Ma; last first.
   by rewrite emx30M' // => ->; rewrite angle1; left.
 rewrite -eskew_unitE ?norm_normalize // ?vaxis_euler_neq0 //.
 rewrite eskew_unitE ?norm_normalize // ?vaxis_euler_neq0 //.
-rewrite eskew_pi' // ?norm_normalize // ?vaxis_euler_neq0 //; last first.
+rewrite eskew_pi' // ?norm_normalize // ?vaxis_euler_neq0 //.
   by rewrite -Hc opprK.
 move => ->; right.
 by rewrite anglepi // ?norm_normalize // ?vaxis_euler_neq0 //.
@@ -1149,8 +1148,8 @@ Proof.
 move=> MSO; case/SO_isRot : (MSO) => a aB HM.
 rewrite (mxtrace_isRot (vaxis_euler_neq0 MSO) HM).
 rewrite [1 + _]addrC addrK -[_ *+2]mulr_natr mulfK.
-  by rewrite cos_geN1 cos_le1.
-by rewrite (eqr_nat _ 2 0).
+  by rewrite (eqr_nat _ 2 0).
+by rewrite cos_geN1 cos_le1.
 Qed.
 
 Lemma angle_interval M : M \is 'SO[T]_3 -> 0 <= angle M <= pi.
@@ -1188,7 +1187,7 @@ Qed.
 Lemma angle0_tr M : M \is 'SO[T]_3 -> angle M = 0 -> \tr M = 3%:R.
 Proof.
 move=> MSO /(congr1 (fun x => cos x)).
-rewrite cos0 /angle acosK; last by apply tr_interval.
+rewrite cos0 /angle acosK; first exact: tr_interval.
 move/(congr1 (fun x => x * 2%:R)).
 rewrite -mulrA mulVr ?unitfE ?pnatr_eq0 // mulr1 mul1r.
 move/(congr1 (fun x => x + 1)).
@@ -1198,7 +1197,7 @@ Qed.
 Lemma angle_pi_tr M : M \is 'SO[T]_3 -> angle M = pi -> \tr M = - 1.
 Proof.
 move=> MSO /(congr1 (fun x => cos x)).
-rewrite cospi /angle acosK; last by apply tr_interval.
+rewrite cospi /angle acosK; first exact: tr_interval.
 move/(congr1 (fun x => x * 2%:R)).
 rewrite -mulrA mulVf ?pnatr_eq0 // mulr1.
 move/(congr1 (fun x => x + 1)).
@@ -1260,12 +1259,12 @@ have [M010 [M020 M001]] : M 0 1 = 0 /\ M 0 2%:R = 0 /\ M 0 0 = 1.
 have [P MP] : exists P : 'M[T]_2, M = block_mx (1 : 'M_1) 0 0 P.
   exists (@drsubmx _ 1 2 1 2 M).
   rewrite -{1}(@submxK _ 1 2 1 2 M).
-  rewrite (_ : ulsubmx _ = 1); last first.
+  rewrite (_ : ulsubmx _ = 1).
     apply/matrixP => i j.
-    rewrite (ord1 i) (ord1 j) !mxE /= -M001 mulr1n; congr (M _ _); by apply val_inj.
-  rewrite (_ : ursubmx _ = 0); last first.
+    by rewrite (ord1 i) (ord1 j) !mxE /= -M001 mulr1n; congr (M _ _); apply val_inj.
+  rewrite (_ : ursubmx _ = 0).
     apply/rowP => i.
-    case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
+    by case/boolP : (i == 0) => [|/ifnot01P]/eqP->;
       [ rewrite !mxE -[RHS]M010; congr (M _ _); exact: val_inj |
         rewrite !mxE -[RHS]M020; congr (M _ _); exact: val_inj ].
   rewrite (_ : dlsubmx _ = 0) //.
@@ -1282,7 +1281,7 @@ split.
 case/rot2d : PSO => a /andP[a_geNpi a_lepi] PRO; rewrite {}PRO in MP.
 have := (angle_RO MP).
 case: (leP 0 a) => Ha /=; first by case=> -> // _; right; rewrite MP Rx_RO.
-case => _ -> //; last by rewrite (ltW a_geNpi) ltW.
+case => _ -> //; first by rewrite (ltW a_geNpi) ltW.
 by left; rewrite opprK MP Rx_RO.
 Qed.
 
@@ -1443,9 +1442,10 @@ apply: (@same_isRot _ _ _ _ (- `|Aa.vaxis M|_e *: w) ((sin (Aa.angle M) *+ 2) * 
   rewrite scale1r /w scaleNr norm_scale_normalize /Aa.vaxis (negbTE api).
   by rewrite tr_axial scalerN.
 - by rewrite -a_angle_of_rot //.
-rewrite isRotZN; first by rewrite opprK isRot_eskew // normalizeI.
-  by rewrite -enorm_eq0 w1 oner_neq0.
-by rewrite oppr_lt0 enorm_gt0 // Aa.vaxis_neq0.
+rewrite isRotZN.
+- by rewrite -enorm_eq0 w1 oner_neq0.
+- by rewrite oppr_lt0 enorm_gt0 // Aa.vaxis_neq0.
+- by rewrite opprK isRot_eskew // normalizeI.
 Qed.
 
 Lemma angle_axis_isRot (Q : 'M[T]_3) : axial Q != 0 ->
@@ -1466,7 +1466,7 @@ case/boolP : (Aa.angle Q == pi) => [api|api].
   apply isRotpi; by rewrite norm_normalize // vaxis_euler_neq0.
 have aB1: 0 < Aa.angle Q < pi by rewrite !lt_neqAle eq_sym a0 api.
 move=> [:vaxis0].
-rewrite {3}H isRotZ; last 2 first.
+rewrite {3}H isRotZ.
   abstract: vaxis0.
   rewrite /Aa.vaxis (negbTE api) scaler_eq0 negb_or Q0 andbT.
   rewrite invr_eq0 mulrn_eq0 /=.
@@ -1667,8 +1667,8 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
 have pi2B : - pi < (pi : T) / 2%:R <= pi.
   rewrite lter_pdivlMr ?ltr0n // ler_pdivrMr ?ltr0n //.
   rewrite -subr_gte0 mulNr opprK addr_gt0 ? pi_gt0 //.
-    by rewrite -subr_gte0 mulr_natr mulr2n addrK pi_ge0.
-  by rewrite mulr_natr mulr2n addr_gt0 // pi_gt0.
+    by rewrite mulr_natr mulr2n addr_gt0 // pi_gt0.
+  by rewrite -subr_gte0 mulr_natr mulr2n addrK pi_ge0.
 have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
   rewrite ltrN2 ltr_pdivrMr// ltr_pMr ?pi_gt0// ltr1n/=.
   by rewrite (le_trans _ (pi_ge0 T))// lerNl oppr0 divr_ge0// pi_ge0.
@@ -1725,32 +1725,32 @@ have [w [wB Hw1 Hw2]] :
   rewrite normu.
   move/(congr1 (fun x => x ^+ 2)).
   rewrite expr1n enormD !enormZ ?noframe_norm !mulr1.
-  rewrite (_ : cos _ = 0); last first.
+  rewrite (_ : cos _ = 0).
     case: (lerP 0 (u *d F|,2%:R)).
       rewrite le_eqVlt eq_sym (negbTE u2) /= => {}u2.
       case: (lerP 0 (u *d F|,1)).
         rewrite le_eqVlt eq_sym (negbTE u1) /= => {}u1.
-        rewrite vec_anglevZ; last by [].
-        rewrite vec_angleZv; last by [].
+        rewrite vec_anglevZ; first by [].
+        rewrite vec_angleZv; first by [].
         rewrite /vec_angle /= noframe_jdotk mul0r acos0.
         by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf.
       move=> {}u1.
-        rewrite vec_angleZNv; last by [].
-        rewrite vec_anglevZ; last by [].
+        rewrite vec_angleZNv; first by [].
+        rewrite vec_anglevZ; first by [].
         rewrite cos_vec_angleNv //.
         rewrite /vec_angle noframe_jdotk mul0r acos0.
         by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf oppr0.
       move=> {}u2.
       case: (lerP 0 (u *d F|,1)).
         rewrite le_eqVlt eq_sym (negbTE u1) /= => {}u1.
-        rewrite vec_angleZv; last by [].
-        rewrite vec_anglevZN; last by [].
+        rewrite vec_angleZv; first by [].
+        rewrite vec_anglevZN; first by [].
         rewrite cos_vec_anglevN //.
         rewrite /vec_angle noframe_jdotk mul0r acos0.
         by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf oppr0.
       move=> {}u1.
-      rewrite vec_anglevZN; last by [].
-      rewrite vec_angleZNv; last by [].
+      rewrite vec_anglevZN; first by [].
+      rewrite vec_angleZNv; first by [].
       rewrite cos_vec_angleNv ?oppr_eq0 // cos_vec_anglevN //.
       rewrite opprK /vec_angle noframe_jdotk mul0r acos0.
       by rewrite (negPf f1D0) (negPf f2D0) cos_pihalf.
@@ -1777,7 +1777,7 @@ exists w; rewrite -{1}Hw1 -{1}Hw2; split => //.
 have <- : v *d F|,1 = - sin w.
   rewrite -Hw2 2!dotmul_cos normu 2!noframe_norm mul1r normv mulr1.
   rewrite [in LHS]mul1r [in RHS]mul1r ?opprK H'.
-  rewrite [in RHS]cos_vec_anglevN ?opprK; [by [] | | ].
+  rewrite [in RHS]cos_vec_anglevN ?opprK; [ | | by []].
   by rewrite -enorm_eq0 normv oner_neq0.
   by rewrite -enorm_eq0 noframe_norm oner_neq0.
 have <- : v *d F|,2%:R = cos w.
@@ -1844,9 +1844,9 @@ have Ha1 : a1 = col 0 R.
   case: ifPn => [/eqP ->|A1].
     by rewrite !mxE /= Kw3 !mulNr opprK -mulrA mulVr ?mulr1 // unitfE gt_eqF.
   rewrite -(negbK (a == 2%:R)) ifnot2 negb_or A0 A1 /= !mxE /= /w2 asinK.
-    suff /eqP -> : a == 2%:R by [].
-    by apply/negPn; rewrite ifnot2 negb_or A0.
-  by rewrite in_itv/= -ler_norml Oij_ub // rotation_sub.
+    by rewrite in_itv/= -ler_norml Oij_ub // rotation_sub.
+  suff /eqP -> : a == 2%:R by [].
+  by apply/negPn; rewrite ifnot2 negb_or A0.
 have Hw2 : sin w2 = R 2%:R 0.
   move/(congr1 (fun v : 'cV_3 => v 2%:R 0)) : Ha1; by rewrite !mxE.
 rewrite -(row_mx_colE R).
@@ -1854,8 +1854,8 @@ transitivity (row_mx (col 0 R) (row_mx a2 a3) *m Rx w1).
   rewrite Rx_RO.
   rewrite (mul_row_block _ _ 1) mulmx0 addr0 mulmx1 mulmx0 add0r.
   congr (row_mx (col 0 R)).
-  rewrite (_ : col 1 R = (row 1 R^T)^T); last by rewrite ?tr_row ?trmxK.
-  rewrite (_ : col 2%:R R = (row 2%:R R^T)^T); last by rewrite ?tr_row ?trmxK.
+  rewrite (_ : col 1 R = (row 1 R^T)^T); first by rewrite ?tr_row ?trmxK.
+  rewrite (_ : col 2%:R R = (row 2%:R R^T)^T); first by rewrite ?tr_row ?trmxK.
   rewrite -(trmxK a2).
   rewrite -(trmxK a3).
   have [k [k' [Hr2 Hr3]]] : exists k k',
@@ -1915,9 +1915,9 @@ exists (if 0 <= u``_0 then vec_angle n 'e_0 else - vec_angle n 'e_0).
   by rewrite Rz_eskew isRot_eskew ?normalizeI ?enorm_delta_mx.
 rewrite {1}e0row /Rz mulmx_row3_col3 ?(scale0r,scale1r,addr0).
 rewrite [in RHS]/n crossmulE.
-rewrite (_ : 'e_2%:R 0 1 = 0) ?(mul0r,add0r); last by rewrite mxE.
-rewrite (_ : 'e_2%:R 0 0 = 0) ?(mul0r,subrr,subr0); last by rewrite mxE.
-rewrite (_ : 'e_2%:R 0 2%:R = 1) ?mul1r; last by rewrite mxE.
+rewrite (_ : 'e_2%:R 0 1 = 0) ?(mul0r,add0r); first by rewrite mxE.
+rewrite (_ : 'e_2%:R 0 0 = 0) ?(mul0r,subrr,subr0); first by rewrite mxE.
+rewrite (_ : 'e_2%:R 0 2%:R = 1) ?mul1r; first by rewrite mxE.
 have ? : 'e_2%:R *v u != 0.
   apply/colinearP; case.
     by rewrite -enorm_eq0 u1 // oner_eq0.
@@ -1939,13 +1939,13 @@ rewrite /normalize row3Z mulr0; congr row3.
       ?enorm_delta_mx ?oner_neq0 //.
     case: ifPn => //; by rewrite sinN.
   rewrite /n /normalize crossmulE.
-  rewrite (_ : 'e_0%:R 0 2%:R = 0) ?(mulr0,subr0,add0r); last by rewrite mxE.
-  rewrite (_ : 'e_0%:R 0 1 = 0) ?(mulr0,oppr0,add0r); last by rewrite mxE.
-  rewrite (_ : 'e_0%:R 0 0 = 1) ?(mulr1); last by rewrite mxE.
+  rewrite (_ : 'e_0%:R 0 2%:R = 0) ?(mulr0,subr0,add0r); first by rewrite mxE.
+  rewrite (_ : 'e_0%:R 0 1 = 0) ?(mulr0,oppr0,add0r); first by rewrite mxE.
+  rewrite (_ : 'e_0%:R 0 0 = 1) ?(mulr1); first by rewrite mxE.
   rewrite crossmulE.
-  rewrite (_ : 'e_2%:R 0 1 = 0) ?(mul0r,add0r); last by rewrite mxE.
-  rewrite (_ : 'e_2%:R 0 0 = 0) ?(mul0r,subrr,subr0); last by rewrite mxE.
-  rewrite (_ : 'e_2%:R 0 2%:R = 1) ?(mul1r); last by rewrite mxE.
+  rewrite (_ : 'e_2%:R 0 1 = 0) ?(mul0r,add0r); first by rewrite mxE.
+  rewrite (_ : 'e_2%:R 0 0 = 0) ?(mul0r,subrr,subr0); first by rewrite mxE.
+  rewrite (_ : 'e_2%:R 0 2%:R = 1) ?(mul1r); first by rewrite mxE.
   rewrite !mxE mulr0 /=.
   rewrite -{2 3 5 6}(oppr0) -row3N enormN.
   rewrite [in LHS]mulrC -{2 3 5 6}(mulr0 (u``_0)) -row3Z.
@@ -1980,6 +1980,7 @@ apply/matrix3P/and9P; split;
   move: (sin c) => sc;
   rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //=.
 
+- by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
@@ -2071,7 +2072,7 @@ apply: Rzyz_reduced_constraints => //.
   rewrite cos_atan2 ?oppr_eq0//.
   rewrite sqrrN sqr_M2jE // -/(yarc _).
   by rewrite mulrC mulrN -mulrA mulVf ?mulr1 ?opprK // yarc_neq0.
-- rewrite /zyz_b /zyz_c sqr_Mi2E; last by rewrite rotation_sub.
+- rewrite /zyz_b /zyz_c sqr_Mi2E ?rotation_sub//.
   rewrite -/(yarc _) sin_atan2_yarcx //.
   have [/eqP M02|M02] := boolP (M 0 2%:R == 0).
     rewrite M02 oppr0 sin_atan2_0.
@@ -2206,7 +2207,7 @@ apply: RxyzE_M02D1 => //.
     by rewrite (negbTE M01) mul0r.
   rewrite cos_atan2 // sqr_Mi2E // -/(yarc _) -mulrA.
   by rewrite mulVr ?mulr1 // unitfE yarc_neq0.
-- rewrite /rpy_a /rpy_b sqr_M0jE; last by rewrite rotation_sub.
+- rewrite /rpy_a /rpy_b sqr_M0jE; first by rewrite rotation_sub.
   rewrite -/(yarc _) cos_atan2_xyarc //.
   have [/eqP M00|M00] := boolP (M 0 0 == 0).
     rewrite M00 sin_atan2_0.
@@ -2285,7 +2286,7 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
       move H : (_ == 0) => h; case: h H => H.
         by rewrite mul1r (eqP H).
       by rewrite mul0r.
-    rewrite cos_atan2; last first.
+    rewrite cos_atan2.
       by rewrite mulf_neq0 // invr_eq0 -/(yarc _) yarc_neq0.
     rewrite -/(yarc _).
     rewrite mulrAC -(mulrA (M 0 0)) mulVr ?unitfE ?yarc_neq0 // mulr1.
@@ -2295,7 +2296,7 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
     have [M00|M00] := eqVneq (M 0 0) 0.
       rewrite M00 mul0r sin_atan2_0 sgrM sgrV -mulrA -normrEsg.
       by rewrite -sqr_Mi2E // M00 expr0n add0r sqrtr_sqr normr_id -numEsg.
-    rewrite sin_atan2; last first.
+    rewrite sin_atan2.
       by rewrite mulf_neq0 // -/(yarc _) invr_eq0 yarc_neq0.
     rewrite -/(yarc _).
     (* NB: same as above *)
@@ -2308,7 +2309,7 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
       rewrite M22 mul0r sin_atan2_0 sgrM sgrV mulrCA -[_ * Num.sg _]mulrC.
       rewrite -normrEsg -sqr_M0jE //.
       by rewrite M22 expr0n addr0 sqrtr_sqr normr_id -numEsg.
-    rewrite sin_atan2; last first.
+    rewrite sin_atan2.
       by rewrite mulf_neq0 // -/(yarc _) invr_eq0 yarc_neq0.
     rewrite -/(yarc _).
     (* NB: same as above *)
@@ -2322,7 +2323,7 @@ have [/eqP NM02E1|NM02D1] := boolP (`|M 0 2%:R| == 1); last first.
     rewrite mulf_eq0 invr_eq0 sqrtr_eq0 le_eqVlt sqrf_eq0.
     rewrite ltNge sqr_ge0 orbF.
     by case: eqP => [->|] /=; rewrite ?(mul0r, mulr0, expr0n, sqrtr0).
-  rewrite cos_atan2; last first.
+  rewrite cos_atan2.
     by rewrite mulf_neq0 // -/(yarc _) invr_eq0 yarc_neq0.
   rewrite -/(yarc _).
   (* NB: same as above *)

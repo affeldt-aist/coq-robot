@@ -201,7 +201,7 @@ do 3 rewrite dotmulE sum3E.
 move=> H1 H2 H3.
 have /eqP : p *m (col_mx3 f~i f~j f~k) ^T = 0.
   by rewrite mul_tr_col_mx3 dotmulE sum3E H1 dotmulE sum3E H2 dotmulE sum3E H3 row30.
-rewrite mul_mx_rowfree_eq0; first by move/eqP.
+rewrite mul_mx_rowfree_eq0; last by move/eqP.
 apply/row_freeP; exists (col_mx3 f~i f~j f~k).
 by apply/eqP; rewrite -orthogonalEC !rowframeE col_mx3_row (NOFrame.MO _).
 Qed.
@@ -238,23 +238,23 @@ rewrite (@lieC _ (vec3 T) _ f~j).
 rewrite (@lieC _ (vec3 T) _ f~k).
 rewrite /=.
 rewrite ![in LHS]linearD /=.
-rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
+rewrite (_ : _ *v _ = 0); first by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
 rewrite oppr0 scaler0 add0r.
 case: noframek => e3e1e2.
 - case: (noframe_posP e3e1e2) => Hj Hi.
-  rewrite (_ : _ *v _ = v2 *: f~k); last by rewrite linearZ /= -e3e1e2.
-  rewrite scalerN (_ : _ *v _ = - v3 *: f~j); last first.
+  rewrite (_ : _ *v _ = v2 *: f~k); first by rewrite linearZ /= -e3e1e2.
+  rewrite scalerN (_ : _ *v _ = - v3 *: f~j).
     by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hj scalerN scaleNr.
-  rewrite scaleNr opprK (_ : _ *v _ = - v1 *: f~k); last first.
+  rewrite scaleNr opprK (_ : _ *v _ = - v1 *: f~k).
     by rewrite linearZ /= (@lieC _ (vec3 T)) e3e1e2 scalerN scaleNr.
-  rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
+  rewrite scaleNr opprK (_ : _ *v _ = 0).
     by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite scalerN scaler0 subr0.
-  rewrite (_ : _ *v _ = v3 *: f~i); last by rewrite linearZ /= -Hi.
-  rewrite scalerN (_ : _ *v _ = v1 *: f~j); last by rewrite linearZ /= Hj.
-  rewrite scalerN (_ : _ *v _ = - v2 *: f~i); last first.
+  rewrite (_ : _ *v _ = v3 *: f~i); first by rewrite linearZ /= -Hi.
+  rewrite scalerN (_ : _ *v _ = v1 *: f~j); first by rewrite linearZ /= Hj.
+  rewrite scalerN (_ : _ *v _ = - v2 *: f~i).
     by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hi scaleNr scalerN.
-  rewrite scaleNr opprK (_ : _ *v _ = 0); last first.
+  rewrite scaleNr opprK (_ : _ *v _ = 0).
     by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite scalerN scaler0 subr0.
   move/esym : noframe_pos; rewrite e3e1e2 eqxx => /eqP ->.
@@ -263,39 +263,40 @@ case: noframek => e3e1e2.
   rewrite addrCA.
   rewrite addrC.
   rewrite ![in LHS]addrA.
-  rewrite -addrA; congr (_ + _); last first.
+  rewrite -(addrA _ _ (w2 *: (v1 *: (f|,0 *v f|,1)))); congr (_ + _); last first.
     by rewrite !scalerA -scaleNr -scalerDl /= addrC mulrC (mulrC w1).
   rewrite -addrA addrACA addrC; congr (_ + _).
     by rewrite -scaleNr !scalerA -scalerDl addrC mulrC mulNr (mulrC w2).
   by rewrite !scalerA -scalerBl scalerN -scaleNr opprB mulrC (mulrC w3).
 - case: (noframe_negP e3e1e2) => Hj Hi.
-  rewrite (_ : _ *v _ = - v2 *: f~k); last first.
+  rewrite (_ : _ *v _ = - v2 *: f~k).
     rewrite linearZ /= e3e1e2.
     rewrite (linearNl _ f|,1)/=.
     by rewrite scalerN scaleNr opprK.
   rewrite scaleNr opprK.
-  rewrite (_ : _ *v _ = v3 *: f~j); last by rewrite linearZ /= -Hj.
+  rewrite (_ : _ *v _ = v3 *: f~j); first by rewrite linearZ /= -Hj.
   rewrite scalerN.
-  rewrite (_ : _ *v _ = v1 *: f~k); last first.
+  rewrite (_ : _ *v _ = v1 *: f~k).
     by rewrite linearZ /= (@lieC _ (vec3 T)) -linearNl /= -e3e1e2.
   rewrite scalerN.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
+  rewrite (_ : _ *v _ = 0); first by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite oppr0 scaler0 addr0.
-  rewrite (_ : _ *v _ = - v3 *: f~i); last first.
+  rewrite (_ : _ *v _ = - v3 *: f~i).
     by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hi scalerN scaleNr.
   rewrite scaleNr opprK.
-  rewrite (_ : _ *v _ = - v1 *: f~j); last first.
+  rewrite (_ : _ *v _ = - v1 *: f~j).
     by rewrite linearZ /= (@lieC _ (vec3 T)) /= -Hj scalerN scaleNr.
   rewrite scaleNr opprK.
-  rewrite (_ : _ *v _ = v2 *: f~i); last by rewrite linearZ /= -Hi.
+  rewrite (_ : _ *v _ = v2 *: f~i); first by rewrite linearZ /= -Hi.
   rewrite scalerN.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
+  rewrite (_ : _ *v _ = 0); first by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite oppr0 scaler0 addr0.
   move: noframe_neg; rewrite {1}e3e1e2 eqxx => /esym/eqP ->.
   rewrite -![in LHS]addrA addrC -addrA.
-  rewrite addrCA -addrA addrC ![in LHS]addrA -addrA; congr (_ + _); last first.
+  rewrite addrCA -addrA addrC ![in LHS]addrA.
+  rewrite -(addrA _ _ (- (w2 *: (v1 *: f|,2)))); congr (_ + _); last first.
     by rewrite !scalerA -scalerBl mulrN1 opprB mulrC (mulrC w2).
-  rewrite -addrA addrACA; congr (_ + _).
+  rewrite -(addrA _ _ (- (w1 *: (v3 *: f|,1)))) addrACA; congr (_ + _).
     by rewrite !scalerA -scalerBl mulrN1 opprB mulrC (mulrC w3).
   by rewrite !scalerA -scalerBl scalerN mulrN1 scaleNr opprK mulrC (mulrC w1).
 Qed.
@@ -516,7 +517,7 @@ Proof. by rewrite /j colinearNv normalcompvN. Qed.
 
 Lemma kN : k (- u) = - k u.
 Proof.
-by rewrite /k (_ : j (- u) = j u); [rewrite (linearNl _ (j u)) | rewrite -jN].
+by rewrite /k (_ : j (- u) = j u); [rewrite -jN | rewrite (linearNl _ (j u))].
 Qed.
 
 End base1_lemmas.
@@ -821,7 +822,7 @@ Qed.
 
 Lemma FromTo_comp A B C : (C _R^ B) *m (B _R^ A) = C _R^ A.
 Proof.
-rewrite 2!FromToE -mulmxA (mulmxA _ B) mulVmx; last first.
+rewrite 2!FromToE -mulmxA (mulmxA _ B) mulVmx.
   by rewrite unitmxE (rotation_det (Frame.MSO B)) unitr1.
 rewrite mul1mx; apply/matrixP => i j.
 rewrite !mxE dotmulE; apply/eq_bigr => k _.
@@ -971,7 +972,7 @@ Proof. by rewrite -enorm_eq0 normi oner_neq0. Qed.
 
 Lemma normj : `| j |_e = 1.
 Proof.
-rewrite /j norm_normalize // normalcomp_colinear; last first.
+rewrite /j norm_normalize // normalcomp_colinear.
   by rewrite -enorm_eq0 normi oner_neq0.
 apply: contra (abc); rewrite colinearvZ invr_eq0 enorm_eq0 subr_eq0.
 by rewrite eq_sym (negPf ab) /= colinear_sym.

@@ -237,8 +237,8 @@ rewrite /relative_displacement mulmxBr mulmx1 opprB.
 rewrite -img_vec_iso.
 rewrite /displacement.
 rewrite addrACA.
-rewrite (addrCA (f a)) subrr addr0.
-by rewrite (addrCA _ a) addrA subrr sub0r.
+rewrite (addrCA (f a)) (subrr (f a)) addr0.
+by rewrite (addrCA _ a) (addrA a) (subrr a) sub0r.
 Qed.
 
 End isometry_3_properties.
@@ -366,8 +366,7 @@ have -> : iso_sgn f = noframe_sgn f'.
   have -> : f'~k = f`* u3p by rewrite rowframeE rowK.
   by rewrite dmap_iso_sgnP /= !rowframeE !rowE !mulmx1 vecjk dote2 mulr1.
 have : (f`* u) *v (f`* v) = noframe_sgn f' *: (f`* (u *v v)) :> vector.
-  rewrite /=.
-  rewrite (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //; last 2 first.
+  rewrite /= (@crossmul_noframe_sgn _ f' (f`* u) u1 u2 u3 (f`* v) v1 v2 v3) //.
     move: Ku.
     by rewrite !rowframeE /= !rowK /=.
     move: Kv.
@@ -386,11 +385,11 @@ have : (f`* u) *v (f`* v) = noframe_sgn f' *: (f`* (u *v v)) :> vector.
   rewrite linearD [in RHS]/=.
   rewrite [in X in _ = - (_ *: X) *m _ + _ + _]linearD.
   rewrite [in RHS]/=.
-  rewrite (_ : 'e_0 *v (u1 *: _) = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
-  rewrite (_ : 'e_0 *v (u2 *: _) = u2 *: 'e_2%:R); last first.
+  rewrite (_ : 'e_0 *v (u1 *: _) = 0); first by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
+  rewrite (_ : 'e_0 *v (u2 *: _) = u2 *: 'e_2%:R).
     rewrite linearZ /=.
     by rewrite vecij.
-  rewrite (_ : 'e_0 *v (u3 *: _) = - u3 *: 'e_1); last first.
+  rewrite (_ : 'e_0 *v (u3 *: _) = - u3 *: 'e_1).
     rewrite linearZ /=.
     rewrite vecik.
     by rewrite scalerN scaleNr.
@@ -403,11 +402,11 @@ have : (f`* u) *v (f`* v) = noframe_sgn f' *: (f`* (u *v v)) :> vector.
   rewrite opprD.
   rewrite [in X in _ = _ + X + _]linearD [in X in _ = _ + X + _]/=.
   rewrite scaleNr scalerN opprK.
-  rewrite (_ : _ *v _ = - u1 *: 'e_2%:R); last first.
+  rewrite (_ : _ *v _ = - u1 *: 'e_2%:R).
     by rewrite linearZ /= (@lieC _ (vec3 T)) /= vecij scalerN scaleNr.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
+  rewrite (_ : _ *v _ = 0); first by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite addr0.
-  rewrite (_ : _ *v _ = u3 *: 'e_0); last by rewrite linearZ /= vecjk.
+  rewrite (_ : _ *v _ = u3 *: 'e_0); first by rewrite linearZ /= vecjk.
   rewrite scaleNr opprK mulmxBl.
   rewrite -![in RHS]scalemxAl.
   rewrite scalerDr scalerN.
@@ -415,20 +414,22 @@ have : (f`* u) *v (f`* v) = noframe_sgn f' *: (f`* (u *v v)) :> vector.
   rewrite opprD.
   rewrite [in X in _ = _ + _ + X]linearD [in X in _ = _ + _ + X]/=.
   rewrite opprD.
-  rewrite (_ : _ *v _ = u1 *: 'e_1); last first.
+  rewrite (_ : _ *v _ = u1 *: 'e_1).
     by rewrite linearZ /= (@lieC _ (vec3 T)) /= vecik opprK.
-  rewrite (_ : _ *v _ = - u2 *: 'e_0); last first.
+  rewrite (_ : _ *v _ = - u2 *: 'e_0).
     by rewrite linearZ /= (@lieC _ (vec3 T)) /= vecjk scalerN scaleNr.
-  rewrite (_ : _ *v _ = 0); last by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
+  rewrite (_ : _ *v _ = 0); first by rewrite linearZ /= (@liexx _ (vec3 T)) scaler0.
   rewrite subr0 scaleNr opprK mulmxDl mulNmx.
   rewrite -![in RHS]scalemxAl.
   rewrite -![in RHS]addrA [in RHS]addrC -[in RHS]addrA [in RHS]addrCA -[in RHS]addrA [in RHS]addrC.
-  rewrite ![in RHS]addrA -[in RHS]addrA.
+  rewrite ![in RHS]addrA.
+  rewrite -(addrA _ _ (v2 *: (u1 *: ('e_2%:R *m ortho_of_iso f)))).
   congr (_ + _); last first.
     rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u1).
     by rewrite /e3 /dmap /u3p rowframeE rowE mulmx1.
   rewrite scalerDr.
-  rewrite -![in RHS]addrA [in RHS]addrCA [in RHS]addrC ![in RHS]addrA -addrA; congr (_ + _).
+  rewrite -![in RHS]addrA [in RHS]addrCA [in RHS]addrC ![in RHS]addrA.
+  rewrite -(addrA _ _ (v3 *: - (u1 *: ('e_1 *m ortho_of_iso f)))); congr (_ + _).
     rewrite /e1 /dmap /u1p.
     rewrite rowframeE rowE mulmx1.
     by rewrite !scalerA -scaleNr -scalerDl addrC mulrC (mulrC u2).
@@ -461,7 +462,7 @@ rewrite K scaleN1r => /eqP; rewrite eqmxNxx.
 move: (mulmxr_crossmulr u v (ortho_of_iso_is_O f)).
 rewrite -/(iso_sgn f) K scaleN1r => /esym/eqP.
 rewrite eqr_oppLR => /eqP ->.
-rewrite oppr_eq0 mul_mx_rowfree_eq0; last first.
+rewrite oppr_eq0 mul_mx_rowfree_eq0.
   apply/row_freeP.
   exists (ortho_of_iso f)^T.
   apply/eqP; by rewrite -orthogonalE ortho_of_iso_is_O.
@@ -717,7 +718,7 @@ Lemma homV (T : comUnitRingType) M : M \is 'SE3[T] -> M * inv_hom M = 1.
 Proof.
 move=> HM.
 rewrite (SE3E HM) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
-rewrite homM -rotation_inv ?rot_of_hom_is_SO // divrr; last first.
+rewrite homM -rotation_inv ?rot_of_hom_is_SO // divrr.
   by apply/orthogonal_unit/rotation_sub/rot_of_hom_is_SO.
 by rewrite mulNmx subrr hom10.
 Qed.
@@ -726,7 +727,7 @@ Lemma Vhom (T : fieldType) M : M \is 'SE3[T] -> inv_hom M * M = 1.
 Proof.
 move=> HM.
 rewrite (SE3E HM) /= /inv_hom rot_of_hom_hom trans_of_hom_hom.
-rewrite homM -rotation_inv ?rot_of_hom_is_SO // mulVr; last first.
+rewrite homM -rotation_inv ?rot_of_hom_is_SO // mulVr.
   by apply/orthogonal_unit/rotation_sub/rot_of_hom_is_SO.
 rewrite -mulmxA mulVmx ?mulmx1 1?addrC ?subrr ?hom10 // .
 by rewrite unitmxE unitfE rotation_det ?oner_eq0 // rot_of_hom_is_SO.
@@ -846,7 +847,7 @@ rewrite /Adjoint -rot_of_homM // trans_of_homM // spinD.
 set a := rot_of_hom (_ * _) * _. set b := rot_of_hom (_ * _) * _.
 suff : a = b by move=> ->.
 rewrite {}/a {}/b; congr (_ * _).
-rewrite spin_similarity; last by rewrite rot_of_hom_is_SO.
+rewrite spin_similarity; first by rewrite rot_of_hom_is_SO.
 by rewrite -/t1 -/t2 -/r2 addrC.
 Qed.
 
@@ -922,7 +923,7 @@ Definition inv (m : t) : t := insubd one (- trans m *m (rot m)^T, (rot m)^T).
 
 Lemma inv'V m : hom_of m *m inv' m = 1.
 Proof.
-rewrite /inv' mulmxE homM -rotation_inv // divrr; last first.
+rewrite /inv' mulmxE homM -rotation_inv // divrr.
   exact/orthogonal_unit/rotation_sub.
 by rewrite mulNmx subrr hom10.
 Qed.
@@ -930,7 +931,7 @@ Qed.
 Lemma invV m : hom_of m *m hom_of (inv m) = 1.
 Proof.
 case: m => -[t r] /= Hr.
-rewrite /hom_of /inv /rot /trans /= insubdK; first exact: (inv'V (mk (t, r) Hr)).
+rewrite /hom_of /inv /rot /trans /= insubdK; last exact: (inv'V (mk (t, r) Hr)).
 by rewrite -rotationV in Hr.
 Qed.
 
