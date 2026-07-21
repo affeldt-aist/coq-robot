@@ -3,7 +3,7 @@ From mathcomp Require Import all_boot all_algebra ring.
 From mathcomp Require Import interval_inference finmap.
 From mathcomp Require Import boolp classical_sets functions reals order.
 From mathcomp Require Import topology normedtype landau sequences derive realfun.
-From mathcomp Require Import matrix_normedtype.
+From mathcomp Require Import matrix_normedtype exp.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
 Require Import lasalle (* to at least get the structure of filters on sets *).
@@ -466,6 +466,63 @@ Qed.
 Lemma cont_sol : forall p t, {within sublevelUpsilon1 p, continuous sol^~ t}.
 Proof.
 (* TODO: using thm 3.4 *)
+move=> p /= t.
+apply: continuous_in_subspaceT => /= u.
+red.
+rewrite inE/= => pu.
+have [r [k/= kr]] := tilt_eqn_locally_lipschitz alpha1 gamma_gt0 u.
+rewrite /continuous_at.
+have r1 : r%:num < 1. admit.
+have [t0|] := leP 0 t.
+  apply/cvgrPdist_le => //=.
+    admit.
+  move=> e e0.
+  near=> v.
+  have t01 : 0 < t + 1 by rewrite ltr_wpDl.
+  have := @thm34 K 6 (fun=> phi) (cst 0) 0 (t + 1) t01 k%:num u v r r1 (ltac:(auto)).
+  have : {in `[0, t + 1]%R, K -> k%:num.-lipschitz_(closed_ball u r%:num) phi}.
+    by move=> t1 t1t1; exact: kr.
+  move=> /[swap] /[apply].
+  have : {in closed_ball u r%:num, forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
+    move=> /= w wur.
+    admit.
+  move=> /[swap] /[apply].
+  have uUpsilon1 : u \in Tilt.Upsilon1 by move: pu => -[_ /mem_set].
+  have vUpsilon1 : v \in Tilt.Upsilon1. admit.
+  move=> /(_ (sol u) (sol v)).
+  have u0u : sol u 0 = u by rewrite /sol; case: cid => //= phi' [+ _]; exact.
+  have v0v : sol v 0 = v by rewrite /sol; case: cid => //= phi' [+ _]; exact.
+  have := @isSol_oo u (t + 1) uUpsilon1.
+  rewrite u0u => /[swap] /[apply].
+  have := @isSol_oo v (t + 1) vUpsilon1.
+  rewrite v0v.
+  rewrite (_ : (fun=> phi) \+ cst 0 = fun=> phi); last by apply/funext => i/=; rewrite addr0.
+  move=> /[swap] /[apply].
+  have Hu : [set sol u x | x in `[0, t + 1]] `<=` closed_ball u r%:num.
+    admit.
+  have Hv : [set sol v x | x in `[0, t + 1]] `<=` closed_ball u r%:num.
+    admit.
+  pose mu := (e * k%:num / (expR (k%:num * t) - 1)) / 2.
+  have mu_gt0 : 0 < mu.
+    rewrite /mu ?mulr_gt0//.
+    rewrite invr_gt0//.
+    rewrite subr_gt0 -expR0 ltr_expR// mulr_gt0//.
+    admit.
+  move/(_ Hu Hv (PosNum mu_gt0)) => /=.
+  set tmp := (tmp in (tmp -> _) -> _).
+  have : tmp.
+    rewrite /tmp.
+    move=> ? ? ? ?.
+    rewrite normr0//=.
+    exact: ltW.
+  move=> /[swap] /[apply] => /(_ t).
+  rewrite inE/= in_itv/= t0 lerDl ler01 => /(_ isT).
+  move=> /le_trans; apply.
+  rewrite subr0.
+  rewrite -lerBrDr.
+  rewrite -ler_pdivlMr ?expR_gt0//.
+  rewrite /mu.
+  admit.
 Admitted.
 
 Lemma invariant_sublevelUpsilon1 p :
