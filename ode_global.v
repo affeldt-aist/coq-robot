@@ -1408,7 +1408,6 @@ Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu : R -> R)
 
 Let lm := @lebesgue_measure R.
 
-
 Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
   {in `]a, b[, forall x, derivable z x 1} ->
   (forall t, t \in `]a, b[ -> 'D_1 z t = mu t * z t + f t) ->
@@ -1486,13 +1485,38 @@ have {}eqn u : u \in `]a, b[ ->
       (fun x => expR (- \int[lm]_(tau in `[a, x]) mu tau))); last first.
     by apply/funext => w; rewrite expRN.
   rewrite -derive1E derive1_comp//; last exact/derivableN/derivable_int_mu.
-  admit.
-suff: z t / phi a t =
+  have [tau1 tau2] : derivable (fun x => \int[lm]_(t0 in `[a, x]) mu t0) u 1 /\
+      (fun x => \int[lm]_(t0 in `[a, x]) mu t0)^`() u = mu u.
+    apply: (@continuous_FTC1 _ mu (BLeft a) u b).
+    by rewrite inE in uab; rewrite (itvP uab).
+    apply: continuous_compact_integrable => //.
+    exact: segment_compact.
+    by rewrite inE in uab; rewrite /= lte_fin (itvP uab).
+    move/continuous_within_itvP : mu_cont => /(_ ab)[+ _ _].
+    by apply; rewrite inE in uab.
+  rewrite derive1N//= derive1E tau2 mulrN; congr (- _).
+  rewrite mulrC; congr (_ * _).
+  by rewrite /phi -expRN -[in RHS]derive_expR.
+suff: z t / phi t a =
      fine (\int[lm]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
-  admit.
+  move=> /(congr1 (fun x => x * phi t a)).
+  by rewrite -!mulrA mulVf ?mulr1// gt_eqF// expR_gt0.
 transitivity (\int[lm]_(z0 in `]a, t[)
     'D_1 (fun t0 => z t0 / phi t0 a) z0) => /=.
-  admit.
+  rewrite /Rintegral integral_itv_obnd_cbnd//=; last first.
+    admit.
+  rewrite /Rintegral integral_itv_bndo_bndc//=; last first.
+    admit.
+  rewrite (@continuous_FTC2 _ _ (fun t0 : R => z t0 / phi t0 a)).
+    by rewrite {3}/phi set_itv1 Rintegral_set1 expR0 divr1 za0 sube0/=.
+    by rewrite (itvP tab).
+    admit.
+    split => /=.
+    + admit.
+    + admit.
+    + admit.
+  move=> u uat.
+  by rewrite derive1E.
 transitivity ((\int[lm]_(z0 in `]a, t[)
     ((phi t z0 * f z0) / phi t a))); last first.
   rewrite RintegralZr//=.
@@ -1507,7 +1531,12 @@ rewrite -opprB; congr (- _).
 apply/esym/eqP; rewrite subr_eq.
 rewrite [in X in _ + X]/Rintegral -integral_itv_obnd_cbnd//=; last first.
   apply/measurable_EFinP.
-  admit.
+  apply/measurable_fun_itv_bndo_bndcP.
+  apply: subspace_continuous_measurable_fun => //.
+  apply: continuous_subspaceW mu_cont.
+  apply: subset_itv; rewrite bnd_simp//.
+  by move: uat; rewrite inE => /itvP ->.
+  by rewrite (itvP tab).
 rewrite -[X in _ + X]/(Rintegral lm _ _) -Rintegral_setU//.
 - rewrite inE in uat.
   by rewrite -itv_bndbnd_setU// ?bnd_simp// (itvP uat).
@@ -1568,7 +1597,7 @@ have za0 : z a = 0 by rewrite /z set_itv1// Rintegral_set1.
 have zE : forall x, x \in `]a, b[ ->
     z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
   move=> x xab.
-  apply: solve_diff_equa => //.
+  apply: solve_diff_equa => //=.
   admit.
   by move=> u uab; rewrite derivez// addrA.
 have phimuv : forall x, x \in `]a, b[ ->
@@ -1590,7 +1619,22 @@ rewrite zE//.
 apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
                    - \int[lm]_(s in `[a, t]) (phi t s * mu s * v s))).
   rewrite -RintegralB//=; last 2 first.
-    admit.
+    apply: continuous_compact_integrable => /=.
+      exact: segment_compact.
+    apply: within_continuousM => /=.
+      apply: within_continuousM => /=.
+        apply: derivable_within_continuous => /= x xat.
+        apply: diff_derivable.
+        apply: (@differentiable_comp _ _ _ _ _ expR) => //=.
+          apply/derivable1_diffP.
+          admit.
+        admit.
+      apply: continuous_subspaceW mu_cont.
+      apply: subset_itvl; rewrite bnd_simp.
+      by move: tab; rewrite inE => /itvP ->.
+    apply: continuous_subspaceW lambda_cont.
+    apply: subset_itvl; rewrite bnd_simp.
+    by move: tab; rewrite inE => /itvP ->.
     admit.
   apply: le_Rintegral => //=.
     admit.
