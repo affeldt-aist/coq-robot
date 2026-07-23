@@ -1674,7 +1674,9 @@ Section thm34.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
 Variables (phi psi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
-Variables (u0 v0 : U) (r : {posnum R}) (r1 : r%:num < 1) .
+Variables (u0 v0 : U) (r : {posnum R}) (*(r1 : r%:num < 1)*).
+(* TODO: there seems to be no reason to have B being a closed ball
+around u0 whereas the proof talks about an open W*)
 Let B : set U := closed_ball u0 r%:num. (* open connected set? *)
 Hypothesis (k0 : 0 < k)
   (lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)})
@@ -1700,14 +1702,14 @@ have yint : forall t', t' \in `[a, b]%R -> y t' = u0 + \vint[lm]_(s in `[a, t'])
   move=> t' t'ab.
   suff: is_integral_sol phi u0 a b y.
     by move=> [<-]; apply.
-  apply/(integral_sol_iff_sol (r:=r) k_neq0 ab) => //.
+  apply/(integral_sol_iff_sol1 (r:=r) k_neq0 ab) => //.
   case: soly => _ _.
   by rewrite closure_neitv_oo. (* where we use By *)
 have zint : forall t, t \in `[a, b]%R -> z t = v0 + \vint[lm]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
   move=> t' t'ab.
   suff: is_integral_sol (phi \+ psi) v0 a b z.
     by move=> [-> ->].
-  apply/(integral_sol_iff_sol (r:=r) k_neq0 ab).
+  apply/(integral_sol_iff_sol1 (r:=r) k_neq0 ab).
   admit.
   admit.
   case: solz => _ _.

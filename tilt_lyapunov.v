@@ -397,10 +397,12 @@ Let phi := Tilt.eqn alpha1 gamma.
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
-Lemma tilt_eqn_locally_lipschitz : locally_lipschitz phi.
+Lemma tilt_eqn_locally_lipschitz_new x (r : R) :
+ exists k : {posnum R}, k%:num.-lipschitz_(closed_ball x r) phi.
 Proof.
-move=> /= x.
-exists (PosNum ltr01).
+have [r0|r0] := ltP 0 r; last first.
+  rewrite closed_ball0//.
+  by exists 1%:pos => /= -[u v] [].
 near (pinfty_nbhs R) => k.
 have k0 : 0 < k by [].
 exists (PosNum k0) => /= => -[/= x0 x1] [x0B x1B].
@@ -421,23 +423,24 @@ rewrite ge_max; apply/andP; split.
   set b := Right x1 - Left x1.
   set c := \S('e_2 - Right x0) ^+ 2.
   set d := \S('e_2 - Right x1) ^+ 2.
-  have abound : `|a| <= 2 * (`|x| + 1).
+  have abound : `|a| <= 2 * (`|x| + r).
     rewrite (le_trans (ler_normB _ _ ))// mulrDl lerD// mul1r.
       rewrite (le_trans (rsubmx_norm_le _))//.
-      exact: closed_ball_bounded.
+      by apply: closed_ball_bounded => //.
     rewrite (le_trans (lsubmx_norm_le _))//.
     exact: closed_ball_bounded.
   (* todo: find some bound and show *)
-  have sbound x' : closed_ball x 1 x' ->  `|'e_2 - Right x'| <= 2+`|x|.
+  have sbound x' : closed_ball x r x' ->  `|'e_2 - Right x'| <= (1 + r)+`|x|.
     move=> cb.
-    rewrite (le_trans (ler_normB _ _))// [in leRHS](natrD _ 1 1) -addrA lerD//.
+    rewrite (le_trans (ler_normB _ _))//.
+    rewrite -addrA lerD//.
       exact: mx_norm_delta_mx.
-    by rewrite (le_trans (rsubmx_norm_le _))// addrC closed_ball_bounded.
-  have dbound : `|d| <=  3 * (2 + `|x|) ^+ 2.
+    by rewrite (le_trans (rsubmx_norm_le _))// addrC closed_ball_bounded//.
+  have dbound : `|d| <=  3 * ((1 + r) + `|x|) ^+ 2.
     rewrite /d.
     apply: (le_trans (spin_sq_norm_bound _)).
     apply ler_pM => //.
-    suff h :  `|'e_2 - Right x1| <= 2 + `|x|.
+    suff h :  `|'e_2 - Right x1| <= (1 + r) + `|x|.
        by apply ler_pM => //; apply normr_ge0.
     by apply sbound.
   rewrite -ler_pdivlMl; last by rewrite normr_gt0 lt0r_neq0.
@@ -461,8 +464,9 @@ rewrite ge_max; apply/andP; split.
     rewrite ler_pdivlMl; last first.
        by rewrite mulr_gt0// gtr0_norm.
     rewrite !mulrA.
-    suff h : `|'e_2 - Right x0| + `|'e_2 - Right x1| <= 2 * (2 + `|x|).
-      exact: (le_trans (ler_pM _ _ (le_refl _) h)).
+    suff h : `|'e_2 - Right x0| + `|'e_2 - Right x1| <= 2 * ((1 + r) + `|x|).
+      apply: (le_trans (ler_pM _ _ (le_refl _) h)) => //.
+      by rewrite !mulr_ge0// addr_ge0// ltW.
     by rewrite mulrDl mul1r lerD//; apply sbound.
   + rewrite (le_trans (mx_norm_mul _ _))//.
     rewrite opprB -addrA (addrC (-Left x0)) addrA (addrC (Left x1)) addrA -(addrA (Right x0 - _)).
@@ -476,8 +480,15 @@ rewrite ge_max; apply/andP; split.
     by rewrite distrC -linearB/=; exact: lsubmx_norm_le.
     rewrite (le_trans (ler_pM  _ _ dbound (lexx _ )))//.
     rewrite ler_pdivlMl; last by rewrite mulr_gt0// gtr0_norm.
-    by rewrite !mulrA ler_pM.
+    by rewrite !mulrA ler_pM// !mulr_ge0// ?addr_ge0// ltW.
 Unshelve. all: by end_near. Qed.
+
+Lemma tilt_eqn_locally_lipschitz : locally_lipschitz phi.
+Proof.
+move=> /= x.
+exists 1%:pos.
+exact: tilt_eqn_locally_lipschitz_new.
+Qed.
 
 Lemma tilt_state_spaceS : state_space phi Tilt.Upsilon1 `<=` Tilt.Upsilon1.
 Proof.

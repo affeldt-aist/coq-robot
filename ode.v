@@ -1179,6 +1179,19 @@ Definition is_sol_oo u0 a b := is_sol_obnd u0 a (BLeft b).
 
 End is_sol.
 
+Lemma is_sol_oo_subset {R : realType} {n : nat} phi (u0 : 'rV[R]_n)
+(a b c d : R) sol : c < d -> a <= c -> d <= b ->
+is_sol_oo phi u0 a b sol -> is_sol_oo phi (sol c) c d sol.
+Proof.
+move=> cd ac bd isSol; split => //.
+
+    move=> x xcd; apply isSol.
+    by apply: subset_itv xcd; rewrite bnd_simp.
+
+    have [_ _ +] := isSol.
+    exact/continuous_subspaceW/closure_subset/subset_itv.
+    Qed.
+
 Section is_integral_sol.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n : nat}.
@@ -1213,76 +1226,9 @@ apply/within_continuous_coord.
 exact: (@within_continuous_lipschitz _ _ _ a b u0 r _ _ _ k0).
 Qed.
 
-Lemma picard_iterator_continuous i t : t \in `]a, b[%R ->
-  {for t, continuous (fun x => phi x (sol x) ord0 i)}.
+Lemma integral_sol_iff_sol1 :
+  is_sol_oo phi u0 a b sol -> is_integral_sol phi u0 a b sol.
 Proof.
-move/within_continuous_continuous; apply => //.
-exact: picard_iterator_within_continuous.
-Qed.
-
-Lemma picard_iterator_integrable i : mu.-integrable `[a, b]
-  (EFin \o (fun x : R => phi x (sol x) ord0 i)).
-Proof.
-apply: continuous_compact_integrable; first exact: segment_compact.
-exact: picard_iterator_within_continuous.
-Qed.
-
-Lemma integral_sol_iff_sol :
-  is_integral_sol phi u0 a b sol <-> is_sol_oo phi u0 a b sol.
-Proof.
-split.
-- move => [hinit h].
-  split => //; last first.
-    apply: continuous_subspaceW cont_sol.
-    exact: itv_closure (* TODO: why not equality? *).
-  move=> t tab.
-  move: (tab); rewrite in_itv /= => /andP[ta tb].
-  have -> : sol^`() t  = (fun x => sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))^`() t.
-    apply/eq_on_itv_deriv/tab => x xt01; apply h.
-    rewrite inE/= in xt01.
-    rewrite inE/=.
-    exact: subset_itv_oo_cc.
-  suff hi : forall i, derivable (fun x => sol x ord0 i) t 1 /\
-    (fun x : R => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%R)^`() t ord0 i =
-      phi t (sol t) ord0 i.
-    split.
-      apply /derivable_mxP => i j.
-      have [? _] := hi j.
-      by rewrite ord1.
-    apply/rowP => j.
-    by have [_ ?] := hi j.
-  move => j.
-  have [H1 H2] := @continuous_FTC1_closed _ (fun x => phi x (sol x) ord0 j)
-    a t b tb (picard_iterator_integrable j) ta (picard_iterator_continuous tab).
-  have Hderivable : derivable (fun x : R => \vint[mu]_(x0 in `[a, x]) phi x0 (sol x0)) t 1.
-    apply/(@derivable_mxP R R) => i0 i; rewrite (ord1 i0){i0}/=.
-    have [?] := @continuous_FTC1_closed _ (fun x => phi x (sol x) ord0 i)
-      a t b tb (picard_iterator_integrable i) ta (picard_iterator_continuous tab).
-    rewrite /rowRintegral.
-    rewrite [X in derivable X t 1](_ : _ =
-      (fun x => \int[mu]_(y in `[a, x]) phi y (sol y) ord0 i))//.
-    by apply/funext => x; rewrite mxE.
-  rewrite derive1E deriveD /=; last 2 first.
-    exact: derivable_cst.
-    exact: Hderivable.
-  split.
-     apply: (near_eq_derivable
-         (f := (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s)) ord0 j))) => //=.
-       near=> t'.
-       rewrite (h t')//= in_itv/=.
-       apply/andP; split.
-       - by apply: ltW; near: t'; exact: lt_nbhsr.
-       - by apply: ltW; near: t'; exact: lt_nbhsl.
-    have -> : (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%R ord0 j) =
-              cst (sol a ord0 j) +
-              (fun x => (\vint[mu]_(s in `[a, x]) (phi s (sol s))) ord0 j).
-      by apply funext => x; rewrite mxE.
-    apply: derivableD.
-      exact: derivable_cst.
-    by move/derivable_mxP : Hderivable; exact.
-  rewrite -!derive1E derive1_cst add0r -H2 !derive1E derive_mx//= mxE/=.
-  congr ('D_1 _ t).
-  by apply/funext => t'; rewrite mxE.
 move => [hinit h]; split => // t tab.
 have /= := tab; rewrite in_itv/= => /andP[ta tb].
 apply/rowP => i.
@@ -1310,6 +1256,93 @@ rewrite (@continuous_FTC2 _ (fun x => phi x (sol x) ord0 i) (fun x => sol x ord0
 Unshelve. all: by end_near. Qed.
 
 End integral_ode.
+
+Section integral_ode2.
+Local Notation mu := lebesgue_measure.
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U) (k : R) (r : {posnum R}).
+Hypothesis k0 : k != 0.
+Hypothesis ab : a < b.
+
+Let B := closed_ball u0 r%:num.
+Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
+Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
+Hypothesis cont_sol : {within `[a, b], continuous sol}.
+Hypothesis sol_bound : sol @` `[a, b] `<=` closed_ball u0 r%:num.
+
+Lemma picard_iterator_continuous i t : t \in `]a, b[%R ->
+  {for t, continuous (fun x => phi x (sol x) ord0 i)}.
+Proof.
+move/within_continuous_continuous; apply => //.
+exact: (picard_iterator_within_continuous k0 lip2 cont1).
+Qed.
+
+Lemma picard_iterator_integrable i : mu.-integrable `[a, b]
+  (EFin \o (fun x : R => phi x (sol x) ord0 i)).
+Proof.
+apply: continuous_compact_integrable; first exact: segment_compact.
+exact: (picard_iterator_within_continuous k0 lip2 cont1).
+Qed.
+
+Lemma integral_sol_iff_sol :
+  is_integral_sol phi u0 a b sol -> is_sol_oo phi u0 a b sol.
+Proof.
+move => [hinit h].
+split => //; last first.
+  apply: continuous_subspaceW cont_sol.
+  exact: itv_closure (* TODO: why not equality? *).
+move=> t tab.
+move: (tab); rewrite in_itv /= => /andP[ta tb].
+have -> : sol^`() t  = (fun x => sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))^`() t.
+  apply/eq_on_itv_deriv/tab => x xt01; apply h.
+  rewrite inE/= in xt01.
+  rewrite inE/=.
+  exact: subset_itv_oo_cc.
+suff hi : forall i, derivable (fun x => sol x ord0 i) t 1 /\
+  (fun x : R => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%R)^`() t ord0 i =
+    phi t (sol t) ord0 i.
+  split.
+    apply /derivable_mxP => i j.
+    have [? _] := hi j.
+    by rewrite ord1.
+  apply/rowP => j.
+  by have [_ ?] := hi j.
+move => j.
+have [H1 H2] := @continuous_FTC1_closed _ (fun x => phi x (sol x) ord0 j)
+  a t b tb (picard_iterator_integrable j) ta (picard_iterator_continuous tab).
+have Hderivable : derivable (fun x : R => \vint[mu]_(x0 in `[a, x]) phi x0 (sol x0)) t 1.
+  apply/(@derivable_mxP R R) => i0 i; rewrite (ord1 i0){i0}/=.
+  have [?] := @continuous_FTC1_closed _ (fun x => phi x (sol x) ord0 i)
+    a t b tb (picard_iterator_integrable i) ta (picard_iterator_continuous tab).
+  rewrite /rowRintegral.
+  rewrite [X in derivable X t 1](_ : _ =
+    (fun x => \int[mu]_(y in `[a, x]) phi y (sol y) ord0 i))//.
+  by apply/funext => x; rewrite mxE.
+rewrite derive1E deriveD /=; last 2 first.
+  exact: derivable_cst.
+  exact: Hderivable.
+split.
+   apply: (near_eq_derivable
+       (f := (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s)) ord0 j))) => //=.
+     near=> t'.
+     rewrite (h t')//= in_itv/=.
+     apply/andP; split.
+     - by apply: ltW; near: t'; exact: lt_nbhsr.
+     - by apply: ltW; near: t'; exact: lt_nbhsl.
+  have -> : (fun x => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%R ord0 j) =
+            cst (sol a ord0 j) +
+            (fun x => (\vint[mu]_(s in `[a, x]) (phi s (sol s))) ord0 j).
+    by apply funext => x; rewrite mxE.
+  apply: derivableD.
+    exact: derivable_cst.
+  by move/derivable_mxP : Hderivable; exact.
+rewrite -!derive1E derive1_cst add0r -H2 !derive1E derive_mx//= mxE/=.
+congr ('D_1 _ t).
+by apply/funext => t'; rewrite mxE.
+Unshelve. all: by end_near. Qed.
+
+End integral_ode2.
 
 Section picard.
 Local Notation mu := lebesgue_measure.
@@ -1690,7 +1723,7 @@ Lemma cauchy_lipschitz_unique_restr f' :
   {in `[a, a + safe_dist]%R, f =1 f'}.
 Proof.
 move => cont bnd.
-move/(@integral_sol_iff_sol _ _ _ _ _ _ _ _ r k0') => []//.
+move/(@integral_sol_iff_sol1 _ _ _ _ _ _ _ _ r k0') => []//.
 - exact: ltDl_safe_dist.
 - move=> t td.
   apply: lip2.
@@ -2406,7 +2439,7 @@ apply: is_integral_sol_patch => //.
     apply/mem_set; apply cplus.
     apply: subset_itvl tp; rewrite bnd_simp lerD2l.
     by rewrite /dboth /dplus 2!ge_min lexx !orbT.
-- apply /(integral_sol_iff_sol (r:=r2) kn0).
+- apply /(integral_sol_iff_sol1 (r:=r2) kn0).
   + by rewrite gtrBl.
   + move => x bx.
     apply: lip2'.
@@ -2463,7 +2496,7 @@ apply: is_integral_sol_patch => //.
       apply h1.
       by move /derivable_mxP: h1.
       * by rewrite closure_neitv_oo; last rewrite gtrBl.
-- apply /(integral_sol_iff_sol (r:=r2) kn0).
+- apply /(integral_sol_iff_sol1 (r:=r2) kn0).
   + by rewrite ltrDl.
   +  move=>x bx.
      rewrite /fminus/=.
