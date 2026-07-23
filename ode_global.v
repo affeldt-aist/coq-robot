@@ -1688,26 +1688,43 @@ Variable mu : {posnum R}.
 Hypothesis mu_ub : forall t x, t \in `[a, b] -> x \in B ->
  `| psi t x | <= mu%:num.
 
+Let lm := @lebesgue_measure R.
+
 Let gamma := `|u0 - v0|.
 Lemma thm34 t : t \in `[a, b] ->
   `|y t - z t| <= gamma * expR (k * (t - a)) + mu%:num / k * (expR (k * (t - a)) - 1).
 Proof.
 move=> tab.
-have yint : forall t, y t = u0 + \vint[lebesgue_measure]_(s in `[a, t]) phi s (y s).
+have k_neq0 : k != 0 by rewrite gt_eqF.
+have yint : forall t', t' \in `[a, b]%R -> y t' = u0 + \vint[lm]_(s in `[a, t']) phi s (y s).
+  move=> t' t'ab.
+  suff: is_integral_sol phi u0 a b y.
+    by move=> [<-]; apply.
+  apply/(integral_sol_iff_sol (r:=r) k_neq0 ab) => //.
+  case: soly => _ _.
+  by rewrite closure_neitv_oo. (* where we use By *)
+have zint : forall t, t \in `[a, b]%R -> z t = v0 + \vint[lm]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
+  move=> t' t'ab.
+  suff: is_integral_sol (phi \+ psi) v0 a b z.
+    by move=> [-> ->].
+  apply/(integral_sol_iff_sol (r:=r) k_neq0 ab).
   admit.
-have zint : forall t, z t = v0 +
-    \vint[lebesgue_measure]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
   admit.
+  case: solz => _ _.
+  by rewrite closure_neitv_oo.
+  (* not exactly Bz *)
+  admit.
+  exact: solz.
 pose gronwall_y t := `|y t - z t|.
 rewrite -/(gronwall_y t).
 have : gronwall_y t <= gamma + mu%:num * (t - a) +
-    \int[lebesgue_measure]_(s in `[a, t])
+    \int[lm]_(s in `[a, t])
       (k * (gamma + mu%:num * (s - a)) * expR (k * (t - s))).
   have H : gronwall_y t <= (gamma + mu%:num * (t - a) +
-      \int[lebesgue_measure]_(s in `[a, t]) (k * `|y s - z s|)).
+      \int[lm]_(s in `[a, t]) (k * `|y s - z s|)).
     apply: (@le_trans _ _ (gamma +
-      \int[lebesgue_measure]_(s in `[a, t]) `|phi s (y s) - psi s (z s)| +
-      \int[lebesgue_measure]_(s in `[a, t]) `|psi s (z s)|)).
+      \int[lm]_(s in `[a, t]) `|phi s (y s) - psi s (z s)| +
+      \int[lm]_(s in `[a, t]) `|psi s (z s)|)).
       admit.
     admit.
   pose lambda t := gamma + mu%:num * (t - a).
@@ -1718,7 +1735,7 @@ move/le_trans; apply.
 apply: (@le_trans _ _
   (gamma + mu%:num * (t - a) - gamma - mu%:num * (t - a) +
     gamma * expR (k * (t - a)) +
-    \int[lebesgue_measure]_(s in `[a, t]) (mu%:num * expR (k * (t - s))))).
+    \int[lm]_(s in `[a, t]) (mu%:num * expR (k * (t - s))))).
   admit. (* ipp *)
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
 admit.

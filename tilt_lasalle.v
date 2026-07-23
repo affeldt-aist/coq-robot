@@ -467,40 +467,61 @@ Lemma cont_sol : forall p t, {within sublevelUpsilon1 p, continuous sol^~ t}.
 Proof.
 (* TODO: using thm 3.4 *)
 move=> p /= t.
-apply: continuous_in_subspaceT => /= u.
-red.
-rewrite inE/= => pu.
+move=> /= u.
+have [pu|] := nbhs_subspaceP _ u; last first.
+  move=> pu y.
+  (* to be cleaned *)
+  rewrite /nbhs/= => -[M/= HM Hy].
+  rewrite /nbhs_subspace.
+  rewrite ifF; last first.
+    apply/negP.
+    by rewrite inE.
+  rewrite /globally/= => _ ->.
+  apply: Hy => //= i j.
+  rewrite /from_subspace.
+  have := HM i j.
+  rewrite /nbhs/=.
+  rewrite /nbhs_ball_/= => -[e /= e0].
+  apply.
+  rewrite /ball_/=.
+  rewrite /from_subspace.
+  by rewrite subrr normr0.
 have [r [k/= kr]] := tilt_eqn_locally_lipschitz alpha1 gamma_gt0 u.
 rewrite /continuous_at.
 have r1 : r%:num < 1. admit.
+(* TODO: we can always pick up a smaller ball*)
 have [t0|] := leP 0 t.
-  apply/cvgrPdist_le => //=.
-    admit.
-  move=> e e0.
+  apply/cvgrPdist_le => //= e e0.
   near=> v.
   have t01 : 0 < t + 1 by rewrite ltr_wpDl.
   have := @thm34 K 6 (fun=> phi) (cst 0) 0 (t + 1) t01 k%:num u v r r1 (ltac:(auto)).
-  have : {in `[0, t + 1]%R, K -> k%:num.-lipschitz_(closed_ball u r%:num) phi}.
-    by move=> t1 t1t1; exact: kr.
+  have : {in `[0, t + 1]%R, K -> k%:num.-lipschitz_(closed_ball (incl_subspace u) r%:num) phi}.
+    by move=> t1 ?; exact: kr.
   move=> /[swap] /[apply].
-  have : {in closed_ball u r%:num, forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
-    move=> /= w wur.
-    admit.
+  have : {in closed_ball (incl_subspace u) r%:num,
+      forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
+    move=> /= w wur ?//.
+    exact: cvg_cst.
   move=> /[swap] /[apply].
   have uUpsilon1 : u \in Tilt.Upsilon1 by move: pu => -[_ /mem_set].
-  have vUpsilon1 : v \in Tilt.Upsilon1. admit.
-  move=> /(_ (sol u) (sol v)).
-  have u0u : sol u 0 = u by rewrite /sol; case: cid => //= phi' [+ _]; exact.
-  have v0v : sol v 0 = v by rewrite /sol; case: cid => //= phi' [+ _]; exact.
-  have := @isSol_oo u (t + 1) uUpsilon1.
+  have vUpsilon1 : v \in Tilt.Upsilon1.
+    admit.
+  move=> /(_ (sol (incl_subspace u)) (sol (incl_subspace v))).
+  have u0u : sol (incl_subspace u) 0 = u by rewrite /sol; case: cid => //= phi' [+ _]; exact.
+  have v0v : sol (incl_subspace v) 0 = v by rewrite /sol; case: cid => //= phi' [+ _]; exact.
+  have := @isSol_oo (incl_subspace u) (t + 1) uUpsilon1.
   rewrite u0u => /[swap] /[apply].
-  have := @isSol_oo v (t + 1) vUpsilon1.
+  have := @isSol_oo (incl_subspace v) (t + 1) vUpsilon1.
   rewrite v0v.
   rewrite (_ : (fun=> phi) \+ cst 0 = fun=> phi); last by apply/funext => i/=; rewrite addr0.
   move=> /[swap] /[apply].
-  have Hu : [set sol u x | x in `[0, t + 1]] `<=` closed_ball u r%:num.
+  set hu := (X in (X -> _) -> _).
+  set hv := (X in (_ -> X -> _) -> _).
+  have Hu : hu.
+    rewrite {}/hu/=.
+    have := @isSol_oo _ t uUpsilon1.
     admit.
-  have Hv : [set sol v x | x in `[0, t + 1]] `<=` closed_ball u r%:num.
+  have Hv : hv.
     admit.
   pose mu := (e * k%:num / (expR (k%:num * t) - 1)) / 2.
   have mu_gt0 : 0 < mu.
@@ -523,6 +544,8 @@ have [t0|] := leP 0 t.
   rewrite -ler_pdivlMr ?expR_gt0//.
   rewrite /mu.
   admit.
+move=> t0.
+admit.
 Admitted.
 
 Lemma invariant_sublevelUpsilon1 p :

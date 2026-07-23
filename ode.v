@@ -1179,17 +1179,6 @@ Definition is_sol_oo u0 a b := is_sol_obnd u0 a (BLeft b).
 
 End is_sol.
 
-Lemma is_sol_oo_subset {R : realType} {n : nat} phi (u0 : 'rV[R]_n)
-    (a b c d : R) sol : c < d -> a <= c -> d <= b ->
-  is_sol_oo phi u0 a b sol -> is_sol_oo phi (sol c) c d sol.
-Proof.
-move=> cd ac bd isSol; split => //.
-- move=> x xcd; apply isSol.
-  by apply: subset_itv xcd; rewrite bnd_simp.
-- have [_ _ +] := isSol.
-  exact/continuous_subspaceW/closure_subset/subset_itv.
-Qed.
-
 Section is_integral_sol.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n : nat}.
