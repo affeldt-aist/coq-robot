@@ -651,19 +651,37 @@ apply/cvgrPdist_le => //= e e0.
   rewrite subr0.
   rewrite -lerBrDr.
   rewrite -ler_pdivlMr ?expR_gt0//.
-  near:v.
-  (* apply : cvgr_distC_le. *)
-  (* rewrite /mu. *)
-
-  (* set s0 :=   (expR (k'%:num * t) - 1). *)
-  (* rewrite -!mulrA [2^-1 * _]mulrC  [k'%:num^-1 * s0]mulrC ![s0^-1 * _]mulrA mulVf?mul1r ?[k'%:num * _]mulrA. *)
-  (* rewrite divff // mul1r -{1}[e]divr1 -mulrBr. *)
-  (* rewrite divrBr. *)
-  (* Search "mul" "D". *)
-  (* rewrite   *)
-  (* suff :  *)
-  admit.
-Admitted.
+  rewrite mulrAC /mu; set ek't1 := (_ - 1).
+  rewrite -!mulrA (mulrCA ek't1^-1) (mulrA ek't1^-1).
+  rewrite mulVf ?gt_eqF// {}/ek't1; last by rewrite subr_gt0 expR_gt1 mulr_gt0.
+  rewrite div1r (mulrCA k'%:num) divff// mulr1.
+  rewrite {1}(splitr e) addrK.
+  have: ball u (e / 2 / expR (k'%:num * t)) v.
+    near: v.
+    have gt0 : 0 < e / 2 / expR (k'%:num * t) by rewrite !divr_gt0// expR_gt0.
+    have [F/= mF Fu] := near_ball u _ gt0.
+    red.
+    red.
+    simpl.
+    red.
+    simpl.
+    red.
+    simpl.
+    red.
+    rewrite uUpsilon1//.
+    red.
+    simpl.
+    red.
+    red.
+    simpl.
+    red.
+    simpl.
+    red.
+    simpl.
+    exists F => //= x/= Hx px.
+    by apply: Fu.
+  by rewrite -ball_normE/= => /ltW.
+Unshelve. all: by end_near. Qed.
 
 Local Lemma sol_sublevelUpsilon1 p u :
   u \in sublevelUpsilon1 p -> sol_is_deriv_c0y phi (sol u).

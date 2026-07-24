@@ -1409,24 +1409,31 @@ Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu : R -> R)
 Let lm := @lebesgue_measure R.
 
 Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
+  {within `[a, b], continuous f} ->
+  {within `[a, b], continuous z} ->
   {in `]a, b[, forall x, derivable z x 1} ->
   (forall t, t \in `]a, b[ -> 'D_1 z t = mu t * z t + f t) ->
   let phi t s := expR (\int[lm]_(tau in `[s, t]) mu tau) in
   forall t, t \in `]a, b[ ->
     z t = \int[lm]_(s in `[a, t]) (phi t s * f s).
 Proof.
-move=> za0 derivable_z eqn phi t /[!inE] tab.
+move=> za0 cf contz derivable_z eqn phi t /[!inE] tab.
+have ? : measurable_fun `]a, t[ f.
+  apply: open_continuous_measurable_fun => //.
+  rewrite -continuous_open_subspace//.
+  apply: continuous_subspaceW cf.
+  by apply: subset_itv; rewrite bnd_simp// (itvP tab).
+have ? : measurable_fun `]a, t[ (phi t).
+  apply/measurableT_comp => //=.
+  apply: subspace_continuous_measurable_fun => //.
+  apply: (@continuous_subspaceW _ _ _ `[a, t]) => //.
+    exact: subset_itv_oo_cc.
+  apply: parameterized_integralr_continuous.
+    by rewrite (itvP tab).
+  apply: continuous_subspaceW mu_cont.
+  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
 rewrite /Rintegral integral_itv_bndoo//=; last first.
-  apply/measurable_EFinP/measurable_funM => //.
-    apply/measurableT_comp => //=.
-    apply: subspace_continuous_measurable_fun => //.
-    apply: (@continuous_subspaceW _ _ _ `[a, t]) => //.
-      exact: subset_itv_oo_cc.
-    apply: parameterized_integralr_continuous.
-      by rewrite (itvP tab).
-    apply: continuous_subspaceW mu_cont.
-    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-  admit.
+  by apply/measurable_EFinP/measurable_funM.
 have {}eqn : forall t : R, t \in `]a, b[ ->
     ('D_1 z t - mu t * z t) * (phi t a)^-1 = f t * (phi t a)^-1.
   move=> x xab.
@@ -1501,26 +1508,106 @@ suff: z t / phi t a =
      fine (\int[lm]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
   move=> /(congr1 (fun x => x * phi t a)).
   by rewrite -!mulrA mulVf ?mulr1// gt_eqF// expR_gt0.
+have ? : {in `]a, t[, continuous (fun x0 : R => (phi x0 a)^-1)}.
+  rewrite -continuous_open_subspace//.
+  apply: derivable_within_continuous => /= x xat.
+  apply: derivablephiV.
+  rewrite inE.
+  by apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
+have ? : measurable_fun `]a, t[ (fun x : R => (phi x a)^-1).
+  by apply: open_continuous_measurable_fun => //.
+have cphi : {within `[a, t], continuous phi^~ a}.
+  apply: (@within_continuous_comp _ _ _ _ _ expR).
+    move=> x _.
+    exact: continuous_expR.
+  rewrite /=.
+  apply: parameterized_integral_continuous.
+    by rewrite (itvP tab).
+  apply: continuous_compact_integrable.
+    exact: segment_compact.
+  apply: continuous_subspaceW mu_cont.
+  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
 transitivity (\int[lm]_(z0 in `]a, t[)
     'D_1 (fun t0 => z t0 / phi t0 a) z0) => /=.
+  have mzphi : measurable_fun `]a, t[(fun x => ('D_1 (fun t0 : R => z t0 / phi t0 a) x)).
+    apply/measurable_fun_eqP.
+      move=> x xat; rewrite eqn.
+      reflexivity.
+      by rewrite inE in xat; rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
+    rewrite /=.
+    by apply: measurable_funM => //=.
   rewrite /Rintegral integral_itv_obnd_cbnd//=; last first.
-    admit.
+    exact/measurable_EFinP.
   rewrite /Rintegral integral_itv_bndo_bndc//=; last first.
-    admit.
+    apply/measurable_EFinP.
+    exact/measurable_fun_itv_obnd_cbndP.
+  rewrite (_ : integral _ _ _ = (\int[lebesgue_measure]_(x in `[a, t]) ((f x / phi x a))%:E)%E); last first.
+    rewrite integral_itv_bndoo//=; last first.
+      by apply/measurable_EFinP.
+    rewrite [RHS]integral_itv_bndoo//=; last first.
+      apply/measurable_EFinP => //.
+      by apply/measurable_funM.
+    apply: eq_integral => x xat/=.
+    rewrite eqn//.
+    by rewrite inE in xat; rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
   rewrite (@continuous_FTC2 _ _ (fun t0 : R => z t0 / phi t0 a)).
     by rewrite {3}/phi set_itv1 Rintegral_set1 expR0 divr1 za0 sube0/=.
     by rewrite (itvP tab).
-    admit.
+    rewrite /=.
+    apply: within_continuousM => //.
+    apply: continuous_subspaceW cf.
+    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+    apply: (@within_continuous_comp _ _ _ _ (phi ^~ a) (fun x => x^-1)).
+      move=> /= x.
+      rewrite inE/= => -[r rat <-].
+      apply: inv_continuous.
+      by rewrite gt_eqF// expR_gt0.
+    exact: cphi.
     split => /=.
-    + admit.
-    + admit.
-    + admit.
+    + move=> x xat.
+      apply: derivableM.
+        apply: derivable_z.
+        by rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
+      apply: derivablephiV => //.
+      by rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
+    + apply: cvgM.
+        by move/continuous_within_itvP : contz => /(_ ab)[].
+      apply: cvgV.
+        by rewrite gt_eqF// expR_gt0.
+      move/continuous_within_itvP : cphi => /(_ _)[].
+        by rewrite (itvP tab).
+      move=> _ + _.
+      exact.
+    + have {}contz : {within `[a, t], continuous z}.
+        by apply: continuous_subspaceW contz; apply: subset_itvl; rewrite bnd_simp (itvP tab).
+      apply: cvgM.
+         move/continuous_within_itvP : contz => /(_ _)[]; last by [].
+         by rewrite (itvP tab).
+      apply: cvgV.
+        by rewrite gt_eqF// expR_gt0.
+      move/continuous_within_itvP : cphi => /(_ _)[].
+        by rewrite (itvP tab).
+      by [].
   move=> u uat.
-  by rewrite derive1E.
+  rewrite derive1E eqn//.
+  by rewrite inE; apply: subset_itvl uat; rewrite bnd_simp (itvP tab).
 transitivity ((\int[lm]_(z0 in `]a, t[)
     ((phi t z0 * f z0) / phi t a))); last first.
   rewrite RintegralZr//=.
-  admit.
+  apply: (@integrableS _ _ _ lebesgue_measure (`[a, t]%classic)) => //=.
+    by apply: subset_itv_oo_cc.
+  apply: continuous_compact_integrable.
+    exact: segment_compact.
+  apply: within_continuousM.
+    apply: within_continuous_comp.
+      move=> x _.
+      exact: continuous_expR.
+   apply: parameterized_integralr_continuous.
+    by rewrite (itvP tab).
+  apply: continuous_subspaceW mu_cont.
+  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+  apply: continuous_subspaceW cf.
+  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
 apply: eq_Rintegral => u uat.
 rewrite eqn; last first.
   rewrite 2!inE in uat *.
@@ -1551,7 +1638,7 @@ rewrite -[X in _ + X]/(Rintegral lm _ _) -Rintegral_setU//.
   + apply: lt_disjoint => v w/=.
     rewrite !in_itv/= => /andP[av vu] /andP[uw wt].
     by rewrite (le_lt_trans vu).
-Admitted.
+Qed.
 
 Lemma gronwall :
   (forall t, t \in `]a, b[ ->
@@ -1594,26 +1681,49 @@ have derivez : forall x, x \in `]a, b[ ->
   by field.
 pose phi (t s : R) := expR (\int[lm]_(tau in `[s, t]) mu tau).
 have za0 : z a = 0 by rewrite /z set_itv1// Rintegral_set1.
+have contz : {within `[a, b], continuous z}.
+  apply: parameterized_integral_continuous => /=.
+    exact: ltW.
+  apply: continuous_compact_integrable.
+    exact: segment_compact.
+  by apply: within_continuousM => //=.
+have contv : {within `[a, b], continuous v}.
+  apply: within_continuousB => //=.
+  by apply: within_continuousD => //=.
+have contmu : {within `[a, t], continuous mu}.
+  apply: continuous_subspaceW mu_cont.
+  apply: subset_itvl; rewrite bnd_simp.
+  by move: tab; rewrite inE => /itvP ->.
 have zE : forall x, x \in `]a, b[ ->
     z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
   move=> x xab.
   apply: solve_diff_equa => //=.
-  admit.
-  by move=> u uab; rewrite derivez// addrA.
-have phimuv : forall x, x \in `]a, b[ ->
-      0 <= \int[lm]_(s in `[a, x]) (phi t s * mu s * v s).
-  move=> x xab.
+  - apply: within_continuousB => /=.
+      by apply: within_continuousM => //=.
+    by apply: within_continuousM => //=.
+  - move=> u uab.
+    by apply: (FTC1z _ _).1.
+    by move=> u uab; rewrite derivez// addrA.
+have phimuv : 0 <= \int[lm]_(s in `[a, t]) (phi t s * mu s * v s).
   rewrite /Rintegral integral_itv_bndoo//=; last first.
-    admit.
+    apply/measurable_EFinP => /=.
+    apply: measurable_funM => //=.
+      apply: measurable_funM => //=.
+      admit.
+    apply: subspace_continuous_measurable_fun => //.
+    apply: continuous_subspaceW contmu.
+    apply: subset_itv; rewrite bnd_simp//.
+    apply: subspace_continuous_measurable_fun => //.
+    apply: continuous_subspaceW contv.
+    apply: subset_itv; rewrite bnd_simp//.
+    by rewrite inE in tab; rewrite (itvP tab).
   apply: Rintegral_ge0 => //= u uab.
   rewrite -mulrA mulr_ge0// ?expR_ge0// mulr_ge0 ?v_ge0//.
     rewrite mu_ge0// inE; apply: subset_itv uab; rewrite bnd_simp//.
-    rewrite inE in xab; move/itvP in xab.
-    by rewrite xab.
+    by rewrite inE in tab; rewrite (itvP tab).
   rewrite inE.
   apply: subset_itvl uab; rewrite bnd_simp.
-  rewrite inE in xab; move/itvP in xab.
-  by rewrite xab.
+  by rewrite inE in tab; rewrite (itvP tab).
 rewrite (le_trans (lambdamuy _ _))// lerD2l -/(z t).
 rewrite zE//.
 apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
@@ -1629,15 +1739,21 @@ apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
           apply/derivable1_diffP.
           admit.
         admit.
-      apply: continuous_subspaceW mu_cont.
-      apply: subset_itvl; rewrite bnd_simp.
-      by move: tab; rewrite inE => /itvP ->.
+    apply: continuous_subspaceW mu_cont.
+    apply: subset_itvl; rewrite bnd_simp.
+    by move: tab; rewrite inE => /itvP ->.
     apply: continuous_subspaceW lambda_cont.
     apply: subset_itvl; rewrite bnd_simp.
     by move: tab; rewrite inE => /itvP ->.
+    apply: continuous_compact_integrable.
+      exact: segment_compact.
     admit.
   apply: le_Rintegral => //=.
+    apply: continuous_compact_integrable.
+      exact: segment_compact.
     admit.
+    apply: continuous_compact_integrable.
+      exact: segment_compact.
     admit.
   move=> u uat.
   rewrite mulrBr.
@@ -1645,7 +1761,6 @@ apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
   by field.
 rewrite lerBlDl.
 rewrite ler_wpDl//.
-  by apply: phimuv.
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
 apply: eq_Rintegral => //= u uat.
 rewrite -/(phi t u).
