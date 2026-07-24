@@ -1414,10 +1414,10 @@ Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
   {in `]a, b[, forall x, derivable z x 1} ->
   (forall t, t \in `]a, b[ -> 'D_1 z t = mu t * z t + f t) ->
   let phi t s := expR (\int[lm]_(tau in `[s, t]) mu tau) in
-  forall t, t \in `]a, b[ ->
+  forall t, t \in `]a, b[%R ->
     z t = \int[lm]_(s in `[a, t]) (phi t s * f s).
 Proof.
-move=> za0 cf contz derivable_z eqn phi t /[!inE] tab.
+move=> za0 cf contz derivable_z eqn phi t tab.
 have ? : measurable_fun `]a, t[ f.
   apply: open_continuous_measurable_fun => //.
   rewrite -continuous_open_subspace//.
@@ -1648,7 +1648,7 @@ Lemma gronwall :
       \int[lm]_(s in `[a, t])
         (lambda s * mu s * expR (\int[lm]_(tau in `[s, t]) mu tau)).
 Proof.
-move=> lambdamuy t tab.
+move=> lambdamuy t /[!inE] tab.
 pose z t := \int[lm]_(s in `[a, t]) (mu s * y s).
 pose v t := z t + lambda t - y t.
 have v_ge0 : forall x, x \in `]a, b[ -> 0 <= v x.
@@ -1692,9 +1692,14 @@ have contv : {within `[a, b], continuous v}.
   by apply: within_continuousD => //=.
 have contmu : {within `[a, t], continuous mu}.
   apply: continuous_subspaceW mu_cont.
-  apply: subset_itvl; rewrite bnd_simp.
-  by move: tab; rewrite inE => /itvP ->.
-have zE : forall x, x \in `]a, b[ ->
+  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+have contphi : {within `[a, t], continuous phi t}.
+  apply: (@within_continuous_comp _ _ _ _ _ expR).
+    by move=> x _; exact: continuous_expR.
+  rewrite /=.
+  apply: parameterized_integralr_continuous => //.
+  by rewrite (itvP tab).
+have zE : forall x, x \in `]a, b[%R ->
     z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
   move=> x xab.
   apply: solve_diff_equa => //=.
@@ -1703,28 +1708,27 @@ have zE : forall x, x \in `]a, b[ ->
     by apply: within_continuousM => //=.
   - move=> u uab.
     by apply: (FTC1z _ _).1.
-    by move=> u uab; rewrite derivez// addrA.
+  - by move=> u uab; rewrite derivez// addrA.
 have phimuv : 0 <= \int[lm]_(s in `[a, t]) (phi t s * mu s * v s).
   rewrite /Rintegral integral_itv_bndoo//=; last first.
     apply/measurable_EFinP => /=.
     apply: measurable_funM => //=.
       apply: measurable_funM => //=.
-      admit.
+      apply/measurable_fun_itv_bndo_bndcP.
+      apply/measurable_fun_itv_obnd_cbndP.
+      by apply: subspace_continuous_measurable_fun => //.
     apply: subspace_continuous_measurable_fun => //.
     apply: continuous_subspaceW contmu.
     apply: subset_itv; rewrite bnd_simp//.
     apply: subspace_continuous_measurable_fun => //.
     apply: continuous_subspaceW contv.
-    apply: subset_itv; rewrite bnd_simp//.
-    by rewrite inE in tab; rewrite (itvP tab).
+    by apply: subset_itv; rewrite bnd_simp// (itvP tab).
   apply: Rintegral_ge0 => //= u uab.
   rewrite -mulrA mulr_ge0// ?expR_ge0// mulr_ge0 ?v_ge0//.
-    rewrite mu_ge0// inE; apply: subset_itv uab; rewrite bnd_simp//.
-    by rewrite inE in tab; rewrite (itvP tab).
+    by rewrite mu_ge0// inE; apply: subset_itv uab; rewrite bnd_simp// (itvP tab).
   rewrite inE.
-  apply: subset_itvl uab; rewrite bnd_simp.
-  by rewrite inE in tab; rewrite (itvP tab).
-rewrite (le_trans (lambdamuy _ _))// lerD2l -/(z t).
+  by apply: subset_itvl uab; rewrite bnd_simp (itvP tab).
+rewrite (le_trans (lambdamuy _ _))// 1?inE// lerD2l -/(z t).
 rewrite zE//.
 apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
                    - \int[lm]_(s in `[a, t]) (phi t s * mu s * v s))).
@@ -1733,28 +1737,42 @@ apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
       exact: segment_compact.
     apply: within_continuousM => /=.
       apply: within_continuousM => /=.
-        apply: derivable_within_continuous => /= x xat.
-        apply: diff_derivable.
-        apply: (@differentiable_comp _ _ _ _ _ expR) => //=.
-          apply/derivable1_diffP.
-          admit.
-        admit.
-    apply: continuous_subspaceW mu_cont.
-    apply: subset_itvl; rewrite bnd_simp.
-    by move: tab; rewrite inE => /itvP ->.
+        apply: (within_continuous_comp _ _ expR).
+          by move=> x _; exact: continuous_expR.
+        apply: parameterized_integralr_continuous => //.
+        by rewrite (itvP tab).
+      apply: continuous_subspaceW mu_cont.
+      by apply: subset_itvl; rewrite bnd_simp (itvP tab).
     apply: continuous_subspaceW lambda_cont.
-    apply: subset_itvl; rewrite bnd_simp.
-    by move: tab; rewrite inE => /itvP ->.
-    apply: continuous_compact_integrable.
-      exact: segment_compact.
-    admit.
+    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+  apply: continuous_compact_integrable.
+    exact: segment_compact.
+  apply: within_continuousM => /=.
+    by apply: within_continuousM => //=.
+  apply: continuous_subspaceW contv.
+  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
   apply: le_Rintegral => //=.
     apply: continuous_compact_integrable.
       exact: segment_compact.
-    admit.
+    apply: within_continuousM => //=.
+    apply: within_continuousB => /=.
+      apply: within_continuousM => //=.
+      apply: continuous_subspaceW lambda_cont.
+      by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+    apply: within_continuousM => //=.
+    apply: continuous_subspaceW contv.
+    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
     apply: continuous_compact_integrable.
       exact: segment_compact.
-    admit.
+    apply: within_continuousB => /=.
+      apply: within_continuousM => //=.
+        by apply: within_continuousM => //=.
+      apply: continuous_subspaceW lambda_cont.
+      by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+    apply: within_continuousM => //=.
+      by apply: within_continuousM => //=.
+    apply: continuous_subspaceW contv.
+    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
   move=> u uat.
   rewrite mulrBr.
   rewrite le_eqVlt; apply/orP; left; apply/eqP.
@@ -1765,7 +1783,7 @@ rewrite le_eqVlt; apply/orP; left; apply/eqP.
 apply: eq_Rintegral => //= u uat.
 rewrite -/(phi t u).
 by field.
-Admitted.
+Qed.
 
 Lemma gronwall_LAMBDA LAMBDA :
   (forall t, t \in `]a, b[ ->
