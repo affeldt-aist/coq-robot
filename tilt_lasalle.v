@@ -531,11 +531,37 @@ have [pu|] := nbhs_subspaceP _ u; last first.
   rewrite /from_subspace.
   by rewrite subrr normr0.
 have uUpsilon1 : u \in Tilt.Upsilon1 by move: pu => -[_ /mem_set].
-rewrite /continuous_at.
-(*have r1 : r%:num < 1. admit.*)
-(* TODO: we can always pick up a smaller ball*)
-have [t0|] := leP 0 t.
-  apply/cvgrPdist_le => //= e e0.
+move : t u pu uUpsilon1.
+suff : forall t, 0 < t ->  {in sublevelUpsilon1 p, continuous (from_subspace (sublevelUpsilon1 p) (sol^~ t))}.
+  move => Ht0 t u pu uUpsilon1.
+  have [|t0] := ltP 0 t.
+    by move => t0;apply Ht0; rewrite ?inE.
+  have cont0 :  {in sublevelUpsilon1 p, continuous (sol^~ 0)}.
+    suff  -> : ((fun x => sol x 0) = fun x => x) by move => ? _; apply: cvg_id.
+    apply funext => x0.
+    by rewrite initp.
+  have [-> |Ht] := eqVneq t 0.
+    apply: continuous_in_subspaceT.
+    by apply cont0; rewrite inE.
+  have heq :  {in sublevelUpsilon1 p, (fun p => 2 *: sol p 0 - sol p (- t))  =1 (sol^~ t)}.
+    move => p' p's.
+    have [/= h _] : is_sol phi (sol p').
+      apply sol_spec => //.
+       by rewrite initp;apply mem_set;have /set_mem [_ +]  := p's.
+       by rewrite initp.
+     by rewrite -h// lt_neqAle Ht.
+  apply: (subspace_eq_continuous heq).
+  rewrite continuous_subspace_in.
+  move => /= u' u'p.
+  apply: cvgB => //=.
+    apply: cvgZ; first by apply: cvg_cst.
+    rewrite /nbhs_subspace/= u'p.
+    apply: cvg_within_filter.
+    by apply cont0.
+  apply: Ht0 => //.
+  by rewrite oppr_gt0 lt_neqAle Ht.
+move=> t t0 u uUpsilon1.
+apply/cvgrPdist_le => //= e e0.
   near=> v.
   have [pv|] := nbhs_subspaceP _ v; last first.
     move=> pv.
@@ -548,30 +574,47 @@ have [t0|] := leP 0 t.
     red.
     simpl.
     red.
-    rewrite ifT//; last exact/mem_set.
+    rewrite uUpsilon1.
     exact: withinT.
-  have t01 : 0 < t + 1 by rewrite ltr_wpDl.
-  have [r' pur] : exists r' : {posnum K}, sublevelUpsilon1 p `<=` closed_ball (incl_subspace u) r'%:num.
-    admit.
+  move : pv.
+  near:v.
+  have t01 : 0 < t + 1 by rewrite addr_gt0.
+  have [r' pur] : exists r' : {posnum K}, sublevelUpsilon1 p `<=` closed_ball u r'%:num.
+    have  [M [Mr Mb ]]:= compact_bounded (@compact_sublevelUpsilon1 p).
+    have mup: `|M| + `| u | + 1  > 0.
+    apply: (lt_le_trans ltr01).
+    by rewrite  addrC lerDl.
+    exists (PosNum mup).
+    move => x0 Sx0.
+    rewrite closed_ballE // /closed_ball_/= /incl_subspace/=.
+    apply: (le_trans (ler_normB _ _)). 
+    rewrite -addrA addrC -addrA lerD //.
+    apply Mb => //.
+    apply: (le_lt_trans (ler_norm M)).
+    by rewrite -{1}(add0r `|M|) ltr_leD. 
   have [k' k'r'phi] :
-      exists k', {in `[0, t + 1]%R, K -> k'.-lipschitz_(closed_ball (incl_subspace u) r'%:num) phi}.
+      exists (k' :  {posnum K}), {in `[0, t + 1]%R, K -> k'%:num.-lipschitz_(closed_ball u r'%:num) phi}.
     have [k kur'] := @tilt_eqn_locally_lipschitz_new _ alpha1 _ gamma_gt0 u r'%:num.
-    exists k%:num => x xt1.
+    exists k => x xt1.
     exact: kur'.
-  have k'0 : 0 < k'. admit.
-  have := @thm34 K 6 (fun=> phi) (cst 0) 0 (t + 1) t01 k' u v r' k'0 k'r'phi.
-  have : {in closed_ball (incl_subspace u) r'%:num,
+  have k'0 : 0 < k'%:num by [].
+  near=>v.
+  move => pv.
+  have := @thm34 K 6 (fun=> phi) (cst 0) 0 (t + 1) t01 k'%:num u v r' k'0 k'r'phi.
+  have : {in closed_ball u r'%:num,
       forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
     move=> /= w wur ?//.
     exact: cvg_cst.
   move=> /[swap] /[apply].
   have vUpsilon1 : v \in Tilt.Upsilon1 by move: pv => -[_ /mem_set].
-  move=> /(_ (sol (incl_subspace u)) (sol (incl_subspace v))).
-  have u0u : sol (incl_subspace u) 0 = u by rewrite /sol; case: cid => //= phi' [+ _]; exact.
-  have v0v : sol (incl_subspace v) 0 = v by rewrite /sol; case: cid => //= phi' [+ _]; exact.
-  have := @isSol_oo (incl_subspace u) (t + 1) uUpsilon1.
+  move=> /(_ (sol u) (sol v)).
+  have u0u : sol u 0 = u by rewrite /sol; case: cid => //= phi' [+ _]; exact.
+  have v0v : sol v 0 = v by rewrite /sol; case: cid => //= phi' [+ _]; exact.
+  have uUpsilon1' : u \in Tilt.Upsilon1.
+    by apply mem_set;have /set_mem [_ +]  := uUpsilon1.
+  have := @isSol_oo u (t + 1) uUpsilon1'.
   rewrite u0u => /[swap] /[apply].
-  have := @isSol_oo (incl_subspace v) (t + 1) vUpsilon1.
+  have := @isSol_oo v (t + 1) vUpsilon1.
   rewrite v0v.
   rewrite (_ : (fun=> phi) \+ cst 0 = fun=> phi); last by apply/funext => i/=; rewrite addr0.
   move=> /[swap] /[apply].
@@ -582,6 +625,7 @@ have [t0|] := leP 0 t.
     apply: subset_trans pur.
     move=> _ [y /= y0t] <-.
     apply: invariant_sublevelUpsilon1 => //.
+    by apply set_mem.
     by rewrite (itvP y0t).
   have Hv : hv.
     rewrite {}/hv/=.
@@ -589,12 +633,11 @@ have [t0|] := leP 0 t.
     move=> _ [y /= y0t] <-.
     apply: invariant_sublevelUpsilon1 => //.
     by rewrite (itvP y0t).
-  pose mu := (e * k' / (expR (k' * t) - 1)) / 2.
+  pose mu := (e * k'%:num / (expR (k'%:num * t) - 1)) / 2.
   have mu_gt0 : 0 < mu.
     rewrite /mu ?mulr_gt0//.
     rewrite invr_gt0//.
     rewrite subr_gt0 -expR0 ltr_expR// mulr_gt0//.
-    admit.
   move/(_ Hu Hv (PosNum mu_gt0)) => /=.
   set tmp := (tmp in (tmp -> _) -> _).
   have : tmp.
@@ -603,15 +646,23 @@ have [t0|] := leP 0 t.
     rewrite normr0//=.
     exact: ltW.
   move=> /[swap] /[apply] => /(_ t).
-  rewrite inE/= in_itv/= t0 lerDl ler01 => /(_ isT).
+  rewrite inE/= in_itv/= ltW // lerDl ler01 => /(_ isT).
   move=> /le_trans; apply.
   rewrite subr0.
   rewrite -lerBrDr.
   rewrite -ler_pdivlMr ?expR_gt0//.
-  rewrite /mu.
+  near:v.
+  (* apply : cvgr_distC_le. *)
+  (* rewrite /mu. *)
+
+  (* set s0 :=   (expR (k'%:num * t) - 1). *)
+  (* rewrite -!mulrA [2^-1 * _]mulrC  [k'%:num^-1 * s0]mulrC ![s0^-1 * _]mulrA mulVf?mul1r ?[k'%:num * _]mulrA. *)
+  (* rewrite divff // mul1r -{1}[e]divr1 -mulrBr. *)
+  (* rewrite divrBr. *)
+  (* Search "mul" "D". *)
+  (* rewrite   *)
+  (* suff :  *)
   admit.
-move=> t0.
-admit.
 Admitted.
 
 Local Lemma sol_sublevelUpsilon1 p u :
