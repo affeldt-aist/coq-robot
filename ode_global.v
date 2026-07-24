@@ -1414,7 +1414,7 @@ Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
   {in `]a, b[, forall x, derivable z x 1} ->
   (forall t, t \in `]a, b[ -> 'D_1 z t = mu t * z t + f t) ->
   let phi t s := expR (\int[lm]_(tau in `[s, t]) mu tau) in
-  forall t, t \in `]a, b[%R ->
+  forall t, t \in `[a, b]%R ->
     z t = \int[lm]_(s in `[a, t]) (phi t s * f s).
 Proof.
 move=> za0 cf contz derivable_z eqn phi t tab.
@@ -1550,6 +1550,11 @@ transitivity (\int[lm]_(z0 in `]a, t[)
     apply: eq_integral => x xat/=.
     rewrite eqn//.
     by rewrite inE in xat; rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
+  have [<-|ta] := eqVneq a t.
+    by rewrite za0 mul0r set_itv1 integral_set1.
+  have {}tab : t \in `]a, b]%R.
+    rewrite in_itv/= lt_neqAle ta/=.
+    by rewrite in_itv in tab.
   rewrite (@continuous_FTC2 _ _ (fun t0 : R => z t0 / phi t0 a)).
     by rewrite {3}/phi set_itv1 Rintegral_set1 expR0 divr1 za0 sube0/=.
     by rewrite (itvP tab).
@@ -1641,9 +1646,9 @@ rewrite -[X in _ + X]/(Rintegral lm _ _) -Rintegral_setU//.
 Qed.
 
 Lemma gronwall :
-  (forall t, t \in `]a, b[ ->
+  (forall t, t \in `[a, b] ->
     y t <= lambda t + \int[lm]_(s in `[a, t]) (mu s * y s)) ->
-  forall t, t \in `]a, b[ ->
+  forall t, t \in `[a, b] ->
     y t <= lambda t +
       \int[lm]_(s in `[a, t])
         (lambda s * mu s * expR (\int[lm]_(tau in `[s, t]) mu tau)).
@@ -1654,7 +1659,11 @@ pose v t := z t + lambda t - y t.
 have v_ge0 : forall x, x \in `]a, b[ -> 0 <= v x.
   move=> x xab.
   rewrite /v subr_ge0 (le_trans (lambdamuy _ _))//.
-  by rewrite  addrC lerD2l.
+    rewrite inE.
+    move: xab.
+    rewrite inE.
+    by apply: subset_itv_oo_cc.
+  by rewrite addrC lerD2l.
 have FTC1z : forall x, x \in `]a, b[ ->
     derivable
       (fun x0 => \int[lm]_(t0 in `[a, x0]) (mu t0 * y t0)) x 1 /\
@@ -1699,9 +1708,12 @@ have contphi : {within `[a, t], continuous phi t}.
   rewrite /=.
   apply: parameterized_integralr_continuous => //.
   by rewrite (itvP tab).
-have zE : forall x, x \in `]a, b[%R ->
+have zE : forall x, x \in `[a, b]%R ->
     z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
-  move=> x xab.
+  move=> x.
+  rewrite in_itv/= => /andP[].
+  rewrite le_eqVlt => /predU1P[<- _|ax xb].
+    by rewrite za0 set_itv1 Rintegral_set1.
   apply: solve_diff_equa => //=.
   - apply: within_continuousB => /=.
       by apply: within_continuousM => //=.
@@ -1709,6 +1721,7 @@ have zE : forall x, x \in `]a, b[%R ->
   - move=> u uab.
     by apply: (FTC1z _ _).1.
   - by move=> u uab; rewrite derivez// addrA.
+  - by rewrite in_itv/= (ltW ax) xb.
 have phimuv : 0 <= \int[lm]_(s in `[a, t]) (phi t s * mu s * v s).
   rewrite /Rintegral integral_itv_bndoo//=; last first.
     apply/measurable_EFinP => /=.
