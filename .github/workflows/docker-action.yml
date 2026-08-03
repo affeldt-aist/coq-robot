@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         image:
-          - 'mathcomp/mathcomp-dev:rocq-prover-9.1'
+          - 'mathcomp/mathcomp:rocq-prover-9.1'
       fail-fast: false
     steps:
       - uses: actions/checkout@v4

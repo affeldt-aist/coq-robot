@@ -35,7 +35,7 @@ supported_rocq_versions:
 
 tested_rocq_opam_versions:
 - version: 'rocq-prover-9.1'
-  repo: 'mathcomp/mathcomp-dev'
+  repo: 'mathcomp/mathcomp'
 
 dependencies:
 - opam:
