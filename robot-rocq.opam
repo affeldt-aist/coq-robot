@@ -20,14 +20,14 @@ build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
   "coq" 
-  "rocq-hierarchy-builder" { (>= "1.10.0") | (= "dev") }
-  "rocq-mathcomp-ssreflect" { (>= "2.6.0") | (= "dev") }
-  "rocq-mathcomp-fingroup" { (>= "2.6.0") | (= "dev") }
-  "rocq-mathcomp-algebra" { (>= "2.6.0") | (= "dev") }
-  "rocq-mathcomp-solvable" { (>= "2.6.0") | (= "dev") }
-  "rocq-mathcomp-field" { (>= "2.6.0") | (= "dev") }
-  "rocq-mathcomp-analysis" { (>= "1.17.0") | (= "dev") }
-  "rocq-mathcomp-real-closed" { (>= "2.0.6") | (= "dev") }
+  "rocq-hierarchy-builder" { (>= "1.10.0") }
+  "rocq-mathcomp-ssreflect" { (>= "2.6.0") }
+  "rocq-mathcomp-fingroup" { (>= "2.6.0") }
+  "rocq-mathcomp-algebra" { (>= "2.6.0") }
+  "rocq-mathcomp-solvable" { (>= "2.6.0") }
+  "rocq-mathcomp-field" { (>= "2.6.0") }
+  "rocq-mathcomp-analysis" { (>= "1.17.0") }
+  "rocq-mathcomp-real-closed" { (>= "2.0.6") }
 ]
 
 tags: [

@@ -40,43 +40,43 @@ tested_rocq_opam_versions:
 dependencies:
 - opam:
     name: rocq-hierarchy-builder
-    version: '{ (>= "1.10.0") | (= "dev") }'
+    version: '{ (>= "1.10.0") }'
   description: |-
     [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
 
 - opam:
     name: rocq-mathcomp-ssreflect
-    version: '{ (>= "2.6.0") | (= "dev") }'
+    version: '{ (>= "2.6.0") }'
   description: |-
     [MathComp ssreflect](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-fingroup
-    version: '{ (>= "2.6.0") | (= "dev") }'
+    version: '{ (>= "2.6.0") }'
   description: |-
     [MathComp fingroup](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-algebra
-    version: '{ (>= "2.6.0") | (= "dev") }'
+    version: '{ (>= "2.6.0") }'
   description: |-
     [MathComp algebra](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-solvable
-    version: '{ (>= "2.6.0") | (= "dev") }'
+    version: '{ (>= "2.6.0") }'
   description: |-
     [MathComp solvable](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-field
-    version: '{ (>= "2.6.0") | (= "dev") }'
+    version: '{ (>= "2.6.0") }'
   description: |-
     [MathComp field](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-analysis
-    version: '{ (>= "1.17.0") | (= "dev") }'
+    version: '{ (>= "1.17.0") }'
   description: |-
     [MathComp analysis](https://github.com/math-comp/analysis)
 - opam:
     name: rocq-mathcomp-real-closed
-    version: '{ (>= "2.0.6") | (= "dev") }'
+    version: '{ (>= "2.0.6") }'
   description: |-
     [MathComp real closed](https://github.com/math-comp/real-closed)
 
