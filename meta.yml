@@ -35,7 +35,6 @@ supported_rocq_versions:
 
 tested_rocq_opam_versions:
 - version: '9.1'
-- version: '9.2'
 
 dependencies:
 - opam:
