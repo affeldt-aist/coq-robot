@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - '**'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,13 +19,15 @@ jobs:
       matrix:
         image:
           - 'mathcomp/mathcomp:2.5.0-rocq-prover-9.0'
+          - 'mathcomp/mathcomp:2.5.0-rocq-prover-9.1'
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: coq-community/docker-coq-action@v1
         with:
           opam_file: 'robot-rocq.opam'
           custom_image: ${{ matrix.image }}
+
 
 # See also:
 # https://github.com/coq-community/docker-coq-action#readme

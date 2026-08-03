@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect ssralg ssrnum.
+From mathcomp Require Import all_boot all_order ssralg ssrnum.
 From mathcomp Require Import boolp interval reals trigo.
 Require Import ssr_ext.
 

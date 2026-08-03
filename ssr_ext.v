@@ -1,6 +1,6 @@
-(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* robot-rocq (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From Stdlib Require Import NsatzTactic.
-From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint rat poly.
+From mathcomp Require Import all_boot ssralg ssrnum ssrint rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import perm path fingroup complex.
 
