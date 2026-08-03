@@ -1,7 +1,7 @@
 fullname: Formal Foundations for Modeling Robot Manipulators
 shortname: robot
 organization: affeldt-aist
-opam_name: coq-robot
+opam_name: robot-rocq
 community: false
 action: true
 coqdoc: false
@@ -10,7 +10,7 @@ synopsis: >-
   Formal Foundations for Modeling Robot Manipulators
 description: |-
   This repository contains an experimental library for the mathematics
-  of rigid body transformations using the Coq proof-assistant and the
+  of rigid body transformations using the Rocq proof-assistant and the
   Mathematical Components library.
 authors:
 - name: Reynald Affeldt, AIST
@@ -29,50 +29,50 @@ license:
   identifier: LGPL-2.1-or-later
   file: LICENSE
 
-supported_coq_versions:
-  text: Coq 8.20
-  opam: '{ (>= "8.20" & < "9~") | (= "dev") }'
+supported_rocq_versions:
+  text: Rocq 9.0--9.3
+  opam: '{ (>= "9.0" & < "9.4") }'
 
-tested_coq_opam_versions:
-- version: '2.3.0-coq-8.20'
+tested_rocq_opam_versions:
+- version: '2.5.0-rocq-prover-9.0'
   repo: 'mathcomp/mathcomp'
-- version: '2.4.0-coq-8.20'
+- version: '2.5.0-rocq-prover-9.1'
   repo: 'mathcomp/mathcomp'
 
 dependencies:
 - opam:
-    name: coq-hierarchy-builder
-    version: '{ (>= "1.5.0") & (< "1.9")}'
+    name: rocq-hierarchy-builder
+    version: '{ (>= "1.10.0") }'
   description: |-
     [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
 - opam:
-    name: coq-mathcomp-ssreflect
-    version: '{ (>= "2.3.0") }'
+    name: rocq-mathcomp-ssreflect
+    version: '{ (>= "2.5.0") }'
   description: |-
     [MathComp ssreflect](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-fingroup
-    version: '{ (>= "2.3.0") }'
+    name: rocq-mathcomp-fingroup
+    version: '{ (>= "2.5.0") }'
   description: |-
     [MathComp fingroup](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-algebra
-    version: '{ (>= "2.3.0") }'
+    name: rocq-mathcomp-algebra
+    version: '{ (>= "2.5.0") }'
   description: |-
     [MathComp algebra](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-solvable
-    version: '{ (>= "2.3.0") }'
+    name: rocq-mathcomp-solvable
+    version: '{ (>= "2.5.0") }'
   description: |-
     [MathComp solvable](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-field
-    version: '{ (>= "2.3.0") }'
+    name: rocq-mathcomp-field
+    version: '{ (>= "2.5.0") }'
   description: |-
     [MathComp field](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-analysis
-    version: '{ (>= "1.11.0") }'
+    name: rocq-mathcomp-analysis
+    version: '{ (>= "1.15.0") }'
   description: |-
     [MathComp analysis](https://github.com/math-comp/analysis)
 - opam:

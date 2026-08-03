@@ -4,11 +4,13 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 --->
 # Formal Foundations for Modeling Robot Manipulators
 
-
 [![Docker CI][docker-action-shield]][docker-action-link]
 
-[docker-action-shield]: https://github.com/affeldt-aist/coq-robot/actions/workflows/docker-action.yml/badge.svg?branch=master
-[docker-action-link]: https://github.com/affeldt-aist/coq-robot/actions?query=branch%3Amaster+event%3Apush
+[docker-action-shield]: https://github.com/affeldt-aist/robot/actions/workflows/docker-action.yml/badge.svg?branch=master
+[docker-action-link]: https://github.com/affeldt-aist/robot/actions/workflows/docker-action.yml
+
+
+
 
 This repository contains an experimental library for the mathematics
 of rigid body transformations using the Rocq proof-assistant and the
@@ -21,7 +23,6 @@ Mathematical Components library.
   - Cyril Cohen, Inria (initial)
   - Laurent Théry, Inria
 - License: [LGPL-2.1-or-later](LICENSE)
-- Compatible Coq versions: Coq 8.20--Rocq 9.0
 - Additional dependencies:
   - [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
   - [MathComp ssreflect](https://math-comp.github.io)
@@ -32,7 +33,7 @@ Mathematical Components library.
   - [MathComp analysis](https://github.com/math-comp/analysis)
   - [MathComp real closed](https://github.com/math-comp/real-closed)
   - [MathComp algebra tactics](https://github.com/math-comp/algebra-tactics)
-- Coq namespace: `robot`
+- Rocq/Coq namespace: `robot`
 - Related publication(s):
   - [Formal foundations of 3D geometry to model robot manipulators](https://staff.aist.go.jp/reynald.affeldt/documents/robot_cpp_long.pdf) doi:[10.1145/3018610.3018629](https://doi.org/10.1145/3018610.3018629)
 
@@ -42,15 +43,19 @@ The easiest way to install the latest released version of Formal Foundations for
 is via [OPAM](https://opam.ocaml.org/doc/Install.html):
 
 ```shell
-opam repo add coq-released https://coq.inria.fr/opam/released
-opam install coq-robot
+opam repo add rocq-released https://rocq-prover.org/opam/released
+opam install robot-rocq
 ```
 
-To instead build and install manually, do:
+To instead build and install manually, you need to make sure that all the
+libraries this development depends on are installed.  The easiest way to do that
+is still to rely on opam:
 
 ``` shell
 git clone https://github.com/affeldt-aist/robot.git
 cd robot
+opam repo add rocq-released https://rocq-prover.org/opam/released
+opam install --deps-only .
 make   # or make -j <number-of-cores-on-your-machine> 
 make install
 ```
