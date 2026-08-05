@@ -1,5 +1,5 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_boot ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import boot ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import sesquilinear.
@@ -119,7 +119,7 @@ Proof.
 rewrite /t1 /rjoint_twist.
 rewrite (linearNl _ q1)/=.
 rewrite (linear0r _ w1)/=.
-rewrite oppr0 etwist_Rz; last first.
+rewrite oppr0 etwist_Rz.
   by rewrite -enorm_eq0 enormeE oner_eq0.
 by rewrite -Rz_eskew.
 Qed.

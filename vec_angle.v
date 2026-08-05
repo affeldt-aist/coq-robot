@@ -1,5 +1,5 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_boot all_order ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex fingroup perm reals interval trigo.
@@ -132,8 +132,8 @@ Proof.
 move=> u0 v0.
 rewrite in_itv /= -ler_norml -(expr_le1 (_ : 0 < 2)%N) //.
 rewrite sqr_normr expr_div_n ler_pdivrMr ?mul1r.
-rewrite -subr_ge0 -enorm_crossmul' ?exprn_ge0 ?enorm_ge0//.
-by rewrite exprn_gt0// mulr_gt0// enorm_gt0.
+  by rewrite exprn_gt0// mulr_gt0// enorm_gt0.
+by rewrite -subr_ge0 -enorm_crossmul' ?exprn_ge0 ?enorm_ge0.
 Qed.
 
 Lemma cos_vec_angleNv v w : v != 0 -> w != 0 ->
@@ -177,7 +177,7 @@ wlog /andP[u0 v0] : u v / (u != 0) && (v != 0).
   have [->|u0] := eqVneq u 0; first by rewrite dotmul0v enorm0 !mul0r.
   have [->|v0] := eqVneq v 0; first by rewrite dotmulv0 enorm0 !(mulr0,mul0r).
   by apply; rewrite u0.
-rewrite /vec_angle (negPf u0) (negPf v0) acosK; last exact: dotmul_div_N11.
+rewrite /vec_angle (negPf u0) (negPf v0) acosK; first exact: dotmul_div_N11.
 by rewrite mulrC divfK // mulf_eq0 negb_or !enorm_eq0 u0.
 Qed.
 
@@ -208,7 +208,7 @@ Qed.
 Lemma enormB u v : `|u - v|_e ^+ 2 =
   `|u|_e ^+ 2 + `|u|_e * `|v|_e * cos (vec_angle u v) *- 2 + `|v|_e ^+ 2.
 Proof.
-rewrite /enorm dotmulD {1}dotmulvv sqr_sqrtr; last first.
+rewrite /enorm dotmulD {1}dotmulvv sqr_sqrtr.
   rewrite !dotmulvN !dotmulNv opprK dotmulvv dotmul_cos.
   by rewrite addrAC mulNrn subr_ge0 triine.
 rewrite sqr_sqrtr ?le0dotmul // !dotmulvv !sqrtr_sqr enormN dotmulvN dotmul_cos.
@@ -219,7 +219,7 @@ Qed.
 Lemma enormD u v : `|u + v|_e ^+ 2 =
   `|u|_e ^+ 2 + `|u|_e * `|v|_e * cos (vec_angle u v) *+ 2 + `|v|_e ^+ 2.
 Proof.
-rewrite {1}(_ : v = - - v); last by rewrite opprK.
+rewrite {1}(_ : v = - - v); first by rewrite opprK.
 rewrite enormB enormN.
 have [->|u0] := eqVneq u 0.
   by rewrite !(enorm0,expr0n,add0r,vec_angle0,mul0r,mul0rn,oppr0).
@@ -232,7 +232,7 @@ Lemma cosine_law' a b c :
   `|b - c|_e ^+ 2 = `|c - a|_e ^+ 2 + `|b - a|_e ^+ 2 -
   `|c - a|_e * `|b - a|_e * cos (vec_angle (b - a) (c - a)) *+ 2.
 Proof.
-rewrite -[in LHS]dotmulvv (_ : b - c = b - a - (c - a)); last first.
+rewrite -[in LHS]dotmulvv (_ : b - c = b - a - (c - a)).
   by rewrite -!addrA opprB (addrC (- a)) (addrC a) addrK.
 rewrite dotmulD dotmulvv [in X in _ + _ + X = _]dotmulvN dotmulNv opprK.
 rewrite dotmulvv dotmulvN addrAC (addrC (`|b - a|_e ^+ _)); congr (_ + _).
@@ -259,13 +259,14 @@ Lemma enorm_crossmul u v :
   `|u *v v|_e = `|u|_e * `|v|_e * `| sin (vec_angle u v) |.
 Proof.
 suff /eqP : `|u *v v|_e ^+ 2 = (`|u|_e * `|v|_e * `| sin (vec_angle u v) |)^+2.
-  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm; last by rewrite enorm_ge0.
-  rewrite ger0_norm; first by move/eqP.
+  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm ?enorm_ge0//.
+  rewrite ger0_norm; last by move/eqP.
   by rewrite -mulrA mulr_ge0 ?enorm_ge0 // mulr_ge0 // enorm_ge0.
 rewrite enorm_crossmul' dotmul_cos !exprMn.
 apply/eqP; rewrite subr_eq -mulrDr.
-rewrite real_normK //; first by rewrite addrC cos2Dsin2 mulr1.
-by rewrite realE; case: ltgtP.
+rewrite real_normK //.
+  by rewrite realE; case: ltgtP.
+by rewrite addrC cos2Dsin2 mulr1.
 Qed.
 
 Lemma enorm_dotmul_crossmul u v : u != 0 -> v != 0 ->
@@ -284,8 +285,8 @@ Proof.
 move=> uD0 vD0 uv0.
 apply/eqP; rewrite -subr_eq0 -enorm_eq0.
 rewrite -(@eqrXn2 _ 2) ?enorm_ge0// expr0n /= enormB.
-rewrite vec_anglevZ; last by rewrite divr_gt0// enorm_gt0.
-rewrite uv0 cos0 mulr1 !enormZ ger0_norm; last first.
+rewrite vec_anglevZ ?divr_gt0 ?enorm_gt0//.
+rewrite uv0 cos0 mulr1 !enormZ ger0_norm.
   by rewrite divr_ge0// enorm_ge0.
 by rewrite divfK ?enorm_eq0// -expr2 addrAC -mulr2n subrr.
 Qed.
@@ -296,8 +297,8 @@ Proof.
 move=> uD0 vD0 uvpi.
 apply/eqP; rewrite -subr_eq0 -enorm_eq0 scaleNr opprK.
 rewrite -(@eqrXn2 _ 2) ?enorm_ge0// expr0n /= enormD.
-rewrite vec_anglevZ; last by rewrite divr_gt0// enorm_gt0.
-rewrite uvpi cospi mulrN1 !enormZ ger0_norm; last first.
+rewrite vec_anglevZ ?divr_gt0 ?enorm_gt0//.
+rewrite uvpi cospi mulrN1 !enormZ ger0_norm.
   by rewrite divr_ge0// enorm_ge0.
 rewrite mulNrn divfK ?enorm_eq0//.
 by rewrite addrC addrA -expr2 -mulr2n subrr.
@@ -334,8 +335,8 @@ Lemma cos_vec_angle a b : a != 0 -> b != 0 ->
 Proof.
 move=> Ha Hb.
 rewrite enorm_crossmul mulrAC divrr // ?mul1r.
-  by rewrite sqr_normr -cos2sin2 sqrtr_sqr.
-by rewrite unitfE mulf_neq0// enorm_eq0.
+  by rewrite unitfE mulf_neq0// enorm_eq0.
+by rewrite sqr_normr -cos2sin2 sqrtr_sqr.
 Qed.
 
 Lemma orth_preserves_vec_angle M : M \is 'O[T]_3 ->
@@ -402,7 +403,7 @@ Qed.
 Lemma colinear_permE (T : idomainType) (s : 'S_3) (u v : 'rV[T]_3) :
   colinear u v = colinear (col_perm s u) (col_perm s v).
 Proof.
-rewrite /colinear !col_permE -mulmx_crossmul; last exact: unitmx_perm.
+rewrite /colinear !col_permE -mulmx_crossmul; first exact: unitmx_perm.
 rewrite -scalemxAr scalemx_eq0 det_perm signr_eq0 /=.
 by rewrite perm_mxV invrK tr_perm_mx -col_permE col_perm_eq0.
 Qed.
@@ -480,13 +481,13 @@ rewrite -norm_cos_eq1 -cos0 => /eqP.
 have [c_le0|c_gt0 Hc] := ler0P (cos (vec_angle u v)).
   rewrite -cos_vec_anglevN // -colinearvN => Hc.
   rewrite (vec_angle0_inv uD0 vND0).
-    by rewrite colinearZv colinearvv orbT.
-  apply: cos_inj => //; rewrite in_itv /= ?(lexx, pi_ge0) //.
-  by apply: vec_angle_bound.
-rewrite (vec_angle0_inv uD0 vD0).
+    apply: cos_inj => //; rewrite in_itv /= ?(lexx, pi_ge0) //.
+    exact: vec_angle_bound.
   by rewrite colinearZv colinearvv orbT.
-apply: cos_inj => //; rewrite in_itv /= ?(lexx, pi_ge0) //.
-by apply: vec_angle_bound.
+rewrite (vec_angle0_inv uD0 vD0).
+  apply: cos_inj => //; rewrite in_itv /= ?(lexx, pi_ge0) //.
+  exact: vec_angle_bound.
+by rewrite colinearZv colinearvv orbT.
 Qed.
 
 Lemma sin_vec_angle_iff (u v : 'rV[T]_3) (u0 : u != 0) (v0 : v != 0) :
@@ -566,7 +567,7 @@ Lemma enorm_axialcomp v e : e *d v < 0 ->
 Proof.
 move=> H.
 have ? : e != 0 by apply: contraTN H => /eqP ->; rewrite dotmul0v ltxx.
-rewrite /axialcomp scalerA enormZ ltr0_norm; last first.
+rewrite /axialcomp scalerA enormZ ltr0_norm.
   rewrite pmulr_llt0 ?invr_gt0 ?enorm_gt0 //.
   by rewrite /normalize dotmulZv pmulr_rlt0 // invr_gt0 enorm_gt0.
 by rewrite mulNr -(mulrA _ _ `|e|_e) mulVr ?mulr1 ?unitfE ?enorm_eq0.
@@ -773,20 +774,20 @@ have v10 : v1 != 0 by apply: contra H => /eqP ->; rewrite colinear0.
 have v20 : v2 != 0 by apply: contra H => /eqP ->; rewrite colinear_sym colinear0.
 rewrite /normalcomp [in RHS]enormB.
 case/boolP : (0 < v2 *d v1) => [v2v1|].
-  rewrite enormZ gtr0_norm; last first.
+  rewrite enormZ gtr0_norm.
     by rewrite dotmulZv mulr_gt0 // invr_gt0 enorm_gt0.
   rewrite norm_normalize // mulr1 vec_angle_axialcomp //.
-  rewrite dotmul_cos norm_normalize // mul1r vec_angleZv; last first.
+  rewrite dotmul_cos norm_normalize // mul1r vec_angleZv.
     by rewrite invr_gt0 enorm_gt0.
   rewrite [in RHS]mulrA (vec_angleC v1) -expr2 -mulrA -expr2 exprMn.
   by rewrite mulr2n opprD addrA subrK sin2cos2 mulrBr mulr1.
 rewrite -leNgt le_eqVlt => /orP[|v2v1].
   rewrite {1}dotmul_cos -mulrA mulf_eq0 enorm_eq0 (negbTE v20) /=.
   rewrite mulf_eq0 enorm_eq0 (negbTE v10) /= => /eqP Hcos.
-  rewrite axialcomp_dotmul; last by rewrite dotmul_cos Hcos mulr0.
+  rewrite axialcomp_dotmul; first by rewrite dotmul_cos Hcos mulr0.
   rewrite enorm0 mulr0 mul0r expr0n mul0rn addr0 subr0.
   by rewrite -(sqr_normr (sin _)) vec_angleC cos0sin1 ?expr1n ?mulr1.
-rewrite vec_anglevZN //; last first.
+rewrite vec_anglevZN //.
   by rewrite /normalize dotmulZv pmulr_rlt0 // invr_gt0 enorm_gt0.
 rewrite cos_vec_anglevN // ?normalize_eq0 //.
 rewrite enorm_axialcomp // !(mulrN,mulNr,opprK,sqrrN).
@@ -840,7 +841,7 @@ Lemma law_of_sines_point (p1 p2 p : 'rV[T]_3) : ~~ tricolinear p1 p2 p ->
   sin (vec_angle (p2 - p1) (p2 - p)) / `|p1 - p|_e.
 Proof.
 move=> H v1 v2.
-rewrite (_ : p2 - p1 = v2 - v1); last by rewrite /v1 /v2 opprB addrA subrK.
+rewrite (_ : p2 - p1 = v2 - v1); first by rewrite /v1 /v2 opprB addrA subrK.
 apply law_of_sines_vector.
 apply: contra H.
 by rewrite tricolinear_perm 2!tricolinear_rot /tricolinear /v1 /v2 colinear_sym.
@@ -1033,7 +1034,7 @@ have Ht' : t' = interpoint_t l1 l2.
   move/(congr1 (fun x => x *d (v1 *v v2))).
   rewrite dotmulZv.
   move/(congr1 (fun x => x / ((v1 *v v2) *d (v1 *v v2)))).
-  rewrite -mulrA divrr ?mulr1; first by rewrite -dot_crossmulC crossmul_triple.
+  rewrite -mulrA divrr ?mulr1; last by rewrite -dot_crossmulC crossmul_triple.
   by rewrite unitfE dotmulvv0.
 have Hs' : s' = interpoint_s l1 l2.
   have : s' *: (v1 *v v2) = (\pt( l2) - \pt( l1 )) *v v1.
@@ -1044,7 +1045,7 @@ have Hs' : s' = interpoint_s l1 l2.
   move/(congr1 (fun x => x *d (v1 *v v2))).
   rewrite dotmulZv.
   move/(congr1 (fun x => x / ((v1 *v v2) *d (v1 *v v2)))).
-  rewrite -mulrA divrr ?mulr1; first by rewrite -dot_crossmulC crossmul_triple.
+  rewrite -mulrA divrr ?mulr1; last by rewrite -dot_crossmulC crossmul_triple.
   by rewrite unitfE dotmulvv0.
 by rewrite /t /s -Ht' -Hs'.
 Qed.

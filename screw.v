@@ -1,6 +1,6 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import all_boot order ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import sesquilinear.
@@ -220,8 +220,10 @@ move=> x y z; rewrite /sq.
 rewrite mulrBr (mulrBl z) opprB !addrA addrC !addrA (mulrA x).
 rewrite (addrC _ (x * y * z)) subrr add0r.
 rewrite (mulrBl y) opprB addrA (addrC _ (x * z * y)) mulrA !addrA subrr add0r.
-rewrite (mulrBr y) !addrA (addrC _ (- (y * (x * z)))) addrC !addrA mulrA subrr.
-by rewrite add0r mulrBl opprB mulrA subrK mulrBr addrA mulrA subrK mulrA subrr.
+rewrite mulrBl opprB 2!mulrBr !mulrA.
+rewrite -!addrA (addrA (- (y * z * x))) addNr add0r.
+rewrite (addrA (- (z * x * y))) addNr add0r.
+by rewrite (addrCA (- (y * x * z))) addNr addr0 subrr.
 Qed.
 
 HB.instance Definition _ :=
@@ -618,7 +620,7 @@ Qed.
 (* [murray] eqn 2.32, p.41 *)
 Lemma emx_twist0E v k : emx (wedge \T(v, 0)) k.+2 = hom 1 v.
 Proof.
-rewrite /emx 2!big_ord_recl big1 ?addr0; last first.
+rewrite /emx 2!big_ord_recl big1 ?addr0.
   move=> /= i _; by rewrite ecoefE exp_twist0v scaler0.
 rewrite liftE0 eqxx /ecoef factS fact0 expr0 expr1 invr1 2!scale1r.
 rewrite /wedge Twist.ang_of Twist.lin_of spin0.
@@ -681,7 +683,7 @@ Proof.
 move=> w1 g h.
 rewrite {1}/emx 2!big_ord_recl big_ord0 addr0 liftE0 eqxx /ecoef factS fact0 invr1 2!scale1r.
 rewrite expr0 expr1.
-rewrite (_ : 1 = @block_mx _ 3 _ 3 _ 1 0 0 1); last first.
+rewrite (_ : 1 = @block_mx _ 3 _ 3 _ 1 0 0 1).
   by rewrite -idmxE (@scalar_mx_block _ 3 1 1).
 rewrite tcoorZ /=.
 rewrite /wedge Twist.ang_of Twist.lin_of (add_block_mx 1 0 0 1 \S( a *: w )) !(addr0,add0r).
@@ -732,16 +734,16 @@ Lemma emx_twistE (t : twist T) a k :
 Proof.
 set v := lin_of_twist (wedge t).
 set w := ang_of_twist (wedge t).
-rewrite (_ : t = \T(v, w)); last first.
+rewrite (_ : t = \T(v, w)).
   by rewrite -(twist_mkE t) lin_of_twist_wedge ang_of_twist_wedge.
 case/boolP : (w == 0) => [/eqP ->|w0].
   rewrite tcoorZ /= scaler0 emx_twist0E.
   by rewrite /emx_twist /hom_twist ang_tcoorE eqxx lin_tcoorE.
 set w' : 'rV_3 := a *: w.
-rewrite -(norm_scale_normalize w) (_ : v = `|w|_e *: ((`|w|_e)^-1 *: v)); last first.
+rewrite -(norm_scale_normalize w) (_ : v = `|w|_e *: ((`|w|_e)^-1 *: v)).
   by rewrite scalerA divrr ?scale1r // unitfE enorm_eq0.
 rewrite -(tcoorZ `|w|_e ((`|w|_e)^-1 *: v) (normalize w)).
-rewrite scalerA p42eq235 p42eq3; last by rewrite norm_normalize.
+rewrite scalerA p42eq235 p42eq3 ?norm_normalize//.
 rewrite -mulmxE.
 rewrite {1}/rigid_trans mulmxE homM mul1r.
 rewrite inv_rigid_transE /inv_rigid_trans homM mulr1 mulmx1.
@@ -882,7 +884,7 @@ case/boolP : (sin a == 0) => [|saD0].
   by rewrite divff ?pnatr_eq0 // scale1r addrC subrr.
 rewrite {1}cot_half_angle' -!mulrA mulVf // mulr1 cot_half_angle.
 rewrite (scalerN (2%:R^-1 * _)) opprK (scalerA (2%:R^-1 * _)).
-rewrite -!mulrA mulVf ?mulr1; last first.
+rewrite -!mulrA mulVf ?mulr1.
   rewrite subr_eq0 eq_sym; apply: contra saD0 => /eqP caE.
   by rewrite cos1sin0 // caE normr1.
 rewrite -!addrA addrCA addrC !addrA.
@@ -965,7 +967,7 @@ have rank_wC : \rank (w^C)%MS = 2%N by rewrite mxrank_compl rank_w.
 have rank_kskew : \rank (kermx \S(w)) = 1%N by rewrite -[RHS]rank_w (eqmx_rank (kernel_spin w0)).
 have rank_skew : \rank \S(w) = 2%N.
   move: rank_kskew; rewrite mxrank_ker => /eqP.
-  rewrite -(eqn_add2r (\rank \S(w))) subnK; last by rewrite rank_leq_row.
+  rewrite -(eqn_add2r (\rank \S(w))) subnK; first by rewrite rank_leq_row.
   rewrite add1n => /eqP[] <-; by apply/eqP.
 move: (kernel_spin w0) => H.
 Abort.
@@ -1011,7 +1013,7 @@ case/boolP : (a == pi) => [/eqP ->|api].
   by rewrite mulrC.
 congr row3; last first.
   rewrite mulrN mulrBl opprB -!addrA addrC !addrA -mulrA subrK.
-  rewrite cot_half_angle' -!mulrA (mulrCA _ a2) mulVf ?mulr1; last first.
+  rewrite cot_half_angle' -!mulrA (mulrCA _ a2) mulVf ?mulr1.
     by rewrite sin_eq0_Npipi // negb_or a0 api.
   rewrite addrC -mulrBr opprD mulrDl mul1r -!addrA (addrCA _ (- a1)) (mulrC _ a2) subrr addr0.
   by rewrite -mulNr opprB mulrC.
@@ -1115,7 +1117,7 @@ rewrite [in X in _ = _ *: (X + _)]mulNmx.
 rewrite [in X in _ = _ *: (X + _)]mulmxBl.
 rewrite opprB -addrA.
 rewrite scalerDr.
-rewrite -[in X in _ = X + _]scalemxAl scalerA [in X in _ = X + _]mulrC divrr ?scale1r; last first.
+rewrite -[in X in _ = X + _]scalemxAl scalerA [in X in _ = X + _]mulrC divrr ?scale1r.
   by rewrite unitfE expf_eq0 /= enorm_eq0.
 congr (_ + _).
 rewrite -[in X in _ = _ *: (_ + X)]scalemxAl.
@@ -1127,7 +1129,7 @@ rewrite scalerDr.
 rewrite 2!scalerA.
 rewrite [in X in _ = X + _]mulrA.
 rewrite [in X in _ = X + _]mulrC.
-rewrite -(mulrA (a * h)) divrr ?mulr1; last by rewrite unitfE expf_eq0 /= enorm_eq0.
+rewrite -(mulrA (a * h)) divrr ?mulr1; first by rewrite unitfE expf_eq0 /= enorm_eq0.
 rewrite mulrC -[LHS]addr0.
 congr (_ + _).
 rewrite mulmxBr mulmx1.
@@ -1283,7 +1285,7 @@ rewrite -scalemxAl mulmxA dotmulP scalemxAl scalerDr -scalemxAl.
 rewrite (scalerA _ a) (mulrC _ a).
 rewrite -(scalerA a (`|w|_e ^+ 2)^-1).
 rewrite mul_scalar_mx (scalerA _ (v *d w) w) -(dotmulZv v _ w).
-rewrite (_ : _ *d _ = pitch \T(v, w)); last by rewrite /pitch lin_tcoorE ang_tcoorE.
+rewrite (_ : _ *d _ = pitch \T(v, w)); first by rewrite /pitch lin_tcoorE ang_tcoorE.
 rewrite addrC.
 rewrite scalerA.
 rewrite /axis ang_tcoorE (negbTE w0) /=.
@@ -1598,7 +1600,7 @@ have step2 : displacement f q + relative_displacement f p0 q = displacement f q 
   transitivity (displacement f p0 *m w^T *m w).
     rewrite -(displacement_iso f p0 q) {1}(axialnormalcomp (displacement f p0) w).
     move/(MozziChasles w0 sina0) : fp0e0.
-    rewrite -normalcomp_colinear; last by rewrite normalize_eq0.
+    rewrite -normalcomp_colinear; first by rewrite normalize_eq0.
     move/eqP => ->.
     by rewrite addr0 axialcompE w1 expr1n invr1 scale1r.
   by rewrite dotmulP mulmxA dotmulP 2!(displacement_proj w0).
@@ -1622,9 +1624,9 @@ have {step2} : p0 *m A = b.
 move/(congr1 (fun x => x *m A^T)).
 move/(congr1 (fun x => x *m screw_axis_point_mat_inv)).
 rewrite /screw_axis_point.
-rewrite (_ : screw_axis_point_mat_inv = (A *m A^T)^-1); last first.
+rewrite (_ : screw_axis_point_mat_inv = (A *m A^T)^-1).
   by rewrite screw_axis_point_mat_invE.
-rewrite -2!(mulmxA p0) mulmxV; last by rewrite screw_axis_point_mat_unit.
+rewrite -2!(mulmxA p0) mulmxV; first by rewrite screw_axis_point_mat_unit.
 rewrite mulmx1 screw_axis_point_mat_invE //.
 rewrite step3.
 rewrite mulmxBr mulmx1 /displacement opprB addrA subrK.
@@ -1674,15 +1676,15 @@ Let twist_b := \T( - map_v w_a *v map_p q_a + h *: map_v w_a, map_v w_a ).
 
 Lemma twist_change_frame : twist_b = twist_a *m (Adjoint g_ab)^-1.
 Proof.
-rewrite -(@inv_AdjointE _ (hom_of_euclidean_motion g_ab)); last first.
+rewrite -(@inv_AdjointE _ (hom_of_euclidean_motion g_ab)).
   by rewrite EuclideanMotion.hom_of_is_SE3.
 rewrite /inv_Adjoint.
-rewrite (_ : rot_of_hom g_ab = EuclideanMotion.rot g_ab); last first.
+rewrite (_ : rot_of_hom g_ab = EuclideanMotion.rot g_ab).
   case: g_ab => -[t r] /= Hr.
   rewrite /EuclideanMotion.rot /=.
   rewrite /hom_of_euclidean_motion /EuclideanMotion.hom_of.
   by rewrite rot_of_hom_hom.
-rewrite (_ : trans_of_hom g_ab = EuclideanMotion.trans g_ab); last first.
+rewrite (_ : trans_of_hom g_ab = EuclideanMotion.trans g_ab).
   case: g_ab => -[t r] /= Hr.
   rewrite /EuclideanMotion.rot /=.
   rewrite /hom_of_euclidean_motion /EuclideanMotion.hom_of.
@@ -1711,10 +1713,10 @@ congr (@block_mx _ 1 0 3 3).
   rewrite (linearNl _ (- (EuclideanMotion.trans g_ab *m (EuclideanMotion.rot g_ab)^T)))/=.
   rewrite (linearNr _ (w_a *m (EuclideanMotion.rot g_ab)^T))/=.
   rewrite opprK.
-  rewrite -spin_similarity; last by rewrite rotationV EuclideanMotion.rotP.
-  rewrite trmxK mulrA mulNr -mulmxE mulmxA orthogonal_tr_mul ?mul1mx; last first.
+  rewrite -spin_similarity; first by rewrite rotationV EuclideanMotion.rotP.
+  rewrite trmxK mulrA mulNr -mulmxE mulmxA orthogonal_tr_mul ?mul1mx.
     by rewrite rotation_sub // EuclideanMotion.rotP.
-  rewrite mulNmx mulmxN mulmxA spinE -mulmxr_crossmulr_SO; last first.
+  rewrite mulNmx mulmxN mulmxA spinE -mulmxr_crossmulr_SO.
     by rewrite rotationV EuclideanMotion.rotP.
   by rewrite (@lieC _ (vec3 T)) /= linearNl.
 - by rewrite /map_v coortrans_vectorE EuclideanMotion.rot_inv.

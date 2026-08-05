@@ -1,9 +1,9 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import all_boot order ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
-From mathcomp Require Import ring.
+From mathcomp Require Import ring_tactic field_tactic.
 From mathcomp Require Import realalg complex fingroup perm.
 From mathcomp Require Import interval reals trigo.
 Require Import ssr_ext euclidean vec_angle frame rot.
@@ -95,7 +95,7 @@ Local Open Scope ring_scope.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Section quaternion0.
-Variable R : pzRingType.
+Context (R : pzRingType).
 
 Record quat := mkQuat {quatl : R ; quatr : 'rV[R]_3 }.
 Implicit Types x y : quat.
@@ -112,7 +112,7 @@ Local Notation "x '_k'" := ((x.2)``_(2%:R : 'I_3)).
 Coercion pair_of_quat x := let: mkQuat x1 x2 := x in (x1, x2).
 Let quat_of_pair (a : R * 'rV[R]_3) := let: (a1, a2) := a in mkQuat a1 a2.
 
-Lemma quat_of_pairK : cancel pair_of_quat quat_of_pair.
+Let quat_of_pairK : cancel pair_of_quat quat_of_pair.
 Proof. by case. Qed.
 
 HB.instance Definition _ := Equality.copy quat (can_type quat_of_pairK).
@@ -128,19 +128,19 @@ Qed.
 Definition addq x y := mkQuat (x.1 + y.1) (x.2 + y.2).
 Arguments addq : simpl never.
 
-Lemma addqC : commutative addq.
+Let addqC : commutative addq.
 Proof. move=> *; congr mkQuat; by rewrite addrC. Qed.
 
-Lemma addqA : associative addq.
+Let addqA : associative addq.
 Proof. move=> *; congr mkQuat; by rewrite addrA. Qed.
 
-Lemma add0q : left_id 0%:q addq.
+Let add0q : left_id 0%:q addq.
 Proof. case=> *; by rewrite /addq /= 2!add0r. Qed.
 
 Definition oppq x := mkQuat (- x.1) (- x.2).
 Arguments oppq : simpl never.
 
-Lemma addNq : left_inverse 0%:q oppq addq.
+Let addNq : left_inverse 0%:q oppq addq.
 Proof. move=> *; congr mkQuat; by rewrite addNr. Qed.
 
 HB.instance Definition _ := @GRing.isZmodule.Build quat _ _ _ addqA addqC add0q addNq.
@@ -543,7 +543,7 @@ rewrite scaler0 add0r double_crossmul dotmulvv enormeE expr1n scale1r.
 rewrite [_ *v 'e_2%:R](@lieC _ (vec3 R)) /= ['e_2%:R *v _]linearD /=.
 rewrite ['e_2%:R *v (x.1 *: _)]linearZ /= (@liexx _ (vec3 R)).
 rewrite scaler0 add0r double_crossmul dotmulvv enormeE expr1n scale1r.
-rewrite [X in _ = - _ *: X](_ : _ = 2%:R *:x.2).
+rewrite [X in _ = - _ *: X](_ : _ = 2%:R *:x.2); last first.
   by rewrite scalerA mulNr div1r mulVr ?unitfE ?pnatr_eq0 // scaleN1r.
 rewrite !opprB (addrCA _ x.2).
 rewrite (addrA x.2 x.2) [in RHS]scaler_nat -[RHS]addr0.
@@ -633,8 +633,7 @@ Proof. by rewrite /normq /sqrq /= enormN. Qed.
 
 Lemma normqE x : (normq x ^+ 2)%:q = x^*q * x.
 Proof.
-rewrite -normqc /normq sqr_sqrtr; last by rewrite /sqrq addr_ge0 // sqr_ge0.
-by rewrite -conjqP conjqI.
+by rewrite -normqc /normq sqr_sqrtr /sqrq ?addr_ge0 ?sqr_ge0// -conjqP conjqI.
 Qed.
 
 Lemma normq_ge0 x : 0 <= normq x.
@@ -650,7 +649,7 @@ Qed.
 
 Lemma normqM x y : normq (x * y) = normq x * normq y.
 Proof.
-apply/eqP; rewrite -(@eqrXn2 _ 2) // ?normq_ge0 //; last first.
+apply/eqP; rewrite -(@eqrXn2 _ 2) // ?normq_ge0 //.
   by rewrite mulr_ge0 // normq_ge0.
 rewrite -quat_scalarE normqE conjqM -mulrA (mulrA x^*q) -normqE.
 rewrite quat_algE mulr_algl -scalerAr exprMn quat_realM.
@@ -665,7 +664,7 @@ Qed.
 
 Lemma normqV x : normq (x^-1) = normq x / sqrq x.
 Proof.
-rewrite invqE /invq normqZ ger0_norm; last first.
+rewrite invqE /invq normqZ ger0_norm.
   by rewrite divr_ge0 // ?ler01 // /sqrq addr_ge0 // sqr_ge0.
 by rewrite normqc mulrC mul1r.
 Qed.
@@ -679,7 +678,7 @@ Definition normalizeq x : quat R := 1 / normq x *: x.
 
 Lemma normalizeq1 x : x != 0 -> normq (normalizeq x) = 1.
 Proof.
-move=> x0; rewrite /normalizeq normqZ normrM normr1 mul1r normrV; last first.
+move=> x0; rewrite /normalizeq normqZ normrM normr1 mul1r normrV.
   by rewrite unitfE normq_eq0.
 by rewrite ger0_norm ?normq_ge0 // mulVr // unitfE normq_eq0.
 Qed.
@@ -707,7 +706,7 @@ apply: le_trans (_ : Num.sqrt (\sum_(i < 4) (`|X i| + `|Y i|) ^+ 2) <= _).
   rewrite !sqr_sqrtr; try by apply: sumr_ge0 => i _; apply: sqr_ge0.
   apply: ler_sum => i _; rewrite !sqrrD.
   by rewrite !sqr_normE; do ! apply: lerD => //.
-rewrite -ler_sqr ?nnegrE; last 2 first.
+rewrite -ler_sqr ?nnegrE.
 - by apply: sqrtr_ge0.
 - by apply: addr_ge0; apply: sqrtr_ge0.
 rewrite [in X in _ <= X]sqrrD !sqr_sqrtr;
@@ -719,10 +718,10 @@ under [X in _ <= _ + _ X * _ *+2  + _]eq_bigr do rewrite -sqr_normE.
 under [X in _ <= _ + _ + X]eq_bigr do rewrite -sqr_normE.
 under [X in _ <= _ + _ * _ X *+2  + _]eq_bigr do rewrite -sqr_normE.
 do 2 (apply: lerD => //); rewrite lerMn2r /=.
-rewrite -ler_sqr ?nnegrE; last 2 first.
+rewrite -ler_sqr ?nnegrE.
 - by apply: sumr_ge0 => i _; apply: mulr_ge0; apply: normr_ge0.
 - by apply: mulr_ge0; apply: sqrtr_ge0.
-rewrite exprMn !sqr_sqrtr; last 2 first.
+rewrite exprMn !sqr_sqrtr.
 - by apply: sumr_ge0=> i _; apply: sqr_ge0.
 - by apply: sumr_ge0=> i _; apply: sqr_ge0.
 (* This is Cauchy Schwartz *)
@@ -1005,12 +1004,12 @@ do 2 rewrite (addrCA _ (_ *: v)); congr (_ + _).
 do 2 rewrite (addrCA _ (_ *: x.2 *+ 2)).
 rewrite dotmulDr scalerDl mulrnDl -addrA addrCA; congr (_ + _).
 rewrite dotmulvZ -scalerA scalerMnr.
-rewrite -(scalerMnr k); congr (_ + _).
-rewrite scalerMnr scalerA (mulrC _ x.1) -scalerA.
-rewrite scalerMnr -scalerDr; congr (_ *: _).
-rewrite -scalerMnr -mulrnDl.
-congr (_ *+ _).
-by rewrite linearD/= linearZ/=.
+  by rewrite !scalerMnr.
+congr (_ + _).
+rewrite scalerMnr.
+rewrite 2!(scalerMnr x.1) scalerA mulrC -scalerA -(scalerMnr k) -scalerDr -mulrnDl.
+congr (_ *: (_ *+ _)).
+by rewrite linearD /= linearZ /=.
 Qed.
 
 HB.instance Definition _ x := @GRing.isLinear.Build _ _ _ _ _ (quat_rot_is_linear x).
@@ -1419,7 +1418,7 @@ Proof. by rewrite dnumE' eqxx. Qed.
 Lemma dnum_nat n : n%:R \is dnum.
 Proof.
 elim: n => [|n IH]; first by rewrite dnum0.
-by rewrite -add1n natrD dnumD; [by []|exact: dnum1|exact: IH].
+by rewrite -add1n natrD dnumD; [exact: dnum1|exact: IH|by []].
 Qed.
 
 Lemma dnumM x y : x \is dnum -> y \is dnum -> x * y \is dnum.

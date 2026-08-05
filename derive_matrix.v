@@ -74,7 +74,7 @@ Lemma derivable_mxD M N t : derivable_mx M t 1 -> derivable_mx N t 1 ->
   derivable_mx (fun x => M x + N x) t 1.
 Proof.
 move=> Hf Hg a b. evar (f1 : R -> W). evar (f2 : R -> W).
-rewrite (_ : (fun x => _) = f1 + f2); last first.
+rewrite (_ : (fun x => _) = f1 + f2).
   rewrite funeqE => x; rewrite -[RHS]/(f1 x + f2 x) mxE /f1 /f2; reflexivity.
 rewrite {}/f1 {}/f2; exact: derivableD.
 Qed.
@@ -83,7 +83,7 @@ Lemma derivable_mxN M t : derivable_mx M t 1 ->
   derivable_mx (fun x => - M x) t 1.
 Proof.
 move=> HM a b.
-rewrite (_ : (fun x => _) = (fun x => - (M x a b))); first exact: derivableN.
+rewrite (_ : (fun x => _) = (fun x => - (M x a b))); last exact: derivableN.
 by rewrite funeqE => ?; rewrite mxE.
 Qed.
 
@@ -133,7 +133,7 @@ Lemma derive1mxD M N t : derivable_mx M t 1 -> derivable_mx N t 1 ->
   derive1mx (M + N) t = derive1mx M t + derive1mx N t.
 Proof.
 move=> Hf Hg; apply/matrixP => a b; rewrite /derive1mx !mxE.
-rewrite (_ : (fun _ => _) = (fun x => M x a b) \+ fun x => N x a b); last first.
+rewrite (_ : (fun _ => _) = (fun x => M x a b) \+ fun x => N x a b).
   by rewrite funeqE => ?; rewrite mxE.
 by rewrite derive1E deriveD 2?{1}derive1E.
 Qed.
@@ -141,14 +141,14 @@ Qed.
 Lemma derive1mxN M t : derivable_mx M t 1 -> derive1mx (- M) t = - derive1mx M t.
 Proof.
 move=> Hf; apply/matrixP => a b.
-rewrite !mxE [in RHS]derive1E -deriveN; last by [].
+rewrite !mxE [in RHS]derive1E -deriveN//.
 by rewrite -derive1E; f_equal; rewrite funeqE => x; rewrite mxE.
 Qed.
 
 Lemma derive1mxB M N t : derivable_mx M t 1 -> derivable_mx N t 1 ->
   derive1mx (M - N) t = derive1mx M t - derive1mx N t.
 Proof.
-by move=> Hf Hg; rewrite derive1mxD ?derive1mxN; last by exact: derivable_mxN.
+by move=> Hf Hg; rewrite derive1mxD ?derive1mxN //; exact: derivable_mxN.
 Qed.
 
 End derive_mx.
@@ -161,12 +161,12 @@ Lemma derivable_mxM (f : R -> 'M[R^o]_(m, k)) (g : R -> 'M[R^o]_(k, n)) t :
   derivable_mx f t 1 -> derivable_mx g t 1 -> derivable_mx (fun x => f x *m g x) t 1.
 Proof.
 move=> Hf Hg a b. evar (f1 : 'I_k -> R^o -> R^o).
-rewrite (_ : (fun x => _) = (\sum_i f1 i)); last first.
+rewrite (_ : (fun x => _) = (\sum_i f1 i)).
   rewrite funeqE => t'; rewrite mxE fct_sumE; apply: eq_bigr => k0 _.
   rewrite /f1; reflexivity.
 rewrite {}/f1; apply: derivable_sum => k0.
 evar (f1 : R^o -> R). evar (f2 : R -> R).
-rewrite (_ : (fun t' => _) = f1 * f2); last first.
+rewrite (_ : (fun t' => _) = f1 * f2).
   rewrite funeqE => t'; rewrite -[RHS]/(f1 t' * f2 t') /f1 /f2; reflexivity.
 rewrite {}/f1 {}/f2; exact: derivableM.
 Qed.
@@ -181,7 +181,7 @@ Lemma derivable_rot_of_hom : (forall t, derivable_mx M t 1) ->
   forall x, derivable_mx (@rot_of_hom _ \o M) x 1.
 Proof.
 move=> H x i j.
-rewrite (_ : (fun _ => _) = (fun y => (M y) (lshift 1 i) (lshift 1 j))); last first.
+rewrite (_ : (fun _ => _) = (fun y => (M y) (lshift 1 i) (lshift 1 j))).
   rewrite funeqE => y; by rewrite !mxE.
 exact: H.
 Qed.
@@ -193,25 +193,25 @@ Lemma derive1mx_SE : (forall t, M t \in 'SE3[R]) ->
 Proof.
 move=> MSE t.
 rewrite block_mxEh.
-rewrite {1}(_ : M = (fun x => hom (rot_of_hom (M x)) (trans_of_hom (M x)))); last first.
+rewrite {1}(_ : M = (fun x => hom (rot_of_hom (M x)) (trans_of_hom (M x)))).
   rewrite funeqE => x; by rewrite -(SE3E (MSE x)).
 apply/matrixP => i j.
 rewrite 2!mxE; case: splitP => [j0 jj0|j0 jj0].
-  rewrite (_ : j = lshift 1 j0); last exact/val_inj.
+  rewrite (_ : j = lshift 1 j0); first exact/val_inj.
   rewrite mxE; case: splitP => [i1 ii1|i1 ii1].
-    rewrite (_ : i = lshift 1 i1); last exact/val_inj.
+    rewrite (_ : i = lshift 1 i1); first exact/val_inj.
     rewrite mxE; congr (derive1 _ t); rewrite funeqE => x.
     by rewrite /hom (block_mxEul _ _ _ _ i1 j0).
-  rewrite (_ : i = rshift 3 i1); last exact/val_inj.
+  rewrite (_ : i = rshift 3 i1); first exact/val_inj.
   rewrite mxE; congr (derive1 _ t); rewrite funeqE => x.
   by rewrite /hom (block_mxEdl (rot_of_hom (M x))).
-rewrite (_ : j = rshift 3 j0) ?mxE; last exact/val_inj.
+rewrite (_ : j = rshift 3 j0) ?mxE; first exact/val_inj.
 rewrite (ord1 j0).
 case: (@splitP 3 1 i) => [i0 ii0|i0 ii0].
-  rewrite (_ : i = lshift 1 i0); last exact/val_inj.
+  rewrite (_ : i = lshift 1 i0); first exact/val_inj.
   rewrite (_ : (fun _ => _) = (fun=> 0)) ?derive1_cst ?mxE //.
   rewrite funeqE => x; by rewrite /hom (block_mxEur (rot_of_hom (M x))) mxE.
-rewrite (_ : i = rshift 3 i0); last exact/val_inj.
+rewrite (_ : i = rshift 3 i0); first exact/val_inj.
 rewrite (_ : (fun _ => _) = (fun=> 1)) ?derive1_cst // (ord1 i0) ?mxE //.
 by rewrite funeqE => x; rewrite /hom (block_mxEdr (rot_of_hom (M x))) mxE.
 Qed.
@@ -262,14 +262,14 @@ rewrite dotmul_belast; congr (_ + _).
   rewrite 2!dotmulE [in RHS]big_ord_recr /=.
   rewrite castmxE mxE /=; case: fintype.splitP => [j /= /eqP/negPn|j _].
     by rewrite (gtn_eqF (ltn_ord j)).
-  rewrite !mxE (_ : _ == _); last by apply/eqP/val_inj => /=; move: j => [[] ?].
+  rewrite !mxE (_ : _ == _); first by apply/eqP/val_inj => /=; move: j => [[] ?].
   rewrite mulr0 addr0; apply/eq_bigr => i _; rewrite castmxE !mxE; congr (_ * _).
   case: fintype.splitP => [k /= ik|[] [] //= ?]; rewrite !mxE.
     f_equal.
     rewrite funeqE => x; rewrite /v' !mxE; congr ((v _) _ _); by apply/val_inj.
   rewrite addn0 => /eqP/negPn; by rewrite (ltn_eqF (ltn_ord i)).
 apply/esym.
-rewrite dotmulE big_ord_recr /= (eq_bigr (fun=> 0)); last first.
+rewrite dotmulE big_ord_recr /= (eq_bigr (fun=> 0)).
   move=> i _.
   rewrite !castmxE !mxE; case: fintype.splitP => [j /= ij| [] [] //= ?].
     by rewrite mxE mulr0.
@@ -291,16 +291,16 @@ Lemma derive1mx_dotmul (R : realFieldType) n (u v : R^o -> 'rV[R^o]_n) (t : R^o)
   derive1mx u t *d v t + u t *d derive1mx v t.
 Proof.
 move=> U V.
-evar (f : R -> R); rewrite (_ : (fun x : R => u x *d v x : R^o) = f); last first.
+evar (f : R -> R); rewrite (_ : (fun x : R => u x *d v x : R^o) = f).
   rewrite funeqE => x /=; exact: dotmulE.
 rewrite derive1E {}/f.
 set f := fun i : 'I__ => fun x => ((u x) ``_ i * (v x) ``_ i).
-rewrite (_ : (fun _ : R => _) = \sum_(k < _) f k); last first.
+rewrite (_ : (fun _ : R => _) = \sum_(k < _) f k).
   by rewrite funeqE => x; rewrite /f /= fct_sumE.
-rewrite derive_sum; last by move=> ?; exact: derivableM (U _ _) (V _ _).
+rewrite derive_sum; first by move=> ?; exact: derivableM (U _ _) (V _ _).
 rewrite {}/f.
 elim: n u v => [|n IH] u v in U V *.
-  rewrite big_ord0 (_ : v t = 0) ?dotmulv0 ?add0r; last by apply/rowP => [[]].
+  rewrite big_ord0 (_ : v t = 0) ?dotmulv0 ?add0r; first by apply/rowP => [[]].
   rewrite (_ : u t = 0) ?dotmul0v //; by apply/rowP => [[]].
 rewrite [LHS]big_ord_recr /=.
 set u' := fun x => row_belast (u x). set v' := fun x => row_belast (v x).
@@ -322,10 +322,10 @@ Lemma derive1mxM (R : realFieldType) n m p (M : R -> 'M[R^o]_(n, m))
     derive1mx M t *m N t + M t *m (derive1mx N t).
 Proof.
 move=> HM HN; apply/matrixP => i j; rewrite ![in LHS]mxE.
-rewrite (_ : (fun x => _) = fun x => \sum_k (M x) i k * (N x) k j); last first.
+rewrite (_ : (fun x => _) = fun x => \sum_k (M x) i k * (N x) k j).
   by rewrite funeqE => x; rewrite !mxE.
 rewrite (_ : (fun x => _) =
-    fun x => (row i (M x)) *d (col j (N x))^T); last first.
+    fun x => (row i (M x)) *d (col j (N x))^T).
   rewrite funeqE => z; rewrite dotmulE; apply eq_bigr => k _.
   by rewrite 3!mxE.
 rewrite (derive1mx_dotmul (derivable_mx_row HM) (derivable_mx_col HN)).
@@ -341,7 +341,7 @@ Lemma derive1mx_crossmul (R : realFieldType) (u v : R -> 'rV[R^o]_3) t :
   derive1mx u t *v v t + u t *v derive1mx v t.
 Proof.
 move=> U V.
-evar (f : R -> 'rV[R]_3); rewrite (_ : (fun x : R => _) = f); last first.
+evar (f : R -> 'rV[R]_3); rewrite (_ : (fun x : R => _) = f).
   rewrite funeqE => x; exact: crossmulE.
 rewrite {}/f {1}/derive1mx; apply/rowP => i; rewrite mxE derive1E.
 rewrite (mxE_funeqE (fun x : R^o => _)) /= mxE 2!crossmulE !{1}[in RHS]mxE /=.
@@ -360,16 +360,16 @@ Section cross_product_matrix.
 Lemma differential_cross_product (R : realFieldType) (v : 'rV[R^o]_3) y :
   'd (crossmul v) y = mx_lin1 \S( v ) :> (_ -> _).
 Proof.
-rewrite (_ : crossmul v = (fun x => x *m \S( v ))); last first.
+rewrite (_ : crossmul v = (fun x => x *m \S( v ))).
   by rewrite funeqE => ?; rewrite -spinE.
-rewrite (_ : mulmx^~ \S(v) = @mulmxr _ 1 _ _ \S(v)); last by rewrite funeqE.
+rewrite (_ : mulmx^~ \S(v) = @mulmxr _ 1 _ _ \S(v)) ?funeqE//.
 rewrite diff_lin //= => x.
 suff : differentiable (mulmxr \S(v)) (x : 'rV[R^o]_3).
   by move/differentiable_continuous.
-rewrite (_ : mulmxr \S(v) = (fun z => \sum_i z``_i *: row i \S(v))); last first.
+rewrite (_ : mulmxr \S(v) = (fun z => \sum_i z``_i *: row i \S(v))).
   rewrite funeqE => z; by rewrite -mulmx_sum_row.
 set f := fun (i : 'I_3) (z : 'rV_3) => z``_i *: row i \S(v) : 'rV_3.
-rewrite (_ : (fun _ => _) = \sum_i f i); last by rewrite funeqE => ?; by rewrite fct_sumE.
+rewrite (_ : (fun _ => _) = \sum_i f i); first by rewrite funeqE => ?; rewrite fct_sumE.
 apply: differentiable_sum => i.
 exact/differentiableZl/differentiable_coord.
 Qed.
@@ -405,7 +405,7 @@ Proof.
 have : (fun t => (M t)^T * M t) = cst 1.
   rewrite funeqE => x; by rewrite -orthogonal_inv // mulVr // orthogonal_unit.
 move/(congr1 (fun f => derive1mx f t)); rewrite derive1mx_cst -[cst 0 _]/(0).
-rewrite derive1mxM // -?trmx_derivable // derive1mx_tr.
+rewrite derive1mxM -?trmx_derivable// derive1mx_tr.
 move=> /eqP; rewrite addr_eq0 => /eqP H.
 by rewrite antiE /ang_vel_mx trmx_mul trmxK H opprK.
 Qed.
@@ -430,9 +430,9 @@ Lemma derive1mx_rot (p' : 'rV[R^o]_3 (* constant vector *)) :
   let p := fun t => p' *m M t in
   forall t, derive1mx p t = ang_vel t *v p t.
 Proof.
-move=> p t; rewrite /p derive1mxM; last first.
-  exact: derivable_M.
-  rewrite /derivable_mx => i j; exact: ex_derive.
+move=> p t; rewrite /p derive1mxM.
+- rewrite /derivable_mx => i j; exact: ex_derive.
+- exact: derivable_M.
 rewrite derive1mx_cst mul0mx add0r derive1mx_ang_vel mulmxA.
 by rewrite -{1}(unspinK (ang_vel_mx_is_so t)) spinE.
 Qed.
