@@ -95,7 +95,7 @@ Local Open Scope ring_scope.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 
 Section quaternion0.
-Variable R : pzRingType.
+Context (R : pzRingType).
 
 Record quat := mkQuat {quatl : R ; quatr : 'rV[R]_3 }.
 Implicit Types x y : quat.
@@ -112,7 +112,7 @@ Local Notation "x '_k'" := ((x.2)``_(2%:R : 'I_3)).
 Coercion pair_of_quat x := let: mkQuat x1 x2 := x in (x1, x2).
 Let quat_of_pair (a : R * 'rV[R]_3) := let: (a1, a2) := a in mkQuat a1 a2.
 
-Lemma quat_of_pairK : cancel pair_of_quat quat_of_pair.
+Let quat_of_pairK : cancel pair_of_quat quat_of_pair.
 Proof. by case. Qed.
 
 HB.instance Definition _ := Equality.copy quat (can_type quat_of_pairK).
@@ -128,19 +128,19 @@ Qed.
 Definition addq x y := mkQuat (x.1 + y.1) (x.2 + y.2).
 Arguments addq : simpl never.
 
-Lemma addqC : commutative addq.
+Let addqC : commutative addq.
 Proof. move=> *; congr mkQuat; by rewrite addrC. Qed.
 
-Lemma addqA : associative addq.
+Let addqA : associative addq.
 Proof. move=> *; congr mkQuat; by rewrite addrA. Qed.
 
-Lemma add0q : left_id 0%:q addq.
+Let add0q : left_id 0%:q addq.
 Proof. case=> *; by rewrite /addq /= 2!add0r. Qed.
 
 Definition oppq x := mkQuat (- x.1) (- x.2).
 Arguments oppq : simpl never.
 
-Lemma addNq : left_inverse 0%:q oppq addq.
+Let addNq : left_inverse 0%:q oppq addq.
 Proof. move=> *; congr mkQuat; by rewrite addNr. Qed.
 
 HB.instance Definition _ := @GRing.isZmodule.Build quat _ _ _ addqA addqC add0q addNq.

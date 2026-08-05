@@ -1,5 +1,5 @@
 (* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import boot ssralg ssrint ssrnum rat.
+From mathcomp Require Import boot order ssralg ssrint ssrnum rat.
 From mathcomp Require Import interval_inference.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import realalg complex fingroup perm.
