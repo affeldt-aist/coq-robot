@@ -1,5 +1,5 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
-From mathcomp Require Import all_boot all_order ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex fingroup perm reals interval trigo.

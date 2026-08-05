@@ -1,6 +1,6 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import all_boot ssralg ssrint ssrnum rat poly.
+From mathcomp Require Import boot ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
 From mathcomp Require Import realalg complex finset fingroup perm.
@@ -59,10 +59,8 @@ End keyed_qualifiers_anti_sym.
 Notation "''so[' R ]_ n" := (anti n R).
 
 Section sym_anti.
-
-Variables (R : pzRingType) (n : nat).
-Implicit Types M A B : 'M[R]_n.
-Implicit Types v : 'rV[R]_n.
+Context {R : pzRingType} {n : nat}.
+Implicit Types (M A B : 'M[R]_n) (v : 'rV[R]_n).
 
 Section sym.
 
@@ -84,10 +82,7 @@ wlog : i j ij / (i < j)%N.
 by move=> {}ij; rewrite AB // leq_eqVlt ij orbC.
 Qed.
 
-Lemma sym_oppr_closed : oppr_closed (sym n R).
-Proof. move=> /= M /eqP HM; apply/eqP; by rewrite linearN /= -HM. Qed.
-
-Lemma sym_addr_closed : addr_closed (sym n R).
+Let sym_addr_closed : Algebra.nmod_closed (sym n R).
 Proof.
 split; first by rewrite symE trmx0.
 move=> /= A B; rewrite 2!symE => /eqP sA /eqP sB.
@@ -95,11 +90,14 @@ by rewrite symE linearD /= -sA -sB.
 Qed.
 
 HB.instance Definition _ := GRing.isAddClosed.Build _ _ sym_addr_closed.
+
+Let sym_oppr_closed : oppr_closed (sym n R).
+Proof. move=> /= M /eqP HM; apply/eqP; by rewrite linearN /= -HM. Qed.
+
 HB.instance Definition _ := GRing.isOppClosed.Build _ _ sym_oppr_closed.
 
 Lemma sym_scaler_closed : GRing.scaler_closed (sym n R).
 Proof. move=> ? ?; rewrite 2!symE => /eqP H; by rewrite linearZ /= -H. Qed.
-(* TODO: Canonical? *)
 
 HB.instance Definition _ := GRing.isScaleClosed.Build _ _ _ sym_scaler_closed.
 
@@ -541,8 +539,7 @@ Implicit Types M : 'M[R]_3.
 Lemma sqr_spin u : \S( u ) ^+ 2 = u^T *m u - (`|u|_e ^+ 2)%:A.
 Proof.
 apply (symP (sqr_spin_is_sym u)); last move=> i j.
-  rewrite rpredD//= ?mul_tr_vec_sym//.
-  by rewrite sym_oppr_closed (*TODO: why can't we use rpredN*)// sym_scaler_closed// sym_cst.
+  by rewrite rpredB//= ?mul_tr_vec_sym// rpredZ//= sym_cst.
 rewrite [in X in _ -> _ = X]mxE mulmx_trE.
 case/boolP : (i == 0) => [/eqP-> _|/ifnot0P/orP[]/eqP->].
 - case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
