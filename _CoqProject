@@ -1,5 +1,6 @@
 -arg -w -arg -parsing
 -arg -w -arg -ambiguous-paths
+-arg -w -arg -redundant-canonical-projection
 
 ssr_ext.v
 euclidean.v
@@ -17,5 +18,18 @@ scara.v
 derive_matrix.v
 differential_kinematics.v
 extra_trigo.v
+ode_common.v
+ode_contseg.v
+ode.v
+ode_global.v
+lasalle.v
+pendulum.v
+tilt_mathcomp.v
+tilt_analysis.v
+tilt_robot.v
+tilt_stability.v
+tilt_lyapunov.v
+tilt_lasalle.v
+
 
 -R . robot

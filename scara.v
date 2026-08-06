@@ -35,8 +35,7 @@ Import Num.Theory.
 Local Open Scope ring_scope.
 
 Section scara.
-
-Variable R : realType.
+Context {R : realType}.
 Let vector := 'rV[R]_3.
 
 Variable theta1 : R.

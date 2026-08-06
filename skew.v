@@ -1,10 +1,9 @@
 (* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From HB Require Import structures.
-From mathcomp Require Import boot ssralg ssrint ssrnum rat poly.
-From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
-From mathcomp Require Import sesquilinear.
-From mathcomp Require Import realalg complex finset fingroup perm.
-From mathcomp Require Import ring_tactic field_tactic.
+From mathcomp Require Import boot ssralg ssrint ssrnum rat poly matrix
+  mxalgebra mxpoly zmodp sesquilinear finset fingroup perm ring_tactic
+  field_tactic.
+From mathcomp Require Import closed_field polyrcf realalg complex.
 Require Import ssr_ext euclidean vec_angle.
 From mathcomp Require Import reals.
 
@@ -59,8 +58,10 @@ End keyed_qualifiers_anti_sym.
 Notation "''so[' R ]_ n" := (anti n R).
 
 Section sym_anti.
-Context {R : pzRingType} {n : nat}.
-Implicit Types (M A B : 'M[R]_n) (v : 'rV[R]_n).
+
+Variables (R : pzRingType) (n : nat).
+Implicit Types M A B : 'M[R]_n.
+Implicit Types v : 'rV[R]_n.
 
 Section sym.
 
@@ -82,7 +83,7 @@ wlog : i j ij / (i < j)%N.
 by move=> {}ij; rewrite AB // leq_eqVlt ij orbC.
 Qed.
 
-Let sym_addr_closed : Algebra.nmod_closed (sym n R).
+Let sym_addr_closed : nmod_closed (sym n R).
 Proof.
 split; first by rewrite symE trmx0.
 move=> /= A B; rewrite 2!symE => /eqP sA /eqP sB.
@@ -96,8 +97,9 @@ Proof. move=> /= M /eqP HM; apply/eqP; by rewrite linearN /= -HM. Qed.
 
 HB.instance Definition _ := GRing.isOppClosed.Build _ _ sym_oppr_closed.
 
-Lemma sym_scaler_closed : GRing.scaler_closed (sym n R).
+Let sym_scaler_closed : GRing.scaler_closed (sym n R).
 Proof. move=> ? ?; rewrite 2!symE => /eqP H; by rewrite linearZ /= -H. Qed.
+(* TODO: Canonical? *)
 
 HB.instance Definition _ := GRing.isScaleClosed.Build _ _ _ sym_scaler_closed.
 
@@ -539,7 +541,7 @@ Implicit Types M : 'M[R]_3.
 Lemma sqr_spin u : \S( u ) ^+ 2 = u^T *m u - (`|u|_e ^+ 2)%:A.
 Proof.
 apply (symP (sqr_spin_is_sym u)); last move=> i j.
-  by rewrite rpredB//= ?mul_tr_vec_sym// rpredZ//= sym_cst.
+  by rewrite rpredB//= ?mul_tr_vec_sym// rpredZ// sym_cst.
 rewrite [in X in _ -> _ = X]mxE mulmx_trE.
 case/boolP : (i == 0) => [/eqP-> _|/ifnot0P/orP[]/eqP->].
 - case/boolP : (j == 0) => [|/ifnot0P/orP[]]/eqP->.
@@ -810,8 +812,8 @@ rewrite trmx_mul mulmxE trmxV !linearD /= linearN /= trmx1.
 rewrite /uncayley -(mulr1 (M - 1)) -[X in _ * X / _](orthogonal_tr_mul MO).
 rewrite mulrA mulrDl mulNr mul1r -(orthogonal_inv MO) divrr ?orthogonal_unit//.
 rewrite -mulrA -[X in _ * (X * _)](invrK M) -invrM.
-- by rewrite ortho_N1eigen_invertible.
-- by rewrite unitrV orthogonal_unit.
+  by rewrite ortho_N1eigen_invertible.
+  by rewrite unitrV orthogonal_unit.
 rewrite (mulrDl _ _ M^-1) divrr ?orthogonal_unit// mul1r (addrC 1 M^-1).
 by rewrite -mulNr opprB.
 Qed.

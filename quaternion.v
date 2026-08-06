@@ -375,7 +375,7 @@ apply/eqP; Simp.r; rewrite 2!scalerDr scalerA -2!addrA; congr (_ + _).
 by rewrite (linearZl_LR _ y2)/=; congr (_ + _); rewrite scalerA mulrC -scalerA.
 Qed.
 
-HB.instance Definition _ := @GRing.Lmodule_isLalgebra.Build R (quat R) quatAl.
+HB.instance Definition _ := @GRing.LSemiModule_isLSemiAlgebra.Build R (quat R) quatAl.
 
 Lemma quatAr k x y : k *: (x * y) = x * (k *: y).
 Proof.
@@ -387,7 +387,7 @@ rewrite (mulrC k); congr (_ + _ + _).
 by rewrite (linearZr_LR _ x2)/=.
 Qed.
 
-HB.instance Definition _ := @GRing.Lalgebra_isAlgebra.Build _ (quat R) quatAr.
+HB.instance Definition _ := @GRing.LSemiAlgebra_isSemiAlgebra.Build _ (quat R) quatAr.
 
 Lemma quat_algE r : r%:q = r%:A.
 Proof. by apply/eqP; rewrite eq_quat //=; Simp.r. Qed.
@@ -1254,12 +1254,10 @@ Definition duall (r : R) := r +ɛ* 0.
 Local Notation "*%:dl" := duall (at level 2).
 Local Notation "r %:dl" := (duall r) (at level 2).
 
-Fact duall_is_additive : additive *%:dl.
-Proof.
-by move=> p q; congr mkDual; rewrite /= subrr.
-Qed.
+Let duall_is_additive : zmod_morphism *%:dl.
+Proof. by move=> p q; congr mkDual; rewrite /= subrr. Qed.
 
-HB.instance Definition _ := @GRing.isAdditive.Build _ _ _ duall_is_additive.
+HB.instance Definition _ := @Algebra.isZmodMorphism.Build _ _ _ duall_is_additive.
 
 Fact duall_is_multiplicative : multiplicative *%:dl.
 Proof.
@@ -1293,12 +1291,12 @@ case: p => p1 p2; case: q => q1 q2; rewrite !muld_def /=.
 by rewrite addrC mulrC [p2 * _]mulrC [q2 * _]mulrC.
 Qed.
 
-HB.instance Definition _ := GRing.PzRing_hasCommutativeMul.Build (dual R) muld_comm.
+HB.instance Definition _ := GRing.SemiRing_hasCommutativeMul.Build (dual R) muld_comm.
 
 End dual_comm.
 
 Section dual_number_unit.
-Variable R : unitRingType.
+Context {R : unitRingType}.
 Local Open Scope dual_scope.
 Implicit Types x y : dual R.
 

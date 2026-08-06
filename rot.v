@@ -1044,7 +1044,7 @@ Proof.
 rewrite /eskew_unit 2!axialD (_ : axial _ = 0) ?add0r.
   apply/eqP; by rewrite -axial_sym mul_tr_vec_sym.
 rewrite (_ : axial _ = 0) ?add0r.
-  apply/eqP; rewrite -axial_sym sym_scaler_closed (* TODO: declare the right canonical to be able to use rpredZ *) //.
+  apply/eqP; rewrite -axial_sym rpredZ//.
   by rewrite rpredD // ?sym_cst // rpredN mul_tr_vec_sym.
 rewrite axialZ axialE scalerMnr; congr (_ *: _).
 by rewrite unspinD spinK unspinN tr_spin unspinN spinK opprK mulr2n.

@@ -1,4 +1,4 @@
-(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
+(* coq-robot (c) 2017 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import boot order ssralg ssrint ssrnum rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import sesquilinear.
@@ -259,14 +259,13 @@ Lemma enorm_crossmul u v :
   `|u *v v|_e = `|u|_e * `|v|_e * `| sin (vec_angle u v) |.
 Proof.
 suff /eqP : `|u *v v|_e ^+ 2 = (`|u|_e * `|v|_e * `| sin (vec_angle u v) |)^+2.
-  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm ?enorm_ge0//.
+  rewrite -eqr_sqrt ?sqr_ge0 // 2!sqrtr_sqr ger0_norm; first by rewrite enorm_ge0.
   rewrite ger0_norm; last by move/eqP.
   by rewrite -mulrA mulr_ge0 ?enorm_ge0 // mulr_ge0 // enorm_ge0.
 rewrite enorm_crossmul' dotmul_cos !exprMn.
 apply/eqP; rewrite subr_eq -mulrDr.
-rewrite real_normK //.
-  by rewrite realE; case: ltgtP.
-by rewrite addrC cos2Dsin2 mulr1.
+rewrite real_normK //; last by rewrite addrC cos2Dsin2 mulr1.
+by rewrite realE; case: ltgtP.
 Qed.
 
 Lemma enorm_dotmul_crossmul u v : u != 0 -> v != 0 ->
@@ -285,7 +284,7 @@ Proof.
 move=> uD0 vD0 uv0.
 apply/eqP; rewrite -subr_eq0 -enorm_eq0.
 rewrite -(@eqrXn2 _ 2) ?enorm_ge0// expr0n /= enormB.
-rewrite vec_anglevZ ?divr_gt0 ?enorm_gt0//.
+rewrite vec_anglevZ; first by rewrite divr_gt0// enorm_gt0.
 rewrite uv0 cos0 mulr1 !enormZ ger0_norm.
   by rewrite divr_ge0// enorm_ge0.
 by rewrite divfK ?enorm_eq0// -expr2 addrAC -mulr2n subrr.
@@ -297,7 +296,7 @@ Proof.
 move=> uD0 vD0 uvpi.
 apply/eqP; rewrite -subr_eq0 -enorm_eq0 scaleNr opprK.
 rewrite -(@eqrXn2 _ 2) ?enorm_ge0// expr0n /= enormD.
-rewrite vec_anglevZ ?divr_gt0 ?enorm_gt0//.
+rewrite vec_anglevZ; first by rewrite divr_gt0// enorm_gt0.
 rewrite uvpi cospi mulrN1 !enormZ ger0_norm.
   by rewrite divr_ge0// enorm_ge0.
 rewrite mulNrn divfK ?enorm_eq0//.
@@ -480,14 +479,14 @@ apply/idP/idP.
 rewrite -norm_cos_eq1 -cos0 => /eqP.
 have [c_le0|c_gt0 Hc] := ler0P (cos (vec_angle u v)).
   rewrite -cos_vec_anglevN // -colinearvN => Hc.
-  rewrite (vec_angle0_inv uD0 vND0).
-    apply: cos_inj => //; rewrite in_itv /= ?(lexx, pi_ge0) //.
-    exact: vec_angle_bound.
-  by rewrite colinearZv colinearvv orbT.
-rewrite (vec_angle0_inv uD0 vD0).
+  rewrite (vec_angle0_inv uD0 vND0); last first.
+    by rewrite colinearZv colinearvv orbT.
   apply: cos_inj => //; rewrite in_itv /= ?(lexx, pi_ge0) //.
-  exact: vec_angle_bound.
-by rewrite colinearZv colinearvv orbT.
+  by apply: vec_angle_bound.
+rewrite (vec_angle0_inv uD0 vD0); last first.
+  by rewrite colinearZv colinearvv orbT.
+apply: cos_inj => //; rewrite in_itv /= ?(lexx, pi_ge0) //.
+by apply: vec_angle_bound.
 Qed.
 
 Lemma sin_vec_angle_iff (u v : 'rV[T]_3) (u0 : u != 0) (v0 : v != 0) :
