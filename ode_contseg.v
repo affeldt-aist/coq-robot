@@ -142,8 +142,6 @@ have [K0|K0] := eqVneq K set0.
   do 2 rewrite [X in [set _ | _ in X]](_ : _ = set0)// image_set0//.
   by rewrite sup0 mul0rn.
 rewrite -sup_Mn//.
-  apply: normr_has_sup => //.
-  exact/set0P.
 rewrite image_comp/=; congr (sup _).
 apply: eq_imagel => z Kz /=; rewrite -normrMn /=.
 have /(congr1 (@^~ z)) <- := natmulfctE f n.
@@ -324,7 +322,7 @@ Qed.
 
 Lemma infty_normrMn (x : `C[a, b]) n : infty_norm (x *+ n) = infty_norm x *+ n.
 Proof.
-rewrite /infty_norm -pre_infty_normrMn => //; first exact: segment_compact.
+rewrite /infty_norm -pre_infty_normrMn.
 apply: pre_infty_norm_itv_eq => r rab.
 suff : repr (x *+ n) = repr x *+ n %[mod `C[a, b]].
  move=> /eqmod_on_itv ->//.

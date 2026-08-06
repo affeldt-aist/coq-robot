@@ -41,34 +41,6 @@ Unshelve. all: by end_near. Qed.
 
 Section about_sup.
 
-Lemma sup_ge0 {R : realType} (A : set R) :
-  (forall x, A x -> 0 <= x) -> 0 <= sup A.
-Proof.
-move=> Ax.
-have [->|/set0P[a Aa]] := eqVneq A set0; first by rewrite sup0.
-have [supA|supA] := pselect (has_sup A).
-  rewrite (le_trans (Ax _ Aa))// ub_le_sup//.
-  by case: supA.
-by rewrite /sup supremum_out.
-Qed.
-
-Lemma has_sup_Mn {R : realType} (A : set R) n :
-  has_sup A -> has_sup [set x *+n | x in A ].
-Proof.
-move => [-[] x Ax [y uby]].
-split; first by exists (x *+ n), x.
-exists (y *+ n).
-move => _ [y0 Ay0 <-] .
-rewrite lerMn2r.
-by apply /orP;right;apply uby.
-Qed.
-
-Lemma sup_Mn {R : realType} (A : set R) n :
-  has_sup A -> sup [set x *+n | x in A ] = sup A *+ n.
-Proof.
-by move=> ?; rewrite sup_Mn. (* TODO: rm *)
-Qed.
-
 Lemma sup_mult {R: realType} (A : set R) (a : R) :
   has_sup A ->  sup [set normr a * x  | x in A ] = (normr a) * sup A  .
 Proof.

@@ -1349,14 +1349,6 @@ Unshelve. all: by end_near. Qed.
 
 End max_solution.
 
-Lemma within_continuousM {T : topologicalType} {K : (*numFieldType*)realType}
-    (V := (*pseudoMetricNormedZmodType*) K) (A : set T) (f g : T -> V) :
-  {within A, continuous f} -> {within A, continuous g} ->
-  {within A, continuous (f \* g)}.
-Proof.
-exact: within_continuousM. (* TODO: rm *)
-Qed.
-
 Lemma parameterized_integralN {R : realType}
     x b (f : R -> R) : (x <= b) ->
   {within `[x, b], continuous f} ->
