@@ -1,3 +1,4 @@
+(* robot-rocq (c) 2026 AIST and INRIA. License: LGPL-2.1-or-later. *)
 From mathcomp Require Import boot order ssralg ssrnum.
 From mathcomp Require Import boolp interval reals trigo.
 Require Import ssr_ext.
