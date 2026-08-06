@@ -1,5 +1,6 @@
 -arg -w -arg -parsing
 -arg -w -arg -ambiguous-paths
+-arg -w -arg -redundant-canonical-projection
 
 ssr_ext.v
 euclidean.v

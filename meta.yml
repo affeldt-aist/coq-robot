@@ -19,6 +19,8 @@ authors:
   initial: true
 - name: Laurent Théry, Inria
   initial: false
+- name: Damien Rouhling, then Université Côte d’Azur/Inria
+  initial: false
 
 opam-file-maintainer: Reynald Affeldt <reynald.affeldt@aist.go.jp>
 
@@ -34,15 +36,22 @@ supported_rocq_versions:
   opam: '{ (>= "9.1" & < "9.4~") }'
 
 tested_rocq_opam_versions:
-- version: '9.1'
+- version: '2.6.0-rocq-prover-9.1'
+  repo: 'mathcomp/mathcomp'
+- version: '2.6.0-rocq-prover-9.2'
+  repo: 'mathcomp/mathcomp'
 
 dependencies:
+- opam:
+    name: rocq-core
+    version: '{ (>= "9.1" & < "9.4~") | (= "dev") }'
+  description: |-
+    Rocq core
 - opam:
     name: rocq-hierarchy-builder
     version: '{ (>= "1.10.0") }'
   description: |-
     [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
-
 - opam:
     name: rocq-mathcomp-ssreflect
     version: '{ (>= "2.6.0") }'
