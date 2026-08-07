@@ -1814,7 +1814,8 @@ End gronwall.
 Section thm34.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
-Variables (phi psi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
+Variables (phi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
+Let psi : R -> U -> U := cst 0.
 Variables (u0 v0 : U) (r : {posnum R}) (*(r1 : r%:num < 1)*).
 (* TODO: there seems to be no reason to have B being a closed ball
 around u0 whereas the proof talks about an open W*)
@@ -1851,28 +1852,73 @@ have zint : forall t, t \in `[a, b]%R -> z t = v0 + \vint[lm]_(s in `[a, t]) (ph
   suff: is_integral_sol (phi \+ psi) v0 a b z.
     by move=> [-> ->].
   apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) k_neq0 ab).
-  admit.
-  admit.
+  move=> x xab.
+  rewrite (_ : phi \+ psi = phi); first by apply/funext => s; rewrite /= addr0.
+  exact: lip2.
+  move=> x xab.
+  rewrite (_ : phi \+ psi = phi); first by apply/funext => s; rewrite /= addr0.
+  exact: cont1.
   case: solz => _ _.
   by rewrite closure_itvoo.
-  (* not exactly Bz *)
-  admit.
+  rewrite -/B.
+  exact: Bz.
   exact: solz.
 pose gronwall_y t := `|y t - z t|.
 rewrite -/(gronwall_y t).
 have : gronwall_y t <= gamma + mu%:num * (t - a) +
     \int[lm]_(s in `[a, t])
       (k * (gamma + mu%:num * (s - a)) * expR (k * (t - s))).
-  have H : gronwall_y t <= (gamma + mu%:num * (t - a) +
-      \int[lm]_(s in `[a, t]) (k * `|y s - z s|)).
+  have H : gronwall_y t <= gamma + mu%:num * (t - a) +
+      \int[lm]_(s in `[a, t]) (k * `|y s - z s|).
     apply: (@le_trans _ _ (gamma +
-      \int[lm]_(s in `[a, t]) `|phi s (y s) - psi s (z s)| +
-      \int[lm]_(s in `[a, t]) `|psi s (z s)|)).
+      \int[lm]_(s in `[a, t]) `|phi s (y s) - phi s (z s)|)).
+      rewrite /gronwall_y.
+      rewrite yint//; first by rewrite inE in tab.
+      rewrite zint//; first by rewrite inE in tab.
+      under [in X in `|_ - X| <= _]eq_rowRintegral.
+        move=> x xat.
+        rewrite /psi/= addr0.
+        over.
+      rewrite /=.
+      rewrite opprD.
+      rewrite addrACA.
+      rewrite (le_trans (ler_normD _ _))//.
+      rewrite lerD2l// -/lm.
+      rewrite [in leLHS]/Num.norm/= mx_normrE.
+      apply/bigmax_le => /=.
+        admit.
+      move=> [i j] _ /=.
+      rewrite ord1{i}.
+      rewrite !mxE.
+      rewrite -RintegralB//=.
+        admit.
+        admit.
+      apply: (le_trans (le_normr_Rintegral _ _)) => //=.
+        admit.
+      apply: le_Rintegral => //=.
+        admit.
+        admit.
+      move=> x xat.
+      rewrite [in leRHS]/Num.norm/= mx_normrE.
+      rewrite [X in `|X|](_ : _ = (phi x (y x) - phi x (z x)) ord0 j).
+        by rewrite !mxE.
+      rewrite [leRHS](_ : _ = \big[maxr/0]_j `|(phi x (y x) - phi x (z x)) ord0 j|).
+        admit. (* TODO: we need a serious-looking fix *)
+      apply: le_bigmax.
       admit.
+  apply: (le_trans H).
+  rewrite lerD2l.
+(*  apply: le_Rintegral => //=.
     admit.
+    admit.
+  move=> x xat.*)
   pose lambda t := gamma + mu%:num * (t - a).
   pose mu' (s : R) : R := k.
   have := @gronwall _ _ _ ab lambda mu' _ _ _ gronwall_y.
+  rewrite -/lm.
+  rewrite /lambda.
+  rewrite /mu'.
+  rewrite /gronwall_y.
   admit.
 move/le_trans; apply.
 apply: (@le_trans _ _
