@@ -1225,22 +1225,22 @@ Section integral_ode.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
-Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U) (k : R) (r : {posnum R}).
+Variables (phi : R -> U -> U) (u0 u0' : U) (a b : R) (sol : R -> U) (k : R) (r : {posnum R}).
 Hypothesis k0 : k != 0.
 Hypothesis ab : a < b.
 
-Let B := closed_ball u0 r%:num.
+Let B := closed_ball u0' r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Hypothesis cont_sol : {within `[a, b], continuous sol}.
-Hypothesis sol_bound : sol @` `[a, b] `<=` closed_ball u0 r%:num.
+Hypothesis sol_bound : sol @` `[a, b] `<=` B.
 
 Lemma picard_iterator_within_continuous i :
   {within `[a, b], continuous (fun x => phi x (sol x) ord0 i)}.
 Proof.
 move: i.
 apply/within_continuous_coord.
-exact: (@within_continuous_lipschitz _ _ _ a b u0 r _ _ _ k0).
+exact: (@within_continuous_lipschitz _ _ phi a b u0' r sol _ _ k0).
 Qed.
 
 Lemma integral_sol_iff_sol1 :
@@ -1744,7 +1744,7 @@ Lemma cauchy_lipschitz_unique_restr f' :
   {in `[a, a + safe_dist]%R, f =1 f'}.
 Proof.
 move => cont bnd.
-move/(@integral_sol_iff_sol1 _ _ _ _ _ _ _ _ r k0') => []//.
+move/(@integral_sol_iff_sol1 _ _ _ u0 (*u0*) u0(*u0'*) _ _ _ _ r k0') => []//.
 - exact: ltDl_safe_dist.
 - move=> t td.
   apply: lip2.
@@ -2475,6 +2475,7 @@ apply: is_integral_sol_patch => //.
     exact/mem_set/Buneg/set_mem.
   + by [].
   + move => _ [t tp] <-.
+    rewrite /uneg.
     rewrite {1}/cauchy_lipschitz_f_sym patch_in.
       by rewrite inE/=in_itv/= lexx //= gerBl ltW.
     have tin : t \in `[t0 - dboth t0, t0 + dboth t0].
@@ -2519,25 +2520,25 @@ apply: is_integral_sol_patch => //.
       rewrite /=!mxE => ->.
       by rewrite mulrN1 !opprK.
       * by rewrite closure_itvoo; first rewrite gtrBl.
-- apply /(integral_sol_iff_sol1 (r:=r2) kn0).
+- apply/(integral_sol_iff_sol1 (u0' := fminus t0) (r:=r2) kn0).
   + by rewrite ltrDl.
-  +  move=>x bx.
-     rewrite /fminus/=.
-     rewrite (And31 solminus).
-     move => [x1 x2] [ Bx1 Bx2].
-     apply: lip2.
-     move : bx.
-     rewrite !inE.
-     apply: subset_itv; rewrite bnd_simp.
-     by rewrite (itvP t0ab).
-     rewrite -lerBrDl.
-     by rewrite ge_min lexx.
-     split => /=.
-     rewrite /B.
-     apply: (le_closed_ball _ Bx1).
-     by rewrite ler_pdivrMr // ler_pMr // lerDr.
-     apply: (le_closed_ball _ Bx2).
-     by rewrite ler_pdivrMr // ler_pMr // lerDr.
+  + move=> x bx.
+    rewrite /fminus/=.
+    rewrite (And31 solminus).
+    move => [x1 x2] [ Bx1 Bx2].
+    apply: lip2.
+    move : bx.
+    rewrite !inE.
+    apply: subset_itv; rewrite bnd_simp.
+    by rewrite (itvP t0ab).
+    rewrite -lerBrDl.
+    by rewrite ge_min lexx.
+    split => /=.
+    rewrite /B.
+    apply: (le_closed_ball _ Bx1).
+    by rewrite ler_piMr// invf_le1// ler1n.
+    apply: (le_closed_ball _ Bx2).
+    by rewrite ler_piMr// invf_le1// ler1n.
   + move => t tab.
     apply /continuous_subspaceW/cont1.
     apply: subset_itv; rewrite bnd_simp.

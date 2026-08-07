@@ -1843,14 +1843,14 @@ have yint : forall t', t' \in `[a, b]%R -> y t' = u0 + \vint[lm]_(s in `[a, t'])
   move=> t' t'ab.
   suff: is_integral_sol phi u0 a b y.
     by move=> [<-]; apply.
-  apply/(integral_sol_iff_sol1 (r:=r) k_neq0 ab) => //.
+  apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) k_neq0 ab) => //.
   case: soly => _ _.
   by rewrite closure_itvoo. (* where we use By *)
 have zint : forall t, t \in `[a, b]%R -> z t = v0 + \vint[lm]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
   move=> t' t'ab.
   suff: is_integral_sol (phi \+ psi) v0 a b z.
     by move=> [-> ->].
-  apply/(integral_sol_iff_sol1 (r:=r) k_neq0 ab).
+  apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) k_neq0 ab).
   admit.
   admit.
   case: solz => _ _.
