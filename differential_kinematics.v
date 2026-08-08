@@ -1009,7 +1009,7 @@ rewrite (mul_mx_row _ a) {}/a; congr (@row_mx _ _ 3 3 _ _).
   rewrite (_ : (fun _ => _) = (@Rz _ \o (theta1 + theta2 + theta4))).
     by rewrite funeqE.
   rewrite ang_vel_mx_Rz.
-    apply derivableD; [apply/derivableD|by []].
+    apply: derivableD; [apply/derivableD|by []].
     exact: H1.
     exact: H2.
   rewrite [RHS]spinK.
