@@ -34,8 +34,9 @@ supported_rocq_versions:
   opam: '{ (>= "9.1" & < "9.4~") }'
 
 tested_rocq_opam_versions:
-- version: '9.1'
 - version: '2.6.0-rocq-prover-9.1'
+  repo: 'mathcomp/mathcomp'
+- version: '2.6.0-rocq-prover-9.2'
   repo: 'mathcomp/mathcomp'
 
 dependencies:
