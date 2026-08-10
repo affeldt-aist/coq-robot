@@ -2034,7 +2034,87 @@ apply: (@le_trans _ _
     gamma * expR (k * (t - a)) +
     \int[lm]_(s in `[a, t]) (mu%:num * expR (k * (t - s))))).
   rewrite -!addrA !lerD2l.
-  admit.
+  move: (tab).
+  rewrite inE/= in_itv/= => /andP[+ _].
+  rewrite le_eqVlt => /predU1P[<-|altt].
+    rewrite set_itv1 !Rintegral_set1 subrr !mulr0 expR0 mulr1 oppr0 add0r addr0.
+    by rewrite addrC subrr.
+  have -> := (@Rintegration_by_parts _
+ (fun s => (k * (gamma + mu%:num * (s - a))))
+ (fun s => - k^-1 * expR (k * (t - s)))
+ (fun s => k * mu%:num)
+ (fun s => expR (k * (t - s)))
+ ).
+  - exact: altt.
+  - apply: within_continuousMl.
+    exact: cst_continuous.
+  - split => //.
+      apply: cvgM => //.
+      apply: cvgD => //.
+      apply: cvgM => //.
+      apply: cvgD => //.
+      apply: cvg_at_right_filter.
+      exact: cvg_id.
+    apply: cvgM => //.
+    apply: cvgD => //.
+    apply: cvgM => //.
+    apply: cvgD => //.
+    apply: cvg_at_left_filter.
+    exact: cvg_id.
+  - move=> x xat.
+    by rewrite derive1E derive_val subr0 add0r mul1r scaler1.
+  - apply: continuous_subspaceT.
+    move=> x; apply: continuous_comp; last exact: continuous_expR.
+    apply: cvgM => //.
+    apply: cvgD => //.
+    exact: cvgN.
+  - split => //.
+      apply: cvgM => //.
+      apply: cvg_at_right_filter.
+      apply: continuous_comp; last exact: continuous_expR.
+      apply: cvgM => //.
+      exact: cvgB.
+    apply: cvgM => //.
+    apply: cvg_at_left_filter.
+    apply: continuous_comp; last exact: continuous_expR.
+    apply: cvgM => //.
+    exact: cvgB.
+  - move=> x xat.
+    rewrite derive1E derive_val add0r mul1r.
+    rewrite -mulr_algl scaler1.
+    rewrite mulrCA mulrC !mulrA.
+    by rewrite mulNr (mulrC k^-1) divff// mulrNN !mul1r.
+  rewrite !subrr !mulr0 addr0 expR0 mulr1.
+  rewrite mulrAC mulrN divff// mulN1r opprD.
+  rewrite -(addrA (- gamma)).
+  rewrite mulrACA mulrN divff// mulN1r opprK.
+  rewrite !addrA.
+  rewrite (lerD2l (- gamma - mu%:num * (t - a) + gamma * expR (k * (t - a)))).
+  rewrite -mulN1r -RintegralZl//=.
+    apply: continuous_compact_integrable; first exact: segment_compact.
+    apply: within_continuousMl.
+    apply: within_continuousMl.
+    apply: continuous_subspaceT => x.
+    apply: continuous_comp; last exact: continuous_expR.
+    apply: cvgM => //.
+    exact: cvgB.
+  apply: le_Rintegral => //.
+  - apply: continuous_compact_integrable; first exact: segment_compact.
+    apply: within_continuousMl.
+    apply: within_continuousMl.
+    apply: within_continuousMl.
+    apply: continuous_subspaceT => x.
+    apply: continuous_comp; last exact: continuous_expR.
+    apply: cvgM => //.
+    exact: cvgB.
+  - apply: continuous_compact_integrable; first exact: segment_compact.
+    apply: within_continuousMl.
+    apply: continuous_subspaceT => x.
+    apply: continuous_comp; last exact: continuous_expR.
+    apply: cvgM => //.
+    exact: cvgB.
+  move=> s sat.
+  by rewrite mulrAC mulN1r -!mulNr mulrA mulrNN divff// mul1r mulrC.
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
 rewrite (addrC gamma) addrK subrr add0r; congr +%R.
 (* TODO: generalize FTC2 for a <= b so that we avoid this step *)
@@ -2063,6 +2143,7 @@ rewrite /Rintegral (@continuous_FTC2 _ _ (fun x => - mu%:num / k * expR (k * (t 
     rewrite (mulrC _ (- k)) scalerA -mulrA mulrN mulVf// mulrN1 opprK; congr *%R.
     by rewrite -[in RHS]derive_expR.
 - rewrite subrr mulr0 expR0 -mulrBr.
-Admitted.
+  by rewrite !mulNr -mulrN opprB.
+Qed.
 
 End thm34.
