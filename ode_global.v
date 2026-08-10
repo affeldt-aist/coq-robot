@@ -2034,7 +2034,37 @@ apply: (@le_trans _ _
     gamma * expR (k * (t - a)) +
     \int[lm]_(s in `[a, t]) (mu%:num * expR (k * (t - s))))).
   rewrite -!addrA !lerD2l.
-  admit.
+  move: (tab).
+  rewrite inE/= in_itv/= => /andP[+ _].
+  rewrite le_eqVlt => /predU1P[<-|altt].
+    rewrite set_itv1 !Rintegral_set1 subrr !mulr0 expR0 mulr1 oppr0 add0r addr0.
+    by rewrite addrC subrr.
+  have -> := (@Rintegration_by_parts _
+ (fun s => (k * (gamma + mu%:num * (s - a))))
+ (fun s => - k^-1 * expR (k * (t - s)))
+ (fun s => k * mu%:num)
+ (fun s => expR (k * (t - s)))
+ ).
+  - exact: altt.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  rewrite !subrr !mulr0 addr0 expR0 mulr1.
+  rewrite mulrAC mulrN divff// mulN1r opprD.
+  rewrite -(addrA (- gamma)).
+  rewrite mulrACA mulrN divff// mulN1r opprK.
+  rewrite !addrA.
+  rewrite (lerD2l (- gamma - mu%:num * (t - a) + gamma * expR (k * (t - a)))).
+  rewrite -mulN1r -RintegralZl//=.
+    admit.
+  apply: le_Rintegral => //=.
+  - admit.
+  - admit.
+  move=> s sat.
+  by rewrite mulrAC mulN1r -!mulNr mulrA mulrNN divff// mul1r mulrC.
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
 rewrite (addrC gamma) addrK subrr add0r; congr +%R.
 (* TODO: generalize FTC2 for a <= b so that we avoid this step *)
