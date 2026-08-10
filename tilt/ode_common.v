@@ -29,50 +29,14 @@ Import numFieldNormedType.Exports.
 Open Scope ring_scope.
 Open Scope classical_set_scope.
 
-Lemma eq_on_itv_deriv {R : realType} {W : normedModType R} c d (g h : R -> W) :
-  {in `]c, d[%R, g =1 h} -> {in `]c, d[%R, g^`() =1 h^`()}.
+Lemma in_eq_derive1 {R : numFieldType} {W : normedModType R} (A : set R) (g h : R -> W) :
+  open A -> {in A, g =1 h} -> {in A, g^`() =1 h^`()}.
 Proof.
-move=> gh x xcd; rewrite !derive1E; apply: near_eq_derive => //.
-near=>  x0.
-apply gh.
-near: x0.
-exact/near_in_itvoo.
+move=> oA gh x xcd.
+rewrite !derive1E; apply: near_eq_derive => //.
+near do apply: gh.
+exact: open_in_nearW _ xcd.
 Unshelve. all: by end_near. Qed.
-
-Section about_sup.
-
-Lemma sup_mult {R: realType} (A : set R) (a : R) :
-  has_sup A ->  sup [set normr a * x  | x in A ] = (normr a) * sup A  .
-Proof.
-move =>ex_sup.
-have []:= ex_sup => -[] x Ax ub.
-apply /eqP.
-rewrite eq_le.
-apply /andP;split.
-apply ge_sup; first by exists (normr a * x); exists x.
-move => _ [x0 Axo <-].
-apply ler_wpM2l => //.
-rewrite ub_le_sup//.
-have [/eqP ->| ha0] := boolP (a == 0).
-rewrite normr0 !mul0r .
-suff ->:  [set 0 * x0 | x0 in A] = [set 0] by rewrite sup1 lexx.
-apply/predeqP => x0 /=;split => [ [x1 _ <-] | -> ].
-  by rewrite mul0r.
-  by exists x => //=; rewrite  mul0r.
-rewrite -ler_pdivlMl; first by rewrite normr_gt0.
-apply ge_sup; first by apply ex_sup.
-move => x0 Ax0.
-rewrite ler_pdivlMl; first by rewrite normr_gt0.
-rewrite ub_le_sup//.
-  have [x1 ubx1] := ub.
-  exists (`|a| * x1).
-  move => _ [x2 Ax2 <-].
-  apply ler_wpM2l => //.
-  by apply ubx1.
-by exists x0.
-Qed.
-
-End about_sup.
 
 (* TODO: PR to MCA *)
 Lemma cst_is_fun {T1 T2} (A : set T1) x : @isFun T1 T2 A [set: T2] (cst x).

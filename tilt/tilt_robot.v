@@ -43,7 +43,11 @@ rewrite fact212 mulrBl -mulmxE -mulmxA; have: v *m \S(v) = 0.
   apply: trmx_inj.
   by rewrite trmx_mul tr_spin mulNmx spin_mul_tr trmx0 oppr0.
 move => ->.
-by rewrite mulmx0 sub0r -mul_scalar_mx -mulNmx; congr (_ *m _); rewrite scalemx1 rmorphN.
+rewrite mulmx0 sub0r.
+rewrite scaleNr.
+rewrite -[in RHS]mul_scalar_mx.
+congr (- (_ *m _)).
+by rewrite scalemx1.
 Qed.
 
 Lemma fact215 ( v w : 'rV[K]_3) : \S(w *m \S(v)) = \S(w) * \S(v) - \S(v) * \S(w).
@@ -312,7 +316,7 @@ Lemma continuous_enorm {K : realType} {n : nat} :
 Proof.
 move=> /= x.
 rewrite /enorm/=.
-apply/continuous_comp=>/=.
+apply: (@continuous_comp _ _ _ (fun u : 'rV[K^o]_n => u *d u) sqrtr).
   apply: differentiable_continuous.
   under eq_fun do rewrite dotmulvv sqr_enorm.
   rewrite /=.

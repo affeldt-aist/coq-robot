@@ -807,18 +807,16 @@ have integrable1 : mu.-integrable `[a, y]
     rewrite integrableN //=.
     apply: continuous_compact_integrable => //=; first exact: segment_compact.
     move: i {integrable2}.
-    apply/(@within_continuous_coord R n `[a, y] (phi ^~ u0)).
+    apply/(within_continuous_coord `[a, y] (phi ^~ u0)).
     apply/continuous_subspaceW/(@cont1_safe_dist R n phi a b k u0 r cont1 rho).
-      apply: subset_itvl; rewrite bnd_simp.
-      by move : yaaDelta;rewrite in_itv /= => /andP[].
-    by rewrite /B inE; exact: closed_ballxx.
+      by apply: subset_itvl; rewrite bnd_simp (itvP yaaDelta).
+   by rewrite /B inE; exact: closed_ballxx.
   apply: integrable_norm => /=.
   apply continuous_compact_integrable => //=; first exact: segment_compact.
   move: i {integrable2}.
-  apply/(@within_continuous_coord R n `[a, y] (phi ^~ u0)).
+  apply/(within_continuous_coord `[a, y] (phi ^~ u0)).
   apply/continuous_subspaceW/(@cont1_safe_dist R n phi a b k u0 r cont1 rho).
-    apply: subset_itvl; rewrite bnd_simp.
-    by move : yaaDelta;rewrite in_itv /= => /andP[].
+    by apply: subset_itvl; rewrite bnd_simp (itvP yaaDelta).
   rewrite /B inE.
   exact: closed_ballxx.
 rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y])
@@ -840,10 +838,8 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
       rewrite integrableB //=.
         apply continuous_compact_integrable => //; first exact: segment_compact.
         move: j.
-        apply/(@within_continuous_coord R n `[a, y] F).
-        apply/continuous_subspaceW/continuous_fun.
-        apply: subset_itvl; rewrite bnd_simp.
-        by move : yaaDelta; rewrite in_itv /= => /andP[].
+        apply/(within_continuous_coord `[a, y] F)/continuous_subspaceW/continuous_fun.
+        by apply: subset_itvl; rewrite bnd_simp (itvP yaaDelta).
       apply: measurable_bounded_integrable => //=.
         rewrite lebesgue_measure_itv //=.
         case: ifPn => //=.
@@ -889,10 +885,8 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * r%:num + sup_phi)))//.
         apply continuous_compact_integrable => //.
           exact: segment_compact.
         move: j.
-        apply/(@within_continuous_coord R n `[a, y] F).
-        apply /continuous_subspaceW/continuous_fun.
-        apply: subset_itvl; rewrite bnd_simp.
-        by move : yaaDelta; rewrite in_itv /= => /andP[].
+        apply/(within_continuous_coord `[a, y] F)/continuous_subspaceW/continuous_fun.
+        by apply: subset_itvl; rewrite bnd_simp (itvP yaaDelta).
       apply: measurable_bounded_integrable => //=.
         rewrite lebesgue_measure_itv//=.
         case: ifPn => //=.
@@ -1312,10 +1306,12 @@ split; first by []; last first.
   apply: continuous_subspaceW cont_sol.
   exact: itv_closure (* TODO: why not equality? *).
 move=> t tab.
-move: (tab); rewrite in_itv /= => /andP[ta tb].
+move: (tab).
 have -> : sol^`() t  = (fun x => sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))^`() t.
-  apply/eq_on_itv_deriv/tab => x xt01; apply h.
-  exact: subset_itv_oo_cc xt01.
+  apply: (@in_eq_derive1 _ _ `]a, b[) => //; last by rewrite inE.
+  move=> x xab; apply: h.
+  rewrite inE in xab.
+  exact: subset_itv_oo_cc xab.
 suff hi : forall i, derivable (fun x => sol x ord0 i) t 1 /\
   (fun x : R => (sol a + \vint[mu]_(s in `[a, x]) phi s (sol s))%R)^`() t ord0 i =
     phi t (sol t) ord0 i.
@@ -1326,6 +1322,7 @@ suff hi : forall i, derivable (fun x => sol x ord0 i) t 1 /\
   apply/rowP => j.
   by have [_ ?] := hi j.
 move => j.
+move: (tab); rewrite in_itv => /= /andP[ta tb].
 have [H1 H2] := @continuous_FTC1_closed _ (fun x => phi x (sol x) ord0 j)
   a t b tb (picard_iterator_integrable j) ta (picard_iterator_continuous tab).
 have Hderivable : derivable (fun x : R => \vint[mu]_(x0 in `[a, x]) phi x0 (sol x0)) t 1.
@@ -1502,8 +1499,8 @@ suff -> : (picard picard_fix)^`() t =
   congr ('D_1 _ t).
   by apply/funext => t0; rewrite mxE.
 rewrite /picard /picard_fun.
-move: t tad.
-apply: eq_on_itv_deriv => t tad /=.
+apply: (@in_eq_derive1 _ _ `]a, a + safe_dist[) => //; last by rewrite inE.
+move=> {}t {}tad.
 rewrite -(@picard_funE _ _ _ a b k _ r k0' lip2 cont1 rho)//=.
   exact: img_cball_picard_fix.
 rewrite eval_mod_on_itv// inE; apply: subset_itv_oo_cc.
@@ -1855,8 +1852,8 @@ suff [rho [D [Hrho [Db P1 P2]]]] : exists rho D : {posnum R},
   rewrite P1//.
   apply: solution_stays_in_ball2.
   by move: tab; rewrite !inE; apply: subset_itvl; rewrite bnd_simp lerD2l.
-have [d1 D1] := continuous_confined r2 ab cf (And31 sol1).
-have [d2 D2] := continuous_confined r2 ab cf' (And31 sol2).
+have [d1 D1] := continuous_confined r2 ab cf (and3proj1 sol1).
+have [d2 D2] := continuous_confined r2 ab cf' (and3proj1 sol2).
 have [rho [drho1 drho2]] : exists rho, dmax rho <= (Num.min d1%:num d2%:num) /\ rho%:num < 1.
   rewrite /dmax.
   have posk : 0 < Num.min rho_max%:num (Num.min (k * rho_max%:num) (k * (Num.min d1%:num d2%:num))).
@@ -1938,10 +1935,10 @@ have [r [k L]] := phi_local_conds ta tb.
 have taab : `[t, b] `<=` `[a, b].
   by move=> ?/=; apply: subset_itvr; rewrite bnd_simp.
 have cf0 : {within `[t, b], continuous f}.
-  have := And33 sol1.
+  have := and3proj3 sol1.
   rewrite closure_itvoo//; exact: continuous_subspaceW.
 have cf'0 : {within `[t, b], continuous f'}.
-  have := And33 sol2.
+  have := and3proj3 sol2.
   by rewrite closure_itvoo//; exact: continuous_subspaceW.
 have sol10 : is_sol_oo phi (f t) t  b f.
   split; [by []| | by rewrite closure_itvoo].
@@ -1973,7 +1970,7 @@ Qed.
 Let in1_eq1 : {in `[a, a]%R, f =1 f'}.
 Proof.
 move=> t; rewrite in_itv/= -eq_le => /eqP <-.
-by rewrite (And31 sol1) (And31 sol2).
+by rewrite (and3proj1 sol1) (and3proj1 sol2).
 Qed.
 
 Lemma locally_cauchy_lipschitz_unique : {in `[a, b]%R, f =1 f'}.
@@ -2019,8 +2016,8 @@ have Eclosed : closed E.
     set g := fun x => `|f x - f' x|.
     have contg : {within `[a, b], continuous g}.
       apply/within_continuous_comp_norm/within_continuousB.
-      - by have := And33 sol1; rewrite (closure_itvoo ab).
-      - by have := And33 sol2; rewrite (closure_itvoo ab).
+      - by have := and3proj3 sol1; rewrite (closure_itvoo ab).
+      - by have := and3proj3 sol2; rewrite (closure_itvoo ab).
     have g0x : g x > 0 by rewrite normr_gt0 subr_eq0; case: Et.
     have g0 t : t \in `[a, b]%R -> g t > 0 -> ~ {in `[a, t]%R, f =1 f'}.
       move=> tab + atff'.
@@ -2291,10 +2288,10 @@ have solminus :=
   cauchy_lipschitz_ex amin1 k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
 have cminus := solution_stays_in_ball.
 have adplus : t0 < t0 + dplus t0 by rewrite ltrDl safe_dist_gt0.
-have cfplus := And33 solplus.
+have cfplus := and3proj3 solplus.
 rewrite closure_itvoo in cfplus; first by rewrite ltrDl safe_dist_gt0.
 have amind : -t0 < -t0 + dminus t0 by rewrite ltrDl dminus0.
-have cfminus' := And33 solminus.
+have cfminus' := and3proj3 solminus.
 rewrite closure_itvoo in cfminus'; first by rewrite ltrDl.
 have cfminus : {within `[t0-dminus t0, t0], continuous fminus}.
   rewrite /fminus.
@@ -2321,7 +2318,7 @@ have Buneg : closed_ball uneg (r%:num / 2) `<=` closed_ball u0 r%:num.
   rewrite in_itv/= opprB lerDr ltW //= addrC lerD//.
   by rewrite /dboth /dplus !ge_min lexx !orbT.
 have f01intersect : fminus t0 = fplus t0.
-  by rewrite /fminus/= (And31 solminus) (And31 solplus).
+  by rewrite /fminus/= (and3proj1 solminus) (and3proj1 solplus).
 have fa : cauchy_lipschitz_f_sym t0 = u0.
   rewrite /cauchy_lipschitz_f_sym patch_in /fminus /=.
     by rewrite inE/= in_itv/= lexx gerBl ltW.
@@ -2395,7 +2392,7 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)],
 split; last by rewrite closure_itvoo // /safe_dist_sym // ler_ltD // gtrN.
 by [].
 suff h : is_sol_oo phi (cauchy_lipschitz_f_sym (t0-dboth t0))
-  (t0 - dboth t0) (t0 + dboth t0) cauchy_lipschitz_f_sym by apply (And32 h).
+  (t0 - dboth t0) (t0 + dboth t0) cauchy_lipschitz_f_sym by apply (and3proj2 h).
 have kn0 : k != 0 by apply lt0r_neq0.
 have at0t0 : a <= t0 - dboth t0.
   rewrite lerBrDl -lerBrDr.
@@ -2489,7 +2486,7 @@ apply: is_integral_sol_patch => //.
     split.
       * by rewrite /cauchy_lipschitz_f_sym patch_in; first rewrite inE/=in_itv/= lexx //= gerBl ltW.
       *  move => t tad.
-         case : (And32 solminus (-t)).
+         case : (and3proj2 solminus (-t)).
            move : tad.
            rewrite -/dminus /=!in_itv/= ltrNr ltrNl opprD !opprK => /andP[h1 ->//=].
            apply: (le_lt_trans _ h1).
@@ -2524,7 +2521,7 @@ apply: is_integral_sol_patch => //.
   + by rewrite ltrDl.
   + move=> x bx.
     rewrite /fminus/=.
-    rewrite (And31 solminus).
+    rewrite (and3proj1 solminus).
     move => [x1 x2] [ Bx1 Bx2].
     apply: lip2.
     move : bx.
@@ -2557,7 +2554,7 @@ apply: is_integral_sol_patch => //.
     by rewrite lerBlDl lerDr ltW.
   + by [].
   + move => _ [t tp] <-.
-    rewrite /fminus /= (And31 solminus).
+    rewrite /fminus /= (and3proj1 solminus).
     apply: (le_closed_ball ler42).
     suff : fplus t \in closed_ball u0 r4%:num by rewrite inE.
       apply/mem_set; apply cplus.
@@ -2565,7 +2562,7 @@ apply: is_integral_sol_patch => //.
       rewrite inE /=!in_itv/= => /andP[-> //=].
       move/le_trans; apply.
       by rewrite lerD// /dboth /dplus 2!ge_min lexx !orbT.
-    rewrite /fminus /=(And31 solminus).
+    rewrite /fminus /=(and3proj1 solminus).
     split; first by apply solplus.
     move=> t tad.
     apply solplus.
@@ -2643,8 +2640,8 @@ have ast : a <= s <= t by rewrite as' st.
 have int_phi_sol_at i :
   mu.-integrable `[a, t]
     (EFin \o (fun x : R => phi x (sol x) ord0 i)).
-   apply: (@integrableS _ _ _ mu `[a, b] `[a, t]) => //. 
-  by apply: subset_itvl. 
+   apply: (@integrableS _ _ _ mu `[a, b] `[a, t]) => //.
+  by apply: subset_itvl.
 
 rewrite (Hsol t tab) (Hsol s sab).
 rewrite (rowRintegral_itv_split

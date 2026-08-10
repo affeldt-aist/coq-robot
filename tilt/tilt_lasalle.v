@@ -224,7 +224,7 @@ Proof.
 apply: compact_closedI; first exact: V1_bound_compact.
 rewrite Tilt.Upsilon1_preimage.
 apply: preimage_closed => // => x xp.
-apply : continuous_comp; last exact: continuous_enorm.
+apply: (@continuous_comp _ _ _ (fun x0 : 'rV[K^o]_6 => 'e_2 - Right x0)); last exact: continuous_enorm.
 apply: continuousB.
   exact: cst_continuous.
 exact: continuous_rsubmx.
@@ -645,14 +645,8 @@ apply/cvgrPdist_le => //= e e0.
     rewrite invr_gt0//.
     rewrite subr_gt0 -expR0 ltr_expR// mulr_gt0//.
   move/(_ Hu Hv (PosNum mu_gt0)) => /=.
-  set tmp := (tmp in (tmp -> _) -> _).
-  have : tmp.
-    rewrite /tmp.
-    move=> ? ? ? ?.
-    rewrite normr0//=.
-    exact: ltW.
-  move=> /[swap] /[apply] => /(_ t).
-  rewrite inE/= in_itv/= ltW // lerDl ler01 => /(_ isT).
+  move=> /(_ t).
+  rewrite inE/= in_itv/= (ltW t0)/= lerDl ler01 => /(_ isT).
   move=> /le_trans; apply.
   rewrite subr0.
   rewrite -lerBrDr.

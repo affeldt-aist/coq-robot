@@ -21,35 +21,6 @@ Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
 
-(* TODO: PR *)
-Section vector_continuous.
-Context {R : realFieldType} {n : nat}.
-Let U := 'rV[R]_n.
-
-Lemma within_continuous_coord A (f : R -> U) :
-  {within A, continuous f} <->
-  forall i, {within A, continuous (fun x => f x ord0 i)}.
-Proof.
-split=> [Af i|Af].
-- apply/subspace_continuousP => /= x Dx.
-  have /subspace_continuousP/(_ x Dx) Afx := Af.
-  apply: (cvg_comp f (fun z => z ord0 i) Afx).
-  exact: coord_continuous.
-- apply/subspace_continuousP => /= x Ax; apply/cvgrPdist_le => /= e e0.
-  rewrite near_withinE.
-  near=> t => At.
-  rewrite /Num.norm/= mx_normrE; apply/(bigmax_le _ (ltW e0)) => /= -[i j] _ /=.
-  rewrite {i}(ord1 i) !mxE.
-  move: j At.
-  near: t.
-  apply: filter_forall => /= i.
-  have /subspace_continuousP/(_ x Ax) := Af i.
-  move/cvgrPdist_le => /(_ _ e0).
-  by rewrite near_withinE.
-Unshelve. all: by end_near. Qed.
-
-End vector_continuous.
-
 (* PR to MCA *)
 Section continuous_patch.
 Context {R : realType} {n : nat} {U : normedModType R}.

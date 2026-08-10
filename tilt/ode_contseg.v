@@ -542,10 +542,8 @@ apply/eqP; rewrite eq_le; apply/andP; split.
     exact: segment_compact.
     by exists a.
   by exists a.
-rewrite -sup_mult => //.
-  apply: normr_has_sup => //.
-  exact: segment_compact.
-  by exists r =>/=; rewrite bound_itvE.
+rewrite -ge0_supZl/=.
+  by rewrite normr_ge0.
 apply sup_le; [ | | apply normr_has_sup]; last first.
 - by exists r =>/=; rewrite bound_itvE.
   exact: segment_compact.

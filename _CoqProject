@@ -20,15 +20,17 @@ differential_kinematics.v
 extra_trigo.v
 lasalle.v
 pendulum.v
-ode_common.v
-ode_contseg.v
-ode.v
-ode_global.v
-tilt_mathcomp.v
-tilt_analysis.v
-tilt_robot.v
-tilt_stability.v
-tilt_lyapunov.v
-tilt_lasalle.v
+
+tilt/ode_common.v
+tilt/ode_contseg.v
+tilt/ode.v
+tilt/ode_global.v
+
+tilt/tilt_mathcomp.v
+tilt/tilt_analysis.v
+tilt/tilt_robot.v
+tilt/tilt_stability.v
+tilt/tilt_lyapunov.v
+tilt/tilt_lasalle.v
 
 -R . robot

@@ -151,21 +151,18 @@ Qed.
 
 (* Extending to infinite time *)
 
-Lemma continuous_within_ext {A B : topologicalType} (g h : A -> B) D :
-  {in D, g =1 h} ->
-  {within D, continuous g } -> {within D, continuous h}.
+Lemma continuous_within_ext {A B : topologicalType} (f g : A -> B) D :
+  {in D, f =1 g} -> {within D, continuous f} -> {within D, continuous g}.
 Proof.
-move=> h1 h2.
-apply subspace_continuousP.
-move => x Dx.
-apply : cvg_trans.
-  apply (fmap_within_eq (g := g)) => //.
-  apply nbhs_filter.
-  move => x' Dx' .
-  symmetry.
-  by apply h1.
-rewrite <-h1.
-  move /subspace_continuousP : h2.
+move=> fg Df; apply/subspace_continuousP => x Dx.
+apply: cvg_trans.
+  apply (@fmap_within_eq _ _ _ _ _ f) => //.
+  - apply nbhs_filter.
+  - move => x' Dx' .
+    symmetry.
+    by apply fg.
+rewrite <-fg.
+  move /subspace_continuousP : Df.
   by apply.
 by rewrite inE.
 Qed.
@@ -971,13 +968,13 @@ split.
       rewrite /=in_itv/= => /andP[/lt_trans+ _].
       apply.
       by rewrite ltrDl.
-    have := And33 (h (t + 1)).
+    have := and3proj3 (h (t + 1)).
     rewrite closure_itvoo => //.
     move /(continuous_within_itvP _ at1) => [+ _ _].
     apply.
     move : tab.
     by rewrite !in_itv/= ltrDl => /andP[-> _]/=.
-  have := And33 (h (a + 1)).
+  have := and3proj3 (h (a + 1)).
   rewrite closure_itvoo.
     by rewrite ltrDl.
   move/continuous_within_itvP.
@@ -1010,8 +1007,10 @@ split.
       rewrite inE.
       by apply: subset_itv_oo_cc.
     rewrite -hs'//.
-    rewrite -(eq_on_itv_deriv hs') //.
-    by apply solp1.
+    rewrite -[LHS](@in_eq_derive1 _ _ `]a, b[ sol1) //.
+    * by move=> x; rewrite inE; exact: hs'.
+    * by rewrite inE.
+    * by apply solp1.
   + apply: subspace_eq_continuous solp2.
     by rewrite closure_itvoo.
 Unshelve. all: by end_near. Qed.
@@ -1811,10 +1810,13 @@ Abort.
 
 End gronwall.
 
+(* Theorem 3.4 from Khalil (p. 96),
+   specialized to g := 0,
+   TODO: generalize *)
 Section thm34.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
-Variables (phi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
+Context (phi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
 Let psi : R -> U -> U := cst 0.
 Variables (u0 v0 : U) (r : {posnum R}) (*(r1 : r%:num < 1)*).
 (* TODO: there seems to be no reason to have B being a closed ball
@@ -2064,7 +2066,8 @@ apply: (@le_trans _ _
   - move=> x xat.
     by rewrite derive1E derive_val subr0 add0r mul1r scaler1.
   - apply: continuous_subspaceT.
-    move=> x; apply: continuous_comp; last exact: continuous_expR.
+    move=> x.
+    apply: (@continuous_comp _ _ _ (fun s => k * (t - s)) expR); last exact: continuous_expR.
     apply: cvgM => //.
     apply: cvgD => //.
     exact: cvgN.
@@ -2095,7 +2098,7 @@ apply: (@le_trans _ _
     apply: within_continuousMl.
     apply: within_continuousMl.
     apply: continuous_subspaceT => x.
-    apply: continuous_comp; last exact: continuous_expR.
+    apply: (@continuous_comp _ _ _ (fun s => k * (t - s)) expR); last exact: continuous_expR.
     apply: cvgM => //.
     exact: cvgB.
   apply: le_Rintegral => //.
@@ -2104,13 +2107,13 @@ apply: (@le_trans _ _
     apply: within_continuousMl.
     apply: within_continuousMl.
     apply: continuous_subspaceT => x.
-    apply: continuous_comp; last exact: continuous_expR.
+    apply: (@continuous_comp _ _ _ (fun s => k * (t - s)) expR); last exact: continuous_expR.
     apply: cvgM => //.
     exact: cvgB.
   - apply: continuous_compact_integrable; first exact: segment_compact.
     apply: within_continuousMl.
     apply: continuous_subspaceT => x.
-    apply: continuous_comp; last exact: continuous_expR.
+    apply: (@continuous_comp _ _ _ (fun s => k * (t - s)) expR); last exact: continuous_expR.
     apply: cvgM => //.
     exact: cvgB.
   move=> s sat.

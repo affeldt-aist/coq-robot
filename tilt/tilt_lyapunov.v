@@ -884,7 +884,9 @@ Lemma angvel_sqr (D : R) (f : R -> 'rV_6) z
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
 move=> z0D sol0 dtraj.
-rewrite /dotmul !trmx_mul !tr_spin !mulNmx mulmxN opprK mulmxN !dotmulP.
+rewrite /dotmul !trmx_mul !tr_spin.
+rewrite !mulNmx !mulmxN opprK.
+rewrite !dotmulP.
 have key_ortho : (z2 z *m \S('e_2)) *d u = 0.
  by rewrite dotmulC; exact/ortho_spin.
 rewrite key_ortho expr2.
@@ -894,7 +896,8 @@ rewrite [X in _ = - (w *m (\S('e_2) *m (z2 z)^T)) 0 0 * (u *d u)%:M 0 0
 rewrite mulr1n mulr0 subr0/=.
 rewrite /u -/w /dotmul.
 have Hw_ortho : (w *d u) = 0 by rewrite /u dotmulC ortho_spin.
-rewrite !mulmxA dotmulP dotmulvv (enorm_e2z2 z0D)// expr2 mulr1.
+rewrite !mulmxA.
+rewrite [in RHS](dotmulP ('e_2 - _)) dotmulvv (enorm_e2z2 z0D)// expr2 mulr1.
 rewrite [X in _ =  - (w *m \S('e_2) *m (z2 z)^T) 0 0 * X]mxE /= mulr1n /=.
 rewrite [X in _ =   - (w *m \S('e_2) *m (z2 z)^T) 0 0 * X]mxE /= mulr1.
 have wu0 : w *m u^T *m u = 0 by rewrite dotmulP Hw_ortho mul_scalar_mx scale0r.
@@ -1022,9 +1025,13 @@ rewrite mxE.
 rewrite !sum2E/= ![in leRHS]mxE !sum2E/= ![in leRHS]mxE /=.
 rewrite !mulr1 mulrN mulNr opprK mulrDl mulNr -expr2.
 rewrite [in leLHS] addrCA -!addrA lerD2l mulrDl (mulNr `|w|_e).
-rewrite -expr2 !addrA lerD2r !(mulrN , mulNr) opprK -mulrA.
-rewrite [in leRHS](mulrC (_ / 2)) (mulrC 2^-1) -mulrDr -splitr.
-by rewrite [leRHS]mulrC.
+rewrite -expr2 !addrA lerD2r !(mulrN, mulNr) opprK -mulrA.
+rewrite !mulrA.
+rewrite !(mulrC _ `| Left (f z) |_e).
+rewrite !mulrA.
+rewrite !(mulrC _ 2^-1).
+rewrite !mulrA.
+by rewrite -!mulrDl -div1r -splitr mul1r.
 Qed.
 
 Lemma V1dot_eq0_p1_or_p2 (D : R) (f : R -> 'rV[R]_6) t :
