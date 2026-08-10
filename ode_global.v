@@ -2036,7 +2036,33 @@ apply: (@le_trans _ _
   rewrite -!addrA !lerD2l.
   admit.
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
-admit.
+rewrite (addrC gamma) addrK subrr add0r; congr +%R.
+(* TODO: generalize FTC2 for a <= b so that we avoid this step *)
+have : a <= t by rewrite inE in tab; rewrite (itvP tab).
+rewrite le_eqVlt => /predU1P[->|ta].
+  by rewrite set_itv1 Rintegral_set1 subrr mulr0 expR0 subrr mulr0.
+rewrite /Rintegral (@continuous_FTC2 _ _ (fun x => - mu%:num / k * expR (k * (t - x))))//=.
+- apply/within_continuousMl => //=; apply: within_continuous_comp => //=.
+    by move=> ? ?; exact: continuous_expR.
+  apply/within_continuousMl => //=; apply/within_continuousB => //=.
+    exact: cst_within_continuous.
+  by apply: continuous_subspaceT => x; exact: cvg_id. (* TODO: id_continuous lemma *)
+- split => //=.
+  + apply: cvg_at_right_filter; apply: cvgMl_tmp.
+    apply: (@cvg_comp _ _ _ _ expR _ (nbhs (k * (t - a)))) => //; last first.
+      exact: continuous_expR.
+    by apply: cvgM => //; apply: cvgB => //; exact: cvgMl_tmp.
+  + apply: cvg_at_left_filter; apply: cvgMl_tmp.
+    apply: (@cvg_comp _ _ _ _ expR _ (nbhs (k * (t - t)))) => //; last first.
+      exact: continuous_expR.
+    by apply: cvgMl_tmp; exact: cvgB.
+  + move=> x xat.
+    rewrite derive1E deriveZ//= -derive1E derive1_comp//.
+    rewrite 2!derive1E deriveZ// deriveD// derive_cst//.
+    rewrite deriveN// derive_id sub0r scalerN scaler1.
+    rewrite (mulrC _ (- k)) scalerA -mulrA mulrN mulVf// mulrN1 opprK; congr *%R.
+    by rewrite -[in RHS]derive_expR.
+- rewrite subrr mulr0 expR0 -mulrBr.
 Admitted.
 
 End thm34.
