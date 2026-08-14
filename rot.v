@@ -858,20 +858,28 @@ rewrite (_ : _ - _ = ('X - 1) * ('X - (expi a)%:P) * ('X - (expi (-a))%:P)); las
 have expiDexpiN  : expi a + expi (-a) = (cos a + cos a)%:C%C.
   rewrite /expi cosN sinN.
   by apply/eqP; rewrite eq_complex /= subrr !eqxx.
-rewrite !(mulrBr, mulrBl, mulrDr, mulrDl, mul1r, mulr1).
-rewrite -expr2 -exprSr !addrA !scalerN.
+rewrite ![in LHS]scalerN.
+rewrite ![in RHS](mulrBr, mulrBl, mul1r, mulr1).
+rewrite -[in RHS]expr2 -[in RHS]exprSr.
 rewrite ['X * _ * 'X]mulrAC -expr2 !['X * _]mulrC !['X^2 * _]mulrC.
 rewrite [_* 'X * _]mulrAC -rmorphM /= -expiD subrr expi0 mul1r.
-rewrite -!addrA; congr (_ + _); rewrite !(addrA, opprB, opprD).
-rewrite [in RHS](ACl (1 * 3 * 7 * 2 * 4 * 5 * 6))/=.
-rewrite -(addrA (- 'X^2)) -opprD -mulrDl -rmorphD/= expiDexpiN.
-rewrite -addrA -3![in RHS]addrA; congr (_ + _).
-  by rewrite !rmorphD/= !scalerDl/= scale1r !opprD mulrDl opprD/= addrA mul_polyC.
-rewrite !addrA [in RHS](ACl (1 * 2 * 4 * 3))/=.
+rewrite -[in 'X - 1%:P](mul1r 'X).
+rewrite -!addrA; congr (_ + _); rewrite addrA.
+rewrite 2![in RHS]opprB 3![in RHS]opprD.
+rewrite -[in - 'X^2](mul1r 'X^2).
+rewrite -![in RHS]addrA.
+rewrite [in RHS](addrCA (_ * 'X)).
+rewrite [in RHS](addrCA (_ * 'X)).
+rewrite ![in RHS]opprK.
+rewrite (addrC (- 1%:P)).
+rewrite ![in RHS]addrA.
 congr (_ - _).
-rewrite [RHS]addrAC -mulrDl -rmorphD/= expiDexpiN.
-rewrite -(addrA 1) rmorphD/= scalerDl scale1r addrC; congr (_ + _).
-by rewrite mul_polyC.
+rewrite -[in RHS]opprD -mulrDl -[in RHS]opprD -mulrDl.
+rewrite -[RHS]addrA -mulrDl -[RHS]addrA -mulrDl -!mul_polyC.
+congr (- (_ * _) + (_ * _)).
+  rewrite -!rmorphD/=; congr (_%:P).
+  by rewrite -[in RHS]addrA expiDexpiN rmorphD/= -mulr2n mulr_natl.
+by rewrite [in RHS]addrA [in RHS]addrC -!rmorphD/= expiDexpiN -mulr2n rmorphD.
 Qed.
 
 Lemma Rz_eskew a : Rz a = `e^(a, 'e_2%:R).
@@ -1044,7 +1052,7 @@ Proof.
 rewrite /eskew_unit 2!axialD (_ : axial _ = 0) ?add0r.
   apply/eqP; by rewrite -axial_sym mul_tr_vec_sym.
 rewrite (_ : axial _ = 0) ?add0r.
-  apply/eqP; rewrite -axial_sym sym_scaler_closed (* TODO: declare the right canonical to be able to use rpredZ *) //.
+  apply/eqP; rewrite -axial_sym rpredZ//.
   by rewrite rpredD // ?sym_cst // rpredN mul_tr_vec_sym.
 rewrite axialZ axialE scalerMnr; congr (_ *: _).
 by rewrite unspinD spinK unspinN tr_spin unspinN spinK opprK mulr2n.
@@ -1575,7 +1583,8 @@ Lemma Mi2_1 i : (`| M i 2%:R | == 1) = (M i 0 == 0) && (M i 1 == 0).
 Proof.
 move/eqP: (sqr_Mi2E i) => MO'.
 apply/idP/idP => [Mi2|/andP[/eqP Mi0 /eqP Mi1]]; last first.
-  move: MO'; by rewrite Mi0 Mi1 expr2 mulr0 addr0 eq_sym subr_eq add0r eq_sym sqr_norm_eq1.
+  move: MO'.
+  by rewrite Mi0 Mi1 expr0n addr0 eq_sym subr_eq add0r eq_sym sqr_norm_eq1.
 move: MO'; rewrite -(sqr_normr (M i 2%:R)) (eqP Mi2) expr1n subrr.
 by rewrite paddr_eq0 ?sqr_ge0 // => /andP[]; rewrite 2!sqrf_eq0 => /eqP -> /eqP ->; rewrite eqxx.
 Qed.
@@ -1604,7 +1613,7 @@ Lemma M2j_1 j :(`| M 2%:R j | == 1) = (M 0 j == 0) && (M 1 j == 0).
 Proof.
 move/eqP: (sqr_M2jE j) => MO'.
 apply/idP/idP => [Mi2|/andP[/eqP Mi0 /eqP Mi1]]; last first.
-  move: MO'; by rewrite Mi0 Mi1 expr2 mulr0 addr0 eq_sym subr_eq add0r eq_sym sqr_norm_eq1.
+  by move: MO'; rewrite Mi0 Mi1 expr0n addr0 eq_sym subr_eq add0r eq_sym sqr_norm_eq1.
 move: MO'; rewrite -(sqr_normr (M 2%:R j)) (eqP Mi2) expr1n subrr.
 by rewrite paddr_eq0 ?sqr_ge0 // => /andP[]; rewrite 2!sqrf_eq0 => /eqP -> /eqP ->; rewrite eqxx.
 Qed.
@@ -1673,7 +1682,7 @@ have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
   rewrite ltrN2 ltr_pdivrMr// ltr_pMr ?pi_gt0// ltr1n/=.
   by rewrite (le_trans _ (pi_ge0 T))// lerNl oppr0 divr_ge0// pi_ge0.
 case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
-  have {u2}[/eqP u2|/eqP u2] : {u *d F|,2%:R == 1} + {u *d F|,2%:R == -1}.
+  have [/eqP {}u2|/eqP {}u2] : {u *d F|,2%:R == 1} + {u *d F|,2%:R == -1}.
     move: normu => /(congr1 (fun x => x ^+ 2)).
     rewrite (sqr_enorm_frame F u) sum3E u0 u1 expr0n !add0r expr1n => /eqP.
     by rewrite sqrf_eq1 => /Bool.orb_true_elim.
@@ -1978,8 +1987,7 @@ apply/matrix3P/and9P; split;
   move: (sin b) => sb;
   move: (cos c) => cc;
   move: (sin c) => sc;
-  rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; Simp.r => //=.
-
+  rewrite !mxE /= sum3E !mxE /= !sum3E !mxE /=; do ! Simp.r => //=.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
@@ -1988,7 +1996,6 @@ apply/matrix3P/and9P; split;
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
 - by apply/eqP; nsatz.
-by apply/eqP; nsatz.
 Qed.
 
 Definition zyz_a (M : 'M[T]_3) : T :=

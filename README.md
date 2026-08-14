@@ -22,8 +22,10 @@ Mathematical Components library.
   - Reynald Affeldt, AIST (initial)
   - Cyril Cohen, Inria (initial)
   - Laurent Théry, Inria
+  - Damien Rouhling, then Université Côte d’Azur/Inria
 - License: [LGPL-2.1-or-later](LICENSE)
 - Additional dependencies:
+  - Rocq core
   - [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
   - [MathComp ssreflect](https://math-comp.github.io)
   - [MathComp fingroup](https://math-comp.github.io)

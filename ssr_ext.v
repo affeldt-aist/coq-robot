@@ -4,16 +4,18 @@ From mathcomp Require Import boot ssralg ssrnum ssrint rat poly.
 From mathcomp Require Import closed_field polyrcf matrix mxalgebra mxpoly zmodp.
 From mathcomp Require Import perm path fingroup complex.
 
-(******************************************************************************)
-(*                    Minor additions to MathComp libraries                   *)
+(**md**************************************************************************)
+(* # Minor additions to MathComp libraries                                    *)
 (*                                                                            *)
 (* This file contains minor additions ssrbool, ssralg, ssrnum, and complex    *)
 (* and more.                                                                  *)
 (*                                                                            *)
+(* ```                                                                        *)
 (*                 u``_i == the ith component of the row vector u             *)
 (*      'e_0, 'e_1, 'e_2 == the canonical vectors                             *)
 (* Section Nsatz_rcfType == type classes for the Coq nsatz tactic             *)
 (*                          (https://coq.inria.fr/refman/addendum/nsatz.html) *)
+(* ```                                                                        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -21,8 +23,10 @@ Reserved Notation "''e_' i" (format "''e_' i", at level 8, i at level 2).
 Reserved Notation "u '``_' i" (at level 3, i at level 2,
   left associativity, format "u '``_' i").
 
-(* TODO: overrides forms.v *)
 Notation "u '``_' i" := (u (@GRing.zero _) i) : ring_scope.
+
+(* NB: like Damien's LaSalle *)
+Notation "p ..[ i ]" := (p (@GRing.zero _) i) (at level 10, only parsing).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -185,6 +189,12 @@ move=> neq_ij.
 have -> : k = if i == k then i else if j == k then j else - (i + j).
   by apply/val_inj; move: i j k neq_ij; do 3![case=> [[|[|[|?]]] ?]].
 by move: i j k neq_ij; do 3![case=> [[|[|[|?]]] ?] //=]; constructor.
+Qed.
+
+Lemma I3_cases (i : 'I_3) : [\/ i = 0, i = 1 | i = 2].
+Proof.
+by move: i => [[|[|[|[|]]]]] // ?; [
+  exact/Or31/val_inj| exact/Or32/val_inj| exact/Or33/val_inj].
 Qed.
 
 Lemma odd_perm312 : perm3 1 2%:R = false :> bool.
@@ -364,6 +374,7 @@ Implicit Types a b k : R.
 Lemma opp_conjc a b : (- (a -i* b) = (- a +i* b))%C.
 Proof. by apply/eqP; rewrite eq_complex /= opprK !eqxx. Qed.
 
+(* TODO: what the difference between complex.Re and Re from MC? *)
 Lemma Re_scale x k : k != 0 -> complex.Re (x / k%:C%C) = complex.Re x / k.
 Proof.
 move=> k0; case: x => a b /=.
@@ -380,8 +391,9 @@ Proof. by simpc. Qed.
 Lemma complexZ2 a b k : ((k * a) -i* (k * b) = k%:C * (a -i* b))%C.
 Proof. by simpc. Qed.
 
+(* TODO: not in real-closed? *)
 Lemma ReZ x k : complex.Re (k%:C%C * x) = k * complex.Re x.
-Proof. case: x => a b /=; by rewrite mul0r subr0. Qed.
+Proof. by case: x => a b /=; by rewrite mul0r subr0. Qed.
 
 Lemma ImZ x k : complex.Im ((k%:C)%C * x) = k * complex.Im x.
 Proof. by case: x => a b /=; rewrite mul0r addr0. Qed.
@@ -450,3 +462,17 @@ by rewrite (eqr_nat T 1 0).
 Defined.
 
 End Nsatz_rcfType.
+
+(* TODO: PR to MathComp? *)
+Definition row_belast {R : pzRingType} n (v : 'rV[R]_n.+1) : 'rV[R]_n :=
+  \row_(i < n) (v ``_ (widen_ord (leqnSn n) i)).
+
+(* TODO: PR to MathComp? *)
+Lemma row_belast_last (R : pzRingType) n (r : 'rV[R]_n.+1) H :
+  r = castmx (erefl, H) (row_mx (row_belast r) (r ``_ ord_max)%:M).
+Proof.
+apply/rowP => i; rewrite castmxE mxE.
+case: fintype.splitP => /= [j Hj|[] [] //= ? ni]; rewrite mxE /=.
+  by congr (_ ``_ _); exact: val_inj.
+by rewrite mulr1n; congr (_ ``_ _); apply val_inj; rewrite /= ni addn0.
+Qed.
