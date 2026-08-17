@@ -1911,6 +1911,100 @@ End solution_locally_unique.
 Definition locally_lipschitz {R : realType} n (U := 'rV[R]_n) (phi : U -> U) :=
  forall x, exists r k : {posnum R}, k%:num.-lipschitz_(closed_ball x r%:num) phi.
 
+Lemma locally_lipschitzP {R : realType} n (U := 'rV[R]_n) (phi : U -> U) :
+  locally_lipschitz phi <-> [locally [lipschitz phi x | x in [set: U]]].
+Proof.
+split.
+  (* locally_lipschitz phi -> [locally lipschitz phi] *)
+  move=> lip_phi /= -[/= a b _].
+  red.
+  have [ra [ka Ha]] := lip_phi a.
+  have [rb [kb Hb]] := lip_phi b.
+  do 2 red in Ha.
+  do 2 red in Hb.
+  simpl in Ha, Hb.
+  have [ab|ab] := eqVneq a b.
+    near=> M.
+    rewrite setXTT.
+    red.
+    rewrite withinET.
+    red in lip_phi.
+    simpl in lip_phi.
+    apply/nbhs_closedballP.
+    subst b.
+    exists ra => -[u v].
+    rewrite closed_ballE// /closed_ball_/= => H.
+    rewrite {1}/Num.norm /ProdNormedZmodule.norm/= /ProdNormedZmodule.norm/= in H.
+    rewrite (@le_trans _ _ (ka%:num * `|u - v|))//; last first.
+      admit.
+    apply: (Ha (u, v)) => //=; split.
+      rewrite closed_ballE// /closed_ball_/=.
+      rewrite (le_trans _ H)//.
+      by rewrite le_max lexx.
+    rewrite closed_ballE// /closed_ball_/=.
+    rewrite (le_trans _ H)//.
+    by rewrite le_max lexx orbT.
+  near=> M.
+  rewrite setXTT.
+  red.
+  rewrite withinET.
+  red in lip_phi.
+  simpl in lip_phi.
+  apply/nbhs_closedballP.
+  have ab20 : `|a - b| / 2 > 0 by rewrite divr_gt0// normr_gt0 subr_eq0.
+  pose r := minr (PosNum ab20) (minr ra rb).
+  exists r => -[/= u v].
+  rewrite closed_ballE// /closed_ball_/= => H.
+  rewrite (@le_trans _ _ (`|(phi u - phi a)(* <k *) +
+                            (phi a - phi b) (* < r *) +
+                            (phi b - phi v)(* <k *)|))//.
+    admit.
+  rewrite (@le_trans _ _ ( ka%:num * `| u - a| +
+                           `|phi a - phi b| +
+                           kb%:num * `|b - v|))//.
+    rewrite (le_trans (ler_normD _ _))//.
+    rewrite lerD//.
+      rewrite (le_trans (ler_normD _ _))//.
+      rewrite lerD//.
+        (* Ha *)
+        admit.
+      admit.
+    clear Hb Ha lip_phi.
+    admit.
+(* [locally lipschitz phi] -> locally_lipschitz phi *)
+move=> lip_phi /= a.
+red in lip_phi.
+simpl in *.
+rewrite setXTT in lip_phi.
+have := lip_phi (a, a).
+move=> /(_ (conj Logic.I Logic.I)).
+rewrite /lipschitz_on => -[M [Mreal HM]].
+rewrite withinET in HM.
+have M0 : 0 < M + 1.
+  rewrite addr_gt0//.
+  admit.
+have := HM (M + 1).
+rewrite ltrDl => /(_ ltr01).
+case => /= => CD [aC aD] H.
+have [r1 Hr1] : exists r1 : {posnum R}, closed_ball a r1%:num `<=` CD.1.
+  by move/nbhs_closedballP : aC.
+have [r2 Hr2] : exists r2 : {posnum R}, closed_ball a r2%:num `<=` CD.2.
+  by move/nbhs_closedballP : aD.
+exists (minr r1 r2).
+exists (PosNum M0).
+red.
+red.
+simpl.
+move=> uv [au av].
+apply: H.
+split.
+  apply: Hr1.
+  apply: le_closed_ball au.
+  admit.
+apply: Hr2.
+admit.
+Abort.
+
 Section loc_lip_uniqueness.
 Context {R : realType} {n : nat} (a b : R) (r0 : {posnum R}).
 Notation U := 'rV[R]_n.
