@@ -1272,18 +1272,17 @@ Qed.
 End tilt_eqn_Lyapunov_global.
 
 Section equilibrium_zero_stable.
-Context {R : realType}.
-Variables gamma alpha1 : R.
+Context {R : realType} (gamma alpha1 : R).
 Hypotheses (gamma_gt0 : 0 < gamma) (alpha1_gt0 : 0 < alpha1).
 Let phi := Tilt.eqn alpha1 gamma.
 Variable Init : set 'rV[R]_6.
 
 Lemma equilibrium_zero_stable :
-  Tilt.point1 \in Init -> open Init -> Init `<=` Tilt.Upsilon1 ->
+  Tilt.point1 \in Init -> Init `<=` Tilt.Upsilon1 ->
   is_stable_at phi Init Tilt.point1.
 Proof.
-move=> Init0 openInit Init_in_state.
-apply: (@Lyapunov_stability R _ phi Init openInit (Tilt.V1 alpha1 gamma)).
+move=> Init0 Init_in_state.
+apply: (@Lyapunov_stability R _ phi setT openT Init (Tilt.V1 alpha1 gamma)).
 - exact: V1_diff.
 - move=> D /= f f0 sol_f t t0.
   apply: (@derive_along_V1_le0 _ _ _ _ _ D f) => //.
@@ -1296,6 +1295,7 @@ apply: (@Lyapunov_stability R _ phi Init openInit (Tilt.V1 alpha1 gamma)).
 - have := V1_is_Lyapunov_candidate alpha1_gt0 gamma_gt0.
   rewrite /is_Lyapunov_candidate /Tilt.point1 => H.
   rewrite /Tilt.V1 lsubmx_const rsubmx_const; split => //.
+  + by rewrite inE.
   + by rewrite !expr2 !enorm0 !mulr0 !mul0r add0r.
   + move=> z zInit z_neq0.
     case: H => // _ _.

@@ -381,8 +381,9 @@ Section Lyapunov_stability.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.+1.
 Variable phi : U -> U.
+Variable A : set U.
+Hypothesis openA : open A.
 Variable Init : set U.
-Hypothesis openInit : open Init.
 
 Let B r := closed_ball_ (fun x => `|x|) (0 : 'rV[R]_n.+1) r.
 
@@ -397,12 +398,12 @@ Hypothesis DV_le0 : forall D f, f 0 \in Init ->
 
 (* khalil theorem 4.1 *)
 Theorem Lyapunov_stability0 :
-  is_Lyapunov_candidate V Init 0 -> is_stable_at phi Init 0.
+  is_Lyapunov_candidate V A 0 -> is_stable_at phi Init 0.
 Proof.
 move=> VInitx /= eps eps0/=.
 move: VInitx => [/= xInit Vx0 InitxV].
-have [r [r_gt0 r_eps BrD]] : exists r : R, [/\ 0 < r, r <= eps & B r `<=` Init].
-  move: xInit; rewrite inE => /(open_subball openInit)[r0/= r0_gt0] q.
+have [r [r_gt0 r_eps BrD]] : exists r : R, [/\ 0 < r, r <= eps & B r `<=` A].
+  move: xInit; rewrite inE => /(open_subball openA)[r0/= r0_gt0] q.
   pose r := Num.min (r0 / 2) eps.
   have r_gt0 : 0 < r by rewrite /r lt_min eps0 divr_gt0.
   exists (r / 2); split.
@@ -666,8 +667,9 @@ Section Lyapunov_stability.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.+1.
 Variable phi : U -> U.
+Variable A : set U.
+Hypothesis openA : open A.
 Variable Init : set U.
-Hypothesis openInit : open Init.
 
 Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
@@ -677,12 +679,15 @@ Hypothesis V'_le0 : forall D (f : R -> U),
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 Theorem Lyapunov_stability :
-  is_Lyapunov_candidate V Init `<=` is_stable_at phi Init.
+  is_Lyapunov_candidate V A `<=` is_stable_at phi Init.
 Proof.
 move=> x VInitx.
+(* TODO: renaming Init <-> A*)
 apply: is_stable_at_substitution.
-apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
-- rewrite [X in open X](_ : _ = (fun y => y + x) @^-1` Init).
+pose A' := [set y - x | y in A].
+have openA' : open A'.
+  rewrite /A'.
+  rewrite [X in open X](_ : _ = (fun y => y + x) @^-1` A).
     apply/seteqP; split.
       by move=> /= z [v vInit <-]; rewrite subrK.
     by move=> /= z zxInit; exists (z + x) => //; rewrite addrK.
@@ -691,6 +696,7 @@ apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
   apply: (@cvgD _ 'rV_n.+1) => //=.
     by apply: filter_filter; exact: mx_nbhs_filter. (* TODO: should be automatic! *)
   by apply: cvg_cst; apply: filter_filter; exact: mx_nbhs_filter.
+apply: (@Lyapunov_stability0 _ _ _ _ openA' _ (fun y => V (y + x))) => //.
 - by move=> t; exact: differentiable_comp.
 - move=> /= D sol sol0Init solp /= t t0D.
   rewrite [leLHS](_ : _ =  ('D~((fun y => y + x) \o sol) V) t).
@@ -730,7 +736,7 @@ apply: (@Lyapunov_stability0 _ _ _ _ _ (fun y => V (y + x))).
     apply: continuousD => //.
     apply: cst_continuous.
     by have [_ _ +] := solp.
-exact: is_Lyapunov_candidate_substitution.
+by have /= := @is_Lyapunov_candidate_substitution R n A V _ VInitx.
 Qed.
 
 End Lyapunov_stability.
