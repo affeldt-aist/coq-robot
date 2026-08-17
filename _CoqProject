@@ -18,5 +18,7 @@ scara.v
 derive_matrix.v
 differential_kinematics.v
 extra_trigo.v
+lasalle.v
+pendulum.v
 
 -R . robot
