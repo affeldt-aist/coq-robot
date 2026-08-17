@@ -1935,8 +1935,7 @@ split.
     exists ra => -[u v].
     rewrite closed_ballE// /closed_ball_/= => H.
     rewrite {1}/Num.norm /ProdNormedZmodule.norm/= /ProdNormedZmodule.norm/= in H.
-    rewrite (@le_trans _ _ (ka%:num * `|u - v|))//; last first.
-      admit.
+    rewrite (@le_trans _ _ (ka%:num * `|u - v|))//; last by rewrite ler_pM//.
     apply: (Ha (u, v)) => //=; split.
       rewrite closed_ballE// /closed_ball_/=.
       rewrite (le_trans _ H)//.
@@ -1944,33 +1943,68 @@ split.
     rewrite closed_ballE// /closed_ball_/=.
     rewrite (le_trans _ H)//.
     by rewrite le_max lexx orbT.
-  near=> M.
   rewrite setXTT.
   red.
   rewrite withinET.
   red in lip_phi.
   simpl in lip_phi.
-  apply/nbhs_closedballP.
-  have ab20 : `|a - b| / 2 > 0 by rewrite divr_gt0// normr_gt0 subr_eq0.
+  have ab20 : `|a - b| / 4 > 0 by rewrite divr_gt0// normr_gt0 subr_eq0.
+  have ab20' : `|a - b| / 2 > 0 by rewrite divr_gt0// normr_gt0 subr_eq0.
   pose r := minr (PosNum ab20) (minr ra rb).
+  near=> M.
+  apply/nbhs_closedballP.
   exists r => -[/= u v].
   rewrite closed_ballE// /closed_ball_/= => H.
-  rewrite (@le_trans _ _ (`|(phi u - phi a)(* <k *) +
+  have rra : (r <= ra) by rewrite /r !ge_min lexx !orbT.
+  have rrb : (r <= rb) by rewrite /r !ge_min lexx !orbT.
+  have rab0 : (r <= PosNum ab20) by rewrite /r !ge_min lexx.
+  have ->: phi u - phi v = ((phi u - phi a)(* <k *) +
                             (phi a - phi b) (* < r *) +
-                            (phi b - phi v)(* <k *)|))//.
-    admit.
-  rewrite (@le_trans _ _ ( ka%:num * `| u - a| +
+                            (phi b - phi v)) by rewrite -addrA !subrKA.
+  rewrite (@le_trans _ _ ( ka%:num * r%:num +
                            `|phi a - phi b| +
-                           kb%:num * `|b - v|))//.
+                           kb%:num * r%:num))//.
     rewrite (le_trans (ler_normD _ _))//.
     rewrite lerD//.
-      rewrite (le_trans (ler_normD _ _))//.
+    + rewrite (le_trans (ler_normD _ _))//.
       rewrite lerD//.
-        (* Ha *)
-        admit.
-      admit.
-    clear Hb Ha lip_phi.
-    admit.
+      rewrite (@le_trans _ _ ( ka%:num * `|u - a|))//.
+        move /(_ (u,a)): Ha;apply.
+        rewrite closed_ballE// /closed_ball_/= subrr normr0=>[]//.
+        split=>//.
+        rewrite (@le_trans _ _  r%:num)//.
+        by rewrite (le_trans _ H) /Num.norm//= le_max lexx.
+      by rewrite distrC ler_pM// (le_trans _ H) /Num.norm//= le_max lexx.
+    +  rewrite (@le_trans _ _ ( kb%:num * `|b - v|))//.
+       move /(_ (b,v)): Hb;apply.
+       rewrite closed_ballE// /closed_ball_/= subrr normr0=>[]//;split=>//.
+       rewrite (@le_trans _ _  r%:num)//.
+       by rewrite (le_trans _ H) /Num.norm//= le_max lexx orbT.
+       by rewrite ler_pM// (le_trans _ H) /Num.norm//= le_max lexx orbT.
+    have rp0 : `|a-b| <= `|a-b|/2 + `|u-v|.
+      have ->: (a-b) = (a -u)  + (v - b) + (u-v) by rewrite addrAC !subrKA.
+      rewrite (le_trans (ler_normD _ _))// lerD2r.
+      apply (@le_trans _ _ ( r%:num + r%:num)).
+      rewrite (le_trans (ler_normD _ _))//lerD//.
+       by rewrite (le_trans _ H) /Num.norm//= le_max lexx.
+       by rewrite distrC (le_trans _ H) /Num.norm//= le_max lexx orbT.
+       rewrite addrAC !subrKA.
+       rewrite [leRHS]splitr lerD//.
+       by rewrite -mulrA -invrM ?unitfE// -natrM.
+       by rewrite -mulrA -invrM ?unitfE// -natrM.
+    have rp :  r%:num  <= `|u-v|.
+      rewrite (@le_trans _ _ (`|a - b|/ 4))//.
+      rewrite (@le_trans _ _ (`|a - b|/ 2))//.
+        by rewrite [leRHS]splitr -mulrA -invrM ?unitfE //= (natrM _ 2 2) lerDl divr_ge0//.
+      move : rp0.
+      by rewrite [leLHS]splitr lerD2l.
+    set C:=  ka%:num * r%:num + `|phi a - phi b| + kb%:num * r%:num .
+    apply (@le_trans _ _ (C/r%:num * `|u-v|)).
+    rewrite -mulrA;apply: ler_peMr; rewrite ?addr_ge0//.
+    by rewrite ler_pdivlMl// mulr1.
+  rewrite ler_pM//.
+  rewrite divr_ge0//.
+  by rewrite !addr_ge0.
 (* [locally lipschitz phi] -> locally_lipschitz phi *)
 move=> lip_phi /= a.
 red in lip_phi.
@@ -1980,11 +2014,11 @@ have := lip_phi (a, a).
 move=> /(_ (conj Logic.I Logic.I)).
 rewrite /lipschitz_on => -[M [Mreal HM]].
 rewrite withinET in HM.
-have M0 : 0 < M + 1.
-  rewrite addr_gt0//.
-  admit.
-have := HM (M + 1).
-rewrite ltrDl => /(_ ltr01).
+have M0 : 0 < `|M| + 1 by rewrite ltr_wpDl//.
+have MM0 : M < `|M|+1.
+  by rewrite (le_lt_trans (ler_norm _)) // ltrDl.
+have := HM (`|M| + 1).
+move /(_ MM0).
 case => /= => CD [aC aD] H.
 have [r1 Hr1] : exists r1 : {posnum R}, closed_ball a r1%:num `<=` CD.1.
   by move/nbhs_closedballP : aC.
@@ -2000,10 +2034,13 @@ apply: H.
 split.
   apply: Hr1.
   apply: le_closed_ball au.
-  admit.
+  suff : (minr r1 r2) <= r1 by [].
+  by rewrite ge_min lexx.
 apply: Hr2.
-admit.
-Abort.
+apply: le_closed_ball av.
+suff : (minr r1 r2) <= r2 by [].
+by rewrite ge_min lexx orbT.
+Unshelve. all: by end_near. Qed.
 
 Section loc_lip_uniqueness.
 Context {R : realType} {n : nat} (a b : R) (r0 : {posnum R}).
