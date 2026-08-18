@@ -2306,12 +2306,13 @@ Section continuous_dependence.
 
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
-Context (phi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
-Variables (u0 v0 : U) (r : {posnum R}).
+Context (phi : R -> U -> U).
+Context (a b : R) (ab : a < b).
+Variables (k : {posnum R})  (r : {posnum R}).
+Variables (u0 v0 : U).
 Let B : set U := closed_ball u0 r%:num. 
-Hypothesis (k0 : 0 < k)
-  (lip2 : {in `[a, b]%R, forall t, k.-lipschitz_B (phi t)})
-  (cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}).
+Hypothesis lip2 : {in `[a, b]%R, forall t, k%:num.-lipschitz_B (phi t)}.
+Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Variables y z : R -> U.
 Hypothesis soly : is_sol_oo phi u0 a b y.
 Hypothesis solz : is_sol_oo phi v0 a b z.
@@ -2321,13 +2322,13 @@ Hypothesis Bz : z @` `[a, b] `<=` B.
 Let lm := @lebesgue_measure R.
 
 Lemma continuous_dependence t : t \in `[a, b] ->
-                               `|y t - z t| <= `|u0 - v0| * expR (k * (t - a)).
+                               `|y t - z t| <= `|u0 - v0| * expR (k%:num * (t - a)).
 Proof.
 move=>tab.
-have := @thm34 _ _ phi a b ab k u0 v0 r k0 lip2 cont1 _ _ soly _ By Bz 0.
+have := @thm34 _ _ phi a b ab k%:num u0 v0 r _ lip2 cont1 _ _ soly _ By Bz 0.
 rewrite (_ : phi \+ cst 0 = phi); first by apply/funext => s; rewrite /= addr0.
-move /(_ solz).
-move /(_ _ t).
+move /(_ _ solz).
+move /(_ _ _ t).
 rewrite !mul0r addr0.
 apply => //.
 by move => ? ? ? ?; rewrite normr0 lexx.

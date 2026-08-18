@@ -606,7 +606,7 @@ apply/cvgrPdist_le => //= e e0.
   have k'0 : 0 < k'%:num by [].
   near=>v.
   move => pv.
-  have := @continuous_dependence K 6 (fun=> phi) 0 (t + 1) t01 k'%:num u v r' k'0 k'r'phi.
+  have := @continuous_dependence K 6 (fun=> phi) 0 (t + 1) t01 k' r' u v k'r'phi.
   have : {in closed_ball u r'%:num,
       forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
     move=> /= w wur ?//.
