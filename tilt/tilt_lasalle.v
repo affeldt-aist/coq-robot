@@ -243,18 +243,18 @@ move=> y0Upsilon1.
 suff [sol [solP1 solP2]]:  exists sol, is_sol_obnd (fun => phi) y0 0 (BInfty K false) sol /\ (h^-1 *: (sol (0+h) - sol 0)) @[h --> 0^'+] --> phi (sol 0).
   move : solP2;under eq_fun do rewrite add0r;move=>solP2.
   by exists sol.
-apply: (@compact_containment_global_sol _ _ _ _ (sublevelUpsilon1 y0)) => /=.
+  apply: (compact_global_solution (K:=sublevelUpsilon1 y0)) => /=.
 - exact: compact_sublevelUpsilon1.
-- move=> y1.
+- by apply: mem_sublevelUpsilon1; apply: set_mem.
+- move => x; exact: cst_continuous.
+- move=> b b0 y1.
   have [r [k y0r]] := @tilt_eqn_locally_lipschitz K alpha1 _ gamma_gt0 y1.
-  exists r, k; split => //.
-  move=> v vy0r.
-  apply: cst_continuous.
-- move=> t y' [init solp cont] y1 [t0 /= t0t <-].
-  split;last first.
-    apply/(@tilt_state_spaceS  _ alpha1 gamma).
-    exists y', t; split; rewrite ?init//.
-      by exists t0.
+  by exists r, k.
+move=> t y' [init solp cont] y1 [t0 /= t0t <-].
+ split;last first.
+  apply/(@tilt_state_spaceS  _ alpha1 gamma).
+  exists y', t; split; rewrite ?init//.
+    by exists t0.
 rewrite /sublevel/=.
 rewrite -init.
 apply: (V_nincr (D:=t)) => /=.

@@ -837,21 +837,97 @@ Hypothesis u0K : u0 \in K.
 (*   forall sol @` `[a, b[ `<=` K. *)
 
 
+(* Hypothesis phi_loc_lip : *)
+(*   forall y0,  *)
+(*     exists r k : {posnum R},  *)
+(*           (forall t, *)
+(*          k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)) /\ *)
+(*          {in closed_ball y0 r%:num, forall y, *)
+(*             continuous (phi ^~ y)}. *)
+
+
+(* Local Lemma phi_cont : *)
+(*     continuous (fun p : (R * U)%type => phi p.1 p.2). *)
+(* Proof. *)
+(* move => [/= t0 y0]. *)
+(* apply/cvg_ballP => eps eps0 /=. *)
+(* have [r [k [Hlip Hcont]]] := phi_loc_lip y0. *)
+(* have y0B : y0 \in closed_ball y0 r%:num by rewrite inE/=;apply closed_ballxx. *)
+(* have e20 : 0 < eps / 2 by rewrite divr_gt0. *)
+(* (* todo: improve proof *) *)
+(* have c1 : *)
+(*   \forall p \near (t0, y0), *)
+(*     `| phi t0 y0 - phi p.1 y0 | < eps / 2. *)
+(*   have /cvgrPdist_lt := Hcont y0 y0B t0. *)
+(*   move => /(_ _ e20) [e0 e00 H]. *)
+(*   exists (ball t0 e0 , [set: U]) => /=. *)
+(*   split => //=. *)
+(*   by apply: nbhsx_ballx. *)
+(*   exact: filterT. *)
+(*   move => [t1 t2] [b1 b2]. *)
+(*   by apply: H. *)
+(* have c2 : *)
+(*   \forall p \near (t0, y0), *)
+(*     `| phi p.1 y0 - phi p.1 p.2 | < eps / 2. *)
+(*   near=>p. *)
+(*   have  B0 : ((closed_ball y0 r%:num `*` closed_ball y0 r%:num) (y0, p.2)). *)
+(*     split; first by apply closed_ballxx. *)
+(*     near:p. *)
+(*     exists ([set:R], ball y0 r%:num) => /=. *)
+(*     split => //=. *)
+(*     exact: filterT. *)
+(*     by apply: nbhsx_ballx. *)
+(*     move => [t1 t2] [b1 b2 /=]. *)
+(*     by apply subset_closed_ball. *)
+(*   move : (Hlip p.1 (y0, p.2) B0). *)
+(*   move/le_lt_trans;apply. *)
+(*   rewrite -ltr_pdivlMl//= mulrC. *)
+(*   suff : ball y0 (eps/2/k%:num) p.2 by rewrite -ball_normE. *)
+(*   near:p. *)
+(*   exists ([set:R], ball y0 (eps/2/k%:num)) => /=. *)
+(*   split => //=. *)
+(*   exact: filterT. *)
+(*   apply: nbhsx_ballx. *)
+(*   by rewrite divr_gt0. *)
+(*   move => [t1 t2] [b1 b2 /=]. *)
+(*   exact b2. *)
+(* near=> t. *)
+(* rewrite -ball_normE/=. *)
+(* rewrite -(subrKA (phi t.1 y0 ) (phi t0 y0)) (le_lt_trans (ler_normD _ _))  // (splitr eps) ltrD//. *)
+(* by near:t;exact: c1. *)
+(* by near:t;exact: c2. *)
+(* Unshelve. all: end_near. Qed. *)
+
+Hypothesis phi_continuous :
+  forall y, continuous (phi ^~ y).
+
+(* Hypothesis phi_cont : *)
+(*   continuous (fun p : (R * U)%type => phi p.1 p.2). *)
+
 Hypothesis phi_loc_lip :
-  forall y0, 
-    exists r k : {posnum R}, 
-          (forall t,
-         k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)) /\
-         {in closed_ball y0 r%:num, forall y,
-            continuous (phi ^~ y)}.
+  forall c, a < c -> forall y0,
+    exists r k : {posnum R},
+      {in `[a, c]%R, forall t,
+        k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)}.
 
-
-Local Lemma phi_cont :
-    continuous (fun p : (R * U)%type => phi p.1 p.2).
+Local Lemma phi_local_conds c (ac : a < c) y0 :
+  exists r k : {posnum R},
+    {in `[a, c]%R, forall t,
+      k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)} /\
+    {in closed_ball y0 r%:num, forall y,
+      continuous (phi ^~ y)}.
 Proof.
-move => [/= t0 y0].
-apply/cvg_ballP => eps eps0 /=.
-have [r [k [Hlip Hcont]]] := phi_loc_lip y0.
+have [r [k Hlip]] := @phi_loc_lip c ac y0.
+exists r, k; split=> // y _.
+Qed.
+
+Local Lemma phi_cont c (ac : a < c) :
+  {within `[a, c] `*` K,
+    continuous (fun p : (R * U)%type => phi p.1 p.2)}.
+Proof.
+apply/subspace_continuousP => /=  [[t0 y0] [/= pD1 pD2]].
+apply/cvgrPdist_lt => eps eps0 /=.
+have [r [k [Hlip Hcont]]] := phi_local_conds ac y0.
 have y0B : y0 \in closed_ball y0 r%:num by rewrite inE/=;apply closed_ballxx.
 have e20 : 0 < eps / 2 by rewrite divr_gt0.
 (* todo: improve proof *)
@@ -867,9 +943,9 @@ have c1 :
   move => [t1 t2] [b1 b2].
   by apply: H.
 have c2 :
-  \forall p \near (t0, y0),
-    `| phi p.1 y0 - phi p.1 p.2 | < eps / 2.
-  near=>p.
+  \forall p \near within (`[a, c] `*` K) (nbhs (t0, y0)),
+      `|phi p.1 y0 - phi p.1 p.2| < eps / 2.
+  rewrite near_withinE; near=> p => ptD.
   have  B0 : ((closed_ball y0 r%:num `*` closed_ball y0 r%:num) (y0, p.2)).
     split; first by apply closed_ballxx.
     near:p.
@@ -879,7 +955,7 @@ have c2 :
     by apply: nbhsx_ballx.
     move => [t1 t2] [b1 b2 /=].
     by apply subset_closed_ball.
-  move : (Hlip p.1 (y0, p.2) B0).
+  move: (Hlip p.1 ptD.1 (y0, p.2) B0).
   move/le_lt_trans;apply.
   rewrite -ltr_pdivlMl//= mulrC.
   suff : ball y0 (eps/2/k%:num) p.2 by rewrite -ball_normE.
@@ -892,11 +968,12 @@ have c2 :
   move => [t1 t2] [b1 b2 /=].
   exact b2.
 near=> t.
-rewrite -ball_normE/=.
 rewrite -(subrKA (phi t.1 y0 ) (phi t0 y0)) (le_lt_trans (ler_normD _ _))  // (splitr eps) ltrD//.
-by near:t;exact: c1.
+by near: t; rewrite near_withinE;apply: filterS c1.
 by near:t;exact: c2.
 Unshelve. all: end_near. Qed.
+
+
 
 Definition bset := [set b | b >= a /\ exists sol, is_sol_oo phi u0 a b sol].
 
@@ -908,7 +985,7 @@ Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 Lemma bset_min : exists x, bset x /\ a < x.
 Proof.
 have a1 : a < a+1 by rewrite ltrDl.
-have [r [k [l2 c1]]] := phi_loc_lip u0.
+have [r [k [l2 c1]]] := phi_local_conds a1 u0.
 have lip1: {in `[a, a + 1]%R, forall x , k%:num.-lipschitz_(closed_ball u0 r%:num) (phi x)} by [].
 have cont1 : {in closed_ball u0 r%:num, forall y : 'rV_n, {within `[a, a + 1], continuous phi^~ y}}.
   by move => x xb; apply: continuous_subspaceT; apply c1.
@@ -1048,8 +1125,9 @@ Proof.
       by rewrite le_max lexx.
     done.
     move => t0 at0 t0t.
-    have [r [k [l1 c1]]] := phi_loc_lip (solt (maxr (t + 1) b) t0).
-    exists r, k => t' _; split => //=.
+    have [r [k [l1 c1]]] := phi_local_conds at1 (solt (maxr (t + 1) b) t0).
+    exists r, k => t' at'; split => //=.
+    exact: l1 t' at'.
     by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
     move : tab.
     by rewrite inE/=!in_itv/= lerDl ler01 => /andP[-> _].
@@ -1060,8 +1138,9 @@ Proof.
     apply /is_sol_oo_subset/(soltp _) => //=.
    by rewrite le_max lexx;apply /orP;right.
     move => t0 at0 t0t.
-    have [r [k [l1 c1]]] := (phi_loc_lip (solt b t0)). 
-    exists r, k => t' _; split => //=.
+    have [r [k [l1 c1]]] := (phi_local_conds ab (solt b t0)). 
+    exists r, k => t' at'; split => //=.
+    exact: l1 t' at'.
     by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
 by move : tab;rewrite inE.
 Qed.
@@ -1135,8 +1214,9 @@ suff -> : solt b t = solt (maxr (r t) b) t.
     by rewrite gt_max rsup.
     by apply: soltp; apply rsup.
     move => t0 at0 t0t.
-    have [r0 [k [l1 c1]]] := (phi_loc_lip (solt (maxr (r t) b) t0)).
-    exists r0, k => t' _; split => //=.
+    have [r0 [k [l1 c1]]] := (phi_local_conds art (solt (maxr (r t) b) t0)).
+    exists r0, k => t' at'; split => //=.
+    exact: l1 t' at'.
     by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
     move : tab.
     rewrite inE/=!in_itv/=  => /andP[-> _].
@@ -1149,8 +1229,9 @@ apply: (locally_cauchy_lipschitz_unique  (phi:=phi) ab _ (u0 := u0)) => /=.
    by rewrite le_max lexx;apply /orP;right.
    by rewrite gt_max bs andbT rsup//.
   move => t0 at0 t0t.
-  have [r0 [k [l1 c1]]] := (phi_loc_lip (solt b t0)). 
-  exists r0, k => t' _; split => //=.
+  have [r0 [k [l1 c1]]] := (phi_local_conds ab (solt b t0)). 
+  exists r0, k => t' at'; split => //=.
+  exact: l1 t' at'.
   by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
 by move : tab;rewrite inE.
 Qed.
@@ -1214,12 +1295,17 @@ apply: (solution_extends_from_compact (c := sup bset + 1) (K:=K)) => /=.
     exists x => //=.
     by rewrite in_itv/=ha/=ltr_pdivlMr // mulr2n mulrDr mulr1 ltrD2l.
   move =>  y Ky.
-  have [r [k [hrk1 hrk2]]]:= (phi_loc_lip y).
+  have ac : a < sup bset + 1.
+    apply: lt_trans; first exact: asup_lt Hsup.
+    by rewrite ltrDl.
+  have [r [k [hrk1 hrk2]]]:= (phi_local_conds ac y).
   exists r,k;split => //.
   move => /= y0 Hy0.
   apply: continuous_subspaceT.
   by apply hrk2.
-by apply /continuous_subspaceT/phi_cont.
+apply: phi_cont.
+rewrite ltr_pDr//.
+exact: asup_lt.
 Qed.
 
 (* Thm 3.3 in Khalil *)
@@ -1229,31 +1315,43 @@ Lemma compact_containment_global_sol :
 Proof.
 move => H.
 suff [sol [init d cont]]:  exists sol, is_sol_obnd phi u0 a (BInfty R false) sol.
+   have allsol : forall b, is_sol_oo phi u0 a b sol .
+     by apply /sol_inftyP;split.
    exists sol; split=>//. 
    apply /cvgrPdist_le.
    move => eps eps0.
    rewrite closure_neitv_coo in cont.
    have := cont.
    move /continuous_within_itvcyP => [_ cr].
- have phi_sol_cont : {within `[a, +oo[, continuous (fun t=> (phi t (sol t)))}.
-    have -> : (fun t => phi t (sol t)) = (fun t => phi t.1 t.2) \o (fun t => (t, sol t)).
-      by apply funext.
-    apply: within_continuous_comp.        
-      by move => t tp; apply phi_cont.
-    apply /continuous_within_itvcyP; split.
-      move => t ta.
-      rewrite /continuous_at.
-      have /continuous_within_itvcyP [+ _] := cont.
-      move /(_ _ ta) => c0.
-      by apply (cvg_pair cvg_id c0).
-    have /continuous_within_itvcyP [_ +] := cont => c0.
-    have ca : x @[x --> a^'+] --> a.
-       move => S [e /= e0 Be].
-       exists e => // x0 bx0 _.
-       by apply Be.
-    by apply (cvg_pair ca c0).
-  have hphi : phi t (sol t) @[t --> a^'+] --> phi a (sol a).
-    by have /continuous_within_itvcyP [_ +] := phi_sol_cont.
+   have a1 : a < a + 1 by rewrite ltrDl.
+   have /subspace_continuousP Hj := phi_cont a1.
+   have pa : (`[a, a + 1] `*` K) (a, sol a).
+     split; first by rewrite /= bound_itvE ltW.
+     by rewrite init;move/set_mem: u0K.
+  have ca : x @[x --> a^'+] --> a.
+    move=> S [e /= e0 Be].
+    exists e => // x0 bx0 _.
+    exact: Be.
+  have pair_cvg :
+    (fun t => (t, sol t)) @ a^'+ --> (a, sol a).
+    exact: cvg_pair ca cr.
+
+  have hphi :
+    phi t (sol t) @[t --> a^'+] --> phi a (sol a).
+    apply/cvgrPdist_le => e e0.
+    have /cvgrPdist_le /(_ _ e0) := Hj (a, sol a) pa.
+    rewrite near_withinE => Hnear.
+    have Hcomp := pair_cvg _ Hnear.
+    have Hdomain : \forall t \near a^'+,(`[a, a + 1] `*` K) (t, sol t).
+      near=> t; split.
+        apply/andP; split.
+        by near: t; exact: nbhs_right_ge.
+        by near: t; apply: nbhs_right_le; rewrite ltrDl.
+        apply: (H (a+2) sol) => //; exists t=>//.
+          apply/andP; split.
+          by near: t; exact: nbhs_right_ge.
+          by near: t; apply: nbhs_right_lt; rewrite ltrDl.
+  move: Hcomp Hdomain; apply: filter_app.
   have heps2 : 0 < eps / 2 /2 by rewrite !divr_gt0.
   have heps20 : 0 < eps / 2 by rewrite !divr_gt0.
   move /cvgrPdist_le : hphi.
@@ -1347,6 +1445,44 @@ exact: compact_containment_no_sup.
 Unshelve. all: by end_near. Qed.
 
 End max_solution.
+
+Section compact_global_solution.
+
+Context {R : realType} {n : nat}.
+Notation U := 'rV[R]_n.
+
+Variables (a : R) (phi : R -> U -> U).
+Variables  (K : set U) (u0 : U).
+
+Hypothesis compactK : compact K.
+Hypothesis u0K : u0 \in K.
+
+Hypothesis phi_continuous :
+  forall x, continuous (phi ^~ x).
+
+Hypothesis phi_locally_lipschitz :
+  forall b, a < b ->
+  forall x,
+    exists r k : {posnum R},
+      {in `[a, b]%R, forall t,
+        k%:num.-lipschitz_(closed_ball x r%:num) (phi t)}.
+
+Hypothesis solutions_in_K :
+  forall b sol,
+    is_sol_oo phi u0 a b sol ->
+    sol @` `[a, b[ `<=` K.
+
+Lemma compact_global_solution :
+  exists sol,
+    is_sol_obnd phi u0 a  +oo%O sol /\
+    (h^-1 *: (sol (a + h) - sol a)) @[h --> 0^'+]
+      --> phi a (sol a).
+Proof.
+exact: (compact_containment_global_sol (K:=K)).
+Qed.
+
+
+End compact_global_solution.
 
 Lemma parameterized_integralN {R : realType}
     x b (f : R -> R) : (x <= b) ->
@@ -1791,22 +1927,6 @@ apply: eq_Rintegral => //= u uat.
 rewrite -/(phi t u).
 by field.
 Qed.
-
-Lemma gronwall_LAMBDA LAMBDA :
-  (forall t, t \in `]a, b[ ->
-    y t <= LAMBDA + \int[lm]_(s in `[a, t]) (mu s * y s)) ->
-  forall t, t \in `]a, b[ ->
-    y t <= LAMBDA * expR (\int[lm]_(tau in `[a, t]) mu tau).
-Proof.
-Abort.
-
-Lemma gronwall_MU LAMBDA MU :
-  (forall t, t \in `]a, b[ ->
-    y t <= LAMBDA + \int[lm]_(s in `[a, t]) (MU * y s)) ->
-  forall t, t \in `]a, b[ ->
-    y t <= LAMBDA * expR (MU * (t - a)).
-Proof.
-Abort.
 
 End gronwall.
 
