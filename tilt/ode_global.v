@@ -1969,15 +1969,26 @@ Hypothesis soly : is_sol_oo phi u0 a b y.
 Hypothesis solz : is_sol_oo (phi \+ psi) v0 a b z.
 Hypothesis By : y @` `[a, b] `<=` B.
 Hypothesis Bz : z @` `[a, b] `<=` B.
-Variable mu : {posnum R}.
+Variable mu : R.
 Hypothesis mu_ub : forall t x, t \in `[a, b] -> x \in B ->
- `| psi t x | <= mu%:num.
+ `| psi t x | <= mu.
 
 Let lm := @lebesgue_measure R.
 
+Let mu0 : 0 <= mu.
+Proof.
+apply /le_trans/(@mu_ub a u0).
+exact: normr_ge0.
+by rewrite inE/=in_itv/= lexx ltW.
+rewrite /B.
+rewrite inE.
+by apply: closed_ballxx.
+Qed.
+
+
 Let gamma := `|u0 - v0|.
 Lemma thm34 t : t \in `[a, b] ->
-  `|y t - z t| <= gamma * expR (k * (t - a)) + mu%:num / k * (expR (k * (t - a)) - 1).
+  `|y t - z t| <= gamma * expR (k * (t - a)) + mu/ k * (expR (k * (t - a)) - 1).
 Proof.
 move=> tab.
 have k_neq0 : k != 0 by rewrite gt_eqF.
@@ -2038,10 +2049,10 @@ have contphiz j0 t'  : t' \in `[a,b] -> {within `[a,t'], continuous (fun x => (p
   apply Bz.
   exists y0 => //.
   by apply : subset_itv By0 => //;apply t'b.
-have : gronwall_y t <= gamma + mu%:num * (t - a) +
+have : gronwall_y t <= gamma + mu * (t - a) +
     \int[lm]_(s in `[a, t])
-      (k * (gamma + mu%:num * (s - a)) * expR (k * (t - s))).
-  have H t' : t' \in `[a,b] ->  gronwall_y t' <= gamma + mu%:num * (t' - a) +
+      (k * (gamma + mu * (s - a)) * expR (k * (t - s))).
+  have H t' : t' \in `[a,b] ->  gronwall_y t' <= gamma + mu * (t' - a) +
       \int[lm]_(s in `[a, t']) (k * `|y s - z s|).
     move => t'ab.
     have contphiy' j0  :  {within `[a,t'], continuous (fun x => (phi x (y x)) ord0 j0)}.
@@ -2110,7 +2121,7 @@ have : gronwall_y t <= gamma + mu%:num * (t - a) +
        have := lip2 xab.
        move /(_ (y x, z x));apply.
        by split; [apply By | apply Bz]; exists x.
-  pose lambda t := gamma + mu%:num * (t - a).
+  pose lambda t := gamma + mu* (t - a).
   pose mu' (s : R) : R := k.
   have := @gronwall _ _ _ ab lambda mu' _ _ _ gronwall_y _ H t tab.
   rewrite /lambda/mu'/=/lm.
@@ -2171,9 +2182,9 @@ have : gronwall_y t <= gamma + mu%:num * (t - a) +
   by rewrite closure_itvoo //; apply: subset_itvl => //;apply t'b.
 move/le_trans; apply.
 apply: (@le_trans _ _
-  (gamma + mu%:num * (t - a) - gamma - mu%:num * (t - a) +
+  (gamma + mu* (t - a) - gamma - mu * (t - a) +
     gamma * expR (k * (t - a)) +
-    \int[lm]_(s in `[a, t]) (mu%:num * expR (k * (t - s))))).
+    \int[lm]_(s in `[a, t]) (mu * expR (k * (t - s))))).
   rewrite -!addrA !lerD2l.
   move: (tab).
   rewrite inE/= in_itv/= => /andP[+ _].
@@ -2181,9 +2192,9 @@ apply: (@le_trans _ _
     rewrite set_itv1 !Rintegral_set1 subrr !mulr0 expR0 mulr1 oppr0 add0r addr0.
     by rewrite addrC subrr.
   have -> := (@Rintegration_by_parts _
- (fun s => (k * (gamma + mu%:num * (s - a))))
+ (fun s => (k * (gamma + mu * (s - a))))
  (fun s => - k^-1 * expR (k * (t - s)))
- (fun s => k * mu%:num)
+ (fun s => k * mu)
  (fun s => expR (k * (t - s)))
  ).
   - exact: altt.
@@ -2231,7 +2242,7 @@ apply: (@le_trans _ _
   rewrite -(addrA (- gamma)).
   rewrite mulrACA mulrN divff// mulN1r opprK.
   rewrite !addrA.
-  rewrite (lerD2l (- gamma - mu%:num * (t - a) + gamma * expR (k * (t - a)))).
+  rewrite (lerD2l (- gamma - mu * (t - a) + gamma * expR (k * (t - a)))).
   rewrite -mulN1r -RintegralZl//=.
     apply: continuous_compact_integrable; first exact: segment_compact.
     apply: within_continuousMl.
@@ -2263,7 +2274,7 @@ rewrite (addrC gamma) addrK subrr add0r; congr +%R.
 have : a <= t by rewrite inE in tab; rewrite (itvP tab).
 rewrite le_eqVlt => /predU1P[->|ta].
   by rewrite set_itv1 Rintegral_set1 subrr mulr0 expR0 subrr mulr0.
-rewrite /Rintegral (@continuous_FTC2 _ _ (fun x => - mu%:num / k * expR (k * (t - x))))//=.
+rewrite /Rintegral (@continuous_FTC2 _ _ (fun x => - mu / k * expR (k * (t - x))))//=.
 - apply/within_continuousMl => //=; apply: within_continuous_comp => //=.
     by move=> ? ?; exact: continuous_expR.
   apply/within_continuousMl => //=; apply/within_continuousB => //=.
@@ -2289,3 +2300,36 @@ rewrite /Rintegral (@continuous_FTC2 _ _ (fun x => - mu%:num / k * expR (k * (t 
 Qed.
 
 End thm34.
+
+Section continuous_dependence.
+
+
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.
+Context (phi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
+Variables (u0 v0 : U) (r : {posnum R}).
+Let B : set U := closed_ball u0 r%:num. 
+Hypothesis (k0 : 0 < k)
+  (lip2 : {in `[a, b]%R, forall t, k.-lipschitz_B (phi t)})
+  (cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}).
+Variables y z : R -> U.
+Hypothesis soly : is_sol_oo phi u0 a b y.
+Hypothesis solz : is_sol_oo phi v0 a b z.
+Hypothesis By : y @` `[a, b] `<=` B.
+Hypothesis Bz : z @` `[a, b] `<=` B.
+
+Let lm := @lebesgue_measure R.
+
+Lemma continuous_dependence t : t \in `[a, b] ->
+                               `|y t - z t| <= `|u0 - v0| * expR (k * (t - a)).
+Proof.
+move=>tab.
+have := @thm34 _ _ phi a b ab k u0 v0 r k0 lip2 cont1 _ _ soly _ By Bz 0.
+rewrite (_ : phi \+ cst 0 = phi); first by apply/funext => s; rewrite /= addr0.
+move /(_ solz).
+move /(_ _ t).
+rewrite !mul0r addr0.
+apply => //.
+by move => ? ? ? ?; rewrite normr0 lexx.
+Qed.
+End continuous_dependence.

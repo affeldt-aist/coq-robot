@@ -606,7 +606,7 @@ apply/cvgrPdist_le => //= e e0.
   have k'0 : 0 < k'%:num by [].
   near=>v.
   move => pv.
-  have := @thm34 K 6 (fun=> phi) 0 (t + 1) t01 k'%:num u v r' k'0 k'r'phi.
+  have := @continuous_dependence K 6 (fun=> phi) 0 (t + 1) t01 k'%:num u v r' k'0 k'r'phi.
   have : {in closed_ball u r'%:num,
       forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
     move=> /= w wur ?//.
@@ -622,7 +622,6 @@ apply/cvgrPdist_le => //= e e0.
   rewrite u0u => /[swap] /[apply].
   have := @isSol_oo v (t + 1) vUpsilon1.
   rewrite v0v.
-  rewrite (_ : (fun=> phi) \+ cst 0 = fun=> phi); first by apply/funext => i/=; rewrite addr0.
   move=> /[swap] /[apply].
   set hu := (X in (X -> _) -> _).
   set hv := (X in (_ -> X -> _) -> _).
@@ -633,32 +632,21 @@ apply/cvgrPdist_le => //= e e0.
     apply: invariant_sublevelUpsilon1 => //.
     by apply set_mem.
     by rewrite (itvP y0t).
-  have Hv : hv.
+ have Hv : hv.
     rewrite {}/hv/=.
     apply: subset_trans pur.
     move=> _ [y /= y0t] <-.
     apply: invariant_sublevelUpsilon1 => //.
     by rewrite (itvP y0t).
-  pose mu := (e * k'%:num / (expR (k'%:num * t) - 1)) / 2.
-  have mu_gt0 : 0 < mu.
-    rewrite /mu ?mulr_gt0//.
-    rewrite invr_gt0//.
-    rewrite subr_gt0 -expR0 ltr_expR// mulr_gt0//.
-  move/(_ Hu Hv (PosNum mu_gt0)) => /=.
+  move/(_ Hu Hv) => /=.
   move=> /(_ t).
   rewrite inE/= in_itv/= (ltW t0)/= lerDl ler01 => /(_ isT).
   move=> /le_trans; apply.
   rewrite subr0.
-  rewrite -lerBrDr.
   rewrite -ler_pdivlMr ?expR_gt0//.
-  rewrite mulrAC /mu; set ek't1 := (_ - 1).
-  rewrite -!mulrA (mulrCA ek't1^-1) (mulrA ek't1^-1).
-  rewrite mulVf ?gt_eqF// {}/ek't1; first by rewrite subr_gt0 expR_gt1 mulr_gt0.
-  rewrite div1r (mulrCA k'%:num) divff// mulr1.
-  rewrite {1}(splitr e) addrK.
-  have: ball u (e / 2 / expR (k'%:num * t)) v.
+  have: ball u (e /  expR (k'%:num * t)) v.
     near: v.
-    have gt0 : 0 < e / 2 / expR (k'%:num * t) by rewrite !divr_gt0// expR_gt0.
+    have gt0 : 0 < e / expR (k'%:num * t) by rewrite !divr_gt0// expR_gt0.
     have [F/= mF Fu] := near_ball u _ gt0.
     red.
     red.
