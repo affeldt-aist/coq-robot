@@ -1481,7 +1481,26 @@ Proof.
 exact: (compact_containment_global_sol (K:=K)).
 Qed.
 
-
+Lemma global_solution_unique f f':   is_sol_obnd phi u0 a +oo%O f ->
+                                     is_sol_obnd phi u0 a +oo%O f' ->
+                                     {in `[a, +oo[%R, f =1 f'}.
+Proof.
+move => /sol_inftyP h1 /sol_inftyP h2 t tp.  
+apply: (@locally_cauchy_lipschitz_unique _ _ a (t+1) phi _ u0 f f') => //.
+- rewrite ltr_pwDr//.
+  by move : tp; rewrite in_itv/= => /andP[].
+- move => t0 at0 tt0.
+  have at1 : a < t+1 by apply (le_lt_trans at0).
+  have [r [k H]] := phi_locally_lipschitz at1 (f t0).
+  exists r, k => t' at'.
+  split;first by apply H; rewrite in_itv/=.
+  move => y Hy.
+  apply : continuous_subspaceT.
+  exact: phi_continuous.
+- move : tp.
+  rewrite !in_itv/= => /andP[-> _]/=.
+  by rewrite lerDl.
+Qed.
 End compact_global_solution.
 
 Lemma parameterized_integralN {R : realType}
