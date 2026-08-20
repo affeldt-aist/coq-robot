@@ -171,10 +171,10 @@ Let U := 'rV[R]_n.
 Variable phi : U -> U.
 
 Lemma sol_is_deriv_c0oP (D : R) (f : R -> U) (e : {posnum R}) :
-  is_sol_oo (fun=> phi) (f (- e%:num)) (- e%:num) D f ->
+  is_sol_cauchy_oo (fun=> phi) (f (- e%:num)) (- e%:num) D f ->
   sol_is_deriv_co (fun=> phi) 0 D f.
 Proof.
-move=> [_ H cf] t t0D; apply H; rewrite inE/=; apply: subset_itv t0D => //.
+move=> [_ [H cf]] t t0D; apply H; rewrite inE/=; apply: subset_itv t0D => //.
 by rewrite bnd_simp.
 Qed.
 
@@ -207,7 +207,7 @@ Let U := 'rV[R]_n.
 Variable phi : U -> U.
 
 Definition state_space (Init : set U) : set U :=
-  [set x | exists f D, [/\ f 0 \in Init, is_sol_oo (fun=> phi) (f 0) 0 D f &
+  [set x | exists f D, [/\ f 0 \in Init, is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f &
     exists2 t, t \in `[0, D[%R & x = f t]].
 
 End state_space.
@@ -218,7 +218,7 @@ Let U := 'rV[R]_n.
 Variable phi : U -> U.
 
 Definition is_equilibrium_point (x : U) :=
-   sol_is_deriv_cy (fun=> phi) 0 (cst x).
+   sol_is_deriv (fun=> phi) `[0, +oo[%R (cst x).
 
 (* Lemma equilibrium_point_in_state_space (Init : set U) : *)
 (*   is_equilibrium_point Init `<=` state_space phi Init. *)
@@ -250,7 +250,7 @@ Variable Init : set U.
 
 Definition is_stable_at (x : U) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
-  forall f D, f 0 \in Init -> is_sol_oo (fun=> phi) (f 0) 0 D f ->
+  forall f D, f 0 \in Init -> is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
     `| f 0 - x | < d -> forall t, t \in `[0, D[%R -> `| f t - x | < eps.
 
 (* assuming solution exists for all time *)
@@ -393,7 +393,7 @@ Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
 Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis DV_le0 : forall D f, f 0 \in Init ->
-  is_sol_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 (* khalil theorem 4.1 *)
@@ -449,7 +449,7 @@ have Omega_beta_Br : Omega_beta `<=` (B r)°.
     by have := lt_le_trans beta_alpha (le_trans alphaVy Vybeta); rewrite ltxx.
 (* any trajectory starting in Omega_beta at t = 0
    stays in Omega_beta for all t >= 0 *)
-have Df_Omega_beta D f : f 0 \in Init -> is_sol_oo (fun=> phi) (f 0) 0 D f ->
+have Df_Omega_beta D f : f 0 \in Init -> is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
    f 0 \in Omega_beta -> forall t, t \in `[0, D[%R -> f t \in Omega_beta.
   move=> f0 solf f0_Omega.
   have /= V_nincr_consequence t : t \in `]0, D[%R -> forall u, 0 <= u <= t ->
@@ -457,8 +457,8 @@ have Df_Omega_beta D f : f 0 \in Init -> is_sol_oo (fun=> phi) (f 0) 0 D f ->
     move=> /= t0D u ut Vle0l; apply/andP; split.
     - move: f0_Omega; rewrite inE /Omega_beta/= => -[Brphi0 Vphi0beta].
       apply: (@V_nincr _ _ D f).
-      + by move=> t' t'0D; have [_ d _] := solf; apply d.
-      + have [_ _ solc] := solf.
+      + by move=> t' t'0D; have [_ [d _]] := solf; apply d.
+      + have [_ [_ solc]] := solf.
         apply /continuous_subspaceW/solc; rewrite closure_itvoo.
           by rewrite (itvP t0D).
         by apply: subset_itvl; rewrite bnd_simp.
@@ -484,7 +484,7 @@ have Df_Omega_beta D f : f 0 \in Init -> is_sol_oo (fun=> phi) (f 0) 0 D f ->
     have norm_phi_cont : {within `[0, t]%classic, continuous (normr \o f)}.
       apply/(@within_continuous_comp _ _ _ `[0, t] f (@normr _ _)) => //.
         by move=> z _; exact: norm_continuous.
-      have [_ _ cont] := solf.
+      have [_ [_ cont]] := solf.
       apply/continuous_subspaceW/cont.
       rewrite closure_itvoo.
         by rewrite (itvP t0D).
@@ -590,13 +590,14 @@ rewrite subrK derive1E deriveB/=.
 by rewrite derive_cst subr0 -derive1E; apply H.
 Qed.
 
-Lemma is_sol_oo_substitution D f x :
- is_sol_oo (fun=> phi) (f 0) 0 D f ->
- is_sol_oo (fun _ y => phi (y + x)) (f 0 - x) 0 D (f \- cst x).
+Lemma is_sol_cauchy_oo_substitution D f x :
+ is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+ is_sol_cauchy_oo (fun _ y => phi (y + x)) (f 0 - x) 0 D (f \- cst x).
 Proof.
-move=> /= [init sol cont ]; split.
+move=> /= [init [sol cont]]; split.
 - by [].
 - split.
+  split.
   + apply: derivableB.
       by apply sol.
     by [].
@@ -620,7 +621,7 @@ rewrite -[_ - _]subr0.
 rewrite -[f t - x]/((f \- cst x) t).
 apply: (H _ D) => /=.
 - exact/image_f.
-- exact: is_sol_oo_substitution.
+- exact: is_sol_cauchy_oo_substitution.
 - by rewrite /= subr0.
 - assumption.
 Qed.
@@ -675,7 +676,7 @@ Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis V'_le0 : forall D (f : R -> U),
   f 0 \in Init ->
-  is_sol_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 Theorem Lyapunov_stability :
@@ -703,7 +704,7 @@ apply: (@Lyapunov_stability0 _ _ _ _ openA' _ (fun y => V (y + x))) => //.
     rewrite derive_along_derive.
       exact: differentiable_comp.
       apply/derivable1_diffP.
-      have [_ d _] := solp.
+      have [_ [d _]] := solp.
       apply d.
       by apply: subset_itvr t0D; rewrite bnd_simp.
     have -> : (fun y => V (y + x)) \o sol = V \o (+%R^~ x \o sol).
@@ -712,7 +713,7 @@ apply: (@Lyapunov_stability0 _ _ _ _ openA' _ (fun y => V (y + x))) => //.
       exact: differentiable_comp.
       apply: differentiable_comp => //.
       apply/derivable1_diffP.
-      have [_ d _] := solp.
+      have [_ [d _]] := solp.
       apply d.
       by apply: subset_itvr t0D; rewrite bnd_simp.
     by [].
@@ -722,7 +723,8 @@ apply: (@Lyapunov_stability0 _ _ _ _ openA' _ (fun y => V (y + x))) => //.
     by rewrite subrK.
   - split => /=.
     by [].
-    have [_ d _] := solp.
+    have [_ [d _]] := solp.
+    split.
     move=> /= z z0D; split.
       apply/derivable1_diffP/differentiable_comp => //.
       apply/derivable1_diffP.
@@ -735,7 +737,7 @@ apply: (@Lyapunov_stability0 _ _ _ _ openA' _ (fun y => V (y + x))) => //.
     move => x0 x0p.
     apply: continuousD => //.
     apply: cst_continuous.
-    by have [_ _ +] := solp.
+    by have [_ [_ +]] := solp.
 by have /= := @is_Lyapunov_candidate_substitution R n A V _ VInitx.
 Qed.
 
