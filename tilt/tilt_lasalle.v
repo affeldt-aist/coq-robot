@@ -237,10 +237,10 @@ rewrite /Tilt.Upsilon1.
 Abort.
 
 Let solP' y0 : y0 \in Tilt.Upsilon1 ->
-  exists sol, is_sol_cauchy (fun => phi) y0 0 (BInfty K false) sol /\ (h^-1 *: (sol h - sol 0)) @[h --> 0^'+] --> phi (sol 0).
+  exists sol, is_sol_cauchy (fun => phi) 0 +oo%O y0 sol /\ (h^-1 *: (sol h - sol 0)) @[h --> 0^'+] --> phi (sol 0).
 Proof.
 move=> y0Upsilon1.
-suff [sol [solP1 solP2]]:  exists sol, is_sol_cauchy (fun => phi) y0 0 (BInfty K false) sol /\ (h^-1 *: (sol (0+h) - sol 0)) @[h --> 0^'+] --> phi (sol 0).
+suff [sol [solP1 solP2]]:  exists sol, is_sol_cauchy (fun => phi) 0 +oo%O y0 sol /\ (h^-1 *: (sol (0+h) - sol 0)) @[h --> 0^'+] --> phi (sol 0).
   move : solP2;under eq_fun do rewrite add0r;move=>solP2.
   by exists sol.
   apply: (compact_global_solution (K:=sublevelUpsilon1 y0)) => /=.
@@ -279,7 +279,7 @@ Qed.
 Lemma solP : exists sol, (forall p, sol p 0 = p) /\  forall y, y 0 \in Tilt.Upsilon1 ->
   (lasalle.is_sol phi y <-> y = sol (y 0)).
 Proof.
-have /choice [sol0 sol0P ] : forall y0, exists sol, sol 0 = y0 /\ (y0 \in Tilt.Upsilon1 -> is_sol_cauchy (fun => phi) y0 0 +oo%O sol /\ (h^-1 *: (sol h - sol 0)) @[h --> 0^'+] --> phi (sol 0)).
+have /choice [sol0 sol0P ] : forall y0, exists sol, sol 0 = y0 /\ (y0 \in Tilt.Upsilon1 -> is_sol_cauchy (fun => phi) 0 +oo%O y0 sol /\ (h^-1 *: (sol h - sol 0)) @[h --> 0^'+] --> phi (sol 0)).
   move => y0.
   case hy : (y0 \in Tilt.Upsilon1); last by exists (fun t => y0);split.
   have [sol [solp solpr]]:= (solP' hy).
@@ -381,9 +381,8 @@ move /(_ _ t0) => h.
 move: t0.
 rewrite le_eqVlt.
 move/orP => [/eqP <-| tp]; first by have [-> _] := (sol0P (y 0)).
-have hs : is_sol_cauchy_oo (fun => phi) (sol0 (y 0) 0) 0 t (sol0 (y 0)).
-  split.
-    by [].
+have hs : is_sol_cauchy_oo (fun => phi) 0 t (sol0 (y 0) 0) (sol0 (y 0)).
+  split; first reflexivity.
   split.
     move => t0 t0t.
     apply sol0P => //.
@@ -442,7 +441,8 @@ split.
 by rewrite derive1E; apply H.
 Qed.
 
-Let isSol_oo p t : p \in Tilt.Upsilon1 -> is_sol_cauchy_oo (fun => phi) (sol p 0) 0 t (sol p).
+Let isSol_oo p t : p \in Tilt.Upsilon1 ->
+  is_sol_cauchy_oo (fun => phi) 0 t (sol p 0) (sol p).
 Proof.
 move => ph.
 split.

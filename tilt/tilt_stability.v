@@ -166,21 +166,20 @@ Definition derive_along_partial {R : realType} n (V : 'rV[R]_n -> R)
   \sum_(i < n) (partial V (a t) i * ('D_1 a t) ``_ i).
 
 Section ode.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variable phi : U -> U.
 
 Lemma sol_is_deriv_c0oP (D : R) (f : R -> U) (e : {posnum R}) :
-  is_sol_cauchy_oo (fun=> phi) (f (- e%:num)) (- e%:num) D f ->
+  is_sol_cauchy_oo (fun=> phi) (- e%:num) D (f (- e%:num)) f ->
   sol_is_deriv_co (fun=> phi) 0 D f.
 Proof.
 move=> [_ [H cf]] t t0D; apply H; rewrite inE/=; apply: subset_itv t0D => //.
 by rewrite bnd_simp.
 Qed.
 
-(* "global" solution *)
+(* "global" solution *) (* TODO: move elsewhere? *)
 Definition sol_is_deriv_c0y (f : R -> U) :=
-  sol_is_deriv_cbnd (fun=> phi) 0 (BInfty R false) f.
+  sol_is_deriv_cbnd (fun=> phi) 0 +oo%O f.
 
 (* TODO: generalize this lemma *)
 Lemma sol_is_deriv_c0yP (f : R -> U) : sol_is_deriv_c0y f <->
@@ -202,19 +201,18 @@ Qed.
 End ode.
 
 Section state_space.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variable phi : U -> U.
 
 Definition state_space (Init : set U) : set U :=
-  [set x | exists f D, [/\ f 0 \in Init, is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f &
+  [set x | exists f D, [/\ f 0 \in Init,
+                           is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f &
     exists2 t, t \in `[0, D[%R & x = f t]].
 
 End state_space.
 
 Section equilibrium_point.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variable phi : U -> U.
 
 Definition is_equilibrium_point (x : U) :=
@@ -243,14 +241,13 @@ Qed.
 End equilibrium_point.
 
 Section stability.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variable phi : U -> U.
 Variable Init : set U.
 
 Definition is_stable_at (x : U) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
-  forall f D, f 0 \in Init -> is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  forall f D, f 0 \in Init -> is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
     `| f 0 - x | < d -> forall t, t \in `[0, D[%R -> `| f t - x | < eps.
 
 (* assuming solution exists for all time *)
@@ -378,8 +375,7 @@ Unshelve. all: by end_near. Qed.
 End sphere.
 
 Section Lyapunov_stability.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.+1.
+Context {R : realType} {n} (U := 'rV[R]_n.+1).
 Variable phi : U -> U.
 Variable A : set U.
 Hypothesis openA : open A.
@@ -393,7 +389,7 @@ Proof. by move=> r0; rewrite /B -closed_ballE. Qed.
 Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis DV_le0 : forall D f, f 0 \in Init ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 (* khalil theorem 4.1 *)
@@ -449,7 +445,8 @@ have Omega_beta_Br : Omega_beta `<=` (B r)°.
     by have := lt_le_trans beta_alpha (le_trans alphaVy Vybeta); rewrite ltxx.
 (* any trajectory starting in Omega_beta at t = 0
    stays in Omega_beta for all t >= 0 *)
-have Df_Omega_beta D f : f 0 \in Init -> is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+have Df_Omega_beta D f : f 0 \in Init ->
+   is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
    f 0 \in Omega_beta -> forall t, t \in `[0, D[%R -> f t \in Omega_beta.
   move=> f0 solf f0_Omega.
   have /= V_nincr_consequence t : t \in `]0, D[%R -> forall u, 0 <= u <= t ->
@@ -591,22 +588,20 @@ by rewrite derive_cst subr0 -derive1E; apply H.
 Qed.
 
 Lemma is_sol_cauchy_oo_substitution D f x :
- is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
- is_sol_cauchy_oo (fun _ y => phi (y + x)) (f 0 - x) 0 D (f \- cst x).
+ is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
+ is_sol_cauchy_oo (fun _ y => phi (y + x)) 0 D (f 0 - x) (f \- cst x).
 Proof.
 move=> /= [init [sol cont]]; split.
-- by [].
+- reflexivity.
 - split.
-  split.
-  + apply: derivableB.
-      by apply sol.
-    by [].
-  + rewrite subrK derive1E deriveB/=; first by apply sol.
-    by [].
-    by rewrite derive_cst subr0 -derive1E; apply sol.
-  + apply : within_continuousB => //.
-    apply: continuous_subspaceT.
-    exact: cst_continuous.
+  + split.
+    * apply: derivableB.
+        by apply sol.
+      by [].
+    * rewrite subrK derive1E deriveB/=; first by apply sol.
+        by [].
+      by rewrite derive_cst subr0 -derive1E; apply sol.
+  + by apply : within_continuousB => //; exact: cst_within_continuous.
 Qed.
 
 Lemma is_stable_at_substitution x :
@@ -665,8 +660,7 @@ Qed.
 End is_equilibrium_point_change_of_variables.
 
 Section Lyapunov_stability.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.+1.
+Context {R : realType} {n} (U := 'rV[R]_n.+1).
 Variable phi : U -> U.
 Variable A : set U.
 Hypothesis openA : open A.
@@ -676,7 +670,7 @@ Variable V : U -> R.
 Hypothesis Vdiff : forall t : U, differentiable V t.
 Hypothesis V'_le0 : forall D (f : R -> U),
   f 0 \in Init ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.
 
 Theorem Lyapunov_stability :
@@ -721,23 +715,22 @@ apply: (@Lyapunov_stability0 _ _ _ _ openA' _ (fun y => V (y + x))) => //.
   - rewrite inE/=.
     move: sol0Init; rewrite inE/= => -[x0 x0Init <-].
     by rewrite subrK.
-  - split => /=.
-    by [].
+  - split => /=; first reflexivity.
     have [_ [d _]] := solp.
     split.
-    move=> /= z z0D; split.
-      apply/derivable1_diffP/differentiable_comp => //.
-      apply/derivable1_diffP.
+    + move=> /= z z0D; split.
+        apply/derivable1_diffP/differentiable_comp => //.
+        apply/derivable1_diffP.
+        by apply d.
+      rewrite derive1E deriveD/=; first by apply d.
+        by [].
+      rewrite derive_cst addr0 -derive1E.
       by apply d.
-    rewrite derive1E deriveD/=; first by apply d.
-    by [].
-    rewrite derive_cst addr0 -derive1E.
-    by apply d.
-    apply: within_continuous_comp.
-    move => x0 x0p.
-    apply: continuousD => //.
-    apply: cst_continuous.
-    by have [_ [_ +]] := solp.
+    + apply: within_continuous_comp.
+      * move => x0 x0p.
+        apply: continuousD => //.
+        exact: cst_continuous.
+    + exact: solp.2.2.
 by have /= := @is_Lyapunov_candidate_substitution R n A V _ VInitx.
 Qed.
 

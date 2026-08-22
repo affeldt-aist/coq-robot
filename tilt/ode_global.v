@@ -18,35 +18,20 @@ Import numFieldNormedType.Exports.
 Open Scope ring_scope.
 Open Scope classical_set_scope.
 
-(* TODO: mv *)
-Lemma closure_neitv_coo {R : realType} (a : R) :
-  closure `]a, +oo[%classic = `[a, +oo[%classic.
-Proof.
-set x := a + 1.
-have -> : (`]a, +oo[ = `]a, x[ `|` `[x, +oo[)%classic.
-  by apply: itv_bndbnd_setU => //; rewrite bnd_simp ltrDl.
-rewrite closureU -((closure_id _).1 (@rray_closed _ _ _)).
-rewrite closure_itvoo; first by rewrite ltrDl.
-rewrite -(setUitv1 true) ?bnd_simp; first by rewrite lerDl.
-rewrite -setUA [[set x] `|` _]setUidr.
-  by rewrite -set_itv1; apply: subset_itvl.
-apply/esym.
-by apply: itv_bndbnd_setU => //; rewrite bnd_simp lerDl.
-Qed.
-
-Lemma safe_dist_rho_le {R : realType} {n : nat} phi (a b : R) k (u0 : 'rV[R]_n) r rho rho': 0 < k -> rho%:num <= rho'%:num -> safe_dist phi a b k u0 r rho <= safe_dist phi a b k u0 r rho'.
+Lemma safe_dist_rho_le {R : realType} {n} phi (a b : R) k (u0 : 'rV[R]_n) r rho rho' : 0 < k ->
+  rho <= rho' ->
+  safe_dist phi a b u0 r k rho <= safe_dist phi a b u0 r k rho'.
 Proof.
 move => k0 rhorho'.
 by rewrite unlock/=!le_min !ge_min !lexx /= !orbT /= ler_pdivlMr // ler_pM2r ?rhorho' ?orbT// invr_gt0.
 Qed.
 
-
 Lemma is_sol_cauchy_oo_rev {R : realType} {n : nat}
     (phi : R -> 'rV[R]_n -> 'rV[R]_n)
     (a b : R) (f : R -> 'rV[R]_n) :
   a < b ->
-  is_sol_cauchy_oo phi (f a) a b f ->
-  is_sol_cauchy_oo (fun t x => - phi (- t) x) (f b) (- b) (- a) (f \o -%R).
+  is_sol_cauchy_oo phi a b (f a) f ->
+  is_sol_cauchy_oo (fun t x => - phi (- t) x) (- b) (- a) (f b) (f \o -%R).
 Proof.
 move => ab [_ [hd]].
 split => /=; first by rewrite opprK.
@@ -81,13 +66,14 @@ Lemma is_sol_cauchy_oo_rev_iff {R : realType} {n : nat}
     (phi : R -> 'rV[R]_n -> 'rV[R]_n)
     (a b : R) (f : R -> 'rV[R]_n) :
   a < b ->
-  is_sol_cauchy_oo phi (f a) a b f <->
-  is_sol_cauchy_oo (fun t x => - phi (- t) x) (f b) (- b) (- a) (f \o -%R).
+  is_sol_cauchy_oo phi a b (f a) f <->
+  is_sol_cauchy_oo (fun t x => - phi (- t) x) (- b) (- a) (f b) (f \o -%R).
 Proof.
-move => ab.
+move=> ab.
 split; first by apply is_sol_cauchy_oo_rev.
 move => h.
-suff : is_sol_cauchy_oo (fun t x => - - (phi (- - t) x)) ((f \o -%R) (- a)) (- - a) (- - b) ((f \o -%R) \o -%R).
+suff : is_sol_cauchy_oo (fun t x => - - (phi (- - t) x)) (- - a) (- - b)
+    ((f \o -%R) (- a)) ((f \o -%R) \o -%R).
   rewrite /= !opprK.
   have -> : ((f \o -%R) \o -%R) = f by rewrite -compA; apply/funext=> x; rewrite /= opprK.
   suff -> : (fun t x => - - (phi (- - t) x)) = phi by [].
@@ -235,8 +221,7 @@ by rewrite subr_ge0.
 Qed.
 
 (* where is this needed? *)
-Lemma is_integral_sol_lipschitz :
-  is_integral_sol phi u0 a b sol ->
+Lemma is_integral_sol_lipschitz : is_integral_sol phi a b u0 sol ->
   forall s t,
     s \in `[a, b]%R ->
     t \in `[s, b]%R ->
@@ -359,7 +344,8 @@ Qed.
 (* (* solution on max interval [a, b) *) *)
 (* Hypothesis is_integral_sol_co : forall b', b' \in `[a,b[%R -> is_integral_sol phi u0 a b' sol. *)
 
-Hypothesis sol_oo : forall b', b' \in `[a,b[%R -> is_sol_cauchy_oo phi u0 a b' sol.
+Hypothesis sol_oo : forall b', b' \in `[a,b[%R ->
+  is_sol_cauchy_oo phi a b' u0 sol.
 
 (* limit at the right boundary is u1 and u1 is in safe area *)
 Hypothesis has_left_limit : sol @ b^'- --> u1.
@@ -432,7 +418,7 @@ Qed.
 
 Let sol_extended0 := (patch sol [set b] (cst u1)).
 
-Lemma sol_extends_pt : is_sol_cauchy_oo phi u0 a b sol_extended0.
+Lemma sol_extends_pt : is_sol_cauchy_oo phi a b u0 sol_extended0.
 Proof.
 rewrite /sol_extended0.
 split; first by rewrite patchC // in_setC in_set1 lt_eqF //.
@@ -475,15 +461,16 @@ apply/continuous_within_itvP => //; split.
  Unshelve. all: by end_near. Qed.
 
 (* Local Notation safe_dist := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho). *)
-Local Notation safe_dist_fwd := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho).
-Local Notation safe_dist := (@safe_dist_sym R n phi k  u1 r a c b).
+Local Notation safe_dist_fwd := (@safe_dist R n phi b c (r%:num / 2)%:pos u1 k rho).
+Local Notation safe_dist := (@safe_dist_sym R n phi k u1 r a c b).
 
 Local Lemma bac : b \in `]a, c[%R.
 Proof. by rewrite in_itv /= ab bc. Qed.
 
 Let sol2 := cauchy_lipschitz_f_sym  k0 cont1 lip2 bac.
 
-Let sol2_sol : is_sol_cauchy_oo phi (sol2 (b-safe_dist)) (b-safe_dist) (b + safe_dist) sol2.
+Let sol2_sol : is_sol_cauchy_oo phi (b-safe_dist) (b + safe_dist)
+  (sol2 (b - safe_dist)) sol2.
 Proof. by apply cauchy_lipschitz_sym_oo. Qed.
 
 (* Let sol2_sol_fwd : is_sol_cauchy_oo phi (sol2 (b-safe_dist_fwd)) (b-safe_dist_fwd) (b + safe_dist_fwd) sol2. *)
@@ -546,7 +533,7 @@ rewrite /sol2 cauchy_lipschitz_sym_left /=; last first.
 Unshelve. all: by end_near. Qed.
 
 
-Lemma solution_extends : is_sol_cauchy_oo phi u0 a (b + safe_dist) sol_extended.
+Lemma solution_extends : is_sol_cauchy_oo phi a (b + safe_dist) u0 sol_extended.
 Proof.
 split; first by [].
 split; last first.
@@ -641,7 +628,7 @@ Hypothesis ab : a < b.
 Hypothesis bc : b < c.
 
 Hypothesis sol_oo :
-  forall b', b' \in `[a, b[%R -> is_sol_cauchy_oo phi u0 a b' sol.
+  forall b', b' \in `[a, b[%R -> is_sol_cauchy_oo phi a b' u0 sol.
 
 Variable k : R.
 Hypothesis k0 : 0 < k.
@@ -671,7 +658,8 @@ Qed.
 Local Notation sol_extended := (sol_extended sol ab bc k0 cont1 lip2 ).
 Local Notation safe_dist := (@safe_dist_sym R n phi k u1 r a c b).
 
-Lemma solution_extends_from_lipschitz : is_sol_cauchy_oo phi u0 a (b + safe_dist) sol_extended.
+Lemma solution_extends_from_lipschitz :
+  is_sol_cauchy_oo phi a (b + safe_dist) u0 sol_extended.
 Proof. by apply : solution_extends. Qed.
 
 End extend_from_lipschitz.
@@ -690,21 +678,18 @@ Hypothesis ab : a < b.
 Hypothesis bc : b < c.
 
 Hypothesis sol_oo :
-  forall b', b' \in `[a, b[%R -> is_sol_cauchy_oo phi u0 a b' sol.
+  forall b', b' \in `[a, b[%R -> is_sol_cauchy_oo phi a b' u0 sol.
 
 Hypothesis compactK : compact K.
 
-Hypothesis solK :
-  sol @` `[a, b[ `<=` K.
+Hypothesis solK : sol @` `[a, b[ `<=` K.
 
-
-Hypothesis phi_loc_lip :
-  forall y0, y0 \in K ->
-    exists r k : {posnum R}, 
-          {in `[a, c]%R, forall t,
-         k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)} /\
-         {in closed_ball y0 r%:num, forall y,
-            {within `[a, c], continuous phi ^~ y}}.
+Hypothesis phi_loc_lip : forall y0, y0 \in K ->
+  exists r k : {posnum R},
+    {in `[a, c]%R, forall t,
+      k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)} /\
+    {in closed_ball y0 r%:num, forall y,
+      {within `[a, c], continuous phi ^~ y}}.
 
 (* should be derivable from the previous *)
 Hypothesis phi_cont :
@@ -712,7 +697,6 @@ Hypothesis phi_cont :
     continuous (fun p : (R * U)%type => phi p.1 p.2)}.
 
 Let u1 :=  lim (sol @ b^'-).
-
 
 Lemma rhs_bounded_on_solution :
   bounded_set [set `| phi t (sol t) | | t in `[a, b[].
@@ -809,10 +793,10 @@ Unshelve. all: by end_near. Qed.
 
 Lemma solution_extends_from_compact :
   exists d : {posnum R}, exists sol' : R -> U,
-    is_sol_cauchy_oo phi u0 a (b + d%:num) sol' /\
+    is_sol_cauchy_oo phi a (b + d%:num) u0 sol' /\
     {in `[a, b[%R, sol =1 sol'}.
 Proof.
-have [r [k [lip2 cont1]]]:= (phi_loc_lip  left_limit_in_K).
+have [r [k [lip2 cont1]]] := phi_loc_lip left_limit_in_K.
 have k0 : 0 < k%:num by [].
 exists (PosNum (safe_dist_sym_gt0 phi u1 r ab bc k0)).
 exists (sol_extended sol ab bc k0 cont1 lip2).
@@ -976,9 +960,8 @@ by near: t; rewrite near_withinE;apply: filterS c1.
 by near:t;exact: c2.
 Unshelve. all: end_near. Qed.
 
-
-
-Definition bset := [set b | b >= a /\ exists sol, is_sol_cauchy_oo phi u0 a b sol].
+Definition bset :=
+  [set b | b >= a /\ exists sol, is_sol_cauchy_oo phi a b u0 sol].
 
 Let rho : {posnum R} := 2^-1%:pos.
 
@@ -993,11 +976,11 @@ have lip1: {in `[a, a + 1]%R, forall x , k%:num.-lipschitz_(closed_ball u0 r%:nu
 have cont1 : {in closed_ball u0 r%:num, forall y : 'rV_n, {within `[a, a + 1], continuous phi^~ y}}.
   by move => x xb; apply: continuous_subspaceT; apply c1.
 have k0 : 0 < k%:num by [].
-exists (a+safe_dist phi a (a+1) k%:num u0 (r%:num/2)%:pos rho).
+exists (a+safe_dist phi a (a + 1) u0 (r%:num / 2) k%:num rho%:num).
 split; last by rewrite ltDl_safe_dist.
 split; first by rewrite leDl_safe_dist.
 exists  (cauchy_lipschitz_f a1 k0 lip1 cont1 rho1).
-apply: is_sol_cauchy_lipschitz_f.
+exact: is_sol_cauchy_lipschitz_f.
 Qed.
 
 Lemma bset_nonempty : bset !=set0.
@@ -1006,7 +989,8 @@ have [x [bx ax]]:= bset_min.
 by exists x.
 Qed.
 
-Lemma is_sol_empty sol b : b <= a ->sol a = u0 -> is_sol_cauchy_oo phi u0 a b sol.
+Lemma is_sol_empty sol b : b <= a -> sol a = u0 ->
+  is_sol_cauchy_oo phi a b u0 sol.
 Proof.
 move => ba sol0.
 split.
@@ -1023,7 +1007,8 @@ split.
 Qed.
 
 Lemma sol_inftyP sol :
-  is_sol_cauchy phi u0 a +oo%O sol <-> (forall b, is_sol_cauchy_oo phi u0 a b sol).
+  is_sol_cauchy phi a +oo%O u0 sol <->
+  (forall b, is_sol_cauchy_oo phi a b u0 sol).
 Proof.
 split.
 - move => [h1 [h2 h3]] b.
@@ -1036,38 +1021,32 @@ split.
     apply/continuous_subspaceW/h3/closureS.
     exact: subset_itvl.
 - move => h; split.
-  by apply h.
+    by apply h.
   split.
     move => t tab.
     apply (h (t+1)).
     move : tab.
     by rewrite /=!in_itv/= ltrDl ltr01 => /andP[-> _].
-  rewrite closure_neitv_coo.
-  apply/continuous_within_itvcyP.
-  split=>//.
-   move => /= t tab.
-    have at1: a < t+1.
-      move: tab.
-      rewrite /=in_itv/= => /andP[/lt_trans+ _].
-      apply.
-      by rewrite ltrDl.
+  rewrite closure_neitv_oy; apply/continuous_within_itvcyP.
+  split.
+    move => /= t tab.
     have := (h (t + 1)).2.2.
-    rewrite closure_itvoo => //.
-    move /(continuous_within_itvP _ at1) => [+ _ _].
+    have at1 : a < t + 1 by rewrite ltr_wpDr// (itvP tab).
+    rewrite closure_itvoo//.
+    move=> /(continuous_within_itvP _ at1)[+ _ _].
     apply.
-    move : tab.
-    by rewrite !in_itv/= ltrDl => /andP[-> _]/=.
+    by rewrite in_itv/= ltrDl ltr01 (itvP tab).
   have := (h (a + 1)).2.2.
   rewrite closure_itvoo.
     by rewrite ltrDl.
   move/continuous_within_itvP.
-  rewrite ltrDl.
-  move=> /(_ ltr01).
+  rewrite ltrDl => /(_ ltr01).
   by case => [_ + _].
 Qed.
 
 Lemma solt_eq sol1 sol2 b : a < b ->
-  {in `[a,b], sol1 =1 sol2} -> is_sol_cauchy_oo phi u0 a b sol1 -> is_sol_cauchy_oo phi u0 a b sol2.
+  {in `[a,b], sol1 =1 sol2} -> is_sol_cauchy_oo phi a b u0 sol1 ->
+  is_sol_cauchy_oo phi a b u0 sol2.
 Proof.
 move => ab hs [init [solp1 solp2]].
 split.
@@ -1099,57 +1078,59 @@ split.
   by rewrite closure_itvoo.
 Unshelve. all: by end_near. Qed.
 
-Lemma all_sols_global_sol : (forall b, exists sol, is_sol_cauchy_oo phi u0 a b sol) ->  exists sol, is_sol_cauchy phi u0 a (BInfty R false) sol.
+Lemma all_sols_global_sol :
+  (forall b, exists sol, is_sol_cauchy_oo phi a b u0 sol) ->
+  exists sol, is_sol_cauchy phi a +oo%O u0 sol.
 Proof.
-  move => H.
-  have [solt soltp] := (choice H).
-  exists (fun t => solt (t+1) t).
-  apply /sol_inftyP.
-  move => b /=.
-  have [ab | ba]:= ltP a b; last first.
-    split; first by apply soltp.
-    split.
-      move => t.
-      rewrite in_itv/= => /andP[h1 h2].
-      have h3:= lt_trans h1 h2.
-      have := le_lt_trans ba h3.
-      by rewrite ltxx.
-    rewrite set_itv_ge; first by rewrite -leNgt bnd_simp.
-    rewrite closure0.
-    exact: continuous_subspace0.
-  suff heq : {in `[a,b],  solt b =1 (fun t => solt (t+1) t) }.
-    by apply (solt_eq ab heq).
-  move => t tab.
-  have at1 : a < (t+1).
-    move : tab.
-    rewrite !inE/=!in_itv/=  => /andP[h _].
-    apply: (le_lt_trans h).
-    by rewrite ltrDl.
-  suff -> : solt b t = solt (maxr (t+1) b) t.
-    apply: (locally_cauchy_lipschitz_unique  at1 _ (u0 := u0) ).
-    have <- :  solt (maxr (t+1) b) a = u0.
-      by apply (soltp (maxr (t+1) b)).
-    apply /is_sol_cauchy_oo_subset/(soltp _) => //=.
-      by rewrite le_max lexx.
-    done.
-    move => t0 at0 t0t.
-    have [r [k [l1 c1]]] := phi_local_conds at1 (solt (maxr (t + 1) b) t0).
-    exists r, k => t' at'; split => //=.
-    exact: l1 t' at'.
-    by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
-    move : tab.
-    by rewrite inE/=!in_itv/= lerDl ler01 => /andP[-> _].
-    apply: (locally_cauchy_lipschitz_unique  ab (u0 := u0) ) => /=.
-    exact: soltp.
-    have <- :  solt (maxr (t+1) b) a = u0.
-      by apply (soltp (maxr (t+1) b)).
-    apply /is_sol_cauchy_oo_subset/(soltp _) => //=.
-   by rewrite le_max lexx;apply /orP;right.
-    move => t0 at0 t0t.
-    have [r [k [l1 c1]]] := (phi_local_conds ab (solt b t0)). 
-    exists r, k => t' at'; split => //=.
-    exact: l1 t' at'.
-    by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
+move => H.
+have [solt soltp] := (choice H).
+exists (fun t => solt (t+1) t).
+apply /sol_inftyP.
+move => b /=.
+have [ab | ba]:= ltP a b; last first.
+  split; first by apply soltp.
+  split.
+    move => t.
+    rewrite in_itv/= => /andP[h1 h2].
+    have h3:= lt_trans h1 h2.
+    have := le_lt_trans ba h3.
+    by rewrite ltxx.
+  rewrite set_itv_ge; first by rewrite -leNgt bnd_simp.
+  rewrite closure0.
+  exact: continuous_subspace0.
+suff heq : {in `[a,b],  solt b =1 (fun t => solt (t+1) t) }.
+  by apply (solt_eq ab heq).
+move => t tab.
+have at1 : a < (t+1).
+  move : tab.
+  rewrite !inE/=!in_itv/=  => /andP[h _].
+  apply: (le_lt_trans h).
+  by rewrite ltrDl.
+suff -> : solt b t = solt (maxr (t+1) b) t.
+  apply: (locally_cauchy_lipschitz_unique  at1 _ (u0 := u0) ).
+  have <- :  solt (maxr (t+1) b) a = u0.
+    by apply (soltp (maxr (t+1) b)).
+  apply /is_sol_cauchy_oo_subset/(soltp _) => //=.
+    by rewrite le_max lexx.
+  done.
+  move => t0 at0 t0t.
+  have [r [k [l1 c1]]] := phi_local_conds at1 (solt (maxr (t + 1) b) t0).
+  exists r, k => t' at'; split => //=.
+  exact: l1 t' at'.
+  by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
+  move : tab.
+  by rewrite inE/=!in_itv/= lerDl ler01 => /andP[-> _].
+  apply: (locally_cauchy_lipschitz_unique  ab (u0 := u0) ) => /=.
+  exact: soltp.
+  have <- : solt (maxr (t + 1) b) a = u0.
+    by apply (soltp (maxr (t+1) b)).
+  apply /is_sol_cauchy_oo_subset/(soltp _) => //=.
+  by rewrite le_max lexx orbT.
+  move => t0 at0 t0t.
+  have [r [k [l1 c1]]] := phi_local_conds ab (solt b t0).
+  exists r, k => t' at'; split => //=.
+  exact: l1 t' at'.
+  by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
 by move : tab;rewrite inE.
 Qed.
 
@@ -1172,10 +1153,12 @@ apply (lt_le_trans ax).
 by apply sup_upper_bound.
 Qed.
 
-Lemma max_sol : has_sup bset -> exists sol,  forall b, b < sup bset -> is_sol_cauchy_oo phi u0 a b sol.
+Lemma max_sol : has_sup bset ->
+  exists sol, forall b, b < sup bset -> is_sol_cauchy_oo phi a b u0 sol.
 Proof.
 move => hs.
-have /choice [solt soltp]: forall b, exists sol,b < sup bset -> is_sol_cauchy_oo phi u0 a b sol.
+have /choice[solt soltp] :
+    forall b, exists sol,b < sup bset -> is_sol_cauchy_oo phi a b u0 sol.
   move => b.
   have [ab0 | ba0]:= ltP a b; last first.
     exists (cst u0).
@@ -1242,7 +1225,7 @@ by move : tab;rewrite inE.
 Qed.
 
 Lemma no_ub_global_sol : ~ has_ubound bset ->
-  exists sol, is_sol_cauchy phi u0 a +oo%O sol.
+  exists sol, is_sol_cauchy phi a +oo%O u0 sol.
 Proof.
 move => h.
 apply all_sols_global_sol.
@@ -1276,13 +1259,14 @@ by rewrite ltW.
 Qed.
 
 Lemma compact_containment_no_sup :
-  (forall b sol, is_sol_cauchy_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) ->
-                                                  ~ has_sup bset.
+  (forall b sol, is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a,b[ `<=` K) ->
+  ~ has_sup bset.
 Proof.
 move => H Hsup.
 have [sol Hsol] := max_sol Hsup.
 suff [d [sol' [H1 _]]]:  exists (d : {posnum R}) (sol' : R -> 'rV_n),
-     is_sol_cauchy_oo phi u0 a (sup bset + d%:num) sol' /\ {in `[a, sup bset[%R, sol =1 sol'}.
+     is_sol_cauchy_oo phi a (sup bset + d%:num) u0 sol' /\
+     {in `[a, sup bset[%R, sol =1 sol'}.
   have Hb : bset (sup bset + d%:num).
     split; last by exists sol'.
     by rewrite ltW// (lt_le_trans  (asup_lt Hsup))// lerDl.
@@ -1316,17 +1300,17 @@ Qed.
 
 (* Thm 3.3 in Khalil *)
 Lemma compact_containment_global_sol :
-  (forall b sol, is_sol_cauchy_oo phi u0 a b sol -> sol @` `[a,b[ `<=` K) ->
-  exists sol, is_sol_cauchy phi u0 a (BInfty R false) sol /\ ( h^-1 *: (sol (a+h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
+  (forall b sol, is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a,b[ `<=` K) ->
+  exists sol, is_sol_cauchy phi a +oo%O u0 sol /\ ( h^-1 *: (sol (a+h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
 Proof.
 move => H.
-suff [sol [init [d cont]]] : exists sol, is_sol_cauchy phi u0 a (BInfty R false) sol.
-   have allsol : forall b, is_sol_cauchy_oo phi u0 a b sol .
+suff [sol [init [d cont]]] : exists sol, is_sol_cauchy phi a +oo%O u0 sol.
+   have allsol : forall b, is_sol_cauchy_oo phi a b u0 sol.
      by apply /sol_inftyP;split.
    exists sol; split=>//. 
    apply /cvgrPdist_le.
    move => eps eps0.
-   rewrite closure_neitv_coo in cont.
+   rewrite closure_neitv_oy in cont.
    have := cont.
    move /continuous_within_itvcyP => [_ cr].
    have a1 : a < a + 1 by rewrite ltrDl.
@@ -1473,28 +1457,24 @@ Hypothesis phi_locally_lipschitz :
       {in `[a, b]%R, forall t,
         k%:num.-lipschitz_(closed_ball x r%:num) (phi t)}.
 
-Hypothesis solutions_in_K :
-  forall b sol,
-    is_sol_cauchy_oo phi u0 a b sol ->
-    sol @` `[a, b[ `<=` K.
+Hypothesis solutions_in_K : forall b sol,
+  is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a, b[ `<=` K.
 
-Lemma compact_global_solution :
-  exists sol,
-    is_sol_cauchy phi u0 a  +oo%O sol /\
-    (h^-1 *: (sol (a + h) - sol a)) @[h --> 0^'+]
-      --> phi a (sol a).
+Lemma compact_global_solution : exists sol,
+  is_sol_cauchy phi a +oo%O u0 sol /\
+  (h^-1 *: (sol (a + h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
 Proof.
 exact: (compact_containment_global_sol (K:=K)).
 Qed.
 
-Lemma global_solution_unique f f':   is_sol_cauchy phi u0 a +oo%O f ->
-                                     is_sol_cauchy phi u0 a +oo%O f' ->
-                                     {in `[a, +oo[%R, f =1 f'}.
+Lemma global_solution_unique f f':
+  is_sol_cauchy phi a +oo%O u0 f ->
+  is_sol_cauchy phi a +oo%O u0 f' ->
+  {in `[a, +oo[%R, f =1 f'}.
 Proof.
-move => /sol_inftyP h1 /sol_inftyP h2 t tp.  
-apply: (@locally_cauchy_lipschitz_unique _ _ a (t+1) phi _ u0 f f') => //.
-- rewrite ltr_pwDr//.
-  by move : tp; rewrite in_itv/= => /andP[].
+move => /sol_inftyP h1 /sol_inftyP h2 t tp.
+apply: (@locally_cauchy_lipschitz_unique _ _ a (t + 1) phi _ u0 f f') => //.
+- by rewrite ltr_pwDr// (itvP tp).
 - move => t0 at0 tt0.
   have at1 : a < t+1 by apply (le_lt_trans at0).
   have [r [k H]] := phi_locally_lipschitz at1 (f t0).
@@ -1503,10 +1483,9 @@ apply: (@locally_cauchy_lipschitz_unique _ _ a (t+1) phi _ u0 f f') => //.
   move => y Hy.
   apply : continuous_subspaceT.
   exact: phi_continuous.
-- move : tp.
-  rewrite !in_itv/= => /andP[-> _]/=.
-  by rewrite lerDl.
+- by rewrite in_itv/= (itvP tp) lerDl ler01.
 Qed.
+
 End compact_global_solution.
 
 Lemma parameterized_integralN {R : realType}
@@ -1971,8 +1950,8 @@ Hypothesis (k0 : 0 < k)
   (lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)})
   (cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}).
 Variables y z : R -> U.
-Hypothesis soly : is_sol_cauchy_oo phi u0 a b y.
-Hypothesis solz : is_sol_cauchy_oo (phi \+ psi) v0 a b z.
+Hypothesis soly : is_sol_cauchy_oo phi a b u0 y.
+Hypothesis solz : is_sol_cauchy_oo (phi \+ psi) a b v0 z.
 Hypothesis By : y @` `[a, b] `<=` B.
 Hypothesis Bz : z @` `[a, b] `<=` B.
 Variable mu : R.
@@ -2000,14 +1979,14 @@ move=> tab.
 have k_neq0 : k != 0 by rewrite gt_eqF.
 have yint : forall t', t' \in `[a, b]%R -> y t' = u0 + \vint[lm]_(s in `[a, t']) phi s (y s).
   move=> t' t'ab.
-  suff: is_integral_sol phi u0 a b y.
+  suff: is_integral_sol phi a b u0 y.
     by move=> [<-]; apply.
   apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) k_neq0 ab) => //.
   case: soly => _ [_].
   by rewrite closure_itvoo. (* where we use By *)
 have zint : forall t, t \in `[a, b]%R -> z t = v0 + \vint[lm]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
   move=> t' t'ab.
-  suff: is_integral_sol (phi \+ psi) v0 a b z.
+  suff: is_integral_sol (phi \+ psi) a b v0 z.
     by move=> [-> ->].
   apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) k_neq0 ab).
   move=> x xab.
@@ -2308,27 +2287,23 @@ Qed.
 End thm34.
 
 Section continuous_dependence.
-
-
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
-Context (phi : R -> U -> U).
+Context {R : realType} {n : nat} (U := 'rV[R]_n) (phi : R -> U -> U).
 Context (a b : R) (ab : a < b).
-Variables (k : {posnum R})  (r : {posnum R}).
+Variables (k : {posnum R}) (r : {posnum R}).
 Variables (u0 v0 : U).
 Let B : set U := closed_ball u0 r%:num. 
 Hypothesis lip2 : {in `[a, b]%R, forall t, k%:num.-lipschitz_B (phi t)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Variables y z : R -> U.
-Hypothesis soly : is_sol_cauchy_oo phi u0 a b y.
-Hypothesis solz : is_sol_cauchy_oo phi v0 a b z.
+Hypothesis soly : is_sol_cauchy_oo phi a b u0 y.
+Hypothesis solz : is_sol_cauchy_oo phi a b v0 z.
 Hypothesis By : y @` `[a, b] `<=` B.
 Hypothesis Bz : z @` `[a, b] `<=` B.
 
 Let lm := @lebesgue_measure R.
 
 Lemma continuous_dependence t : t \in `[a, b] ->
-                               `|y t - z t| <= `|u0 - v0| * expR (k%:num * (t - a)).
+  `|y t - z t| <= `|u0 - v0| * expR (k%:num * (t - a)).
 Proof.
 move=>tab.
 have := @thm34 _ _ phi a b ab k%:num u0 v0 r _ lip2 cont1 _ _ soly _ By Bz 0.
@@ -2339,4 +2314,5 @@ rewrite !mul0r addr0.
 apply => //.
 by move => ? ? ? ?; rewrite normr0 lexx.
 Qed.
+
 End continuous_dependence.

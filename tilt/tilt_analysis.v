@@ -22,6 +22,22 @@ Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
 
 (* PR to MCA *)
+Lemma closure_neitv_oy {R : realType} (a : R) :
+  closure `]a, +oo[%classic = `[a, +oo[%classic.
+Proof.
+set x := a + 1.
+have -> : (`]a, +oo[ = `]a, x[ `|` `[x, +oo[)%classic.
+  by apply: itv_bndbnd_setU => //; rewrite bnd_simp ltrDl.
+rewrite closureU -((closure_id _).1 (@rray_closed _ _ _)).
+rewrite closure_itvoo; first by rewrite ltrDl.
+rewrite -(setUitv1 true) ?bnd_simp; first by rewrite lerDl.
+rewrite -setUA [[set x] `|` _]setUidr.
+  by rewrite -set_itv1; apply: subset_itvl.
+apply/esym.
+by apply: itv_bndbnd_setU => //; rewrite bnd_simp lerDl.
+Qed.
+
+(* PR to MCA *)
 Section continuous_patch.
 Context {R : realType} {n : nat} {U : normedModType R}.
 Variables (a b c : R) (f : R -> U) (g : R -> U).

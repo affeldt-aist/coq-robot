@@ -814,8 +814,7 @@ End V1.
 
 Section tilt_eqn_Lyapunov.
 Local Open Scope classical_set_scope.
-Context {R : realType}.
-Variables alpha1 gamma : R.
+Context {R : realType} (alpha1 gamma : R).
 Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
 Let phi := Tilt.eqn alpha1 gamma.
 Implicit Types f : R -> 'rV[R]_6.
@@ -824,7 +823,7 @@ Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
 Lemma derive_zp1 (D : R) t f :
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   t \in `]0, D[ -> 'D_1 (Left \o f) t = - alpha1 *: Left (f t).
 Proof.
 move=> /= deri /[!inE]/= t0D.
@@ -836,7 +835,7 @@ by rewrite derive_lsubmx.
 Qed.
 
 Lemma derive_z2 (D : R) z f :
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   z \in `]0, D[ -> 'D_1 (Right \o f) z =
   gamma *: (Right (f z) - Left (f z)) *m \S('e_2 - Right (f z)) ^+ 2.
 Proof.
@@ -849,7 +848,7 @@ Qed.
 Lemma is_sol_state_space_tilt (D : R) f t :
   t \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   Tilt.Upsilon1 (f t).
 Proof.
 move=> + f0 deriv_f.
@@ -866,7 +865,7 @@ Lemma enorm_e2z2 (D : R) f (z : R)
     (z2 := Right \o f) (zp1 := Left \o f) (u := 'e_2 - z2 z) :
   z \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f -> `|u|_e = 1.
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f -> `|u|_e = 1.
 Proof.
 move=> z0D sol0 sol_f.
 suff: Tilt.Upsilon1 (row_mx (zp1 z) (z2 z)).
@@ -880,7 +879,7 @@ Lemma angvel_sqr (D : R) (f : R -> 'rV_6) z
   (w := (z2 z) *m \S('e_2)) (u := 'e_2 - z2 z) :
   z \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   (w *m \S(u)) *d (w *m \S(u)) = (w *d w) * (u *d u) - (w *d u) ^+ 2.
 Proof.
 move=> z0D sol0 dtraj.
@@ -909,7 +908,7 @@ Qed.
 Lemma neg_spin (D : R) (f : R -> 'rV_6) z :
   z \in `[0, D[%R ->
   f 0 \in Tilt.Upsilon1 ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   `|Right (f z) *m \S('e_2) *m - \S('e_2 - Right (f z))|_e =
   `|Right (f z) *m \S('e_2)|_e.
 Proof.
@@ -935,7 +934,7 @@ Let c2 := 2^-1 / gamma.
 
 Lemma V1dotE z (D : R) (f : R -> 'rV_6)
   (zp1 := Left \o f) (z2 := Right \o f) :
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   z \in `]0, D[ ->
   V1dot (f z) =
     c1 *: (2 *: 'D_1 zp1 z *m (Left (f z))^T) 0 0 +
@@ -963,7 +962,7 @@ Qed.
 
 Lemma derive_along_V1 (D : R) t (f : R -> 'rV_6) :
   t \in `]0, D[ ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   (forall t, t \in `]0, D[ -> differentiable f t) ->
   'D~(f) (Tilt.V1 alpha1 gamma) t = V1dot (f t).
 Proof.
@@ -999,7 +998,7 @@ Definition u1 (f : R -> 'rV[R]_6) t
 Lemma V1dot_ub (D : R) (f : R -> 'rV[R]_6)
     (zp1 := Left \o f) (z2 := Right \o f) :
   f 0 \in Tilt.Upsilon1 ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   forall t, t \in `[0, D[%R ->
     V1dot (f t) <= (- (u1 f t) *m u2 *m (u1 f t)^T) 0 0.
 Proof.
@@ -1036,7 +1035,7 @@ Qed.
 
 Lemma V1dot_eq0_p1_or_p2 (D : R) (f : R -> 'rV[R]_6) t :
   f 0 \in Tilt.Upsilon1 ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   t \in `[0, D[%R ->
   V1dot (f t) = 0 ->
   f t = Tilt.point1 \/ f t = Tilt.point2.
@@ -1083,8 +1082,8 @@ Qed.
 
 Lemma derive_along_V1_le0 (D : R) (f : R -> 'rV_6) :
   f 0 \in Tilt.Upsilon1 ->
-  is_sol_cauchy_oo (fun=> phi) (f 0) 0 D f ->
-  (forall t, t \in `]0, D[%R -> differentiable f t) ->
+  is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
+  {in `]0, D[%R, forall t, differentiable f t} ->
   forall t, t \in `]0, D[%R ->
   'D~(f) (Tilt.V1 alpha1 gamma) t <= 0.
 Proof.
@@ -1117,8 +1116,7 @@ End tilt_eqn_Lyapunov.
 
 Section tilt_eqn_Lyapunov_global.
 Local Open Scope classical_set_scope.
-Context {R : realType}.
-Variables alpha1 gamma : R.
+Context {R : realType} (alpha1 gamma : R).
 Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
 Let phi := Tilt.eqn alpha1 gamma.
 
@@ -1208,9 +1206,9 @@ rewrite !derive_along_enorm_squared//=.
   exact: dif1.
 move: t0; rewrite le_eqVlt => /predU1P[<-//|t0].
   by rewrite V1dotE0// !invfM.
-have is_sol_oo_sol : is_sol_cauchy_oo (fun=> Tilt.eqn alpha1 gamma) (sol 0) 0 (t + 1) sol.
-  split.
-    by [].
+have is_sol_oo_sol : is_sol_cauchy_oo (fun=> Tilt.eqn alpha1 gamma) 0 (t + 1)
+    (sol 0) sol.
+  split; first reflexivity.
   split.
     rewrite /sol_is_deriv_obnd/= => t' t'0t1.
     apply: tilt_eqnx.
@@ -1241,13 +1239,13 @@ move => t t0.
 rewrite derive_along_V1_global//.
 have t0D : t \in `[0, t + 1[%R.
   by rewrite in_itv/=t0 ltrDl ltr01.
-have is_sol_oo_sol : is_sol_cauchy_oo (fun=> Tilt.eqn alpha1 gamma) (sol 0) 0 (t + 1) sol.
+have is_sol_oo_sol : is_sol_cauchy_oo (fun=> Tilt.eqn alpha1 gamma) 0 (t + 1)
+    (sol 0) sol.
+  split; first reflexivity.
   split.
-    by [].
-    split.
-      rewrite /sol_is_deriv_obnd/= => t' t'0t1.
-      apply: solves.
-      by apply: subset_itv t'0t1 => //; rewrite bnd_simp.
+    rewrite /sol_is_deriv_obnd/= => t' t'0t1.
+    apply: solves.
+    by apply: subset_itv t'0t1 => //; rewrite bnd_simp.
   apply: continuous_in_subspaceT => /= t'.
   rewrite closure_itvoo; first by rewrite ltr_wpDl.
   move=> /[!inE] t'0t1.
