@@ -21,7 +21,17 @@ Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
 
-(* PR to MCA *)
+(* TODO: PR to MCA in progress *)
+Lemma within_continuous_continuous_new {R : realFieldType} {K : numDomainType}
+    {U : pseudoMetricNormedZmodType K} a b (f : R -> U) x : (a <= b)%R ->
+  {within `[a, b], continuous f} -> x \in `]a, b[%R -> {for x, continuous f}.
+Proof.
+rewrite le_eqVlt => /predU1P[<- _|ab].
+  by rewrite in_itv/= => /andP[] /lt_trans /[apply]; rewrite ltxx.
+by move=> /continuous_within_itvP-/(_ ab)[+ _ _]; exact.
+Qed.
+
+(* TODO: PR to MCA *)
 Lemma closure_neitv_oy {R : realType} (a : R) :
   closure `]a, +oo[%classic = `[a, +oo[%classic.
 Proof.
@@ -37,7 +47,7 @@ apply/esym.
 by apply: itv_bndbnd_setU => //; rewrite bnd_simp lerDl.
 Qed.
 
-(* PR to MCA *)
+(* TODO: PR to MCA *)
 Section continuous_patch.
 Context {R : realType} {n : nat} {U : normedModType R}.
 Variables (a b c : R) (f : R -> U) (g : R -> U).

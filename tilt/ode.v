@@ -338,7 +338,6 @@ Variables (u0 : U) (r : {posnum R}).
 Let B : set U := closed_ball u0 r%:num.
 
 Variable k : R.
-Hypothesis k0 : k != 0.
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Variable g : R -> U.
@@ -370,7 +369,7 @@ apply: parameterized_integral_continuous.
 apply: continuous_compact_integrable; first exact: segment_compact.
 move=> {x}.
 move: i; apply/within_continuous_coord.
-exact: (within_continuous_lipschitz cg _ lip2 cont1).
+exact: (within_continuous_lipschitz cg lip2 cont1).
 Qed.
 
 HB.instance Definition _ := isContinuous.Build (subspace `[a, b]) U
@@ -388,7 +387,7 @@ Variables (u0 : U) (r : {posnum R}).
 Let B := closed_ball u0 r%:num.
 
 Definition picard_fun
-    (k : R) (k0 : k != 0) (lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)})
+    (k : R) (lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)})
     (cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}})
     (g : R -> U) : R -> U :=
   match pselect (g @` `[a, b] `<=` B) with
@@ -476,36 +475,20 @@ Qed.
 
 End sup_phi_lemmas.
 
-HB.lock Definition safe_dist {R : realType} {n}
-  (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R) (u0 : U) (r k rho : R)
-  := Num.min (b - a)
-    (Num.min (r / (k * r + sup_phi phi a b u0))
-             (rho / k)).
+HB.lock Definition safe_dist {R : realType} {n} (U := 'rV[R]_n)
+    (phi : R -> U -> U) (a b : R) (u0 : U) (r k rho : R) :=
+  Num.min (b - a)
+ (Num.min (r / (k * r + sup_phi phi a b u0))
+          (rho / k)).
 Canonical safe_dist_unlockable := Unlockable safe_dist.unlock.
 
 Section safe_dist.
-Context {R : realType} {n : nat} (U := 'rV[R]_n)
-  (phi : R -> U -> U) (a b : R) (k : R).
-Hypothesis ab : a < b.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R) (k : R).
 Variables (u0 : U) (r : R).
-Hypothesis k0 : 0 < k.
 Variable rho : R.
 
 Local Notation safe_dist := (safe_dist phi a b u0 r k rho).
 Local Notation sup_phi := (sup_phi phi a b u0).
-
-Lemma safe_dist_gt0 : 0 < r -> 0 < rho -> 0 < safe_dist.
-Proof.
-move=> r0 rho0.
-rewrite unlock/= lt_min subr_gt0 ab/= lt_min mulr_gt0 ?divr_gt0//.
-by rewrite invr_gt0// ltr_wpDr ?sup_phi_ge0// mulr_gt0.
-Qed.
-
-Lemma ltDl_safe_dist : 0 < r -> 0 < rho -> a < a + safe_dist.
-Proof. by move=> r0 rho0; rewrite ltrDl// safe_dist_gt0. Qed.
-
-Lemma leDl_safe_dist : 0 < r -> 0 < rho -> a <= a + safe_dist.
-Proof. by move=> r0 rho0; rewrite ltW// ltDl_safe_dist. Qed.
 
 Lemma safe_dist_itv : safe_dist <= b - a.
 Proof. by rewrite unlock/= ge_min lexx. Qed.
@@ -513,8 +496,32 @@ Proof. by rewrite unlock/= ge_min lexx. Qed.
 Lemma safe_dist_le_sup_phiV : safe_dist <= r / (k * r + sup_phi).
 Proof. by rewrite unlock/= 2!ge_min mulrC lexx/= orbT. Qed.
 
-Lemma safe_dist_le_rho : k * safe_dist <= rho.
-Proof. by rewrite mulrC -ler_pdivlMr// unlock/= !ge_min lexx !orbT. Qed.
+Lemma safe_dist_le_rho : 0 < k -> k * safe_dist <= rho.
+Proof.
+by move=> k0; rewrite mulrC -ler_pdivlMr// unlock/= !ge_min lexx !orbT.
+Qed.
+
+Lemma safe_dist_ge0 : a <= b -> 0 <= k -> 0 <= r -> 0 <= rho -> 0 <= safe_dist.
+Proof.
+move=> ab k0 r0 rho0.
+rewrite unlock/= le_min subr_ge0 ab/= le_min mulr_ge0//=; last first.
+  by rewrite divr_ge0.
+by rewrite invr_ge0// addr_ge0 ?sup_phi_ge0// mulr_ge0.
+Qed.
+
+Lemma leDl_safe_dist : a <= b -> 0 <= k -> 0 <= r -> 0 <= rho ->
+  a <= a + safe_dist.
+Proof. by move=> ab k0 r0 rho0; rewrite lerDl safe_dist_ge0. Qed.
+
+Lemma safe_dist_gt0 : a < b -> 0 < k -> 0 < r -> 0 < rho -> 0 < safe_dist.
+Proof.
+move=> ab k0 r0 rho0.
+rewrite unlock/= lt_min subr_gt0 ab/= lt_min mulr_gt0 ?divr_gt0//.
+by rewrite invr_gt0// ltr_wpDr ?sup_phi_ge0// mulr_gt0.
+Qed.
+
+Lemma ltDl_safe_dist : a < b -> 0 < k -> 0 < r -> 0 < rho -> a < a + safe_dist.
+Proof. by move=> ab k0 r0 rho0; rewrite ltrDl// safe_dist_gt0. Qed.
 
 End safe_dist.
 
@@ -523,7 +530,7 @@ Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
 Variables (phi : R -> U -> U) (a b : R) (k : R).
 Variables (u0 : U) (r : {posnum R}).
-Hypothesis k0 : 0 < k.
+Hypothesis k0 : 0 <= k.
 Variable rho : {posnum R}. (* rho < 1 *)
 
 Import ContSeg_quot.
@@ -545,7 +552,7 @@ have /eqmod_on_itv : (repr (\pi_C%qT (cst u0)) = cst u0 %[mod C])%qT.
 by apply; rewrite inE.
 Qed.
 
-Lemma img_cballE : a < b -> img_cball =
+Lemma img_cballE : a <= b -> img_cball =
   @closed_ball R C (pi C (@cst (subspace `[a, a + safe_dist]) U u0)) r%:num.
 Proof.
 move=> ab; rewrite closed_ballE//.
@@ -553,7 +560,7 @@ apply: eq_set => /= f; apply propext; split => h.
 - rewrite -(@reprK _ C f).
   rewrite /GRing.opp /= -Quotient.pi_opp /GRing.add /= -Quotient.pi_add.
   rewrite infty_norm_pi pre_infty_norm_le//.
-    by exists a => /=; rewrite bound_itvE lerDl ltW// safe_dist_gt0.
+    by exists a => /=; rewrite bound_itvE lerDl// safe_dist_ge0// ltW.
   move=> x adx.
   move /(_ (f x)) : h.
   rewrite closed_ballE//.
@@ -571,26 +578,23 @@ apply: eq_set => /= f; apply propext; split => h.
   rewrite eval_mod_on_itv; first by rewrite inE.
   move/mem_set in xad.
   apply: (le_trans (pre_infty_norm_ge _ _  _ xad)).
-    by exists a => /=; rewrite bound_itvE lerDl ltW// safe_dist_gt0.
-  by apply: segment_compact.
-(*  (leDl_safe_dist phi ab u0 r k0 rho) *)
-  rewrite -infty_norm_pi.
-  by rewrite Quotient.pi_add Quotient.pi_opp reprK.
+  + by exists a => /=; rewrite bound_itvE lerDl// safe_dist_ge0.
+  + exact: segment_compact.
+  + rewrite -infty_norm_pi.
+    by rewrite Quotient.pi_add Quotient.pi_opp reprK.
 Qed.
 
-Lemma closed_img_cball : a < b -> closed img_cball.
+Lemma closed_img_cball : a <= b -> closed img_cball.
 Proof. by move=> ?; rewrite img_cballE//; exact: closed_ball_closed. Qed.
 
 End image_in_closed_ball.
 
 Section picard_fun_isFun.
 Local Notation mu := lebesgue_measure.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variables (phi : R -> U -> U) (a b : R) (k : R).
 Variables (u0 : U) (r : {posnum R}).
 Let B := closed_ball u0 r%:num.
-Hypothesis k0 : k != 0.
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 
@@ -618,7 +622,7 @@ by rewrite bnd_simp -lerBrDl; exact: safe_dist_itv.
 Qed.
 
 Local Notation picard_fun :=
-  (@picard_fun _ n phi a (a + safe_dist) u0 r k k0 lip2_safe_dist cont1_safe_dist).
+  (@picard_fun _ n phi a (a + safe_dist) u0 r k lip2_safe_dist cont1_safe_dist).
 
 Lemma picard_funE g t : g @` `[a, a + safe_dist] `<=` B ->
   picard_fun g t = u0 + \vint[mu]_(x in `[a, t]) phi x (g x).
@@ -651,7 +655,6 @@ Let U := 'rV[R]_n.
 Variables (phi : R -> U -> U) (a b : R) (k : R).
 Variables (u0 : U) (r : {posnum R}).
 Let B := closed_ball u0 r%:num.
-Hypothesis k0 : k != 0.
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 
@@ -659,7 +662,7 @@ Variable rho : {posnum R}.
 
 Local Notation safe_dist := (safe_dist phi a b u0 r%:num k rho%:num).
 
-Local Notation picard_fun := (@picard_fun _ n phi a (a + safe_dist) u0 r k k0
+Local Notation picard_fun := (@picard_fun _ n phi a (a + safe_dist) u0 r k
   (@lip2_safe_dist R n phi a b k u0 r lip2 rho)
   (@cont1_safe_dist R n phi a b k u0 r cont1 rho)).
 
@@ -681,7 +684,6 @@ have := @continuous_fun _ _ g.
 rewrite /picard_fun; case: pselect => /=.
   move=> z cg.
   apply: (@continuous_fun (subspace `[a, a + safe_dist]) U (picard_fun_subdef phi z)).
-  - exact: k0.
   - exact: lip2_safe_dist.
   - exact: cont1_safe_dist.
   - exact: cg.
@@ -704,7 +706,6 @@ Let U := 'rV[R]_n.
 Variables (phi : R -> U -> U) (a b : R) (k : R).
 Variables (u0 : U) (r : {posnum R}).
 Let B := closed_ball u0 r%:num.
-Hypothesis k0 : k != 0.
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 
@@ -726,7 +727,7 @@ move=> yaadelta ab0r.
 apply: continuous_compact_integrable; first exact: segment_compact.
 move: (yaadelta); rewrite in_itv/= => /andP[ay yadelta].
 move: i; apply/within_continuous_coord.
-apply/(within_continuous_lipschitz _ k0).
+apply/within_continuous_lipschitz.
 - have := @continuous_fun _ _ F.
   by apply/continuous_subspaceW/subset_itvl; rewrite bnd_simp.
 - apply/in_switch.
@@ -740,15 +741,13 @@ Qed.
 
 End integrable_comp.
 
-Section picard.
+Section picard_def.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n : nat}.
 Let U := 'rV[R]_n.
 Variables (phi : R -> U -> U) (a b : R) (k : R).
 Variables (u0 : U) (r : {posnum R}).
 Let B := closed_ball u0 r%:num.
-Hypothesis k0 : 0 < k.
-Let k0' : k != 0. Proof. by rewrite gt_eqF. Qed.
 
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
@@ -756,7 +755,7 @@ Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Variable rho : {posnum R}.
 
 Local Notation safe_dist := (safe_dist phi a b u0 r%:num k rho%:num).
-Local Notation picard_fun := (@picard_fun _ n phi a (a + safe_dist) u0 r k k0'
+Local Notation picard_fun := (@picard_fun _ n phi a (a + safe_dist) u0 r k
   (@lip2_safe_dist R n phi a b k u0 r lip2 rho)
   (@cont1_safe_dist R n phi a b k u0 r cont1 rho)).
 
@@ -764,14 +763,39 @@ Import ContSeg_quot.
 
 Local Notation C := (`C([a, a + safe_dist] U)).
 
-Definition picard (f : C) : C := \pi_C%qT (picard_fun f).
+Definition picard (_ : 0 <= k) (f : C) : C := \pi_C%qT (picard_fun f).
+End picard_def.
+
+Section picard.
+Local Notation mu := lebesgue_measure.
+Context {R : realType} {n : nat}.
+Let U := 'rV[R]_n.
+Variables (phi : R -> U -> U) (a b : R) (k : R).
+Variables (u0 : U) (r : {posnum R}).
+Let B := closed_ball u0 r%:num.
+Hypothesis k0 : 0 <= k.
+
+Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
+Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
+
+Variable rho : {posnum R}.
+
+Local Notation safe_dist := (safe_dist phi a b u0 r%:num k rho%:num).
+Local Notation picard_fun := (@picard_fun _ n phi a (a + safe_dist) u0 r k
+  (@lip2_safe_dist R n phi a b k u0 r lip2 rho)
+  (@cont1_safe_dist R n phi a b k u0 r cont1 rho)).
+
+Import ContSeg_quot.
+
+Local Notation C := (`C([a, a + safe_dist] U)).
 
 Local Notation img_cball := (@img_cball R n phi a b k u0 r rho).
 Local Notation sup_phi := (@sup_phi R n phi a b u0).
 
 Import MeasurableR.
 
-Let set_fun_picard : set_fun img_cball img_cball picard.
+Let set_fun_picard : set_fun img_cball img_cball
+  (picard lip2 cont1 k0).
 Proof.
 move=> F.
 rewrite /img_cball/= => invariant _/= [y yaaDelta <-].
@@ -859,7 +883,7 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
       apply: subset_itvl xay; rewrite bnd_simp.
       by rewrite (itvP yaaDelta).
     move/(lip2_safe_dist lip2) : xaaDelta.
-    rewrite lipschitz_componentE//; first exact: ltW.
+    rewrite lipschitz_componentE//.
     move/(_ i (F x, u0)) => /=.
     apply.
     split => /=.
@@ -906,7 +930,7 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * r%:num + sup_phi)))//.
       by rewrite -EFinD ltry.
     exact: bounded_cst.
   - move=> x xay.
-    rewrite lerD2r ler_pM2l//.
+    rewrite lerD2r ler_wpM2l//.
     have : B (F x).
       apply: invariant => /=.
       exists x => //.
@@ -925,6 +949,15 @@ rewrite (@le_trans _ _ ((k * r%:num + sup_phi) * safe_dist))//.
   rewrite ler_wpM2l//.
     by rewrite addr_ge0 ?mulr_ge0 ?(ltW k0)// sup_phi_ge0.
   by rewrite ay//= lerBlDl.
+move: k0; rewrite le_eqVlt => /predU1P[<-|].
+  rewrite mul0r add0r.
+  have := sup_phi_ge0 phi a b u0.
+  rewrite le_eqVlt => /predU1P[<-|sup_phi_gt0].
+    by rewrite mul0r.
+  rewrite -ler_pdivlMl//.
+  rewrite (le_trans (safe_dist_le_sup_phiV _ _ _ _ _ _ _))//.
+  by rewrite mul0r add0r mulrC.
+move=> k_gt0.
 rewrite -ler_pdivlMl//.
   by rewrite ltr_pwDl ?mulr_gt0// sup_phi_ge0.
 by rewrite mulrC safe_dist_le_sup_phiV.
@@ -932,9 +965,9 @@ Qed.
 
 Fail Check picard_to_cont : {fun [set: V] >-> [set: V]}.
 
-HB.instance Definition _ := @isFun.Build _ _ _ _ picard set_fun_picard.
+HB.instance Definition _ := @isFun.Build _ _ _ _ (picard lip2 cont1 k0) set_fun_picard.
 
-Check picard : {fun img_cball >-> img_cball}.
+Check picard lip2 cont1 k0 : {fun img_cball >-> img_cball}.
 (* still, we can't state that it is a contraction for typing reasons *)
 
 Fail Lemma tmp : is_contraction (picard : {fun [set: _] >-> [set: _]}).
@@ -988,12 +1021,11 @@ End picard.
 
 Section is_contraction_picard.
 Local Notation mu := lebesgue_measure.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variables (phi : R -> U -> U) (a b : R).
-Hypothesis ab : a < b.
+Hypothesis ab : a <= b.
 Variable k : R.
-Hypothesis k0 : 0 < k.
+Hypothesis k0 : 0 <= k.
 Variables (u0 : U) (r : {posnum R}).
 Let B := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
@@ -1015,7 +1047,7 @@ Check @cst (subspace `[a, a + safe_dist]) U u0
 Check @cst (subspace `[a, a + safe_dist]) U u0
   : continuousType (subspace `[a, a + safe_dist]) U.
 
-Local Notation picard := (@picard R n phi a b k u0 r k0 lip2 cont1 rho).
+Local Notation picard := (@picard R n phi a b k u0 r lip2 cont1 rho k0).
 
 Import MeasurableR.
 
@@ -1031,7 +1063,7 @@ rewrite infty_norm_pi/=.
 rewrite /pre_infty_norm/=.
 apply: ge_sup => //=.
   set u := _ \o _; exists (u a) => /=; exists a => //.
-  by rewrite in_itv/= lexx leDl_safe_dist.
+  by rewrite in_itv/= lexx leDl_safe_dist// ltW.
 move=> _ /= [t tNdd <-].
 have tb : t <= b.
   move: tNdd.
@@ -1049,13 +1081,11 @@ rewrite {i}(ord1 i)/=.
 rewrite mxE rowRintegralE mxE rowRintegralE.
 have integrable1 : mu.-integrable `[a, t] (EFin \o (fun x0 => phi x0 (x x0) ord0 j)).
   apply: integrable_comp => //=.
-    by rewrite gt_eqF.
   apply: subset_trans Hg; apply: image_subset.
   apply/subset_itvl; rewrite bnd_simp.
   by move: tNdd; rewrite !in_itv/= => /andP[].
 have integrable2 : mu.-integrable `[a, t] (EFin \o (fun x0 => phi x0 (y x0) ord0 j)).
   apply: integrable_comp => //=.
-    by rewrite gt_eqF.
   move=> _ [x0 h] <-.
   apply: Hg2 => /=.
   exists x0 => //.
@@ -1067,7 +1097,7 @@ rewrite (le_trans (le_normr_Rintegral _ _))//=.
   by rewrite integrableB.
 have integrable3 : mu.-integrable `[a, t] (fun x0 => `|x x0 - y x0|%:E).
   rewrite /=.
-  apply : vintegrable_norm.
+  apply: vintegrable_norm.
     exact: measurable_itv.
   move => i.
   under [x in integrable _ _  x]eq_fun do rewrite !mxE EFinB.
@@ -1116,7 +1146,7 @@ rewrite (@le_trans _ _ (k * \int[mu]_(t0 in `[a, t]) `| x t0 - y t0|))//.
     by rewrite /= !mxE.
   by rewrite RintegralZl.
 rewrite (@le_trans _ _ (k * \int[mu]_(t0 in `[a, t]) `|x - y| ))//.
-  rewrite ler_pM2l//.
+  rewrite ler_wpM2l//.
   apply: le_Rintegral => //=.
     apply: measurable_bounded_integrable => //=.
       rewrite lebesgue_measure_itv //=.
@@ -1131,18 +1161,21 @@ rewrite (@le_trans _ _ (k * \int[mu]_(t0 in `[a, t]) `|x - y| ))//.
     apply (@eqmod_on_itv _ _ _ _ (repr x - repr y)) => //.
     by rewrite Quotient.pi_add Quotient.pi_opp !reprK.
   rewrite pre_infty_norm_ge//.
-  by exists a => /=; rewrite bound_itvE// lerDl ltW// safe_dist_gt0.
+  by exists a => /=; rewrite bound_itvE// lerDl// safe_dist_ge0// ltW.
   exact: segment_compact.
   by rewrite inE.
 (* leDl_safe_dist.*)
 rewrite (@le_trans _ _ (k * `|x - y| * (t - a)))//.
-  rewrite -mulrA ler_wpM2l//; first exact: ltW.
+  rewrite -mulrA ler_wpM2l//.
   rewrite Rintegral_cst// ler_pM//.
   move: tNdd; rewrite in_itv/= => /andP[+ _].
   rewrite le_eqVlt => /predU1P[->|].
     by rewrite set_itv1 lebesgue_measure_set1 subrr lexx.
   by rewrite /= (lebesgue_measure_itv `[a,t]%R) /= lte_fin => ->.
 rewrite [leLHS]mulrAC ler_wpM2r//.
+have [->|] := eqVneq k 0.
+  by rewrite mul0r.
+rewrite neq_lt ltNge k0/= => k0'.
 move: tNdd; rewrite in_itv/= => /andP[Ndt].
 rewrite -lerBlDl -[in X in X -> _](@ler_pM2l _ k)// => /le_trans; apply.
 by rewrite safe_dist_le_rho.
@@ -1231,10 +1264,8 @@ End is_integral_sol.
 
 Section integral_ode.
 Local Notation mu := lebesgue_measure.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variables (phi : R -> U -> U) (u0 u0' : U) (a b : R) (sol : R -> U) (k : R) (r : {posnum R}).
-Hypothesis k0 : k != 0.
 Hypothesis ab : a < b.
 
 Let B := closed_ball u0' r%:num.
@@ -1248,7 +1279,7 @@ Lemma picard_iterator_within_continuous i :
 Proof.
 move: i.
 apply/within_continuous_coord.
-exact: (@within_continuous_lipschitz _ _ phi a b u0' r sol _ _ k0).
+exact: (@within_continuous_lipschitz _ _ phi a b u0' r sol _ k).
 Qed.
 
 Lemma integral_sol_iff_sol1 :
@@ -1260,6 +1291,7 @@ apply/rowP => i.
 rewrite mxE rowRintegralE.
 move: ta; rewrite le_eqVlt => /predU1P[<-|ta].
   by rewrite set_itv1 Rintegral_set1 addr0.
+have ab' : a < b by rewrite (lt_le_trans ta).
 rewrite /Rintegral.
 have cont_soli : {within `[a, b], continuous (fun x => sol x ord0 i)}.
   by move: i; exact/within_continuous_coord.
@@ -1269,7 +1301,7 @@ rewrite (@continuous_FTC2 _ (fun x => phi x (sol x) ord0 i) (fun x => sol x ord0
 - split.
   + move=> t' tx'.
     by have /h.1[/derivable_mxP] : t' \in `]a, b[%R by exact/subset_itvl/tx'.
-  + by move /(continuous_within_itvP _ ab) : cont_soli => [_ + _].
+  + by move /(continuous_within_itvP _ ab') : cont_soli => [_ + _].
   + have cont_phii' : {within `[a, t], continuous fun x0 : R => sol x0 ord0 i}.
       apply: continuous_subspaceW; last exact: cont_soli.
       exact: subset_itvl.
@@ -1284,11 +1316,10 @@ End integral_ode.
 
 Section integral_ode2.
 Local Notation mu := lebesgue_measure.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U) (k : R) (r : {posnum R}).
 Hypothesis k0 : k != 0.
-Hypothesis ab : a < b.
+Hypothesis ab : a <= b.
 
 Let B := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
@@ -1299,8 +1330,8 @@ Hypothesis sol_bound : sol @` `[a, b] `<=` closed_ball u0 r%:num.
 Lemma picard_iterator_continuous i t : t \in `]a, b[%R ->
   {for t, continuous (fun x => phi x (sol x) ord0 i)}.
 Proof.
-move/within_continuous_continuous; apply => //.
-exact: (picard_iterator_within_continuous k0 lip2 cont1).
+move/within_continuous_continuous_new; apply => //.
+exact: (picard_iterator_within_continuous lip2 cont1).
 Qed.
 
 Import MeasurableR.
@@ -1309,7 +1340,7 @@ Lemma picard_iterator_integrable i : mu.-integrable `[a, b]
   (EFin \o (fun x : R => phi x (sol x) ord0 i)).
 Proof.
 apply: continuous_compact_integrable; first exact: segment_compact.
-exact: (picard_iterator_within_continuous k0 lip2 cont1).
+exact: (picard_iterator_within_continuous lip2 cont1).
 Qed.
 
 Lemma integral_sol_iff_sol :
@@ -1379,9 +1410,8 @@ Local Notation mu := lebesgue_measure.
 Context {R : realType} {n : nat}.
 Notation U := (@row_vector R n).
 Variables (phi : R -> U -> U) (a b : R) (k : R) (u0 : U) (r : {posnum R}).
-Hypothesis ab : a < b.
-Hypothesis k0 : 0 < k.
-Let k0' : k != 0. Proof. by rewrite gt_eqF. Qed.
+Hypothesis ab : a <= b.
+Hypothesis k0 : 0 <= k.
 Let B := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
@@ -1400,11 +1430,11 @@ Local Notation V := (@quot_contSeg R a (a + safe_dist) U).
 
 Check V : completeNormedModType _.
 
-Local Notation img_cball := (@img_cball R n phi a b k  u0 r rho).
+Local Notation img_cball := (@img_cball R n phi a b k u0 r rho).
 Local Notation img_cball_nonempty := (img_cball_nonempty phi a b k u0 r rho).
 Local Notation closed_img_cball := (@closed_img_cball R n phi a b k u0 r k0 rho ab).
 
-Local Notation picard := (@picard _ n phi a b k u0 r k0 lip2 cont1 rho).
+Local Notation picard := (@picard _ n phi a b k u0 r lip2 cont1 rho k0).
 
 Definition picard_fix : V :=
   sval (cid2 (@banach_fixed_point R V img_cball
@@ -1419,14 +1449,14 @@ Proof. by rewrite {}/picard_fix; case: cid2. Qed.
 Lemma img_cball_picard_fix : img_cball picard_fix.
 Proof.
 by apply (svalP (cid2 (@banach_fixed_point R V img_cball _
-  (@is_contraction_picard R n phi _ _ ab k k0 u0 r lip2 cont1 _ rho1)
+  (@is_contraction_picard R n phi _ _ ab k _ u0 r lip2 cont1 _ rho1)
   closed_img_cball img_cball_nonempty))).
 Qed.
 
 Lemma picard_fix_init : picard_fix a = u0.
 Proof.
 rewrite picard_fixE eval_mod_on_itv.
-  by rewrite in_itv/= lexx leDl_safe_dist.
+  by rewrite in_itv/= lexx leDl_safe_dist// ltW.
 by rewrite /picard_fun /= picard_fun_init//; exact: img_cball_picard_fix.
 Qed.
 
@@ -1484,15 +1514,15 @@ suff -> : (picard picard_fix)^`() t =
   have Fint i : mu.-integrable `[a, a + safe_dist]
       (EFin \o (fun x => phi x (picard_fix x) ord0 i)).
     apply: integrable_comp => //.
-      by rewrite in_itv /= lexx andbT leDl_safe_dist.
+      by rewrite in_itv /= lexx andbT leDl_safe_dist// ltW.
     exact: img_cball_picard_fix.
   have Fcont i : {for t, continuous (fun x => phi x (picard_fix x) ord0 i)}.
     move: tad; rewrite inE.
-    apply/within_continuous_continuous => //=.
-      exact: ltDl_safe_dist.
+    apply/within_continuous_continuous_new => //=.
+     by rewrite leDl_safe_dist// ltW.
     clear Fint.
     move: i; apply/within_continuous_coord.
-    apply: (@within_continuous_lipschitz _ _ _ a _ u0 r _ _ _ k0').
+    apply: (@within_continuous_lipschitz _ _ _ a _ u0 r _ _ k).
     + exact: continuous_fun.
     + exact: lip2_safe_dist.
     + exact: cont1_safe_dist.
@@ -1516,7 +1546,7 @@ suff -> : (picard picard_fix)^`() t =
 rewrite /picard /picard_fun.
 apply: (@in_eq_derive1 _ _ `]a, a + safe_dist[) => //; last by rewrite inE.
 move=> {}t {}tad.
-rewrite -(@picard_funE _ _ _ a b k _ r k0' lip2 cont1 rho)//=.
+rewrite -(@picard_funE _ _ _ a b k _ r lip2 cont1 rho)//=.
   exact: img_cball_picard_fix.
 rewrite eval_mod_on_itv// inE; apply: subset_itv_oo_cc.
 by rewrite inE in tad.
@@ -1638,12 +1668,10 @@ Qed.
 End picard_extension.
 
 Section cauchy_lipschitz_local.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-Variables (phi : R -> U -> U) (a b : R) (u0 : U) (r : {posnum R}) (k : R).
-Hypothesis ab : a < b.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
+  (u0 : U) (r : {posnum R}) (k : R).
+Hypothesis ab : a <= b.
 Hypothesis k0 : 0 < k.
-Let k0' : k != 0. Proof. by rewrite gt_eqF. Qed.
 Let B := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
@@ -1686,13 +1714,13 @@ Local Notation safe_dist := (safe_dist phi a b u0 r2%:num k rho%:num).
 
 Definition cauchy_lipschitz_f :
     continuousSubspaceType `[a, a + safe_dist] [set: 'rV[R]_n] :=
-  repr (picard_fix ab k0 lip2' cont1' rho1).
+  repr (picard_fix ab (ltW k0) lip2' cont1' rho1).
 
 Lemma is_sol_cauchy_lipschitz_f :
   is_sol_cauchy_oo phi a (a + safe_dist) u0 cauchy_lipschitz_f.
 Proof.
-apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
-- by rewrite ltDl_safe_dist.
+apply/(integral_sol_iff_sol (* TODO: weaken to a <= b *)(k:=k) (r:=r)) => //.
+- by rewrite leDl_safe_dist// ltW.
 - move=> t td.
   apply: lip2.
   move: td; rewrite /=!in_itv/= => /andP [-> h] /=.
@@ -1730,7 +1758,7 @@ Let f := cauchy_lipschitz_f.
 Theorem cauchy_lipschitz_ex : is_sol_cauchy_oo phi a (a + safe_dist) u0 f.
 Proof.
 apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
-- by rewrite ltDl_safe_dist.
+- by rewrite leDl_safe_dist// ltW.
 - move=> t td.
   apply: lip2.
   move: td; rewrite /=!in_itv/= => /andP [-> h] /=.
@@ -1746,7 +1774,6 @@ apply/(integral_sol_iff_sol (k:=k) (r:=r)) => //.
 - exact: cauchy_lipschitz_integral_version.
 Qed.
 
-
 Local Notation V := (@ContSeg_quot.quot_contSeg R a (a + safe_dist) U).
 
 Lemma cauchy_lipschitz_unique_restr f' :
@@ -1756,8 +1783,7 @@ Lemma cauchy_lipschitz_unique_restr f' :
   {in `[a, a + safe_dist]%R, f =1 f'}.
 Proof.
 move => cont bnd.
-move/(@integral_sol_iff_sol1 _ _ _ u0 (*u0*) u0(*u0'*) _ _ _ _ r k0') => []//.
-- exact: ltDl_safe_dist.
+move/(@integral_sol_iff_sol1 _ _ _ u0 (*u0*) u0(*u0'*) _ _ _ k r) => []//.
 - move=> t td.
   apply: lip2.
   by apply: subset_itvl td; rewrite bnd_simp -lerBrDl safe_dist_itv.
@@ -1803,7 +1829,7 @@ Variables (a b : R) (u0 : U) (r : {posnum R}).
 Hypothesis ab : a < b.
 Let B := closed_ball u0 r%:num.
 
-Local Lemma continuous_confined  (g : R -> U) : {within `[a, b], continuous g} ->
+Local Lemma continuous_confined (g : R -> U) : {within `[a, b], continuous g} ->
   g a = u0 ->
   exists Delta : {posnum R}, {in `[a, a + Delta%:num], forall t, g t \in B}.
 Proof.
@@ -1835,8 +1861,7 @@ Qed.
 End continuous_confined.
 
 Section solution_locally_unique.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
+Context {R : realType} {n} (U := 'rV[R]_n).
 Variables (phi : R -> U -> U) (a b : R) (k : R) (u0 : U) (r : {posnum R})
           (f : R -> U).
 Hypothesis ab : a < b.
@@ -1850,7 +1875,7 @@ Let rho_max : {posnum R} := (2^-1)%:pos.
 
 Let r2 := (r%:num/2)%:pos.
 Let dmax (rho : {posnum R}) := safe_dist phi a b u0 r2%:num k rho%:num.
-Let fc := cauchy_lipschitz_f ab k0 lip2 cont1.
+Let fc := cauchy_lipschitz_f (ltW ab) k0 lip2 cont1.
 
 Lemma initial_solution_unique f' : {within `[a, b], continuous f'} ->
   is_sol_cauchy_oo phi a b u0 f' ->
@@ -2244,7 +2269,7 @@ Let r2 := (r%:num/2)%:pos.
 Variable rho : {posnum R}. (* rho < 1 *)
 Hypothesis rho1 : (rho%:num < 1).
 Local Notation safe_dist := (safe_dist phi a b u0 r2%:num k rho%:num).
-Let f := cauchy_lipschitz_f ab k0 lip2 cont1 rho1.
+Let f := cauchy_lipschitz_f (ltW ab) k0 lip2 cont1 rho1.
 
 Lemma closed_ball_split (x1 x2 y : U) q : 0 < q ->
   closed_ball x1 (q / 2) y -> closed_ball x2 (q / 2) x1 -> closed_ball x2 q y.
@@ -2402,15 +2427,14 @@ Let amin1 : - t0 < - a. Proof. by rewrite ltrN2 (itvP t0ab). Qed.
 Let t0ab' : t0 \in `[a, b]%R. Proof. by exact: subset_itv_oo_cc. Qed.
 
 Let fminus0 := @cauchy_lipschitz_f R n (fun t x => - phi (- t) x) (- t0)
-  _ u0 r4 k amin1 k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho rho1.
+  _ u0 r4 k (ltW amin1) k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho rho1.
 
 Let fminus := fminus0 \o -%R.
 
 Let t0b : t0 < b. Proof. by rewrite (itvP t0ab). Qed.
 
 Let fplus := @cauchy_lipschitz_f R n phi t0
-  _ u0 r4 k t0b k0 (phi_lip2 t0ab') (phi_cont1 t0ab') rho rho1.
-
+  _ u0 r4 k (ltW t0b) k0 (phi_lip2 t0ab') (phi_cont1 t0ab') rho rho1.
 
 Definition safe_dist_sym := (dboth t0).
 Definition cauchy_lipschitz_f_sym :=
@@ -2431,11 +2455,11 @@ Lemma cauchy_lipschitz_sym_oo : is_sol_cauchy_oo phi
   cauchy_lipschitz_f_sym.
 Proof.
 have solplus :=
-  cauchy_lipschitz_ex t0b k0 (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
+  cauchy_lipschitz_ex (ltW t0b) k0 (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
 have cplus := solution_stays_in_ball.
 have dminus0 : 0 < dminus t0 by exact: safe_dist_gt0.
 have solminus :=
-  cauchy_lipschitz_ex amin1 k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
+  cauchy_lipschitz_ex (ltW amin1) k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
 have cminus := solution_stays_in_ball.
 have adplus : t0 < t0 + dplus t0 by rewrite ltrDl safe_dist_gt0.
 have cfplus := solplus.2.2.
@@ -2551,8 +2575,8 @@ have at0t0 : a <= t0 - dboth t0.
 have t0t0b : t0 + dboth t0 <= b.
   rewrite -lerBrDl.
   by rewrite !ge_min lexx.
-apply/(integral_sol_iff_sol (r := r2) kn0) => /=.
-- by rewrite ler_ltD // gtrN.
+apply/(integral_sol_iff_sol (r := r2)) => /=.
+- by rewrite lerD// gerN// ltW.
 - move => t tab /= x Bx.
   apply: lip2.
     by apply: subset_itv tab; rewrite bnd_simp.
@@ -2570,7 +2594,7 @@ apply/(integral_sol_iff_sol (r := r2) kn0) => /=.
   by apply fc; rewrite inE.
 apply: is_integral_sol_patch => //.
 - by rewrite gtrBl.
-- apply: (within_continuous_lipschitz _ kn0 (u0 := u0) (r:=r)).
+- apply: (within_continuous_lipschitz _ (u0 := u0) (r:=r)).
   + exact: contf_minus.
   + move=> x bx.
     apply: lip2.
@@ -2582,7 +2606,7 @@ apply: is_integral_sol_patch => //.
     by rewrite (itvP t0ab).
     exact: tab.
   + move => _ [/= t' tp] <-.
-    apply: (le_closed_ball (e1:=r4%:num)) => //.
+    apply: (le_closed_ball (e1 := r4%:num)) => //.
     suff : (fminus t') \in closed_ball u0 r4%:num by rewrite inE.
     apply mem_set; apply cminus.
     move : tp.
@@ -2591,7 +2615,7 @@ apply: is_integral_sol_patch => //.
     apply: (le_trans _ h0).
     rewrite lerD2l lerN2 /dboth /dplus /dminus.
     by rewrite !ge_min lexx !orbT.
-  + apply : (within_continuous_lipschitz _ kn0 (u0 := u0) (r:=r)).
+  + apply : (within_continuous_lipschitz _ (u0 := u0) (r:=r)).
     exact: contf_plus.
   + move=> x bx.
     apply: lip2.
@@ -2609,8 +2633,7 @@ apply: is_integral_sol_patch => //.
     apply/mem_set; apply cplus.
     apply: subset_itvl tp; rewrite bnd_simp lerD2l.
     by rewrite /dboth /dplus 2!ge_min lexx !orbT.
-- apply /(integral_sol_iff_sol1 (r:=r2) kn0).
-  + by rewrite gtrBl.
+- apply /(integral_sol_iff_sol1 (r:=r2)).
   + move => x bx.
     apply: lip2'.
     rewrite inE.
@@ -2669,8 +2692,7 @@ apply: is_integral_sol_patch => //.
       rewrite /=!mxE => ->.
       by rewrite mulrN1 !opprK.
       * by rewrite closure_itvoo; first rewrite gtrBl.
-- apply/(integral_sol_iff_sol1 (u0' := fminus t0) (r:=r2) kn0).
-  + by rewrite ltrDl.
+- apply/(integral_sol_iff_sol1 (u0' := fminus t0) (r:=r2)).
   + move=> x bx.
     rewrite /fminus/=.
     rewrite solminus.1.
@@ -2740,12 +2762,13 @@ move=> ht.
 by rewrite cauchy_lipschitz_f_sym_left.
 Qed.
 
-Lemma cauchy_lipschitz_sym : is_sol_sym u0 t0 safe_dist_sym cauchy_lipschitz_f_sym.
+Lemma cauchy_lipschitz_sym :
+  is_sol_sym u0 t0 safe_dist_sym cauchy_lipschitz_f_sym.
 Proof.
 split; last by apply cauchy_lipschitz_sym_oo.
 have dminus0 : 0 < dminus t0 by exact: safe_dist_gt0.
 have solminus :=
-  cauchy_lipschitz_ex amin1 k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
+  cauchy_lipschitz_ex (ltW amin1) k0 (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
 have dboth0 : 0 < dboth t0.
   rewrite lt_min; apply /andP;split; last first.
     by rewrite lt_min safe_dist_gt0 //= lt_min dminus0.
@@ -2762,7 +2785,7 @@ Section integral_sol_between.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n : nat}.
 Notation U := 'rV[R]_n.
-Context (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
+Context (phi : R -> U -> U) (a b : R) (u0 : U) (sol : R -> U).
 
 Import MeasurableR.
 

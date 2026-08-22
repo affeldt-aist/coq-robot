@@ -228,7 +228,7 @@ Lemma is_integral_sol_lipschitz : is_integral_sol phi a b u0 sol ->
     `| sol t - sol s | <= M * (t - s).
 Proof.
 move=> Hsol s t sab tsb.
-rewrite (@integral_sol_between R n phi u0 a b sol int_phi_sol Hsol s t sab tsb).
+rewrite (@integral_sol_between _ _ phi a b u0 sol int_phi_sol Hsol s t sab tsb).
 rewrite addrC addrA (addrC _ (sol s)) subrr add0r.
 exact: norm_rowRintegral_le_cst.
 Qed.
@@ -970,7 +970,7 @@ Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 
 Lemma bset_min : exists x, bset x /\ a < x.
 Proof.
-have a1 : a < a+1 by rewrite ltrDl.
+have a1 : a < a + 1 by rewrite ltrDl.
 have [r [k [l2 c1]]] := phi_local_conds a1 u0.
 have lip1: {in `[a, a + 1]%R, forall x , k%:num.-lipschitz_(closed_ball u0 r%:num) (phi x)} by [].
 have cont1 : {in closed_ball u0 r%:num, forall y : 'rV_n, {within `[a, a + 1], continuous phi^~ y}}.
@@ -978,8 +978,8 @@ have cont1 : {in closed_ball u0 r%:num, forall y : 'rV_n, {within `[a, a + 1], c
 have k0 : 0 < k%:num by [].
 exists (a+safe_dist phi a (a + 1) u0 (r%:num / 2) k%:num rho%:num).
 split; last by rewrite ltDl_safe_dist.
-split; first by rewrite leDl_safe_dist.
-exists  (cauchy_lipschitz_f a1 k0 lip1 cont1 rho1).
+split; first by rewrite leDl_safe_dist// ltW.
+exists (cauchy_lipschitz_f (ltW a1) k0 lip1 cont1 rho1).
 exact: is_sol_cauchy_lipschitz_f.
 Qed.
 
@@ -1981,14 +1981,14 @@ have yint : forall t', t' \in `[a, b]%R -> y t' = u0 + \vint[lm]_(s in `[a, t'])
   move=> t' t'ab.
   suff: is_integral_sol phi a b u0 y.
     by move=> [<-]; apply.
-  apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) k_neq0 ab) => //.
+  apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) (k := k)) => //.
   case: soly => _ [_].
   by rewrite closure_itvoo. (* where we use By *)
 have zint : forall t, t \in `[a, b]%R -> z t = v0 + \vint[lm]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
   move=> t' t'ab.
   suff: is_integral_sol (phi \+ psi) a b v0 z.
     by move=> [-> ->].
-  apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) k_neq0 ab).
+  apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) (k := k)).
   move=> x xab.
   rewrite (_ : phi \+ psi = phi); first by apply/funext => s; rewrite /= addr0.
   exact: lip2.
@@ -2004,8 +2004,9 @@ pose gronwall_y t := `|y t - z t|.
 rewrite -/(gronwall_y t).
 have t'b t' : t' \in `[a,b] -> t' <= b.
   by rewrite inE/=in_itv/= => /andP[].
-have contphiy j0 t'  : t' \in `[a,b] -> {within `[a,t'], continuous (fun x => (phi x (y x)) ord0 j0)}.
-  move => t'ab.
+have contphiy j0 t'  : t' \in `[a,b] ->
+    {within `[a,t'], continuous (fun x => (phi x (y x)) ord0 j0)}.
+  move=> t'ab.
   apply: (picard_iterator_within_continuous (k:=k) (u0' := u0) (r:=r)) => //.
     move => t0 t0at;apply: lip2.
     by apply : subset_itv t0at => //; apply t'b.
@@ -2287,11 +2288,11 @@ Qed.
 End thm34.
 
 Section continuous_dependence.
-Context {R : realType} {n : nat} (U := 'rV[R]_n) (phi : R -> U -> U).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U).
 Context (a b : R) (ab : a < b).
 Variables (k : {posnum R}) (r : {posnum R}).
 Variables (u0 v0 : U).
-Let B : set U := closed_ball u0 r%:num. 
+Let B : set U := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall t, k%:num.-lipschitz_B (phi t)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Variables y z : R -> U.

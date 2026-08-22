@@ -477,7 +477,6 @@ Hypothesis cg : {within `[a, b], continuous g}.
 Let B := closed_ball u0 r%:num.
 
 Variable k : R.
-Hypothesis k0 : k != 0.
 (* properties of the function f defining the differential equation: *)
 (* k-lipschitz for all t *)
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (f x)}.
@@ -486,9 +485,53 @@ Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous f ^~ y}}.
 
 Hypothesis imageg : g @` `[a, b] `<=` B.
 
+(* TODO: move *)
+Let lipschitz0_at_right : k = 0 -> a < b ->
+  f x0 (g x0) @[x0 --> a^'+] --> f a (g a).
+Proof.
+move=> k0 ab; apply/cvgrPdist_le => /= e e0.
+have Bga : B (g a).
+  apply: imageg => /=; exists a => //.
+  by rewrite bound_itvE ltW.
+have := @cont1 (g a).
+rewrite inE => /(_ Bga)/continuous_within_itvP => /(_ ab)[_ + _].
+move=> /cvgrPdist_le => /(_ _ e0) H.
+near=> t.
+have tab : t \in `]a, b[%R by rewrite in_itv/=; apply/andP; split.
+move/subset_itv_oo_cc : (tab).
+move/lip2 => /(_ (g a, g t)).
+have Bgt : B (g t).
+  by apply: imageg => /=; exists t => //; exact: subset_itv_oo_cc.
+move=> /(_ (conj Bga Bgt)) /=.
+rewrite k0 mul0r normr_le0 subr_eq0 => /eqP <-.
+by near: t.
+Unshelve. all: end_near. Qed.
+
+Let lipschitz0_at_left : k = 0 -> a < b ->
+  f x0 (g x0) @[x0 --> b^'-] --> f b (g b).
+Proof.
+move=> k0 ab; apply/cvgrPdist_le => /= e e0.
+have Bgb : B (g b).
+  apply: imageg => /=; exists b => //.
+  by rewrite bound_itvE ltW.
+have := @cont1 (g b).
+rewrite inE => /(_ Bgb)/continuous_within_itvP => /(_ ab)[_ _].
+move=> /cvgrPdist_le => /(_ _ e0) H.
+near=> t.
+have tab : t \in `]a, b[%R by rewrite in_itv/=; apply/andP; split.
+move/subset_itv_oo_cc : (tab).
+move/lip2 => /(_ (g t, g b)).
+have Bgt : B (g t).
+  by apply: imageg => /=; exists t => //; exact: subset_itv_oo_cc.
+move=> /(_ (conj Bgt Bgb)) /=.
+rewrite k0 mul0r normr_le0 subr_eq0 => /eqP ->.
+by near: t.
+Unshelve. all: end_near. Qed.
+
 Let within_continuous_lipschitz_at_right (ab : a < b) :
   f x (g x) @[x --> a^'+] --> f a (g a).
 Proof.
+have [k0|k0] := eqVneq k 0; first by apply: lipschitz0_at_right.
 apply/cvgrPdist_le => /= e e0.
 have aab : a \in `[a, b]%R by rewrite bound_itvE ltW.
 have e20 : 0 < e / 2 by rewrite divr_gt0.
@@ -536,6 +579,7 @@ Unshelve. all: end_near. Qed.
 Let within_continuous_lipschitz_at_left (ab : a < b) :
   f x (g x) @[x --> b^'-] --> f b (g b).
 Proof.
+have [k0|k0] := eqVneq k 0; first by apply: lipschitz0_at_left.
 apply/cvgrPdist_le => /= e e0.
 have bbab : b \in `[a, b]%R by rewrite bound_itvE ltW.
 have e20 : 0 < e / 2 by rewrite divr_gt0.
@@ -633,7 +677,10 @@ apply/continuous_within_itvP_g; [by [] | split].
     move/(_ (g x, g t) (conj gxB Bgt)).
     move=> /le_trans; apply.
     near: t.
-    move: k0; rewrite neq_lt => /orP[k_lt0|k_gt0].
+    have [->|] := eqVneq k 0.
+      near=> t.
+      by rewrite mul0r divr_ge0// ltW.
+    rewrite neq_lt => /orP[k0|k0].
       near=> t.
       rewrite (@le_trans _ _ 0)//; last by rewrite divr_ge0// ltW.
       by rewrite mulr_le0_ge0// ltW.
