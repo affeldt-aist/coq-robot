@@ -3,7 +3,8 @@ From mathcomp Require Import boot order algebra ring_tactic
   interval_inference.
 From mathcomp Require Import boolp classical_sets functions filter reals
   topology ereal prodnormedzmodule normedtype sequences derive realfun
-  landau measure lebesgue_integral.
+  landau measure lebesgue_integral lebesgue_measure
+  lebesgue_stieltjes_measure measurable_realfun ftc.
 Require Import ssr_ext derive_matrix.
 
 (**md**************************************************************************)
@@ -20,6 +21,118 @@ Import numFieldNormedType.Exports.
 
 Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
+
+(* TODO: PR *)
+Lemma continuous_within_ext {A B : topologicalType} (f g : A -> B) D :
+  {in D, f =1 g} -> {within D, continuous f} -> {within D, continuous g}.
+Proof.
+move=> fg Df; apply/subspace_continuousP => x Dx.
+apply: cvg_trans.
+  apply (@fmap_within_eq _ _ _ _ _ f) => //.
+  - apply nbhs_filter.
+  - move => x' Dx' .
+    symmetry.
+    by apply fg.
+rewrite <-fg.
+  move /subspace_continuousP : Df.
+  by apply.
+by rewrite inE.
+Qed.
+
+(* TODO: PR *)
+Lemma parameterized_integralN {R : realType}
+    x b (f : R -> R) : (x <= b) ->
+  {within `[x, b], continuous f} ->
+  parameterized_integral lebesgue_measure x b f =
+  parameterized_integral lebesgue_measure (- b) (- x) (f \o -%R).
+Proof.
+move=> xb cf.
+rewrite /parameterized_integral /Rintegral.
+rewrite -(@integration_by_substitution_oppr _ f (- b) (- x)) ?opprK//.
+by rewrite lerN2.
+Qed.
+
+Section parameterized_integral_continuous.
+Context {R : realType}.
+Notation mu := (@lebesgue_measure R).
+
+Let int := (parameterized_integral mu).
+
+(* TODO: PR *)
+Lemma parameterized_integralr_continuous a b (f : R -> R) : a <= b ->
+  {within `[a, b], continuous f} ->
+  {within `[a, b], continuous (fun x => int x b f)}.
+Proof.
+move=> ab abf.
+rewrite /int.
+suff: {within `[a, b], continuous
+    ((fun x => parameterized_integral lebesgue_measure (-b) x (f \o -%R)) \o -%R)}.
+  apply: continuous_within_ext => x /[!inE] xab/=.
+  rewrite -parameterized_integralN//.
+    by rewrite (itvP xab).
+  apply: continuous_subspaceW abf.
+  by apply: subset_itvr; rewrite bnd_simp (itvP xab).
+apply: within_continuous_compN.
+apply: (@parameterized_integral_continuous _ (- b) (- a) (f \o -%R)).
+  by rewrite lerN2.
+apply: continuous_compact_integrable => //.
+  exact: segment_compact.
+apply: within_continuous_compN.
+by rewrite !opprK.
+Qed.
+
+End parameterized_integral_continuous.
+
+Section integral_cst.
+Context {d} {T : measurableType d} {R : realType}
+  (mu : {measure set T -> \bar R}).
+
+(* TODO: PR? *)
+Lemma integrable_cst D (c : R) : measurable D -> (mu D < +oo)%E ->
+  mu.-integrable D (EFin \o cst c).
+Proof.
+move => h1 h2.
+apply: measurable_bounded_integrable => //=.
+exact: bounded_cst.
+Qed.
+
+End integral_cst.
+
+(* TODO: move *)
+Lemma closed_ball_split {R : realFieldType} (U : normedModType R) (x1 x2 y : U)
+    q : 0 < q ->
+  closed_ball x1 (q / 2) y -> closed_ball x2 (q / 2) x1 -> closed_ball x2 q y.
+Proof.
+move=> q0.
+have q20 : 0 < q / 2 by rewrite divr_gt0.
+rewrite !closed_ballE// /closed_ball_ /= => h1 h2.
+by rewrite -(subrKA x1 x2) (le_trans (ler_normD _ _))// (splitr q) lerD.
+Qed.
+
+Section measurable_fun_bigmaxr.
+Import MeasurableR.
+
+(* TODO: PR *)
+Lemma measurable_fun_bigmaxr d (T : measurableType d) (R : realType)
+  (D : set T) (n : nat) (f : 'I_n -> T -> R) :
+  d.-measurable D ->
+  (forall i, measurable_fun D (f i)) ->
+  measurable_fun D (fun x => \big[maxr/0]_(i < n) f i x).
+Proof.
+move=> mD mf.
+elim: n f mf => [|n IH] f mf.
+  have -> : (fun x : T => \big[maxr/0]_(i < 0) f i x) = 0.
+    by apply: funext => x; rewrite big_ord0.
+  exact: measurable_cst.
+have -> : (fun x : T => \big[maxr/0]_(i < n.+1) f i x) =
+    fun x => maxr (f ord0 x) (\big[maxr/0]_(i < n) (f (lift ord0 i) x)).
+  by apply funext => x; rewrite big_ord_recl.
+apply: measurable_maxr.
+  exact: mf.
+by apply: IH  => i; exact: mf.
+Qed.
+
+End measurable_fun_bigmaxr.
 
 (* TODO: PR to MCA in progress *)
 Lemma within_continuous_continuous_new {R : realFieldType} {K : numDomainType}
@@ -49,7 +162,7 @@ Qed.
 
 (* TODO: PR to MCA *)
 Section continuous_patch.
-Context {R : realType} {n : nat} {U : normedModType R}.
+Context {R : realType} {U : normedModType R}.
 Variables (a b c : R) (f : R -> U) (g : R -> U).
 Hypothesis ab : a < b.
 Hypothesis bc : b < c.

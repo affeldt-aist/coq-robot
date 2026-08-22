@@ -609,7 +609,7 @@ apply/cvgrPdist_le => //= e e0.
   have k'0 : 0 < k'%:num by [].
   near=>v.
   move => pv.
-  have := @continuous_dependence K 6 (fun=> phi) 0 (t + 1) t01 k' r' u v k'r'phi.
+  have := @continuous_dependence K 6 (fun=> phi) 0 (t + 1) u v r' k' t01 k'r'phi.
   have : {in closed_ball u r'%:num,
       forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
     move=> /= w wur ?//.
@@ -633,7 +633,7 @@ apply/cvgrPdist_le => //= e e0.
     apply: subset_trans pur.
     move=> _ [y /= y0t] <-.
     apply: invariant_sublevelUpsilon1 => //.
-    by apply set_mem.
+      exact/set_mem.
     by rewrite (itvP y0t).
  have Hv : hv.
     rewrite {}/hv/=.
@@ -1019,30 +1019,26 @@ have VsublevelUpsilon1  : sublevelUpsilon1 p `<=` V.
   by rewrite (le_lt_trans (ler_normB _ _))// ltrD2l ltr_pwDr// Mp// ltrDl.
 have B1 :  0 < `|p| + (M + 1 + 1).
   by rewrite ltr_wpDl// addr_gt0// ltr_wpDl.
-have Vo : open V.
-  by rewrite /V; exact: ball_open.
+have Vo : open V by exact: ball_open.
 have cV : compact (closure V).
-   rewrite closure_ballE closed_ballE//.
-   apply: bounded_closed_compact; last exact: closed_closed_ball_.
-   exists (`|p| + (`|p| + (M + 1 +1))).
-   rewrite /closed_ball_/=.
-   split => //= x xB y Hy.
-   rewrite -(subrKC p y).
-   apply: (le_trans (ler_normD _ _)).
-   rewrite distrC.
-   apply (le_trans (lerD (lexx _ ) Hy)).
-   by apply ltW.
+  rewrite closure_ballE closed_ballE//.
+  apply: bounded_closed_compact; last exact: closed_closed_ball_.
+  exists (`|p| + (`|p| + (M + 1 + 1))).
+  split => //= x xB y Hy.
+  rewrite -(subrKC p y).
+  rewrite (le_trans (ler_normD _ _))// distrC (le_trans (lerD (lexx _ ) Hy))//.
+  exact/ltW.
 apply: (compact_cluster_set1 _ cV ) => //.
   rewrite nbhsE/=.
-  exists V; last by apply subset_closure.
+  exists V; last by exact: subset_closure.
   split => //.
-  by apply VsublevelUpsilon1.
+  exact: VsublevelUpsilon1.
 apply: (filterS (closureS VsublevelUpsilon1)).
 exists 0; split => //= x /ltW x0.
 rewrite -(closure_id (sublevelUpsilon1 p)).1.
-  by apply compact_closed =>//; apply compact_sublevelUpsilon1.
-apply invariant_sublevelUpsilon1 => //.
-by apply/set_mem/mem_sublevelUpsilon1/set_mem.
+  by apply compact_closed =>//; exact: compact_sublevelUpsilon1.
+apply: invariant_sublevelUpsilon1 => //.
+exact/set_mem/mem_sublevelUpsilon1/set_mem.
 Qed.
 
 End LaSalle_tilt.

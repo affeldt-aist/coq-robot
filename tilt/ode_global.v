@@ -18,16 +18,15 @@ Import numFieldNormedType.Exports.
 Open Scope ring_scope.
 Open Scope classical_set_scope.
 
-Lemma safe_dist_rho_le {R : realType} {n} phi (a b : R) k (u0 : 'rV[R]_n) r rho rho' : 0 < k ->
-  rho <= rho' ->
+Lemma safe_dist_rho_le {R : realType} {n} phi (a b : R) (u0 : 'rV[R]_n) r k
+    rho rho' : 0 < k -> rho <= rho' ->
   safe_dist phi a b u0 r k rho <= safe_dist phi a b u0 r k rho'.
 Proof.
 move => k0 rhorho'.
 by rewrite unlock/=!le_min !ge_min !lexx /= !orbT /= ler_pdivlMr // ler_pM2r ?rhorho' ?orbT// invr_gt0.
 Qed.
 
-Lemma is_sol_cauchy_oo_rev {R : realType} {n : nat}
-    (phi : R -> 'rV[R]_n -> 'rV[R]_n)
+Lemma is_sol_cauchy_oo_rev {R : realType} {n} (phi : R -> 'rV[R]_n -> 'rV[R]_n)
     (a b : R) (f : R -> 'rV[R]_n) :
   a < b ->
   is_sol_cauchy_oo phi a b (f a) f ->
@@ -46,24 +45,22 @@ split.
   split => //.
   apply/rowP=> i.
   rewrite mxE derive1E derive_mx //= mxE -derive1E /=.
-   have -> : (fun t0 : R => f (- t0) ord0 i) = ((fun t => f t ord0 i) \o -%R) by apply funext.
-   rewrite derive1_comp/=.
-     by [].
-     by move /derivable_mxP: Df.
-   rewrite !derive1N//=derive1_id/=.
-   move /rowP : Hf =>  /(_ i).
-      rewrite !derive1E /=!derive_mx.
+  have -> : (fun t0 : R => f (- t0) ord0 i) = ((fun t => f t ord0 i) \o -%R) by apply funext.
+  rewrite derive1_comp/=.
+  - by [].
+  - by move /derivable_mxP: Df.
+  - rewrite !derive1N//=derive1_id/=.
+    move /rowP : Hf =>  /(_ i).
+    rewrite !derive1E /=!derive_mx.
       exact: Df.
-      rewrite /=!mxE => ->.
-      by rewrite mulrN1.
-  rewrite closure_itvoo; first by rewrite ltrN2.
-  apply: within_continuous_compN.
-  rewrite !opprK.
-  by rewrite -closure_itvoo.
+    rewrite /=!mxE => ->.
+    by rewrite mulrN1.
+rewrite closure_itvoo; first by rewrite ltrN2.
+apply: within_continuous_compN.
+by rewrite !opprK -closure_itvoo.
 Qed.
 
-Lemma is_sol_cauchy_oo_rev_iff {R : realType} {n : nat}
-    (phi : R -> 'rV[R]_n -> 'rV[R]_n)
+Lemma is_sol_cauchy_oo_rev_iff {R : realType} {n} (phi : R -> 'rV[R]_n -> 'rV[R]_n)
     (a b : R) (f : R -> 'rV[R]_n) :
   a < b ->
   is_sol_cauchy_oo phi a b (f a) f <->
@@ -83,13 +80,13 @@ apply (@is_sol_cauchy_oo_rev _ _ (fun t x => - phi (- t) x)).
 by rewrite /= opprK.
 Qed.
 
-Lemma bounded_derivative_lipschitz {R : realType} {n : nat}
-    (a b M : R) (f : R -> 'rV[R]_n) :
+(* TODO: move *)
+Lemma bounded_derivative_lipschitz {R : realType} {n} (a b M : R)
+    (f : R -> 'rV[R]_n) :
   0 <= M ->
   {within `[a, b], continuous f} ->
-  {in `]a, b[%R, forall x,
-     derivable f x 1 /\ `| f^`() x | <= M} ->
-   {in `]a, b[%R&, forall s t,
+  {in `]a, b[%R, forall x, derivable f x 1 /\ `| f^`() x | <= M} ->
+  {in `]a, b[%R&, forall s t,
   `| f t - f s | <= M * `|t - s|}.
 Proof.
 move => M0 cont /= deri s t sab tab.
@@ -100,12 +97,12 @@ rewrite ord1 !mxE /=.
 wlog st : s t sab tab / s <= t.
   move => H.
   have [st|ts] := leP s t.
-  exact: H.
+    exact: H.
   rewrite distrC (distrC t).
   apply H => //.
   by apply ltW.
 have [ | |c cst ->]:= @MVT_segment _ (fun t => f t ord0 i) ('D_1 (fun t => f t ord0 i)) _ _ st.
-  move => x xst.
+- move => x xst.
   have xab : x \in `]a,b[%R.
     move : xst.
     apply : subset_itv; rewrite bnd_simp ltW //.
@@ -113,9 +110,8 @@ have [ | |c cst ->]:= @MVT_segment _ (fun t => f t ord0 i) ('D_1 (fun t => f t o
     by move : tab;rewrite in_itv/= => /andP[].
   apply /derivableP.
   have [/derivable_mxP + _] := (deri x xab).
-  apply.
-
-  move /within_continuous_coord : cont.
+  by apply.
+- move /within_continuous_coord : cont.
   move /(_ i).
   apply: continuous_subspaceW.
   apply : subset_itv; rewrite bnd_simp ltW//.
@@ -124,13 +120,14 @@ have [ | |c cst ->]:= @MVT_segment _ (fun t => f t ord0 i) ('D_1 (fun t => f t o
 rewrite -derive1E/= normrM ler_wpM2r //.
 have cab: c \in `]a,b[%R.
   move : cst.
-  apply : subset_itv; rewrite bnd_simp.
-  by move : sab;rewrite in_itv/= //= => /andP[].
-  by move : tab;rewrite in_itv/= => /andP[].
+  apply: subset_itv; rewrite bnd_simp.
+    by rewrite (itvP sab).
+  by rewrite (itvP tab).
 have [_  + ] := (deri c cab).
 rewrite {1}/Num.norm /= mx_normrE.
 apply: le_trans.
-suff -> : (fun t0 : R => f t0 ord0 i)^`() c =  f^`() c ord0 i by exact: (le_bigmax _ _ (ord0, i)).
+suff -> : (fun t0 : R => f t0 ord0 i)^`() c =  f^`() c ord0 i.
+  exact: (le_bigmax _ _ (ord0, i)).
 rewrite !derive1E !derive_mx.
   by apply deri.
 by rewrite mxE/=.
@@ -138,29 +135,11 @@ Qed.
 
 (* Extending to infinite time *)
 
-Lemma continuous_within_ext {A B : topologicalType} (f g : A -> B) D :
-  {in D, f =1 g} -> {within D, continuous f} -> {within D, continuous g}.
-Proof.
-move=> fg Df; apply/subspace_continuousP => x Dx.
-apply: cvg_trans.
-  apply (@fmap_within_eq _ _ _ _ _ f) => //.
-  - apply nbhs_filter.
-  - move => x' Dx' .
-    symmetry.
-    by apply fg.
-rewrite <-fg.
-  move /subspace_continuousP : Df.
-  by apply.
-by rewrite inE.
-Qed.
-
 (* Goal: if the rhs function is bounded, it is Lipschitz *)
 Section bounded_rhs_lipschitz.
 Local Notation mu := lebesgue_measure.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-
-Variables (phi : R -> U -> U) (u0 : U) (a b : R) (sol : R -> U).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
+ (u0 : U) (sol : R -> U).
 Variable M : R.
 
 Hypothesis M0 : 0 <= M.
@@ -168,20 +147,10 @@ Hypothesis M0 : 0 <= M.
 Import MeasurableR.
 
 Hypothesis int_phi_sol : forall i,
-  mu.-integrable `[a, b]
-    (EFin \o (fun x : R => phi x (sol x) ord0 i)).
+  mu.-integrable `[a, b] (EFin \o (fun x => phi x (sol x) ord0 i)).
 
 Hypothesis rhs_bound :
   {in `[a, b]%R, forall x, `| phi x (sol x) | <= M}.
-
-(* TODO: PR? *)
-Lemma integrable_cst D (c : R) : measurable D ->   (mu D < +oo)%E
- ->  mu.-integrable D (EFin \o cst c).
-Proof.
-move => h1 h2.
-apply: measurable_bounded_integrable => //=.
-exact: bounded_cst.
-Qed.
 
 (*Todo: PR? *)
 Lemma norm_rowRintegral_le_cst s t :
@@ -190,13 +159,12 @@ Lemma norm_rowRintegral_le_cst s t :
   `| \vint[mu]_(x in `[s, t]) phi x (sol x) | <= M * (t - s).
 Proof.
 move => sab tsb.
-have as' : a <= s by move: sab; rewrite in_itv /= => /andP[].
-have st : s <= t by move: tsb; rewrite in_itv /= => /andP[].
-have tb : t <= b by move: tsb; rewrite in_itv /= => /andP[].
+have as' : a <= s by rewrite (itvP sab).
+have st : s <= t by rewrite (itvP tsb).
+have tb : t <= b by rewrite (itvP tsb).
 have st_ab : `[s, t] `<=` `[a, b].
   move=> x.
-  rewrite /= !in_itv /=.
-  move=> /andP[sx xt].
+  rewrite /= !in_itv /= => /andP[sx xt].
   by rewrite (le_trans as' sx) (le_trans xt tb).
 rewrite /Num.norm /= mx_normrE.
 apply: bigmax_le => //=.
@@ -208,10 +176,10 @@ rewrite (le_trans (le_normr_Rintegral _ _)) //=.
   by apply: (@integrableS _ _ _ mu `[a, b] `[s, t]) => //.
 apply (@le_trans _ _ (\int[mu]_(x in `[s, t]) M)) => //=.
   apply (le_Rintegral ) => //=.
-    apply: (@integrableS _ _ _ mu `[a, b] `[s, t]) => //; first by apply integrable_norm.
-    apply integrable_cst => //=.
-      by rewrite lebesgue_measure_itv /=; case: ifPn => //=;rewrite  ltry.
-    move => x xst.
+  - by apply: (@integrableS _ _ _ mu `[a, b] `[s, t]) => //; first by apply integrable_norm.
+  - apply: integrable_cst => //=.
+    by rewrite lebesgue_measure_itv /=; case: ifPn => //=;rewrite  ltry.
+  - move => x xst.
     apply (@le_trans _ _ `| phi x (sol x) |); last by apply (rhs_bound (st_ab _ xst)).
     rewrite {2}/Num.norm /= mx_normrE /=.
     by apply: (le_bigmax _ _ (ord0, j)).
@@ -236,17 +204,13 @@ Qed.
 End bounded_rhs_lipschitz.
 
 Section lipschitz_left_limit.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-Variables (a b k : R) (f : R -> U).
+Context {R : realType} {n} (U := 'rV[R]_n) (a b k : R) (f : R -> U).
 Hypothesis ab : a < b.
 Hypothesis k0 : 0 < k.
-Hypothesis f_lip sol:
-  forall s t,
-    s \in `]a, b[%R ->
-    t \in `]a, b[%R ->
-    `| f t - f s | <= k * `|t - s|.
+Hypothesis f_lip sol: forall s t,
+  s \in `]a, b[%R -> t \in `]a, b[%R -> `| f t - f s | <= k * `|t - s|.
 
+(* TODO: move *)
 Lemma lipschitz_has_left_limit : f @ b^'- --> lim (f @ b^'-).
 Proof.
 apply /cauchy_cvgP.
@@ -257,18 +221,16 @@ near b^'- => s.
 exists (f s).
 near=>t.
 rewrite /= -ball_normE /=.
- apply: le_lt_trans; first apply f_lip.
-  rewrite in_itv/=;apply /andP;split.
-  near:t.
-  apply: cvg_at_left_filter; first by apply cvg_id.
-  by apply: lt_nbhsr.
+apply: le_lt_trans; first apply f_lip.
+- rewrite in_itv/=;apply /andP;split.
+    near:t.
+    apply: cvg_at_left_filter; first by apply cvg_id.
+    by apply: lt_nbhsr.
   by near:t;exact: nbhs_left_lt.
-  
-
-  rewrite in_itv/=;apply /andP;split.
-  near:s.
-  apply: cvg_at_left_filter; first by apply cvg_id.
-  by apply: lt_nbhsr.
+- rewrite in_itv/=;apply /andP;split.
+    near:s.
+    apply: cvg_at_left_filter; first by apply cvg_id.
+    by apply: lt_nbhsr.
   by near:s;exact: nbhs_left_lt.
 rewrite mulrC -ltr_pdivlMr //.
 rewrite -(subrKA b) (le_lt_trans  (ler_normD _ _)) // (splitr (eps / k)) ltrD //.
@@ -285,12 +247,11 @@ Unshelve. all: by end_near. Qed.
 End lipschitz_left_limit.
 
 Section safe_dist_sym_props.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-Context (phi : R -> U -> U) (u0 : U) (a b c k : R) (sol : R -> U)
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
+  (u0 : U) (c k : R) (sol : R -> U)
   (r : {posnum R}).
 
-Local Notation safe_dist := (@safe_dist_sym R n phi k u0 r a c b).
+Local Notation safe_dist := (@safe_dist_sym R n phi a c u0 r k b).
 
 Hypothesis ab : a < b.
 Hypothesis bc : b < c.
@@ -301,13 +262,13 @@ Proof.
 by rewrite lt_min subr_gt0 bc /= lt_min !safe_dist_gt0 // ltrNl opprK.
 Qed.
 
-Lemma safe_dist_sym_itv1 : safe_dist <= b-a.
+Lemma safe_dist_sym_itv1 : safe_dist <= b - a.
 Proof.
 rewrite addrC -{2}(opprK b).
 by rewrite 2!ge_min safe_dist_itv !orbT.
 Qed.
 
-Lemma safe_dist_sym_itv2 : safe_dist <= c-b.
+Lemma safe_dist_sym_itv2 : safe_dist <= c - b.
 Proof.
 by rewrite 2!ge_min safe_dist_itv orbT.
 Qed.
@@ -315,9 +276,8 @@ Qed.
 End safe_dist_sym_props.
 
 Section extend_sol.
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-Variables (phi : R -> U -> U) (u0 u1 : U) (a b c k : R) (sol : R -> U) (r : {posnum R}).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b c : R)
+  (u0 u1 : U) (k : R) (sol : R -> U) (r : {posnum R}).
 Let B := closed_ball u1 r%:num.
 Hypothesis ab : a < b.
 Hypothesis bc : b < c.
@@ -461,8 +421,8 @@ apply/continuous_within_itvP => //; split.
  Unshelve. all: by end_near. Qed.
 
 (* Local Notation safe_dist := (@safe_dist R n phi b c k u1 (r%:num / 2)%:pos rho). *)
-Local Notation safe_dist_fwd := (@safe_dist R n phi b c (r%:num / 2)%:pos u1 k rho).
-Local Notation safe_dist := (@safe_dist_sym R n phi k u1 r a c b).
+Local Notation safe_dist_fwd := (@safe_dist R n phi b c u1 (r%:num / 2)%:pos k rho).
+Local Notation safe_dist := (@safe_dist_sym R n phi a c u1 r k b).
 
 Local Lemma bac : b \in `]a, c[%R.
 Proof. by rewrite in_itv /= ab bc. Qed.
@@ -656,7 +616,7 @@ by apply /lipschitz_has_left_limit/sol_lip.
 Qed.
 
 Local Notation sol_extended := (sol_extended sol ab bc k0 cont1 lip2 ).
-Local Notation safe_dist := (@safe_dist_sym R n phi k u1 r a c b).
+Local Notation safe_dist := (@safe_dist_sym R n phi a c u1 r k b).
 
 Lemma solution_extends_from_lipschitz :
   is_sol_cauchy_oo phi a (b + safe_dist) u0 sol_extended.
@@ -979,7 +939,7 @@ have k0 : 0 < k%:num by [].
 exists (a+safe_dist phi a (a + 1) u0 (r%:num / 2) k%:num rho%:num).
 split; last by rewrite ltDl_safe_dist.
 split; first by rewrite leDl_safe_dist// ltW.
-exists (cauchy_lipschitz_f (ltW a1) k0 lip1 cont1 rho1).
+exists (cauchy_lipschitz_f (ltW a1) (ltW k0) lip1 cont1 rho1).
 exact: is_sol_cauchy_lipschitz_f.
 Qed.
 
@@ -1473,7 +1433,7 @@ Lemma global_solution_unique f f':
   {in `[a, +oo[%R, f =1 f'}.
 Proof.
 move => /sol_inftyP h1 /sol_inftyP h2 t tp.
-apply: (@locally_cauchy_lipschitz_unique _ _ a (t + 1) phi _ u0 f f') => //.
+apply: (@locally_cauchy_lipschitz_unique _ _ phi a (t + 1) u0) => //.
 - by rewrite ltr_pwDr// (itvP tp).
 - move => t0 at0 tt0.
   have at1 : a < t+1 by apply (le_lt_trans at0).
@@ -1481,56 +1441,12 @@ apply: (@locally_cauchy_lipschitz_unique _ _ a (t + 1) phi _ u0 f f') => //.
   exists r, k => t' at'.
   split;first by apply H; rewrite in_itv/=.
   move => y Hy.
-  apply : continuous_subspaceT.
+  apply: continuous_subspaceT.
   exact: phi_continuous.
 - by rewrite in_itv/= (itvP tp) lerDl ler01.
 Qed.
 
 End compact_global_solution.
-
-Lemma parameterized_integralN {R : realType}
-    x b (f : R -> R) : (x <= b) ->
-  {within `[x, b], continuous f} ->
-  parameterized_integral lebesgue_measure x b f =
-  parameterized_integral lebesgue_measure (- b) (- x) (f \o -%R).
-Proof.
-move=> xb cf.
-rewrite /parameterized_integral /Rintegral.
-rewrite -(@integration_by_substitution_oppr _ f (- b) (- x)) ?opprK//.
-by rewrite lerN2.
-Qed.
-
-Section parameterized_integral_continuous.
-Context {R : realType}.
-Notation mu := (@lebesgue_measure R).
-
-Let int := (parameterized_integral mu).
-
-(* TODO: PR *)
-Lemma parameterized_integralr_continuous a b (f : R -> R) : a <= b ->
-  {within `[a, b], continuous f} ->
-  {within `[a, b], continuous (fun x => int x b f)}.
-Proof.
-move=> ab abf.
-rewrite /int.
-suff:
-  {within `[a, b], continuous ((fun x => parameterized_integral lebesgue_measure (-b) x (f \o -%R)) \o -%R) }.
-  apply: continuous_within_ext => x /[!inE] xab/=.
-  rewrite -parameterized_integralN//.
-    by rewrite (itvP xab).
-  apply: continuous_subspaceW abf.
-  by apply: subset_itvr; rewrite bnd_simp (itvP xab).
-apply: within_continuous_compN.
-have := @parameterized_integral_continuous _ (- b) (- a) (f \o -%R).
-apply.
-  by rewrite lerN2.
-apply: continuous_compact_integrable => //.
-  exact: segment_compact.
-apply: within_continuous_compN.
-by rewrite !opprK.
-Qed.
-
-End parameterized_integral_continuous.
 
 Section gronwall.
 Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu : R -> R)
@@ -2288,10 +2204,9 @@ Qed.
 End thm34.
 
 Section continuous_dependence.
-Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U).
-Context (a b : R) (ab : a < b).
-Variables (k : {posnum R}) (r : {posnum R}).
-Variables (u0 v0 : U).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U)
+  (a b : R) (u0 v0 : U) (r : {posnum R}) (k : {posnum R}).
+Hypothesis ab : a < b.
 Let B : set U := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall t, k%:num.-lipschitz_B (phi t)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
