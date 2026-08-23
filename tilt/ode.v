@@ -53,6 +53,7 @@ Require Import tilt_mathcomp tilt_analysis row_integral ode_common ode_contseg.
 (* is_sol_cauchy_oo == TODO                                                   *)
 (* safe_dist == TODO                                                          *)
 (* is_integral_sol == TODO                                                    *)
+(* is_sol_sym == TODO                                                         *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -1378,9 +1379,8 @@ Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
 Hypothesis ab : a <= b.
 Hypothesis k0 : 0 <= k.
 Let B := closed_ball u0 r%:num.
-Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
+Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
-
 Hypothesis rho1 : rho%:num < 1.
 
 Let r2 := (r%:num/2)%:pos.
@@ -2021,6 +2021,14 @@ End uniqueness.
 Lemma patch_in {R X : Type} (f g : R -> X) S x : x \in S -> patch f S g x = g x.
 Proof. by move => xs; rewrite /patch xs. Qed.
 
+Section cauchy_lipschitz_symmetric_def.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U).
+
+Definition is_sol_sym t0 d u0 (f : R -> U):=
+  f t0 = u0 /\ sol_is_deriv phi `]t0 - d, t0 + d[%R f.
+
+End cauchy_lipschitz_symmetric_def.
+
 Section cauchy_lipschitz_symmetric.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
   (u0 : U) (r : {posnum R}) (k : R).
@@ -2030,15 +2038,12 @@ Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Definition phi_ (t : R) x := phi x.
 
-Definition is_sol_sym u0 t0 d (f : R -> U):=
-   f t0 = u0 /\ sol_is_deriv phi `]t0 - d, t0 + d[%R f.
-
 Let rho : {posnum R} := 2^-1%:pos.
 
-Let rho1 : rho%:num < 1.
-Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
+Let rho1 : rho%:num < 1. Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 
 Let r2 := (r%:num / 2)%:pos.
+
 Let r4 := (r%:num / 4)%:pos.
 
 Let ler4 : r4%:num <= r%:num.
@@ -2052,66 +2057,56 @@ Qed.
 
 Let B4 := closed_ball u0 r4%:num.
 
-Let phi_lip2 t0: t0 \in `[a,b]%R ->
-  {in `[t0, b]%R, forall x, k.-lipschitz_B4 (phi x)}.
+Let phi_lip2 t : t \in `[a, b]%R ->
+  {in `[t, b]%R, forall x, k.-lipschitz_B4 (phi x)}.
 Proof.
-move => tab x abx /= y By.
-apply: lip2.
-  move: abx; rewrite !inE/=; apply: subset_itvr.
+move=> tab x xab /= y By; apply: lip2.
+  move: xab; rewrite !inE/=; apply: subset_itvr.
   by rewrite bnd_simp (itvP tab).
-split.
-  exact/le_closed_ball/By.1.
-exact/le_closed_ball/By.2.
+by split; [exact/le_closed_ball/By.1|exact/le_closed_ball/By.2].
 Qed.
 
-Let phi_cont1 t0 : t0 \in `[a,b]%R ->
-  {in B4, forall y, {within `[t0, b], continuous phi ^~ y}}.
+Let phi_cont1 t : t \in `[a, b]%R ->
+  {in B4, forall y, {within `[t, b], continuous phi ^~ y}}.
 Proof.
-move => /= tab x Bx.
-apply/continuous_subspaceW/cont1 => //.
+move=> /= tab u Bx; apply/continuous_subspaceW/cont1.
   by apply: subset_itvr; rewrite bnd_simp (itvP tab).
 apply/mem_set.
-move/set_mem : Bx.
-exact/le_closed_ball.
+by move/set_mem : Bx; exact: le_closed_ball.
 Qed.
 
-Let phi_lip2' t0 : t0 \in `[a,b]%R ->
-  {in `[-t0, -a]%R, forall x, k.-lipschitz_B4 (-phi (-x))}.
+Let phi_sym x y := - phi (- x) y.
+
+Let phi_sym_lip2 t : t \in `[a, b]%R ->
+  {in `[- t, - a]%R, forall t0, k.-lipschitz_B4 (phi_sym t0)}.
 Proof.
-move => t0ab /= y ab x B12.
+move => tab /= y yta x Bx.
 rewrite /= -normrN opprD !opprK.
-have B12' : (B `*` B) x.
-  split.
-    exact/le_closed_ball/B12.1.
-  exact/le_closed_ball/B12.2.
-apply: (lip2 _  B12').
-move : ab.
-rewrite !in_itv/= lerNl lerNr => /andP[h1 ->]//=.
-by rewrite (le_trans h1)// (itvP t0ab).
+have /lip2 : (B `*` B) x.
+  by split; [exact/le_closed_ball/Bx.1|exact/le_closed_ball/Bx.2].
+apply.
+rewrite oppr_itvcc in_itv/= (itvP yta) andbT.
+by rewrite (@le_trans _ _ (- t)) ?lerN2 ?(itvP tab)// (itvP yta).
 Qed.
 
-Local Lemma phi_cont1' t0 : t0 \in `[a,b]%R ->
-  {in B4, forall y, {within `[-t0, -a], continuous -(fun t => phi (-t) y)}}.
+Local Lemma phi_sym_cont1 t : t \in `[a,b]%R ->
+  {in B4, forall y, {within `[- t, - a], continuous (phi_sym ^~ y)}}.
 Proof.
-move=> t0ab /= y By t.
-apply: continuousN.
-have /within_continuous_compN : {within `[-(-a), - (-t0)], continuous phi^~ y}.
-  rewrite !opprK.
-  apply/continuous_subspaceW/cont1 => //.
-    apply : subset_itvl.
-    by rewrite bnd_simp (itvP t0ab).
-  apply/mem_set.
-  move/set_mem : By.
-  exact/le_closed_ball.
-exact.
+move=> tab /= y By t'; apply: continuousN.
+suff : {within `[- (- a), - (- t)], continuous phi^~ y}.
+  by move/within_continuous_compN; exact.
+rewrite !opprK.
+apply/continuous_subspaceW/cont1.
+  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
+apply/mem_set.
+by move/set_mem : By; exact/le_closed_ball.
 Qed.
 
-Let dplus t0 := safe_dist phi t0 b u0 (r4%:num / 2) k rho%:num.
+Let dplus t := safe_dist phi t b u0 (r4%:num / 2) k rho%:num.
 
-Let dminus t0 := safe_dist (fun t x => - phi (- t) x) (- t0) (- a) u0
-  (r4%:num / 2) k rho%:num.
+Let dminus t := safe_dist phi_sym (- t) (- a) u0 (r4%:num / 2) k rho%:num.
 
-Let dboth t0 := Num.min (b - t0) (Num.min (dplus t0) (dminus t0)).
+Let dboth t := Num.min (b - t) (Num.min (dplus t) (dminus t)).
 
 Section cauchy_lipschitz_sym.
 Context (t0 : R).
@@ -2121,15 +2116,15 @@ Let amin1 : - t0 < - a. Proof. by rewrite ltrN2 (itvP t0ab). Qed.
 
 Let t0ab' : t0 \in `[a, b]%R. Proof. exact: subset_itv_oo_cc. Qed.
 
-Let fminus0 := @cauchy_lipschitz_f R n (fun t x => - phi (- t) x) (- t0) _ u0
-  r4 k rho (ltW amin1) (ltW k0) (phi_lip2' t0ab') (phi_cont1' t0ab') rho1.
+Let fminus0 := @cauchy_lipschitz_f R n phi_sym (- t0) (- a) u0
+  r4 k rho (ltW amin1) (ltW k0) (phi_sym_lip2 t0ab') (phi_sym_cont1 t0ab') rho1.
 
 Let fminus := fminus0 \o -%R.
 
 Let t0b : t0 < b. Proof. by rewrite (itvP t0ab). Qed.
 
-Let fplus := @cauchy_lipschitz_f R n phi t0
-  _ u0 r4 k rho (ltW t0b) (ltW k0) (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
+Let fplus := @cauchy_lipschitz_f R n phi t0 b u0
+  r4 k rho (ltW t0b) (ltW k0) (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
 
 Definition safe_dist_sym := (dboth t0).
 
@@ -2153,8 +2148,8 @@ have solplus := cauchy_lipschitz_ex (ltW t0b) (ltW k0) (phi_lip2 t0ab')
   (phi_cont1 t0ab') rho1.
 have cplus := solution_stays_in_ball.
 have dminus0 : 0 < dminus t0 by exact: safe_dist_gt0.
-have solminus := cauchy_lipschitz_ex (ltW amin1) (ltW k0) (phi_lip2' t0ab')
-  (phi_cont1' t0ab') rho1.
+have solminus := cauchy_lipschitz_ex (ltW amin1) (ltW k0) (phi_sym_lip2 t0ab')
+  (phi_sym_cont1 t0ab') rho1.
 have cminus := solution_stays_in_ball.
 have adplus : t0 < t0 + dplus t0 by rewrite ltrDl safe_dist_gt0.
 have cfplus := solplus.2.2.
@@ -2271,22 +2266,18 @@ have t0t0b : t0 + dboth t0 <= b.
   by rewrite !ge_min lexx.
 apply/(integral_sol_iff_sol (r := r2)) => /=.
 - by rewrite lerD// gerN// ltW.
-- move => t tab /= x Bx.
-  apply: lip2.
+- move=> t tab /= x Bx; apply: lip2.
     by apply: subset_itv tab; rewrite bnd_simp.
-  split.
-    exact/Buneg/Bx.1.
-  exact/Buneg/Bx.2.
-- move=> t tab.
-  apply/continuous_subspaceW/cont1.
+  by split; [exact/Buneg/Bx.1|exact/Buneg/Bx.2].
+- move=> t tab; apply/continuous_subspaceW/cont1.
     by apply: subset_itv; rewrite bnd_simp.
-  by apply/mem_set/Buneg/set_mem.
+  exact/mem_set/Buneg/set_mem.
 - exact: contf.
 - move => _ [t tp] <-.
   rewrite {1}/cauchy_lipschitz_f_sym patch_in.
     by rewrite inE/=in_itv/= lexx //= gerBl ltW.
   by apply fc; rewrite inE.
-apply: is_integral_sol_patch => //.
+apply: is_integral_sol_patch.
 - by rewrite gtrBl.
 - apply: (within_continuous_lipschitz _ (u0 := u0) (r:=r)).
   + exact: contf_minus.
@@ -2326,16 +2317,13 @@ apply: is_integral_sol_patch => //.
   apply/mem_set; apply cplus.
   apply: subset_itvl tp; rewrite bnd_simp lerD2l.
   by rewrite /dboth /dplus 2!ge_min lexx !orbT.
+- by [].
 - apply /(integral_sol_iff_sol1 (r:=r2)).
-  + move => x bx.
-    apply: lip2'.
+  + move => x bx; apply: lip2'.
     rewrite inE.
-    apply: subset_itvl bx; rewrite bnd_simp.
-    by rewrite lerDl ltW.
-  + move => t tab.
-    apply/continuous_subspaceW/cont1.
-      apply: subset_itv; rewrite bnd_simp//.
-      by rewrite (itvP t0ab).
+    by apply: subset_itvl bx; rewrite bnd_simp lerDl ltW.
+  + move => t tab; apply/continuous_subspaceW/cont1.
+      by apply: subset_itv; rewrite bnd_simp// (itvP t0ab).
     exact/mem_set/Buneg/set_mem.
   + exact: contf_minus.
   + move => _ [t tp] <-.
@@ -2343,10 +2331,8 @@ apply: is_integral_sol_patch => //.
     rewrite {1}/cauchy_lipschitz_f_sym patch_in.
       by rewrite inE/=in_itv/= lexx //= gerBl ltW.
     have tin : t \in `[t0 - dboth t0, t0 + dboth t0].
-      move : tp.
-      rewrite !inE.
-      apply: subset_itv; rewrite bnd_simp//.
-      by rewrite lerDl// ltW.
+      move: tp; rewrite !inE.
+      by apply: subset_itv; rewrite bnd_simp// lerDl// ltW.
     have := fc _ tin.
     rewrite {1}/cauchy_lipschitz_f_sym patch_in; first by rewrite inE.
     apply.
@@ -2375,7 +2361,7 @@ apply: is_integral_sol_patch => //.
         rewrite derive1E/=.
         rewrite !derive_mx //= !mxE.
         rewrite -derive1E/=.
-        have -> : (fun t0 : R => fminus0 (- t0) ord0 i) =
+        have -> : (fun t0 => fminus0 (- t0) ord0 i) =
                   ((fun t => fminus0 t ord0 i) \o -%R).
           by apply funext.
         rewrite derive1_comp/=.
@@ -2445,8 +2431,8 @@ apply: is_integral_sol_patch => //.
     by rewrite /dboth /dplus 2!ge_min lexx !orbT.
 Qed.
 
-Lemma cauchy_lipschitz_sym_rev_oo : is_sol_cauchy_oo (fun t x => - phi (- t) x)
-  (- t0) (- t0 + dminus t0) u0 fminus0.
+Lemma cauchy_lipschitz_sym_rev_oo :
+  is_sol_cauchy_oo phi_sym (- t0) (- t0 + dminus t0) u0 fminus0.
 Proof. exact: cauchy_lipschitz_ex. Qed.
 
 Lemma cauchy_lipschitz_sym_left t : t \in `[t0 - safe_dist_sym, t0]%R ->
@@ -2457,12 +2443,12 @@ by rewrite cauchy_lipschitz_f_sym_left.
 Qed.
 
 Lemma cauchy_lipschitz_sym :
-  is_sol_sym u0 t0 safe_dist_sym cauchy_lipschitz_f_sym.
+  is_sol_sym phi t0 safe_dist_sym u0 cauchy_lipschitz_f_sym.
 Proof.
 split; last by apply cauchy_lipschitz_sym_oo.
 have dminus0 : 0 < dminus t0 by exact: safe_dist_gt0.
-have solminus := cauchy_lipschitz_ex (ltW amin1) (ltW k0) (phi_lip2' t0ab')
-  (phi_cont1' t0ab') rho1.
+have solminus := cauchy_lipschitz_ex (ltW amin1) (ltW k0) (phi_sym_lip2 t0ab')
+  (phi_sym_cont1 t0ab') rho1.
 have dboth0 : 0 < dboth t0.
   rewrite lt_min; apply /andP;split; last first.
     by rewrite lt_min safe_dist_gt0 //= lt_min dminus0.
