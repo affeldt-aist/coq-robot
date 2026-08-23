@@ -23,6 +23,7 @@ pendulum.v
 
 tilt/ode_common.v
 tilt/ode_contseg.v
+tilt/row_integral.v
 tilt/ode.v
 tilt/ode_global.v
 

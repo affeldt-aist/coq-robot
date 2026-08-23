@@ -6,7 +6,8 @@ From mathcomp Require Import mathcomp_extra unstable boolp classical_sets
   contra functions constructive_ereal reals topology prodnormedzmodule
   tvs normedtype landau ereal sequences exp derive numfun measure
   realfun measurable_realfun lebesgue_measure lebesgue_integral ftc.
-Require Import tilt_mathcomp tilt_analysis ode_common ode_contseg ode.
+Require Import tilt_mathcomp tilt_analysis row_integral ode_common ode_contseg
+  ode.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

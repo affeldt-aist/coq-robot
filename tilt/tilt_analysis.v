@@ -22,6 +22,54 @@ Import numFieldNormedType.Exports.
 Local Open Scope ring_scope.
 Local Open Scope classical_set_scope.
 
+Lemma closed_ball_coord {R : realType} {n} (x0 : 'rV[R]_n) (r : R) x :
+  0 < r ->
+  closed_ball x0 r x <-> forall i, closed_ball (x0 ord0 i) r (x ord0 i).
+Proof.
+move=> r0; split.
+- rewrite closed_ballE /closed_ball_ //=.
+  rewrite /Num.norm/= mx_normrE => h i.
+  rewrite closed_ballE// /closed_ball_/=.
+  apply/le_trans/h.
+  have -> : x0 ord0 i - x ord0 i = (x0 - x) ord0 i by rewrite !mxE.
+  exact: (le_bigmax _ _ (ord0, i)).
+- move=> h.
+  rewrite closed_ballE// /closed_ball_/=.
+  rewrite [in leLHS]/Num.norm/= mx_normrE.
+  apply: (bigmax_le _ (ltW r0)) => /= -[i j] _ /=.
+  rewrite {i}(ord1 i)/=.
+  move /(_ j) : h.
+  by rewrite closed_ballE// /closed_ball_ /= 2!mxE.
+Qed.
+
+Section lipschitz_coord.
+Context {R : realFieldType} {n} (U := 'rV[R]_n) (f : U -> U) (k : R)
+  (B : set U).
+Hypothesis k0 : 0 <= k.
+
+Lemma lipschitz_coord : k.-lipschitz_B f <->
+  forall i, k.-lipschitz_B (fun y => f y ord0 i).
+Proof.
+split.
+- move => lip i /= [x1 x2] /= Bx12.
+  move /(_ (x1,x2) Bx12) : lip.
+  apply le_trans => /=.
+  rewrite /Num.norm/= mx_normrE.
+  have -> : f x1 ord0 i - f x2 ord0 i = (f x1 - f x2) ord0 i.
+    by rewrite !mxE.
+  exact: (le_bigmax _ _ (ord0, i)).
+- move => h /= [x1 x2] Bx12 /=.
+  rewrite [in leLHS]/Num.norm/= mx_normrE.
+  apply/bigmax_le.
+    by rewrite mulr_ge0 //= ltW.
+  move => //= -[i j] _ /=.
+  rewrite {i}(ord1 i)/=.
+  move /(_ j (x1,x2) Bx12) : h.
+  by rewrite !mxE.
+Qed.
+
+End lipschitz_coord.
+
 (* TODO: PR *)
 Lemma continuous_within_ext {A B : topologicalType} (f g : A -> B) D :
   {in D, f =1 g} -> {within D, continuous f} -> {within D, continuous g}.
@@ -38,6 +86,88 @@ rewrite <-fg.
   by apply.
 by rewrite inE.
 Qed.
+
+Lemma row_mx_norm_le_sum {R : realType} {n} (x : 'rV[R]_n) :
+  `| x | <=  \sum_(i < n) `|x ord0 i|.
+Proof.
+rewrite {1}/Num.norm/= mx_normrE.
+apply: bigmax_le => /=;first by apply sumr_ge0 => i _; exact: normr_ge0.
+move =>  [i0 i] _ /=.
+rewrite {i0}(ord1 i0)/=.
+rewrite (bigD1 i) //= lerDl.
+by apply: sumr_ge0 => j _; exact: normr_ge0.
+Qed.
+
+Section measurable_fun_bigmaxr.
+Import MeasurableR.
+
+(* TODO: PR *)
+Lemma measurable_fun_bigmaxr d (T : measurableType d) (R : realType)
+  (D : set T) (n : nat) (f : 'I_n -> T -> R) :
+  d.-measurable D ->
+  (forall i, measurable_fun D (f i)) ->
+  measurable_fun D (fun x => \big[maxr/0]_(i < n) f i x).
+Proof.
+move=> mD mf.
+elim: n f mf => [|n IH] f mf.
+  have -> : (fun x : T => \big[maxr/0]_(i < 0) f i x) = 0.
+    by apply: funext => x; rewrite big_ord0.
+  exact: measurable_cst.
+have -> : (fun x : T => \big[maxr/0]_(i < n.+1) f i x) =
+    fun x => maxr (f ord0 x) (\big[maxr/0]_(i < n) (f (lift ord0 i) x)).
+  by apply funext => x; rewrite big_ord_recl.
+apply: measurable_maxr.
+  exact: mf.
+by apply: IH  => i; exact: mf.
+Qed.
+
+End measurable_fun_bigmaxr.
+
+Section integrable_row_mx_norm.
+Import MeasurableR.
+
+Lemma measurable_row_mx_norm {R : realType} {n} (D : set R) (F : R -> 'rV[R]_n):
+   measurable D -> (forall i, measurable_fun D (fun t => F t ord0 i)) ->
+  measurable_fun D (Num.norm \o F).
+Proof.
+move=> mD h.
+have -> : normr \o F = (fun x => \big[maxr/0]_(i < n) `| F x ord0 i |).
+  apply: funext => x.
+  rewrite  {1}/Num.norm/= mx_normrE.
+  rewrite (reindex (fun i : 'I_n => (ord0, i))) => //=.
+  exists (@snd 'I_1 'I_n) => /=.
+  + by move => i.
+  + move => [i j] /= _.
+    by rewrite {i}(ord1 i).
+apply: measurable_fun_bigmaxr => //= i.
+by apply: measurableT_comp => //=.
+Qed.
+
+Lemma integrable_row_mx_norm {R : realType} {n} (D : set R) (F : R -> 'rV[R]_n):
+  measurable D ->
+  (forall i, lebesgue_measure.-integrable D (EFin \o (fun t => F t ord0 i))) ->
+  lebesgue_measure.-integrable D (EFin \o (Num.norm \o F)).
+Proof.
+move => mD intf.
+apply (le_integrable (mu:=lebesgue_measure) mD (f := EFin \o (normr \o F))
+    (g := EFin \o fun x => (\sum_(i < n) `| F x ord0 i|))).
+- apply/measurable_EFinP.
+  apply measurable_row_mx_norm => // i.
+  have /integrableP[+ _]/= := intf i.
+  by move/measurable_EFinP.
+- move => /= x0 Dx0.
+  rewrite normr_id.
+  rewrite lee_fin.
+  rewrite ger0_norm ?sumr_ge0//.
+  exact: row_mx_norm_le_sum.
+- have -> : EFin \o (fun x => \sum_(i < n) `|F x ord0 i|) =
+            fun x => (\sum_(i < n) `|F x ord0 i|%:E).
+    by apply/funext => x; rewrite sumEFin.
+  apply: integrable_sum => //= i _.
+  exact: integrable_norm.
+Qed.
+
+End integrable_row_mx_norm.
 
 (* TODO: PR *)
 Lemma parameterized_integralN {R : realType}
@@ -108,31 +238,6 @@ have q20 : 0 < q / 2 by rewrite divr_gt0.
 rewrite !closed_ballE// /closed_ball_ /= => h1 h2.
 by rewrite -(subrKA x1 x2) (le_trans (ler_normD _ _))// (splitr q) lerD.
 Qed.
-
-Section measurable_fun_bigmaxr.
-Import MeasurableR.
-
-(* TODO: PR *)
-Lemma measurable_fun_bigmaxr d (T : measurableType d) (R : realType)
-  (D : set T) (n : nat) (f : 'I_n -> T -> R) :
-  d.-measurable D ->
-  (forall i, measurable_fun D (f i)) ->
-  measurable_fun D (fun x => \big[maxr/0]_(i < n) f i x).
-Proof.
-move=> mD mf.
-elim: n f mf => [|n IH] f mf.
-  have -> : (fun x : T => \big[maxr/0]_(i < 0) f i x) = 0.
-    by apply: funext => x; rewrite big_ord0.
-  exact: measurable_cst.
-have -> : (fun x : T => \big[maxr/0]_(i < n.+1) f i x) =
-    fun x => maxr (f ord0 x) (\big[maxr/0]_(i < n) (f (lift ord0 i) x)).
-  by apply funext => x; rewrite big_ord_recl.
-apply: measurable_maxr.
-  exact: mf.
-by apply: IH  => i; exact: mf.
-Qed.
-
-End measurable_fun_bigmaxr.
 
 (* TODO: PR to MCA in progress *)
 Lemma within_continuous_continuous_new {R : realFieldType} {K : numDomainType}
