@@ -1450,12 +1450,11 @@ Qed.
 End compact_global_solution.
 
 Section gronwall.
-Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu : R -> R)
-  (lambda_cont : {within `[a, b], continuous lambda})
-  (mu_cont : {within `[a, b], continuous mu})
-  (mu_ge0 : forall x, x \in `[a, b] -> 0 <= mu x)
-  (y : R -> R)
-  (y_cont : {within `[a, b], continuous y}).
+Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu y : R -> R).
+Hypotheses (lambda_cont : {within `[a, b], continuous lambda})
+           (mu_cont : {within `[a, b], continuous mu})
+           (mu_ge0 : forall x, x \in `[a, b] -> 0 <= mu x)
+           (y_cont : {within `[a, b], continuous y}).
 
 Let lm := @lebesgue_measure R.
 
@@ -1481,7 +1480,7 @@ have ? : measurable_fun `]a, t[ (phi t).
   apply: subspace_continuous_measurable_fun => //.
   apply: (@continuous_subspaceW _ _ _ `[a, t]) => //.
     exact: subset_itv_oo_cc.
-  apply: parameterized_integralr_continuous.
+  apply: parameterized_integralN_continuous.
     by rewrite (itvP tab).
   apply: continuous_subspaceW mu_cont.
   by apply: subset_itvl; rewrite bnd_simp (itvP tab).
@@ -1534,10 +1533,9 @@ have H u : u \in `]a, b[ ->
 have {}eqn u : u \in `]a, b[ ->
     'D_1 (fun t0 => z t0 / phi t0 a) u = f u / phi u a.
   move=> uab.
-  rewrite -eqn//.
-  rewrite deriveM/=.
-    exact: derivable_z.
-    exact: derivablephiV.
+  rewrite -eqn// deriveM/=.
+  + exact: derivable_z.
+  + exact: derivablephiV.
   rewrite [in RHS]mulrBl.
   rewrite [in LHS]addrC [X in X + _ = _]mulrC; congr (_ + _).
   rewrite -[in RHS]mulrA [in RHS]mulrCA -[in RHS]mulrN; congr (_ * _).
@@ -1548,15 +1546,14 @@ have {}eqn u : u \in `]a, b[ ->
   have [tau1 tau2] : derivable (fun x => \int[lm]_(t0 in `[a, x]) mu t0) u 1 /\
       (fun x => \int[lm]_(t0 in `[a, x]) mu t0)^`() u = mu u.
     apply: (@continuous_FTC1 _ mu (BLeft a) u b).
-    by rewrite inE in uab; rewrite (itvP uab).
-    apply: continuous_compact_integrable => //.
-    exact: segment_compact.
-    by rewrite inE in uab; rewrite /= lte_fin (itvP uab).
-    move/continuous_within_itvP : mu_cont => /(_ ab)[+ _ _].
-    by apply; rewrite inE in uab.
-  rewrite derive1N//= derive1E tau2 mulrN; congr (- _).
-  rewrite mulrC; congr (_ * _).
-  by rewrite /phi -expRN -[in RHS]derive_expR.
+    + by rewrite inE in uab; rewrite (itvP uab).
+    + by apply: continuous_compact_integrable => //; exact: segment_compact.
+    + by rewrite inE in uab; rewrite /= lte_fin (itvP uab).
+      move/continuous_within_itvP : mu_cont => /(_ ab)[+ _ _].
+      by apply; rewrite inE in uab.
+    + rewrite derive1N//= derive1E tau2 mulrN; congr (- _).
+      rewrite mulrC; congr (_ * _).
+      by rewrite /phi -expRN -[in RHS]derive_expR.
 suff: z t / phi t a =
      fine (\int[lm]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
   move=> /(congr1 (fun x => x * phi t a)).
@@ -1568,16 +1565,13 @@ have ? : {in `]a, t[, continuous (fun x0 : R => (phi x0 a)^-1)}.
   rewrite inE.
   by apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
 have ? : measurable_fun `]a, t[ (fun x : R => (phi x a)^-1).
-  by apply: open_continuous_measurable_fun => //.
+  exact: open_continuous_measurable_fun.
 have cphi : {within `[a, t], continuous phi^~ a}.
-  apply: (@within_continuous_comp _ _ _ _ _ expR).
-    move=> x _.
-    exact: continuous_expR.
-  rewrite /=.
+  apply: (@within_continuous_comp _ _ _ _ _ expR) => /=.
+    by move=> x _; exact: continuous_expR.
   apply: parameterized_integral_continuous.
     by rewrite (itvP tab).
-  apply: continuous_compact_integrable.
-    exact: segment_compact.
+  apply: continuous_compact_integrable; first exact: segment_compact.
   apply: continuous_subspaceW mu_cont.
   by apply: subset_itvl; rewrite bnd_simp (itvP tab).
 transitivity (\int[lm]_(z0 in `]a, t[)
@@ -1636,10 +1630,11 @@ transitivity (\int[lm]_(z0 in `]a, t[)
       move=> _ + _.
       exact.
     + have {}contz : {within `[a, t], continuous z}.
-        by apply: continuous_subspaceW contz; apply: subset_itvl; rewrite bnd_simp (itvP tab).
+        apply: continuous_subspaceW contz.
+        by apply: subset_itvl; rewrite bnd_simp (itvP tab).
       apply: cvgM.
-         move/continuous_within_itvP : contz => /(_ _)[]; last by [].
-         by rewrite (itvP tab).
+        move/continuous_within_itvP : contz => /(_ _)[]; last by [].
+        by rewrite (itvP tab).
       apply: cvgV.
         by rewrite gt_eqF// expR_gt0.
       move/continuous_within_itvP : cphi => /(_ _)[].
@@ -1649,17 +1644,15 @@ transitivity (\int[lm]_(z0 in `]a, t[)
   rewrite derive1E eqn//.
   by rewrite inE; apply: subset_itvl uat; rewrite bnd_simp (itvP tab).
   by rewrite {3}/phi set_itv1 Rintegral_set1 expR0 divr1 za0 sube0/=.
-transitivity ((\int[lm]_(z0 in `]a, t[)
-    ((phi t z0 * f z0) / phi t a))); last first.
+transitivity (\int[lm]_(z0 in `]a, t[) ((phi t z0 * f z0) / phi t a)); last first.
   rewrite RintegralZr//=.
   apply: (@integrableS _ _ _ lebesgue_measure (`[a, t]%classic)) => //=.
     exact: subset_itv_oo_cc.
-  apply: continuous_compact_integrable.
-    exact: segment_compact.
+  apply: continuous_compact_integrable; first exact: segment_compact.
   apply: within_continuousM.
     apply: within_continuous_comp.
       by move=> x _; exact: continuous_expR.
-   apply: parameterized_integralr_continuous.
+   apply: parameterized_integralN_continuous.
     by rewrite (itvP tab).
   apply: continuous_subspaceW mu_cont.
   by apply: subset_itvl; rewrite bnd_simp (itvP tab).
@@ -1714,7 +1707,7 @@ have v_ge0 : forall x, x \in `]a, b[ -> 0 <= v x.
     rewrite inE.
     move: xab.
     rewrite inE.
-    by apply: subset_itv_oo_cc.
+    exact: subset_itv_oo_cc.
   by rewrite addrC lerD2l.
 have FTC1z : forall x, x \in `]a, b[ ->
     derivable
@@ -1745,20 +1738,18 @@ have za0 : z a = 0 by rewrite /z set_itv1// Rintegral_set1.
 have contz : {within `[a, b], continuous z}.
   apply: parameterized_integral_continuous => /=.
     exact: ltW.
-  apply: continuous_compact_integrable.
-    exact: segment_compact.
+  apply: continuous_compact_integrable; first exact: segment_compact.
   by apply: within_continuousM => //=.
 have contv : {within `[a, b], continuous v}.
   apply: within_continuousB => //=.
-  by apply: within_continuousD => //=.
+  exact: within_continuousD.
 have contmu : {within `[a, t], continuous mu}.
   apply: continuous_subspaceW mu_cont.
   by apply: subset_itvl; rewrite bnd_simp (itvP tab).
 have contphi : {within `[a, t], continuous phi t}.
-  apply: (@within_continuous_comp _ _ _ _ _ expR).
+  apply: (@within_continuous_comp _ _ _ _ _ expR) => /=.
     by move=> x _; exact: continuous_expR.
-  rewrite /=.
-  apply: parameterized_integralr_continuous => //.
+  apply: parameterized_integralN_continuous => //.
   by rewrite (itvP tab).
 have zE : forall x, x \in `[a, b]%R ->
     z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
@@ -1797,13 +1788,12 @@ rewrite zE//.
 apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
                    - \int[lm]_(s in `[a, t]) (phi t s * mu s * v s))).
   rewrite -RintegralB//=.
-    apply: continuous_compact_integrable => /=.
-      exact: segment_compact.
+    apply: continuous_compact_integrable => /=; first exact: segment_compact.
     apply: within_continuousM => /=.
       apply: within_continuousM => /=.
         apply: (within_continuous_comp _ _ expR).
           by move=> x _; exact: continuous_expR.
-        apply: parameterized_integralr_continuous => //.
+        apply: parameterized_integralN_continuous => //.
         by rewrite (itvP tab).
       apply: continuous_subspaceW mu_cont.
       by apply: subset_itvl; rewrite bnd_simp (itvP tab).
@@ -1816,8 +1806,7 @@ apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
   apply: continuous_subspaceW contv.
   by apply: subset_itvl; rewrite bnd_simp (itvP tab).
   apply: le_Rintegral => //=.
-    apply: continuous_compact_integrable.
-      exact: segment_compact.
+    apply: continuous_compact_integrable; first exact: segment_compact.
     apply: within_continuousM => //=.
     apply: within_continuousB => /=.
       apply: within_continuousM => //=.
@@ -1826,15 +1815,14 @@ apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
     apply: within_continuousM => //=.
     apply: continuous_subspaceW contv.
     by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-    apply: continuous_compact_integrable.
-      exact: segment_compact.
+    apply: continuous_compact_integrable; first exact: segment_compact.
     apply: within_continuousB => /=.
       apply: within_continuousM => //=.
         by apply: within_continuousM => //=.
       apply: continuous_subspaceW lambda_cont.
       by apply: subset_itvl; rewrite bnd_simp (itvP tab).
     apply: within_continuousM => //=.
-      by apply: within_continuousM => //=.
+      exact: within_continuousM.
     apply: continuous_subspaceW contv.
     by apply: subset_itvl; rewrite bnd_simp (itvP tab).
   move=> u uat.
@@ -1855,11 +1843,12 @@ End gronwall.
    specialized to g := 0,
    TODO: generalize *)
 Section thm34.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
-Context (phi : R -> U -> U) (a b : R) (ab : a < b) (k : R).
+Context {R : realType} {n : nat} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
+  (k : R).
 Let psi : R -> U -> U := cst 0.
 Variables (u0 v0 : U) (r : {posnum R}) (*(r1 : r%:num < 1)*).
+
+Hypothesis ab : a < b.
 (* TODO: there seems to be no reason to have B being a closed ball
 around u0 whereas the proof talks about an open W*)
 Let B : set U := closed_ball u0 r%:num. (* open connected set? *)
@@ -1879,12 +1868,11 @@ Let lm := @lebesgue_measure R.
 
 Let mu0 : 0 <= mu.
 Proof.
-apply /le_trans/(@mu_ub a u0).
-exact: normr_ge0.
-by rewrite inE/=in_itv/= lexx ltW.
-rewrite /B.
-rewrite inE.
-by apply: closed_ballxx.
+apply/le_trans/(@mu_ub a u0).
+  exact: normr_ge0.
+  by rewrite inE/=in_itv/= lexx ltW.
+rewrite /B inE.
+exact: closed_ballxx.
 Qed.
 
 
@@ -1894,15 +1882,15 @@ Lemma thm34 t : t \in `[a, b] ->
 Proof.
 move=> tab.
 have k_neq0 : k != 0 by rewrite gt_eqF.
-have yint : forall t', t' \in `[a, b]%R -> y t' = u0 + \vint[lm]_(s in `[a, t']) phi s (y s).
-  move=> t' t'ab.
+have yint t' : t' \in `[a, b]%R -> y t' = u0 + \vint[lm]_(s in `[a, t']) phi s (y s).
+  move=> t'ab.
   suff: is_integral_sol phi a b u0 y.
     by move=> [<-]; apply.
   apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) (k := k)) => //.
   case: soly => _ [_].
   by rewrite closure_itvoo. (* where we use By *)
-have zint : forall t, t \in `[a, b]%R -> z t = v0 + \vint[lm]_(s in `[a, t]) (phi s (z s) + psi s (z s)).
-  move=> t' t'ab.
+have zint t' : t' \in `[a, b]%R -> z t' = v0 + \vint[lm]_(s in `[a, t']) (phi s (z s) + psi s (z s)).
+  move=> t'ab.
   suff: is_integral_sol (phi \+ psi) a b v0 z.
     by move=> [-> ->].
   apply/(integral_sol_iff_sol1 (u0' := u0) (r:=r) (k := k)).
@@ -1937,10 +1925,11 @@ have contphiy j0 t'  : t' \in `[a,b] ->
   apply By.
   exists y0 => //.
   by apply : subset_itv By0 => //;apply t'b.
-have contphiz j0 t'  : t' \in `[a,b] -> {within `[a,t'], continuous (fun x => (phi x (z x)) ord0 j0)}.
+have contphiz j0 t' : t' \in `[a,b] ->
+    {within `[a,t'], continuous (fun x => (phi x (z x)) ord0 j0)}.
   move => t'ab.
   apply: (picard_iterator_within_continuous (k:=k) (u0' := u0) (r:=r)) => //.
-    move => t0 t0at;apply: lip2.
+    move => t0 t0at; apply: lip2.
     by apply : subset_itv t0at => //; apply t'b.
     move => y0 y0b.
     apply /continuous_subspaceW/cont1 => //.
@@ -1958,9 +1947,9 @@ have : gronwall_y t <= gamma + mu * (t - a) +
   have H t' : t' \in `[a,b] ->  gronwall_y t' <= gamma + mu * (t' - a) +
       \int[lm]_(s in `[a, t']) (k * `|y s - z s|).
     move => t'ab.
-    have contphiy' j0  :  {within `[a,t'], continuous (fun x => (phi x (y x)) ord0 j0)}.
+    have contphiy' j0 : {within `[a,t'], continuous (fun x => (phi x (y x)) ord0 j0)}.
       by apply contphiy.
-    have contphiz' j0  :  {within `[a,t'], continuous (fun x => (phi x (z x)) ord0 j0)}.
+    have contphiz' j0 : {within `[a,t'], continuous (fun x => (phi x (z x)) ord0 j0)}.
       by apply contphiz.
     apply: (@le_trans _ _ (gamma +
       \int[lm]_(s in `[a, t']) `|phi s (y s) - phi s (z s)|)).
@@ -1983,21 +1972,21 @@ have : gronwall_y t <= gamma + mu * (t - a) +
       rewrite ord1{i}.
       rewrite !mxE.
       rewrite -RintegralB//=.
-        by apply : continuous_compact_integrable; first by apply segment_compact.
-        by apply : continuous_compact_integrable; first by apply segment_compact.
+        by apply : continuous_compact_integrable; first exact: segment_compact.
+        by apply : continuous_compact_integrable; first exact: segment_compact.
       apply: (le_trans (le_normr_Rintegral _ _)) => //=.
-        rewrite /comp /=. 
+        rewrite /comp /=.
         under [X in _.-integrable _ X] eq_fun do rewrite EFinB.
         apply: integrableB => //.
-        by apply : continuous_compact_integrable; first by apply segment_compact.
-        by apply : continuous_compact_integrable; first by apply segment_compact.
+        by apply : continuous_compact_integrable; first exact: segment_compact.
+        by apply : continuous_compact_integrable; first exact: segment_compact.
       apply: le_Rintegral => //=.
-        apply : continuous_compact_integrable; first by apply segment_compact.
+        apply : continuous_compact_integrable; first exact: segment_compact.
         apply: within_continuous_comp_norm.
         apply : within_continuousB => //.
-        apply : continuous_compact_integrable; first by apply segment_compact.
+        apply : continuous_compact_integrable; first exact: segment_compact.
         apply: within_continuous_comp_norm.
-        by apply : within_continuousB; apply /within_continuous_coord.
+        by apply: within_continuousB; apply /within_continuous_coord.
       move=> x xat.
       rewrite [in leRHS]/Num.norm/= mx_normrE.
       rewrite [X in `|X|](_ : _ = (phi x (y x) - phi x (z x)) ord0 j).
@@ -2008,25 +1997,25 @@ have : gronwall_y t <= gamma + mu * (t - a) +
         apply: mulr_ge0 => //.
         by rewrite subr_ge0;move : t'ab; rewrite inE/=in_itv/= => /andP[].
      apply: le_Rintegral => //.
-        apply : continuous_compact_integrable; first by apply segment_compact.
+        apply : continuous_compact_integrable; first exact: segment_compact.
         apply: within_continuous_comp_norm.
         by apply : within_continuousB; apply /within_continuous_coord.
-        apply : continuous_compact_integrable; first by apply segment_compact.
+        apply : continuous_compact_integrable; first exact: segment_compact.
         apply : within_continuousMl.
         apply: within_continuous_comp_norm.
         apply : within_continuousB.
           have [_ [_ +]] := soly;apply: continuous_subspaceW.
-          by rewrite closure_itvoo //; apply: subset_itvl => //;apply t'b.
+          by rewrite closure_itvoo //; apply: subset_itvl => //; apply t'b.
           have [_ [_ +]] := solz;apply: continuous_subspaceW.
-          by rewrite closure_itvoo //; apply: subset_itvl => //;apply t'b.
+          by rewrite closure_itvoo //; apply: subset_itvl => //; apply t'b.
        move => x xat.
-       have xab: x \in `[a,b]%R by apply: subset_itv xat => //;apply t'b.
+       have xab: x \in `[a,b]%R by apply: subset_itv xat => //; apply t'b.
        have := lip2 xab.
        move /(_ (y x, z x));apply.
        by split; [apply By | apply Bz]; exists x.
   pose lambda t := gamma + mu* (t - a).
   pose mu' (s : R) : R := k.
-  have := @gronwall _ _ _ ab lambda mu' _ _ _ gronwall_y _ H t tab.
+  have := @gronwall _ _ _ ab lambda mu' gronwall_y _ _ _ _ H t tab.
   rewrite /lambda/mu'/=/lm.
   rewrite -Rintegral_itvbo_itvbc => //.
     apply: (@integrableS _ _ _ lebesgue_measure (`[a, t]%classic)) => //=.
@@ -2040,10 +2029,10 @@ have : gronwall_y t <= gamma + mu * (t - a) +
     apply: continuous_subspaceT => x; exact: cvg_id.
     apply: within_continuous_comp.
     move => x _;exact : continuous_expR.
-    apply : parameterized_integralr_continuous.
-      move : tab.
-      by rewrite inE/=in_itv/= => /andP[].
-    apply: cst_continuous.
+    apply : parameterized_integralN_continuous.
+      rewrite inE in tab.
+      by rewrite (itvP tab).
+    exact: cst_continuous.
   under eq_Rintegral.
     move => s sat.
     rewrite [ _ * k]mulrC.
@@ -2056,7 +2045,7 @@ have : gronwall_y t <= gamma + mu * (t - a) +
   rewrite Rintegral_itvbo_itvbc.
     apply: (@integrableS _ _ _ lebesgue_measure (`[a, t]%classic)) => //=.
       exact: subset_itv_co_cc.
-    apply : continuous_compact_integrable; first by apply segment_compact.
+    apply : continuous_compact_integrable; first exact: segment_compact.
     apply: within_continuousM.
     apply : within_continuousMl.
     apply : within_continuousD; first exact: cst_continuous.
@@ -2072,9 +2061,9 @@ have : gronwall_y t <= gamma + mu * (t - a) +
   apply: within_continuousD.
     by apply: cst_continuous.
     apply : within_continuousMl.
-    apply: within_continuousB; last by apply: cst_continuous.
+    apply: within_continuousB; last exact: cst_continuous.
     by apply: continuous_subspaceT => x; exact: cvg_id.
-  by apply : cst_continuous.
+  exact: cst_continuous.
   by move => _ _;apply ltW.
   rewrite /gronwall_y.
   apply: within_continuous_comp_norm.
@@ -2108,14 +2097,12 @@ apply: (@le_trans _ _
       apply: cvgD => //.
       apply: cvgM => //.
       apply: cvgD => //.
-      apply: cvg_at_right_filter.
-      exact: cvg_id.
+      exact: cvg_at_right_filter.
     apply: cvgM => //.
     apply: cvgD => //.
     apply: cvgM => //.
     apply: cvgD => //.
-    apply: cvg_at_left_filter.
-    exact: cvg_id.
+    exact: cvg_at_left_filter.
   - move=> x xat.
     by rewrite derive1E derive_val subr0 add0r mul1r scaler1.
   - apply: continuous_subspaceT.
@@ -2205,8 +2192,9 @@ Qed.
 End thm34.
 
 Section continuous_dependence.
-Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U)
-  (a b : R) (u0 v0 : U) (r : {posnum R}) (k : {posnum R}).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
+  (u0 v0 : U) (r : {posnum R}) (k : {posnum R}).
+
 Hypothesis ab : a < b.
 Let B : set U := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall t, k%:num.-lipschitz_B (phi t)}.
@@ -2223,7 +2211,7 @@ Lemma continuous_dependence t : t \in `[a, b] ->
   `|y t - z t| <= `|u0 - v0| * expR (k%:num * (t - a)).
 Proof.
 move=>tab.
-have := @thm34 _ _ phi a b ab k%:num u0 v0 r _ lip2 cont1 _ _ soly _ By Bz 0.
+have := @thm34 _ _ phi a b k%:num u0 v0 r ab _ lip2 cont1 _ _ soly _ By Bz 0.
 rewrite (_ : phi \+ cst 0 = phi); first by apply/funext => s; rewrite /= addr0.
 move /(_ _ solz).
 move /(_ _ _ t).

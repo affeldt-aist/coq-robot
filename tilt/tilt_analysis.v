@@ -70,23 +70,6 @@ Qed.
 
 End lipschitz_coord.
 
-(* TODO: PR *)
-Lemma continuous_within_ext {A B : topologicalType} (f g : A -> B) D :
-  {in D, f =1 g} -> {within D, continuous f} -> {within D, continuous g}.
-Proof.
-move=> fg Df; apply/subspace_continuousP => x Dx.
-apply: cvg_trans.
-  apply (@fmap_within_eq _ _ _ _ _ f) => //.
-  - apply nbhs_filter.
-  - move => x' Dx' .
-    symmetry.
-    by apply fg.
-rewrite <-fg.
-  move /subspace_continuousP : Df.
-  by apply.
-by rewrite inE.
-Qed.
-
 Lemma row_mx_norm_le_sum {R : realType} {n} (x : 'rV[R]_n) :
   `| x | <=  \sum_(i < n) `|x ord0 i|.
 Proof.
@@ -101,24 +84,16 @@ Qed.
 Section measurable_fun_bigmaxr.
 Import MeasurableR.
 
-(* TODO: PR *)
-Lemma measurable_fun_bigmaxr d (T : measurableType d) (R : realType)
-  (D : set T) (n : nat) (f : 'I_n -> T -> R) :
-  d.-measurable D ->
+(* NB: PR in progress *)
+Lemma measurable_bigmaxr d (T : measurableType d) (R : realType) (D : set T)
+  def {n} (f : 'I_n -> T -> R) :
   (forall i, measurable_fun D (f i)) ->
-  measurable_fun D (fun x => \big[maxr/0]_(i < n) f i x).
+  measurable_fun D (fun x => \big[maxr/def]_(i < n) f i x).
 Proof.
-move=> mD mf.
-elim: n f mf => [|n IH] f mf.
-  have -> : (fun x : T => \big[maxr/0]_(i < 0) f i x) = 0.
-    by apply: funext => x; rewrite big_ord0.
-  exact: measurable_cst.
-have -> : (fun x : T => \big[maxr/0]_(i < n.+1) f i x) =
-    fun x => maxr (f ord0 x) (\big[maxr/0]_(i < n) (f (lift ord0 i) x)).
-  by apply funext => x; rewrite big_ord_recl.
-apply: measurable_maxr.
-  exact: mf.
-by apply: IH  => i; exact: mf.
+elim: n f => [|n ih] f mf.
+  by under eq_fun do rewrite big_ord0/=; exact: measurable_cst.
+under eq_fun do rewrite big_ord_recl/=.
+by apply: measurable_maxr; [exact: mf|apply: ih => i; exact: mf].
 Qed.
 
 End measurable_fun_bigmaxr.
@@ -139,7 +114,7 @@ have -> : normr \o F = (fun x => \big[maxr/0]_(i < n) `| F x ord0 i |).
   + by move => i.
   + move => [i j] /= _.
     by rewrite {i}(ord1 i).
-apply: measurable_fun_bigmaxr => //= i.
+apply: measurable_bigmaxr => //= i.
 by apply: measurableT_comp => //=.
 Qed.
 
@@ -169,7 +144,7 @@ Qed.
 
 End integrable_row_mx_norm.
 
-(* TODO: PR *)
+(* NB: PR in progress *)
 Lemma parameterized_integralN {R : realType}
     x b (f : R -> R) : (x <= b) ->
   {within `[x, b], continuous f} ->
@@ -188,27 +163,21 @@ Notation mu := (@lebesgue_measure R).
 
 Let int := (parameterized_integral mu).
 
-(* TODO: PR *)
-Lemma parameterized_integralr_continuous a b (f : R -> R) : a <= b ->
+(* NB: PR in progress *)
+Lemma parameterized_integralN_continuous a b (f : R -> R) : a <= b ->
   {within `[a, b], continuous f} ->
   {within `[a, b], continuous (fun x => int x b f)}.
 Proof.
-move=> ab abf.
-rewrite /int.
-suff: {within `[a, b], continuous
-    ((fun x => parameterized_integral lebesgue_measure (-b) x (f \o -%R)) \o -%R)}.
-  apply: continuous_within_ext => x /[!inE] xab/=.
-  rewrite -parameterized_integralN//.
-    by rewrite (itvP xab).
+move=> ab abf; suff: {within `[a, b], continuous
+    ((fun x => parameterized_integral mu (- b) x (f \o -%R)) \o -%R)}.
+  apply: subspace_eq_continuous => /= x /[!inE] xab/=.
+  rewrite /from_subspace/= -parameterized_integralN ?(itvP xab)//.
   apply: continuous_subspaceW abf.
   by apply: subset_itvr; rewrite bnd_simp (itvP xab).
 apply: within_continuous_compN.
-apply: (@parameterized_integral_continuous _ (- b) (- a) (f \o -%R)).
-  by rewrite lerN2.
-apply: continuous_compact_integrable => //.
-  exact: segment_compact.
-apply: within_continuous_compN.
-by rewrite !opprK.
+apply: parameterized_integral_continuous; first by rewrite lerN2.
+apply: continuous_compact_integrable => //; first exact: segment_compact.
+by apply: within_continuous_compN; rewrite !opprK.
 Qed.
 
 End parameterized_integral_continuous.
@@ -239,7 +208,7 @@ rewrite !closed_ballE// /closed_ball_ /= => h1 h2.
 by rewrite -(subrKA x1 x2) (le_trans (ler_normD _ _))// (splitr q) lerD.
 Qed.
 
-(* TODO: PR to MCA in progress *)
+(* TODO: to appear in MCA 1.18.0 *)
 Lemma within_continuous_continuous_new {R : realFieldType} {K : numDomainType}
     {U : pseudoMetricNormedZmodType K} a b (f : R -> U) x : (a <= b)%R ->
   {within `[a, b], continuous f} -> x \in `]a, b[%R -> {for x, continuous f}.
