@@ -500,13 +500,11 @@ End integrable_comp.
 Section picard_def.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
-  (u0 : U) (r : {posnum R}) (k : R).
+  (u0 : U) (r : {posnum R}) (k : R) (rho : {posnum R}).
 Let B := closed_ball u0 r%:num.
 
 Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
-
-Variable rho : {posnum R}.
 
 Local Notation safe_dist := (safe_dist phi a b u0 r%:num k rho%:num).
 Local Notation picard_fun := (@picard_fun _ n phi a (a + safe_dist) u0 r k
@@ -772,7 +770,7 @@ Check @cst (subspace `[a, a + safe_dist]) U u0
 Check @cst (subspace `[a, a + safe_dist]) U u0
   : continuousType (subspace `[a, a + safe_dist]) U.
 
-Local Notation picard := (@picard R n phi a b u0 r k lip2 cont1 rho k0).
+Local Notation picard := (@picard R n phi a b u0 r k rho lip2 cont1 k0).
 
 Import MeasurableR.
 
@@ -1026,9 +1024,8 @@ Section integral_ode2.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
  (u0 : U) (sol : R -> U) (r : {posnum R}) (k : R).
-
-Hypothesis k0 : k != 0.
 Hypothesis ab : a <= b.
+Hypothesis k0 : k != 0.
 Let B := closed_ball u0 r%:num.
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
@@ -1117,7 +1114,6 @@ Section picard.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n} (U := @row_vector R n) (phi : R -> U -> U) (a b : R)
   (u0 : U) (r : {posnum R}) (k : R) (rho : {posnum R}).
-
 Hypothesis ab : a <= b.
 Hypothesis k0 : 0 <= k.
 Let B := closed_ball u0 r%:num.
@@ -1141,7 +1137,7 @@ Local Notation img_cball := (@img_cball R n phi a b u0 r k rho).
 Local Notation img_cball_nonempty := (img_cball_nonempty phi a b u0 r k rho).
 Local Notation closed_img_cball := (@closed_img_cball R n phi a b u0 r k rho k0 ab).
 
-Local Notation picard := (@picard _ n phi a b u0 r k lip2 cont1 rho k0).
+Local Notation picard := (@picard _ n phi a b u0 r k rho lip2 cont1 k0).
 
 Definition picard_fix : V :=
   sval (cid2 (@banach_fixed_point R V img_cball
@@ -1482,12 +1478,13 @@ Local Notation V := (@ContSeg_quot.quot_contSeg R a (a + safe_dist) U).
 
 Lemma cauchy_lipschitz_unique_restr f' :
   {within `[a, a + safe_dist], continuous f'} ->
-  {in `[a, a + safe_dist]%R, forall t, closed_ball u0 r2%:num (f' t)}  ->
+  {in `[a, a + safe_dist]%R, forall t, closed_ball u0 r2%:num (f' t)}
+    (* i.e., other solutions also stay in the ball B *) ->
   is_sol_cauchy_oo phi a (a + safe_dist) u0 f' ->
   {in `[a, a + safe_dist]%R, f =1 f'}.
 Proof.
 move => cont bnd.
-move/(@integral_sol_iff_sol1 _ _ _ _ _ u0 (*u0*) u0(*u0'*) _ k r) => []//.
+move/(@integral_sol_iff_sol1 _ _ _ _ _ u0 u0 _ k r) => []//.
 - move=> t td.
   apply: lip2.
   by apply: subset_itvl td; rewrite bnd_simp -lerBrDl safe_dist_itv.
@@ -1564,24 +1561,25 @@ End continuous_confined.
 
 Section solution_locally_unique.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
-  (u0 : U) (r : {posnum R}) (k : R) (f : R -> U).
+  (u0 : U) (r : {posnum R}) (k : R) (f : R -> U) (rho_max : {posnum R} := (2^-1)%:pos).
 Hypothesis ab : a < b.
 Hypothesis k0 : 0 < k.
 Let B := closed_ball u0 r%:num.
+
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Hypothesis cf : {within `[a, b], continuous f}.
 Hypothesis sol1 : is_sol_cauchy_oo phi a b u0 f.
-Let rho_max : {posnum R} := (2^-1)%:pos.
 
 Let r2 := (r%:num/2)%:pos.
 Let dmax (rho : {posnum R}) := safe_dist phi a b u0 r2%:num k rho%:num.
-Let fc (rho : {posnum R}) := cauchy_lipschitz_f (ltW ab) (ltW k0) lip2 cont1 (rho := rho).
+Let fc (rho : {posnum R}) :=
+  cauchy_lipschitz_f (ltW ab) (ltW k0) lip2 cont1 (rho := rho).
 
 Lemma initial_solution_unique f' : {within `[a, b], continuous f'} ->
   is_sol_cauchy_oo phi a b u0 f' ->
   exists D : {posnum R}, {in `[a, a + D%:num]%R, f =1 f'} /\
-    {in `[a, a + D%:num]%R, forall t, closed_ball u0 (r2%:num) (f t)}.
+    {in `[a, a + D%:num]%R, forall t, closed_ball u0 r2%:num (f t)}.
 Proof.
 move => cf' sol2.
 suff [rho [D [Hrho [Db P1 P2]]]] : exists rho D : {posnum R},
@@ -1595,27 +1593,30 @@ suff [rho [D [Hrho [Db P1 P2]]]] : exists rho D : {posnum R},
   by move: tab; rewrite !inE; apply: subset_itvl; rewrite bnd_simp lerD2l.
 have [d1 D1] := continuous_confined r2 ab cf sol1.1.
 have [d2 D2] := continuous_confined r2 ab cf' sol2.1.
-have [rho [drho1 drho2]] : exists rho : {posnum R}, dmax rho <= (Num.min d1%:num d2%:num) /\ rho%:num < 1.
+have [rho drho1 drho2] : exists2 rho : {posnum R},
+    dmax rho <= (Num.min d1%:num d2%:num) & rho%:num < 1.
   rewrite /dmax.
-  pose k' := Num.min rho_max%:num (Num.min (k * rho_max%:num) (k * (Num.min d1%:num d2%:num))).
+  pose k' := Num.min rho_max%:num
+            (Num.min (k * rho_max%:num)
+                     (k * (Num.min d1%:num d2%:num))).
   have posk : 0 < k'.
     rewrite lt_min//= invr_gt0/= ltr0n/=.
     by rewrite lt_min/= divr_gt0// mulr_gt0.
-  exists (PosNum posk); split => //=.
+  exists (PosNum posk) => //=.
     rewrite unlock/=.
     rewrite minA !ge_min/=; apply/orP; right.
     rewrite !minr_pMl//=; [by rewrite ltW// invr_gt0..|].
     do 2 rewrite ge_min; apply/orP; right.
     apply/orP; right.
     by rewrite mulrAC divff ?mul1r// gt_eqF//.
-  by rewrite gt_min; apply/orP; left; rewrite invf_lt1// ltr1n.
+  by rewrite gt_min invf_lt1// ltr1n.
 have drho_pos : 0 < dmax rho by exact: safe_dist_gt0.
 exists rho, (PosNum drho_pos), drho2; split => //.
 - move => t tad.
   apply/esym; apply: cauchy_lipschitz_unique_restr.
   + apply/continuous_subspaceW/cf => //.
     apply: subset_itvl => //=.
-    by rewrite bnd_simp -lerBrDl;apply safe_dist_itv.
+    by rewrite bnd_simp -lerBrDl; apply safe_dist_itv.
   + move=> t0 t0ad.
     suff : f t0 \in closed_ball u0 r2%:num by rewrite inE.
     apply D1.
@@ -1779,11 +1780,11 @@ apply: H.
 split.
   apply: Hr1.
   apply: le_closed_ball au.
-  suff : (minr r1 r2) <= r1 by [].
+  suff : minr r1 r2 <= r1 by [].
   by rewrite ge_min lexx.
 apply: Hr2.
 apply: le_closed_ball av.
-suff : (minr r1 r2) <= r2 by [].
+suff : minr r1 r2 <= r2 by [].
 by rewrite ge_min lexx orbT.
 Unshelve. all: by end_near. Qed.
 
@@ -1792,13 +1793,16 @@ Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
   (u0 : U) (r0 : {posnum R}) (f f' : R -> U).
 Hypothesis ab : a < b.
 Let B := closed_ball u0 r0%:num.
+
 Hypothesis sol1 : is_sol_cauchy_oo phi a b u0 f.
 Hypothesis sol2 : is_sol_cauchy_oo phi a b u0 f'.
 Hypothesis sol1B : forall t, a <= t -> t < b -> B (f t).
-Hypothesis phi_local_conds : forall t, a <= t -> t < b -> exists r k : {posnum R},
-  forall t', a <= t' <= b ->
-  (k%:num.-lipschitz_(closed_ball (f t) r%:num) (phi t') /\
-  forall y, closed_ball (f t) r%:num y -> {within `[a, b], continuous phi ^~ y}).
+Hypothesis phi_local_conds : forall t, a <= t -> t < b ->
+  exists r k : {posnum R},
+    forall t', a <= t' <= b ->
+    (k%:num.-lipschitz_(closed_ball (f t) r%:num) (phi t') /\
+    forall y, closed_ball (f t) r%:num y ->
+       {within `[a, b], continuous phi ^~ y}).
 
 Local Lemma cauchy_lipschitz_unique_right_extension t : a <= t < b ->
   f' t = f t ->
@@ -1880,7 +1884,7 @@ have Eclosed : closed E.
       exact: lt_nbhsl.
     - near do (apply/negP; rewrite in_itv negb_and/= -!ltNge; apply/orP; right).
       exact: lt_nbhsr.
-  move: notEx;rewrite not_andP => -[//|notEx].
+  move: notEx; rewrite not_andP => -[//|notEx].
   have [t Et] : exists t, t \in `[a, x]%R /\ f t != f' t.
      rewrite not_existsP => h.
      apply: notEx => t tax.
@@ -1915,7 +1919,7 @@ have Eclosed : closed E.
       move: xab; rewrite in_itv/= => /andP[+ _] ax.
       by move/(conj ax) => /andP; rewrite -eq_le => /eqP ->.
     have /(continuous_within_itvP _ ab)[cg _ gbb] := contg.
-    move: xab; rewrite in_itv/= => /andP[_ ].
+    move: xab; rewrite in_itv/= => /andP[_].
     rewrite le_eqVlt => /predU1P[-> //|xb].
     apply/cvg_at_left_filter/cg.
     by rewrite in_itv/= xb xa.
@@ -1976,7 +1980,7 @@ Theorem cauchy_lipschitz_unique f' :
   is_sol_cauchy_oo phi a (a + safe_dist) u0 f' ->
   {in `[a, a + safe_dist]%R, f =1 f'}.
 Proof.
-move =>  sol1.
+move=> sol1.
 have cont1' y : B y -> {within `[a, a + safe_dist], continuous phi^~ y}.
   move=> By.
   apply/continuous_subspaceW/cont1.
@@ -2001,14 +2005,10 @@ split.
   move => /=[x1 x2] [Bx1 Bx2].
   apply: lip2.
     rewrite in_itv/= at' //=.
-    apply (le_trans bt').
-    rewrite -lerBrDl.
-    exact: safe_dist_itv.
+    by rewrite (le_trans bt')// -lerBrDl safe_dist_itv.
   by split => /=; apply rp.
 move => y By.
-have h : y \in B.
-  apply mem_set.
-  by apply: rp.
+have h : y \in B by exact/mem_set/rp.
 have := cont1 h.
 apply/continuous_subspaceW.
 apply: subset_itvl.
