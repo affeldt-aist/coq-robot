@@ -34,14 +34,16 @@ Require Import tilt_mathcomp tilt_analysis row_integral ode_common ode_contseg.
 (*   g @` `[a, b] `<=` closed_ball u0 r and cst 0 o.w.                        *)
 (*                                                                            *)
 (* Technical constants needed for the proof:                                  *)
-(*   sup_phi == sup {phi t u0 | t \in [a, b]}                                 *)
-(*   safe_dist == min (b - a, r / (k * r + sup_phi), rho / k)                 *)
-(*                upper-bound of delta                                        *)
-(*                The dependence of safe_dist on the initial state u0 comes   *)
-(*                from sup_phi in the second term.                            *)
-(*   @img_cball R n f a b k u0 r k0 rho ==                                    *)
-(*     set of functions of type `C([a, b] U) s.t.                             *)
-(*     f @` `[a, a + safe_dist] `<=` closed_ball u0 r                         *)
+(*                                                                            *)
+(* `sup_ODE`                                                                  *)
+(* : sup {phi t u0 | t \in [a, b]}                                            *)
+(*                                                                            *)
+(* `safe_dist phi a b u0 r k rho`                                             *)
+(* : safe distance for the forward version of the Cauchy-Lipschitz theorem    *)
+(*                                                                            *)
+(* `@img_cball R n f a b k u0 r k0 rho`                                       *)
+(* : set of functions of type `` `C([a, b] U) `` s.t.                         *)
+(* : ``f @` `[a, a + safe_dist] `<=` closed_ball u0 r``                       *)
 (*                                                                            *)
 (* picard == similar to picard_fun                                            *)
 (*   as a function from/to the quotient of functions continuous over `[a, b]  *)
@@ -49,11 +51,28 @@ Require Import tilt_mathcomp tilt_analysis row_integral ode_common ode_contseg.
 (*                                                                            *)
 (* picard_fix == fixpoint of the integral equation defined by picard          *)
 (*                                                                            *)
-(* is_sol_cauchy == TODO                                                      *)
-(* is_sol_cauchy_oo == TODO                                                   *)
+(*                                                                            *)
+(* `sol_is_deriv phi A f`                                                     *)
+(* : f satisfies the ODE phi over the interval A                              *)
+(*                                                                            *)
+(* `is_sol phi A f`                                                           *)
+(* : `sol_is_deriv phi A` and `f` continuous within `closure A`               *)
+(*                                                                            *)
+(* `is_sol_cauchy phi a b u0 f`                                               *)
+(* : f is a of the Cauchy problem `(phi, a, u0)` over the interval `]a,b|`    *)
+(* : `b` can be closed, open, or $+\infty$                                    *)
+(*                                                                            *)
+(* `is_sol_cauchy_oo`                                                         *)
+(* : specialization of `is_sol_cauchy` to an open interval                    *)
+(*                                                                            *)
 (* safe_dist == TODO                                                          *)
 (* is_integral_sol == TODO                                                    *)
-(* is_sol_sym == TODO                                                         *)
+(*                                                                            *)
+(* `is_sol_cauchy_sym phi t0 d u0 f`                                          *)
+(* : f is a of the Cauchy problem `(phi, t0, u0)` over the interval           *)
+(* : `]t0-d,t0+[`                                                             *)
+(*                                                                            *)
+(*                                                                            *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -173,24 +192,23 @@ Definition picard_fun
 
 End picard_fun.
 
-HB.lock Definition sup_phi {R : realType} {n : nat}
+HB.lock Definition sup_ODE {R : realType} {n : nat}
   (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R) (u0 : U)
   : R := sup [set `|phi t u0| | t in `[a, b]].
-Canonical sup_phi_unlockable := Unlockable sup_phi.unlock.
+Canonical sup_ODE_unlockable := Unlockable sup_ODE.unlock.
 
-Section sup_phi.
+Section sup_ODE.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
-  (u0 : U).
-
-Lemma sup_phi_ge0 : 0 <= sup_phi phi a b u0.
-Proof. by rewrite unlock/= /sup_phi sup_ge0//= => x [y _ <-]. Qed.
-
-Variable r : {posnum R}.
+  (u0 : U) (r : {posnum R}).
 Let B := closed_ball u0 r%:num : set U.
+
+Lemma sup_ODE_ge0 : 0 <= sup_ODE phi a b u0.
+Proof. by rewrite unlock/= /sup_ODE sup_ge0//= => x [y _ <-]. Qed.
+
 Hypothesis cont1 : {in B, forall y : U, {within `[a, b], continuous phi^~ y}}.
 
-Lemma normr_phi_sup_phi x : x \in `[a, b]%R ->
-  `|phi x u0| <= sup_phi phi a b u0.
+Lemma normr_phi_sup_ODE x : x \in `[a, b]%R ->
+  `|phi x u0| <= sup_ODE phi a b u0.
 Proof.
 move=> xab.
 rewrite unlock/= ub_le_sup//.
@@ -213,14 +231,14 @@ rewrite unlock/= ub_le_sup//.
 by exists x.
 Qed.
 
-End sup_phi.
+End sup_ODE.
 
-Section sup_phi_lemmas.
+Section sup_ODE_lemmas.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (u0 : U).
 
-Lemma sup_phiS a b c d : {within `[a, b], continuous (phi ^~ u0)} ->
+Lemma sup_ODES a b c d : {within `[a, b], continuous (phi ^~ u0)} ->
   a <= b -> `[c, d] `<=` `[a, b] ->
-  sup_phi phi c d u0 <= sup_phi phi a b u0.
+  sup_ODE phi c d u0 <= sup_ODE phi a b u0.
 Proof.
 move=> cf ab cdab.
 rewrite unlock/=.
@@ -244,12 +262,12 @@ rewrite set_itv_ge ?bnd_simp/= -?ltNge// image_set0 sup0.
 by apply: sup_ge0 => x/= [y _ <-//].
 Qed.
 
-End sup_phi_lemmas.
+End sup_ODE_lemmas.
 
 HB.lock Definition safe_dist {R : realType} {n} (U := 'rV[R]_n)
     (phi : R -> U -> U) (a b : R) (u0 : U) (r k rho : R) :=
   Num.min (b - a)
- (Num.min (r / (k * r + sup_phi phi a b u0))
+ (Num.min (r / (k * r + sup_ODE phi a b u0))
           (rho / k)).
 Canonical safe_dist_unlockable := Unlockable safe_dist.unlock.
 
@@ -258,12 +276,12 @@ Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
   (u0 : U) (r k rho : R).
 
 Local Notation safe_dist := (safe_dist phi a b u0 r k rho).
-Local Notation sup_phi := (sup_phi phi a b u0).
+Local Notation sup_ODE := (sup_ODE phi a b u0).
 
 Lemma safe_dist_itv : safe_dist <= b - a.
 Proof. by rewrite unlock/= ge_min lexx. Qed.
 
-Lemma safe_dist_le_sup_phiV : safe_dist <= r / (k * r + sup_phi).
+Lemma safe_dist_le_sup_ODEV : safe_dist <= r / (k * r + sup_ODE).
 Proof. by rewrite unlock/= 2!ge_min mulrC lexx/= orbT. Qed.
 
 Lemma safe_dist_le_rho : 0 < k -> k * safe_dist <= rho.
@@ -276,7 +294,7 @@ Proof.
 move=> ab k0 r0 rho0.
 rewrite unlock/= le_min subr_ge0 ab/= le_min mulr_ge0//=; last first.
   by rewrite divr_ge0.
-by rewrite invr_ge0// addr_ge0 ?sup_phi_ge0// mulr_ge0.
+by rewrite invr_ge0// addr_ge0 ?sup_ODE_ge0// mulr_ge0.
 Qed.
 
 Lemma leDl_safe_dist : a <= b -> 0 <= k -> 0 <= r -> 0 <= rho ->
@@ -287,7 +305,7 @@ Lemma safe_dist_gt0 : a < b -> 0 < k -> 0 < r -> 0 < rho -> 0 < safe_dist.
 Proof.
 move=> ab k0 r0 rho0.
 rewrite unlock/= lt_min subr_gt0 ab/= lt_min mulr_gt0 ?divr_gt0//.
-by rewrite invr_gt0// ltr_wpDr ?sup_phi_ge0// mulr_gt0.
+by rewrite invr_gt0// ltr_wpDr ?sup_ODE_ge0// mulr_gt0.
 Qed.
 
 Lemma ltDl_safe_dist : a < b -> 0 < k -> 0 < r -> 0 < rho -> a < a + safe_dist.
@@ -538,7 +556,7 @@ Import ContSeg_quot.
 Local Notation C := (`C([a, a + safe_dist] U)).
 
 Local Notation img_cball := (@img_cball R n phi a b u0 r k rho).
-Local Notation sup_phi := (sup_phi phi a b u0).
+Local Notation sup_ODE := (sup_ODE phi a b u0).
 
 Import MeasurableR.
 
@@ -597,7 +615,7 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y])
   - exact: integrable_norm.
   - move=> x xay.
     by rewrite (le_trans _ (ler_normD _ _))// subrK.
-rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
+rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_ODE)))//.
   apply: le_Rintegral => //=.
     under [x in integrable _ _  x]eq_fun do rewrite EFinD.
     rewrite integrableD //=.
@@ -628,12 +646,12 @@ rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * `|F x - u0| + sup_phi)))//.
     exact: closed_ballxx.
   apply: (@le_trans _ _ `|phi x u0|) => //.
     by rewrite /Num.norm/= mx_normrE /= (le_bigmax _ _ (ord0, i)).
-  apply: (@normr_phi_sup_phi _ _ _ _ _ _ r) => //.
+  apply: (@normr_phi_sup_ODE _ _ _ _ _ _ r) => //.
   apply: subset_itvl xay; rewrite bnd_simp.
   move : yaaDelta; rewrite in_itv /= => /andP[_].
   move=> /le_trans; apply.
   by rewrite -lerBrDl safe_dist_itv.
-rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * r%:num + sup_phi)))//.
+rewrite (@le_trans _ _ (\int[mu]_(x in `[a, y]) (k * r%:num + sup_ODE)))//.
   apply: le_Rintegral => //=.
   - under [x in integrable _ _  x]eq_fun do rewrite EFinD.
     rewrite integrableD //=.
@@ -670,22 +688,22 @@ rewrite lte_fin.
 move: (yaaDelta); rewrite in_itv/= => /andP[+ yadelta].
 rewrite le_eqVlt => /predU1P[->|ay].
   by rewrite ltxx/= mulr0.
-rewrite (@le_trans _ _ ((k * r%:num + sup_phi) * safe_dist))//.
+rewrite (@le_trans _ _ ((k * r%:num + sup_ODE) * safe_dist))//.
   rewrite ler_wpM2l//.
-    by rewrite addr_ge0 ?mulr_ge0 ?(ltW k0)// sup_phi_ge0.
+    by rewrite addr_ge0 ?mulr_ge0 ?(ltW k0)// sup_ODE_ge0.
   by rewrite ay//= lerBlDl.
 move: k0; rewrite le_eqVlt => /predU1P[<-|].
   rewrite mul0r add0r.
-  have := sup_phi_ge0 phi a b u0.
-  rewrite le_eqVlt => /predU1P[<-|sup_phi_gt0].
+  have := sup_ODE_ge0 phi a b u0.
+  rewrite le_eqVlt => /predU1P[<-|sup_ODE_gt0].
     by rewrite mul0r.
   rewrite -ler_pdivlMl//.
-  rewrite (le_trans (safe_dist_le_sup_phiV _ _ _ _ _ _ _))//.
+  rewrite (le_trans (safe_dist_le_sup_ODEV _ _ _ _ _ _ _))//.
   by rewrite mul0r add0r mulrC.
 move=> k_gt0.
 rewrite -ler_pdivlMl//.
-  by rewrite ltr_pwDl ?mulr_gt0// sup_phi_ge0.
-by rewrite mulrC safe_dist_le_sup_phiV.
+  by rewrite ltr_pwDl ?mulr_gt0// sup_ODE_ge0.
+by rewrite mulrC safe_dist_le_sup_ODEV.
 Qed.
 
 Fail Check picard_to_cont : {fun [set: V] >-> [set: V]}.
@@ -901,17 +919,16 @@ HB.instance Definition _ {R : realType} n :=Complete.on (@row_vector R n).
 HB.instance Definition _ {R : realType} n := NormedModule.on (@row_vector R n).
 (*HB.instance Definition _ {R : realType} (n : nat) := CompleteNormedModule.on (@row_vector R n).*)
 
-Section is_sol_set.
+Section is_sol_itv.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U).
 
-(* TODO: replace by a general set? *)
 Definition sol_is_deriv (A : interval R) (f : R -> U) :=
   {in A, forall t, derivable f t 1 /\ f^`() t = phi t (f t)}.
 
 Definition is_sol (A : interval R) (f : R -> U) :=
   sol_is_deriv A f /\ {within (closure [set` A]), continuous f}.
 
-End is_sol_set.
+End is_sol_itv.
 
 Section is_sol.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U).
@@ -2024,7 +2041,7 @@ Proof. by move => xs; rewrite /patch xs. Qed.
 Section cauchy_lipschitz_symmetric_def.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U).
 
-Definition is_sol_sym t0 d u0 (f : R -> U):=
+Definition is_sol_cauchy_sym t0 d u0 (f : R -> U):=
   f t0 = u0 /\ sol_is_deriv phi `]t0 - d, t0 + d[%R f.
 
 End cauchy_lipschitz_symmetric_def.
@@ -2126,7 +2143,7 @@ Let t0b : t0 < b. Proof. by rewrite (itvP t0ab). Qed.
 Let fplus := @cauchy_lipschitz_f R n phi t0 b u0
   r4 k rho (ltW t0b) (ltW k0) (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
 
-Definition safe_dist_sym := (dboth t0).
+Definition safe_dist_sym := dboth t0.
 
 Definition cauchy_lipschitz_f_sym :=
   patch fplus `[t0 - safe_dist_sym, t0] fminus.
@@ -2443,16 +2460,14 @@ by rewrite cauchy_lipschitz_f_sym_left.
 Qed.
 
 Lemma cauchy_lipschitz_sym :
-  is_sol_sym phi t0 safe_dist_sym u0 cauchy_lipschitz_f_sym.
+  is_sol_cauchy_sym phi t0 safe_dist_sym u0 cauchy_lipschitz_f_sym.
 Proof.
 split; last by apply cauchy_lipschitz_sym_oo.
-have dminus0 : 0 < dminus t0 by exact: safe_dist_gt0.
 have solminus := cauchy_lipschitz_ex (ltW amin1) (ltW k0) (phi_sym_lip2 t0ab')
   (phi_sym_cont1 t0ab') rho1.
 have dboth0 : 0 < dboth t0.
-  rewrite lt_min; apply /andP;split; last first.
-    by rewrite lt_min safe_dist_gt0 //= lt_min dminus0.
-  by rewrite subr_gt0 (itvP t0ab).
+  rewrite !lt_min subr_gt0 (itvP t0ab)/=.
+  by rewrite /dminus /dplus !safe_dist_gt0.
 rewrite /cauchy_lipschitz_f_sym patch_in /fminus /=.
   by rewrite inE/= in_itv/= lexx gerBl ltW.
 by apply solminus.
@@ -2465,33 +2480,30 @@ End cauchy_lipschitz_symmetric.
 Section integral_sol_between.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
-  (u0 : U) (sol : R -> U).
+  (u0 : U) (f : R -> U).
 
 Import MeasurableR.
 
-Hypothesis int_phi_sol : forall i,
-  mu.-integrable `[a, b] (EFin \o (fun x => phi x (sol x) ord0 i)).
+Hypothesis int_phi_f : forall i,
+  mu.-integrable `[a, b] (EFin \o (fun x => phi x (f x) ord0 i)).
 
-Lemma integral_sol_between : is_integral_sol phi a b u0 sol ->
+Lemma integral_sol_between : is_integral_sol phi a b u0 f ->
   forall s t,
     s \in `[a, b]%R ->
     t \in `[s, b]%R ->
-    sol t = sol s + \vint[mu]_(x in `[s, t]) phi x (sol x).
+    f t = f s + \vint[mu]_(x in `[s, t]) phi x (f x).
 Proof.
-move=> [sola Hsol] s t sab tsb.
+move=> [fau0 fE] s t sab tsb.
 have as' : a <= s by rewrite (itvP sab).
 have st : s <= t by rewrite (itvP tsb).
 have tb : t <= b by rewrite (itvP tsb).
 have tab : t \in `[a, b]%R by rewrite in_itv /= (le_trans as' st) tb.
 have ast : a <= s <= t by rewrite as' st.
-have int_phi_sol_at i :
-    mu.-integrable `[a, t] (EFin \o (fun x => phi x (sol x) ord0 i)).
-  apply: (@integrableS _ _ _ mu `[a, b] `[a, t]) => //.
+have int_phi_f' i :
+    mu.-integrable `[a, t] (EFin \o (fun x => phi x (f x) ord0 i)).
+  apply: (@integrableS _ _ _ _ `[a, b]) => //.
   exact: subset_itvl.
-rewrite (Hsol t tab) (Hsol s sab).
-rewrite (rowRintegral_itv_split
-  (F := fun x => phi x (sol x)) ast int_phi_sol_at).
-by rewrite addrA.
+by rewrite (fE t tab) (fE s sab) -addrA -rowRintegral_itv_split.
 Qed.
 
 End integral_sol_between.
