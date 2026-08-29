@@ -311,6 +311,15 @@ Proof. by move=> ab k0 r0 rho0; rewrite ltrDl// safe_dist_gt0. Qed.
 
 End safe_dist.
 
+Lemma safe_dist_rho_le {R : realType} {n} phi (a b : R) (u0 : 'rV[R]_n) r k
+    rho rho' : 0 < k -> rho <= rho' ->
+  safe_dist phi a b u0 r k rho <= safe_dist phi a b u0 r k rho'.
+Proof.
+move => k0 rhorho'.
+rewrite unlock/= !le_min !ge_min !lexx /= !orbT /=.
+by rewrite ler_pdivlMr// ler_pM2r ?rhorho' ?orbT// invr_gt0.
+Qed.
+
 Section image_in_closed_ball.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
   (u0 : U) (r : {posnum R}) (k : R) (rho : {posnum R}).
@@ -938,7 +947,7 @@ Local Notation mu := lebesgue_measure.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
   (u0 u0' : U) (sol : R -> U) (k : R) (r : {posnum R}).
 
-Hypothesis ab : a < b.
+Hypothesis ab : a <= b.
 Let B := closed_ball u0' r%:num.
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous phi ^~ y}}.
 Hypothesis lip2 : {in `[a, b]%R, forall x : R, k.-lipschitz_B (phi x)}.
@@ -962,7 +971,6 @@ apply/rowP => i.
 rewrite mxE rowRintegralE.
 move: ta; rewrite le_eqVlt => /predU1P[<-|ta].
   by rewrite set_itv1 Rintegral_set1 addr0.
-have ab' : a < b by rewrite (lt_le_trans ta).
 rewrite /Rintegral.
 have cont_soli : {within `[a, b], continuous (fun x => sol x 0 i)}.
   by move: i; exact/within_continuous_coord.
@@ -973,7 +981,8 @@ rewrite (@continuous_FTC2 _ (fun x => phi x (sol x) 0 i)
 - split.
   + move=> t' tx'.
     by have /h.1[/derivable_mxP] : t' \in `]a, b[%R by exact/subset_itvl/tx'.
-  + by move /(continuous_within_itvP _ ab') : cont_soli => [_ + _].
+  + have ab' : a < b by rewrite (lt_le_trans ta).
+    by move /(continuous_within_itvP _ ab') : cont_soli => [_ + _].
   + have cont_phii' : {within `[a, t], continuous fun x0 => sol x0 0 i}.
       apply: continuous_subspaceW; last exact: cont_soli.
       exact: subset_itvl.
@@ -1487,7 +1496,7 @@ Local Lemma continuous_confined (g : R -> U) : {within `[a, b], continuous g} ->
   g a = u0 ->
   exists Delta : {posnum R}, {in `[a, a + Delta%:num], forall t, g t \in B}.
 Proof.
-move /(continuous_within_itvP _ ab)  => [cc cl cr] g0.
+move/(continuous_within_itvP _ ab)  => [cc cl cr] g0.
 have : {within `[a,b], continuous (fun t => `| u0 - g t |) }.
   apply: within_continuous_comp_norm.
   apply/continuous_within_itvP => //=.
@@ -1497,10 +1506,9 @@ have : {within `[a,b], continuous (fun t => `| u0 - g t |) }.
   - exact: (cvgB (cvg_cst _) cl).
   - exact: (cvgB (cvg_cst _) cr).
 move/(continuous_within_itvP _ ab) => [_ /cvgrPdist_le + _].
-move=> /(_ r%:num).
-case=> // Delta /= Delta0.
+move=> /(_ r%:num ltac:(by []))[Delta /= Delta0].
 rewrite /ball_/= g0 subrr normr0/= => H.
-have D20 : (0 < Delta / 2) by rewrite divr_gt0.
+have D20 : 0 < Delta / 2 by rewrite divr_gt0.
 exists (PosNum D20) => t.
 rewrite inE/= in_itv/= => /andP[].
 rewrite le_eqVlt => /predU1P[<-|ta td].
@@ -1517,7 +1525,7 @@ End continuous_confined.
 Section solution_locally_unique.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
   (u0 : U) (r : {posnum R}) (k : R) (f : R -> U)
-  (rho_max : {posnum R} := (2^-1)%:pos).
+  (rho_max : {posnum R} := 2^-1%:pos).
 
 Hypothesis ab : a < b.
 Hypothesis k0 : 0 < k.
@@ -1601,149 +1609,14 @@ apply/esym; apply: cauchy_lipschitz_unique_restr.
   split.
   + move=> t0 t0ad.
     have [_ [+ _]] := sol2; apply.
-    by move: t0ad; rewrite !inE; apply: subset_itvl; rewrite bnd_simp -lerBrDl safe_dist_itv.
+    by move: t0ad; apply: subset_itvl; rewrite bnd_simp -lerBrDl safe_dist_itv.
   + apply/continuous_subspaceW/cf' => //.
     apply: subset_trans; first exact: itv_closure.
-    by apply: subset_itvl; rewrite bnd_simp -lerBrDl;apply safe_dist_itv.
-exact: tad.
+    by apply: subset_itvl; rewrite bnd_simp -lerBrDl safe_dist_itv.
+- exact: tad.
 Qed.
 
 End solution_locally_unique.
-
-(* only for autonomous, used for tilt *)
-Definition locally_lipschitz {R : realType} n (U := 'rV[R]_n) (phi : U -> U) :=
- forall x, exists r k : {posnum R}, k%:num.-lipschitz_(closed_ball x r%:num) phi.
-
-Lemma locally_lipschitzP {R : realType} n (U := 'rV[R]_n) (phi : U -> U) :
-  locally_lipschitz phi <-> [locally [lipschitz phi x | x in [set: U]]].
-Proof.
-split.
-  (* locally_lipschitz phi -> [locally lipschitz phi] *)
-  move=> lip_phi /= -[/= a b _].
-  red.
-  have [ra [ka Ha]] := lip_phi a.
-  have [rb [kb Hb]] := lip_phi b.
-  do 2 red in Ha.
-  do 2 red in Hb.
-  simpl in Ha, Hb.
-  have [ab|ab] := eqVneq a b.
-    near=> M.
-    rewrite setXTT.
-    red.
-    rewrite withinET.
-    red in lip_phi.
-    simpl in lip_phi.
-    apply/nbhs_closedballP.
-    subst b.
-    exists ra => -[u v].
-    rewrite closed_ballE// /closed_ball_/= => H.
-    rewrite {1}/Num.norm /ProdNormedZmodule.norm/= /ProdNormedZmodule.norm/= in H.
-    rewrite (@le_trans _ _ (ka%:num * `|u - v|))//; last by rewrite ler_pM//.
-    apply: (Ha (u, v)) => //=; split.
-      rewrite closed_ballE// /closed_ball_/=.
-      rewrite (le_trans _ H)//.
-      by rewrite le_max lexx.
-    rewrite closed_ballE// /closed_ball_/=.
-    rewrite (le_trans _ H)//.
-    by rewrite le_max lexx orbT.
-  rewrite setXTT.
-  red.
-  rewrite withinET.
-  red in lip_phi.
-  simpl in lip_phi.
-  have ab20 : `|a - b| / 4 > 0 by rewrite divr_gt0// normr_gt0 subr_eq0.
-  have ab20' : `|a - b| / 2 > 0 by rewrite divr_gt0// normr_gt0 subr_eq0.
-  pose r := minr (PosNum ab20) (minr ra rb).
-  near=> M.
-  apply/nbhs_closedballP.
-  exists r => -[/= u v].
-  rewrite closed_ballE// /closed_ball_/= => H.
-  have rra : (r <= ra) by rewrite /r !ge_min lexx !orbT.
-  have rrb : (r <= rb) by rewrite /r !ge_min lexx !orbT.
-  have rab0 : (r <= PosNum ab20) by rewrite /r !ge_min lexx.
-  have ->: phi u - phi v = ((phi u - phi a)(* <k *) +
-                            (phi a - phi b) (* < r *) +
-                            (phi b - phi v)) by rewrite -addrA !subrKA.
-  rewrite (@le_trans _ _ ( ka%:num * r%:num +
-                           `|phi a - phi b| +
-                           kb%:num * r%:num))//.
-    rewrite (le_trans (ler_normD _ _))//.
-    rewrite lerD//.
-    + rewrite (le_trans (ler_normD _ _))//.
-      rewrite lerD//.
-      rewrite (@le_trans _ _ ( ka%:num * `|u - a|))//.
-        move /(_ (u,a)): Ha;apply.
-        rewrite closed_ballE// /closed_ball_/= subrr normr0=>[]//.
-        split=>//.
-        rewrite (@le_trans _ _  r%:num)//.
-        by rewrite (le_trans _ H) /Num.norm//= le_max lexx.
-      by rewrite distrC ler_pM// (le_trans _ H) /Num.norm//= le_max lexx.
-    +  rewrite (@le_trans _ _ ( kb%:num * `|b - v|))//.
-       move /(_ (b,v)): Hb;apply.
-       rewrite closed_ballE// /closed_ball_/= subrr normr0=>[]//;split=>//.
-       rewrite (@le_trans _ _  r%:num)//.
-       by rewrite (le_trans _ H) /Num.norm//= le_max lexx orbT.
-       by rewrite ler_pM// (le_trans _ H) /Num.norm//= le_max lexx orbT.
-    have rp0 : `|a-b| <= `|a-b|/2 + `|u-v|.
-      have ->: (a-b) = (a -u)  + (v - b) + (u-v) by rewrite addrAC !subrKA.
-      rewrite (le_trans (ler_normD _ _))// lerD2r.
-      apply (@le_trans _ _ ( r%:num + r%:num)).
-      rewrite (le_trans (ler_normD _ _))//lerD//.
-       by rewrite (le_trans _ H) /Num.norm//= le_max lexx.
-       by rewrite distrC (le_trans _ H) /Num.norm//= le_max lexx orbT.
-       rewrite addrAC !subrKA.
-       rewrite [leRHS]splitr lerD//.
-       by rewrite -mulrA -invrM ?unitfE// -natrM.
-       by rewrite -mulrA -invrM ?unitfE// -natrM.
-    have rp :  r%:num  <= `|u-v|.
-      rewrite (@le_trans _ _ (`|a - b|/ 4))//.
-      rewrite (@le_trans _ _ (`|a - b|/ 2))//.
-        by rewrite [leRHS]splitr -mulrA -invrM ?unitfE //= (natrM _ 2 2) lerDl divr_ge0//.
-      move : rp0.
-      by rewrite [leLHS]splitr lerD2l.
-    set C:=  ka%:num * r%:num + `|phi a - phi b| + kb%:num * r%:num .
-    apply (@le_trans _ _ (C/r%:num * `|u-v|)).
-    rewrite -mulrA;apply: ler_peMr; rewrite ?addr_ge0//.
-    by rewrite ler_pdivlMl// mulr1.
-  rewrite ler_pM//.
-  rewrite divr_ge0//.
-  by rewrite !addr_ge0.
-(* [locally lipschitz phi] -> locally_lipschitz phi *)
-move=> lip_phi /= a.
-red in lip_phi.
-simpl in *.
-rewrite setXTT in lip_phi.
-have := lip_phi (a, a).
-move=> /(_ (conj Logic.I Logic.I)).
-rewrite /lipschitz_on => -[M [Mreal HM]].
-rewrite withinET in HM.
-have M0 : 0 < `|M| + 1 by rewrite ltr_wpDl//.
-have MM0 : M < `|M|+1.
-  by rewrite (le_lt_trans (ler_norm _)) // ltrDl.
-have := HM (`|M| + 1).
-move /(_ MM0).
-case => /= => CD [aC aD] H.
-have [r1 Hr1] : exists r1 : {posnum R}, closed_ball a r1%:num `<=` CD.1.
-  by move/nbhs_closedballP : aC.
-have [r2 Hr2] : exists r2 : {posnum R}, closed_ball a r2%:num `<=` CD.2.
-  by move/nbhs_closedballP : aD.
-exists (minr r1 r2).
-exists (PosNum M0).
-red.
-red.
-simpl.
-move=> uv [au av].
-apply: H.
-split.
-  apply: Hr1.
-  apply: le_closed_ball au.
-  suff : minr r1 r2 <= r1 by [].
-  by rewrite ge_min lexx.
-apply: Hr2.
-apply: le_closed_ball av.
-suff : minr r1 r2 <= r2 by [].
-by rewrite ge_min lexx orbT.
-Unshelve. all: by end_near. Qed.
 
 Section loc_lip_uniqueness.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
@@ -1834,7 +1707,7 @@ have Eclosed : closed E.
     by apply: contraPP => Ep /(_ _ Ep).
   move=> x notEx.
   have [xab|xnab] := boolP (x \in `[a, b]%R); last first.
-    suff : \forall y \near x, ~ (y \in `[a,b]%R).
+    suff : \forall y \near x, ~ (y \in `[a, b]%R).
       by move=> ?; near do (rewrite not_andP; left).
     move: xnab; rewrite in_itv/= negb_and/= -!ltNge => /orP[xa|xb].
     - near do (apply/negP; rewrite in_itv negb_and/= -!ltNge; apply/orP; left).
@@ -2163,13 +2036,10 @@ have contf_plus : {within `[t0, t0 + dboth t0], continuous fplus}.
   by apply: subset_itvl; rewrite bnd_simp/= lerD2l /dboth 2!ge_min lexx !orbT.
 have contf : {within `[t0 - dboth t0, t0 + dboth t0],
     continuous cauchy_lipschitz_f_sym}.
-  apply : within_continuous_patch => //.
-    by rewrite gtrBl.
-  by rewrite ltrDl.
-have r42 : r4%:num  = r2%:num / 2.
-  rewrite /r4 /r2/= -mulrA.
-  apply congr2 => //.
-  by rewrite -invfM -natrM.
+  apply: (within_continuous_patch _ _ contf_minus contf_plus) => //.
+  - by rewrite gerBl// ltW.
+  - by rewrite lerDl// ltW.
+have r42 : r4%:num = r2%:num / 2 by rewrite /r4 /r2/= -mulrA -invfM -natrM.
 have fc : {in `[t0-dboth t0, (t0 + dboth t0)], forall t,
     closed_ball (fminus (t0 - dboth t0)) r2%:num (cauchy_lipschitz_f_sym t)}.
   move=> t tad.
@@ -2189,8 +2059,7 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)], forall t,
       by rewrite (le_trans _ h1)// lerD2l lerN2 /safe_dist_sym !ge_min lexx !orbT.
     rewrite inE.
     rewrite !r42.
-    move => c2.
-    exact: (closed_ball_split _ c2).
+    by move/closed_ball_split; exact.
   - have : fplus t \in closed_ball u0 (r2%:num / 2).
       rewrite -r42.
       have ht' : t \in `[t0, t0 + dboth t0].
@@ -2199,7 +2068,7 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)], forall t,
         have [hat | hat] := lerP t0 t => //.
         rewrite -ht.
         by rewrite inE/=in_itv/= h1//= ltW.
-     apply mem_set;apply cplus.
+     apply mem_set; apply cplus.
      move : ht'.
      rewrite inE/= !in_itv/= => /andP[-> h1//=].
      apply: (le_trans h1).
@@ -2237,8 +2106,7 @@ apply: is_integral_sol_patch.
   + move => t tB; apply/continuous_subspaceW/cont1 => //.
     by apply: subset_itv; rewrite bnd_simp// (itvP t0ab).
   + move=> x xt0; apply: lip2.
-    apply: subset_itv xt0; rewrite bnd_simp//.
-    by rewrite (le_trans _ t0t0b)// lerDl ltW.
+    by apply: subset_itv xt0; rewrite bnd_simp// (le_trans _ t0t0b)// lerDl ltW.
   + exact: contf_minus.
   + move => _ [/= t' tp] <-.
     apply: (@le_closed_ball _ _ _ r4%:num) => //.
@@ -2246,14 +2114,12 @@ apply: is_integral_sol_patch.
     apply/mem_set/cminus.
     move: tp.
     rewrite !in_itv/=lerNl opprK => /andP[h0 ->//=].
-    rewrite lerNl opprD opprK //=.
-    rewrite (le_trans _ h0)//.
+    rewrite lerNl opprD opprK //= (le_trans _ h0)//.
     rewrite lerD2l lerN2 /dboth /dplus /dminus.
     by rewrite !ge_min lexx !orbT.
 - apply: (@within_continuous_lipschitz _ _ _ _ _ u0 r k) => /=; rewrite -/B.
   + move=> t tB; apply/continuous_subspaceW/cont1 => //.
-    apply: subset_itv; rewrite bnd_simp//.
-    by rewrite (itvP t0ab).
+    by apply: subset_itv; rewrite bnd_simp// (itvP t0ab).
   + move=> x xt0; apply: lip2.
     by apply: subset_itv xt0; rewrite bnd_simp// (itvP t0ab).
   + exact: contf_plus.
@@ -2265,7 +2131,7 @@ apply: is_integral_sol_patch.
     by rewrite /dboth /dplus 2!ge_min lexx !orbT.
 - by [].
 - apply /(integral_sol_iff_sol1 (r:=r2) (u0' := uneg)).
-  + move => t tab; apply/continuous_subspaceW/cont1.
+  + move=> t tab; apply/continuous_subspaceW/cont1.
       by apply: subset_itv; rewrite bnd_simp// (itvP t0ab).
     exact/mem_set/Buneg/set_mem.
   + move => x bx; apply: lip2'.
@@ -2274,59 +2140,50 @@ apply: is_integral_sol_patch.
   + move => _ [t tp] <-.
     rewrite /uneg.
     rewrite {1}/cauchy_lipschitz_f_sym patch_in.
-      by rewrite inE/=in_itv/= lexx //= gerBl ltW.
-    have tin : t \in `[t0 - dboth t0, t0 + dboth t0].
-      move: tp; rewrite !inE.
-      by apply: subset_itv; rewrite bnd_simp// lerDl// ltW.
-    have := fc _ tin.
+      by rewrite inE/= in_itv/= lexx //= gerBl ltW.
+    have /fc : t \in `[t0 - dboth t0, t0 + dboth t0].
+      by rewrite inE; apply: subset_itv tp; rewrite bnd_simp// lerDl// ltW.
     rewrite {1}/cauchy_lipschitz_f_sym patch_in; first by rewrite inE.
-    apply.
-    split.
-      * rewrite /cauchy_lipschitz_f_sym patch_in.
-          by rewrite inE/=in_itv/= lexx //= gerBl ltW.
-        reflexivity.
-      * split; last first.
-          by rewrite closure_itvoo; first rewrite gtrBl.
-        move => t tad.
-        case : (solminus.2.1 (-t)).
-          move : tad.
-          rewrite -/dminus /=!in_itv/= ltrNr ltrNl opprD !opprK => /andP[h1 ->//=].
-          apply: (le_lt_trans _ h1).
-          by rewrite lerD2l lerN2 !ge_min lexx !orbT.
-        move => h1 h2.
-        have hd : derivable fminus t 1.
-          rewrite /fminus/=.
-          apply/derivable1_diffP.
-          apply/differentiable_comp => //.
-          apply/derivable1_diffP.
-          by apply h1.
-        split=>//.
+    exact.
+  + split.
+    + rewrite /cauchy_lipschitz_f_sym patch_in.
+        by rewrite inE/=in_itv/= lexx //= gerBl ltW.
+      reflexivity.
+    + split; last by rewrite closure_itvoo; first rewrite gtrBl.
+      move => t tad.
+      case : (solminus.2.1 (- t)).
+        move : tad.
+        rewrite -/dminus /=!in_itv/= ltrNr ltrNl opprD !opprK => /andP[h1 ->//=].
+        by rewrite (le_lt_trans _ h1)// lerD2l lerN2 !ge_min lexx !orbT.
+      move=> h1 h2.
+      have hd : derivable fminus t 1.
         rewrite /fminus/=.
-        apply /rowP => i /=.
-        rewrite derive1E/=.
-        rewrite !derive_mx //= !mxE.
-        rewrite -derive1E/=.
-        have -> : (fun t0 => fminus0 (- t0) ord0 i) =
-                  ((fun t => fminus0 t ord0 i) \o -%R).
-          by apply funext.
-        rewrite derive1_comp/=.
-        - by [].
-        - by move /derivable_mxP: h1.
-        rewrite !derive1N//=derive1_id/=.
-        move /rowP : h2.
-        move /(_ i).
+        apply/derivable1_diffP.
+        apply/differentiable_comp => //.
+        exact/derivable1_diffP/h1.
+      split =>//.
+      rewrite /fminus/=.
+      apply/rowP => i /=.
+      rewrite derive1E/= !derive_mx //= !mxE -derive1E/=.
+      have -> : (fun t0 => fminus0 (- t0) 0 i) = ((fun t => fminus0 t 0 i) \o -%R).
+        by apply funext.
+      rewrite derive1_comp/=.
+      - by [].
+      - by move /derivable_mxP: h1.
+      - rewrite !derive1N//=derive1_id/=.
+        move/rowP : h2 => /(_ i).
         rewrite !derive1E /=!derive_mx.
           by apply: h1.
         rewrite /=!mxE => ->.
         by rewrite mulrN1 !opprK.
 - apply/(integral_sol_iff_sol1 (u0' := fminus t0) (r:=r2) (k := k)).
-  + move => t tab; apply/continuous_subspaceW/cont1.
+  + move=> t tab; apply/continuous_subspaceW/cont1.
     by apply: subset_itv; rewrite bnd_simp//= (itvP t0ab).
   + rewrite /B.
     suff -> : u0 = fminus t0.
       apply mem_set.
-      apply set_mem in tab.
-      apply: le_closed_ball tab.
+      move/set_mem : tab.
+      apply: le_closed_ball.
       by rewrite /r2/= ler_piMr// invf_le1 // ler1n.
     rewrite -fa.
     rewrite /cauchy_lipschitz_f_sym.
@@ -2338,12 +2195,10 @@ apply: is_integral_sol_patch.
     rewrite solminus.1.
     move => [x1 x2] [ Bx1 Bx2].
     apply: lip2.
-    * move : bx.
-      rewrite !inE.
+    * move: bx.
       apply: subset_itv; rewrite bnd_simp.
-      by rewrite (itvP t0ab).
-    * rewrite -lerBrDl.
-      by rewrite ge_min lexx.
+        by rewrite (itvP t0ab).
+      by rewrite -lerBrDl ge_min lexx.
     * split => /=.
         rewrite /B.
         apply: (le_closed_ball _ Bx1).
@@ -2351,20 +2206,18 @@ apply: is_integral_sol_patch.
       apply: (le_closed_ball _ Bx2).
       by rewrite ler_piMr// invf_le1// ler1n.
   + exact: contf_plus.
-  + move => _ [t tp] <-.
+  + move=> _ [t tp] <-.
     rewrite /fminus /= solminus.1.
     apply: (le_closed_ball ler42).
     suff : fplus t \in closed_ball u0 r4%:num by rewrite inE.
     apply/mem_set; apply cplus.
     move/mem_set : tp.
-    rewrite inE /=!in_itv/= => /andP[-> //=].
-    move/le_trans; apply.
-    by rewrite lerD// /dboth /dplus 2!ge_min lexx !orbT.
+    rewrite inE; apply: subset_itvl; rewrite bnd_simp// lerD2l.
+    by rewrite /dboth /dplus 2!ge_min lexx !orbT.
   + rewrite /fminus /= solminus.1.
     split; first by apply solplus.
     split.
-      move=> t tad.
-      apply solplus.
+      move=> t tad; apply solplus.
       apply: subset_itvl tad; rewrite bnd_simp lerD2l.
       by rewrite /dboth /dplus 2!ge_min lexx !orbT.
     apply/continuous_subspaceW/cfplus.

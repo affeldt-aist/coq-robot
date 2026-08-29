@@ -19,14 +19,6 @@ Import numFieldNormedType.Exports.
 Open Scope ring_scope.
 Open Scope classical_set_scope.
 
-Lemma safe_dist_rho_le {R : realType} {n} phi (a b : R) (u0 : 'rV[R]_n) r k
-    rho rho' : 0 < k -> rho <= rho' ->
-  safe_dist phi a b u0 r k rho <= safe_dist phi a b u0 r k rho'.
-Proof.
-move => k0 rhorho'.
-by rewrite unlock/=!le_min !ge_min !lexx /= !orbT /= ler_pdivlMr // ler_pM2r ?rhorho' ?orbT// invr_gt0.
-Qed.
-
 Lemma is_sol_cauchy_oo_rev {R : realType} {n} (phi : R -> 'rV[R]_n -> 'rV[R]_n)
     (a b : R) (f : R -> 'rV[R]_n) :
   a < b ->
@@ -80,60 +72,6 @@ apply (@is_sol_cauchy_oo_rev _ _ (fun t x => - phi (- t) x)).
   by rewrite ltrN2.
 by rewrite /= opprK.
 Qed.
-
-(* TODO: move *)
-Lemma bounded_derivative_lipschitz {R : realType} {n} (a b M : R)
-    (f : R -> 'rV[R]_n) :
-  0 <= M ->
-  {within `[a, b], continuous f} ->
-  {in `]a, b[%R, forall x, derivable f x 1 /\ `| f^`() x | <= M} ->
-  {in `]a, b[%R&, forall s t,
-  `| f t - f s | <= M * `|t - s|}.
-Proof.
-move => M0 cont /= deri s t sab tab.
-rewrite {1}/Num.norm /= mx_normrE.
-apply: bigmax_le; first by rewrite mulr_ge0 // normr_ge0.
-move => /=  [i0 i] _.
-rewrite ord1 !mxE /=.
-wlog st : s t sab tab / s <= t.
-  move => H.
-  have [st|ts] := leP s t.
-    exact: H.
-  rewrite distrC (distrC t).
-  apply H => //.
-  by apply ltW.
-have [ | |c cst ->]:= @MVT_segment _ (fun t => f t ord0 i) ('D_1 (fun t => f t ord0 i)) _ _ st.
-- move => x xst.
-  have xab : x \in `]a,b[%R.
-    move : xst.
-    apply : subset_itv; rewrite bnd_simp ltW //.
-    by move : sab;rewrite in_itv/= => /andP[].
-    by move : tab;rewrite in_itv/= => /andP[].
-  apply /derivableP.
-  have [/derivable_mxP + _] := (deri x xab).
-  by apply.
-- move /within_continuous_coord : cont.
-  move /(_ i).
-  apply: continuous_subspaceW.
-  apply : subset_itv; rewrite bnd_simp ltW//.
-  by move : sab;rewrite in_itv/= => /andP[].
-  by move : tab;rewrite in_itv/= => /andP[].
-rewrite -derive1E/= normrM ler_wpM2r //.
-have cab: c \in `]a,b[%R.
-  move : cst.
-  apply: subset_itv; rewrite bnd_simp.
-    by rewrite (itvP sab).
-  by rewrite (itvP tab).
-have [_  + ] := (deri c cab).
-rewrite {1}/Num.norm /= mx_normrE.
-apply: le_trans.
-suff -> : (fun t0 : R => f t0 ord0 i)^`() c =  f^`() c ord0 i.
-  exact: (le_bigmax _ _ (ord0, i)).
-rewrite !derive1E !derive_mx.
-  by apply deri.
-by rewrite mxE/=.
-Qed.
-
 (* Extending to infinite time *)
 
 (* Goal: if the rhs function is bounded, it is Lipschitz *)
@@ -429,16 +367,18 @@ Definition sol_extended := patch sol2 `[a,b] sol_extended0.
 Let ac : a < c.
 Proof. exact: (lt_trans ab). Qed.
 
-Lemma sol_extended_continuous : {within `[a, b+safe_dist], continuous sol_extended}.
+Lemma sol_extended_continuous :
+  {within `[a, b + safe_dist], continuous sol_extended}.
 Proof.
-apply: within_continuous_patch => //; first by rewrite ltrDl safe_dist_sym_gt0.
-  by have [_ [_ +]] := sol_extends_pt; rewrite closure_itvoo.
-  have [_ [_ +]] := sol2_sol.
-  apply /continuous_subspaceW.
+apply: (within_continuous_patch (ltW ab)) => //.
+- by rewrite lerDl ltW// safe_dist_sym_gt0.
+- by have [_ [_ +]] := sol_extends_pt; rewrite closure_itvoo.
+- have [_ [_ +]] := sol2_sol.
+  apply/continuous_subspaceW.
   rewrite closure_itvoo ?ler_ltD ?gtrN ?safe_dist_sym_gt0 //.
   apply: subset_itvr.
   by rewrite bnd_simp gerBl ltW // safe_dist_sym_gt0.
-by rewrite /sol_extended0 patch_in ?in_set1.
+- by rewrite /sol_extended0 patch_in ?in_set1.
 Qed.
 
 Let sol_extended_init : sol_extended a = u0.
@@ -474,7 +414,6 @@ rewrite /sol2 cauchy_lipschitz_sym_left /=; last first.
   by rewrite gtrBl safe_dist_sym_gt0 // ltrN2.
 Unshelve. all: by end_near. Qed.
 
-
 Lemma solution_extends : is_sol_cauchy_oo phi a (b + safe_dist) u0 sol_extended.
 Proof.
 split; first by [].
@@ -505,9 +444,9 @@ case: (ltgtP x b) => Hxb.
     near=>x0.
     rewrite /sol_extended patch_in /sol_extended0 ?patchC// ?in_setC ?in_set1 ?lt_eqF//.
     rewrite inE/=in_itv/=;apply /andP;split; rewrite ltW//.
-    by near:x0;apply: lt_nbhsr.
-    by near:x0;apply: lt_nbhsl.
-    by near:x0; apply: lt_nbhsl.
+    by near: x0; exact: lt_nbhsr.
+    by near: x0; exact: lt_nbhsl.
+    by near: x0; exact: lt_nbhsl.
 - split.
   apply:(near_eq_derivable (f:=sol2)).
   near=>x0.

@@ -13,8 +13,10 @@ Require Import ode tilt_stability.
 (* The final result of this file is the proof that the equilibrium point 0 is *)
 (* stable.                                                                    *)
 (*                                                                            *)
+(* `S2`                                                                       *)
+(* : unit sphere centered at 0                                                *)
+(*                                                                            *)
 (* ```                                                                        *)
-(*                    S2 == unit sphere centered at 0                         *)
 (*  Module PhysicalModel == This module contains a formalization of the       *)
 (*                          transformation of a system of measurements to     *)
 (*                          a differential equation that captures the error   *)
@@ -398,6 +400,7 @@ Let phi := Tilt.eqn alpha1 gamma.
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
 
+(* TODO: rename *)
 Lemma tilt_eqn_locally_lipschitz_new x (r : R) :
  exists k : {posnum R}, k%:num.-lipschitz_(closed_ball x r) phi.
 Proof.
@@ -484,7 +487,7 @@ rewrite ge_max; apply/andP; split.
     by rewrite !mulrA ler_pM// !mulr_ge0// ?addr_ge0// ltW.
 Unshelve. all: by end_near. Qed.
 
-Lemma tilt_eqn_locally_lipschitz : locally_lipschitz phi.
+Lemma tilt_eqn_locally_lipschitz : autonomous_locally_lipschitz phi.
 Proof.
 move=> /= x.
 exists 1%:pos.
