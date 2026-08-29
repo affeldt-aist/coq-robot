@@ -7,7 +7,12 @@ From mathcomp Require Import mathcomp_extra unstable boolp classical_sets
   ereal sequences exp derive numfun measure realfun measurable_realfun
   lebesgue_measure lebesgue_integral ftc.
 Require Import tilt_mathcomp tilt_analysis vector_integral ode_common
-  ode_contseg ode.
+  ode_contseg ode gronwall.
+
+(**md**************************************************************************)
+(* # Global versions of the Cauchy-Lipschitz theorem                          *)
+(*                                                                            *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -19,9 +24,11 @@ Import numFieldNormedType.Exports.
 Open Scope ring_scope.
 Open Scope classical_set_scope.
 
-Lemma is_sol_cauchy_oo_rev {R : realType} {n} (phi : R -> 'rV[R]_n -> 'rV[R]_n)
-    (a b : R) (f : R -> 'rV[R]_n) :
-  a < b ->
+Section is_sol_cauchy_ooN.
+Context {R : realType} {n : nat}.
+
+Let is_sol_cauchy_ooN0 (phi : R -> 'rV[R]_n -> 'rV[R]_n) (a b : R)
+    (f : R -> 'rV[R]_n) : a <= b ->
   is_sol_cauchy_oo phi a b (f a) f ->
   is_sol_cauchy_oo (fun t x => - phi (- t) x) (- b) (- a) (f b) (f \o -%R).
 Proof.
@@ -48,19 +55,21 @@ split.
       exact: Df.
     rewrite /=!mxE => ->.
     by rewrite mulrN1.
+move: ab; rewrite le_eqVlt => /predU1P[->|ab].
+  rewrite set_itv_ge ?closure0; last exact: continuous_subspace0.
+  by rewrite bnd_simp ltxx.
 rewrite closure_itvoo; first by rewrite ltrN2.
 apply: within_continuous_compN.
 by rewrite !opprK -closure_itvoo.
 Qed.
 
-Lemma is_sol_cauchy_oo_rev_iff {R : realType} {n} (phi : R -> 'rV[R]_n -> 'rV[R]_n)
-    (a b : R) (f : R -> 'rV[R]_n) :
-  a < b ->
+Lemma is_sol_cauchy_ooN (phi : R -> 'rV[R]_n -> 'rV[R]_n) (a b : R)
+    (f : R -> 'rV[R]_n) : a <= b ->
   is_sol_cauchy_oo phi a b (f a) f <->
   is_sol_cauchy_oo (fun t x => - phi (- t) x) (- b) (- a) (f b) (f \o -%R).
 Proof.
 move=> ab.
-split; first by apply is_sol_cauchy_oo_rev.
+split; first by apply is_sol_cauchy_ooN0.
 move => h.
 suff : is_sol_cauchy_oo (fun t x => - - (phi (- - t) x)) (- - a) (- - b)
     ((f \o -%R) (- a)) ((f \o -%R) \o -%R).
@@ -68,10 +77,13 @@ suff : is_sol_cauchy_oo (fun t x => - - (phi (- - t) x)) (- - a) (- - b)
   have -> : ((f \o -%R) \o -%R) = f by rewrite -compA; apply/funext=> x; rewrite /= opprK.
   suff -> : (fun t x => - - (phi (- - t) x)) = phi by [].
   by apply /funext => t; apply funext => x; rewrite !opprK.
-apply (@is_sol_cauchy_oo_rev _ _ (fun t x => - phi (- t) x)).
-  by rewrite ltrN2.
+apply (@is_sol_cauchy_ooN0 (fun t x => - phi (- t) x)).
+  by rewrite lerN2.
 by rewrite /= opprK.
 Qed.
+
+End is_sol_cauchy_ooN.
+
 (* Extending to infinite time *)
 
 (* Goal: if the rhs function is bounded, it is Lipschitz *)
@@ -142,81 +154,10 @@ Qed.
 
 End bounded_rhs_lipschitz.
 
-Section lipschitz_left_limit.
-Context {R : realType} {n} (U := 'rV[R]_n) (a b k : R) (f : R -> U).
-Hypothesis ab : a < b.
-Hypothesis k0 : 0 < k.
-Hypothesis f_lip sol: forall s t,
-  s \in `]a, b[%R -> t \in `]a, b[%R -> `| f t - f s | <= k * `|t - s|.
-
-(* TODO: move *)
-Lemma lipschitz_has_left_limit : f @ b^'- --> lim (f @ b^'-).
-Proof.
-apply /cauchy_cvgP.
-apply /cauchyP => eps eps0 /=.
-have e2k0 : 0 < eps / k / 2.
-  by rewrite divr_gt0 // divr_gt0.
-near b^'- => s.
-exists (f s).
-near=>t.
-rewrite /= -ball_normE /=.
-apply: le_lt_trans; first apply f_lip.
-- rewrite in_itv/=;apply /andP;split.
-    near:t.
-    apply: cvg_at_left_filter; first by apply cvg_id.
-    by apply: lt_nbhsr.
-  by near:t;exact: nbhs_left_lt.
-- rewrite in_itv/=;apply /andP;split.
-    near:s.
-    apply: cvg_at_left_filter; first by apply cvg_id.
-    by apply: lt_nbhsr.
-  by near:s;exact: nbhs_left_lt.
-rewrite mulrC -ltr_pdivlMr //.
-rewrite -(subrKA b) (le_lt_trans  (ler_normD _ _)) // (splitr (eps / k)) ltrD //.
-  suff: ball b (eps/ k /2) s by rewrite -ball_normE /ball_ /= distrC.
-  near:s.
-  apply: cvg_at_left_filter; first by apply cvg_id.
-  by apply: nbhsx_ballx.
-suff: ball b (eps/ k /2) t by rewrite -ball_normE /ball_ /= distrC.
-near:t.
-apply: cvg_at_left_filter; first by apply cvg_id.
-by apply: nbhsx_ballx.
-Unshelve. all: by end_near. Qed.
-
-End lipschitz_left_limit.
-
-Section safe_dist_sym_props.
-Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
-  (u0 : U) (c k : R) (sol : R -> U)
-  (r : {posnum R}).
-
-Local Notation safe_dist := (@safe_dist_sym R n phi a c u0 r k b).
-
-Hypothesis ab : a < b.
-Hypothesis bc : b < c.
-Hypothesis k0 : 0 < k.
-
-Lemma safe_dist_sym_gt0 : 0 < safe_dist.
-Proof.
-by rewrite lt_min subr_gt0 bc /= lt_min !safe_dist_gt0 // ltrNl opprK.
-Qed.
-
-Lemma safe_dist_sym_itv1 : safe_dist <= b - a.
-Proof.
-rewrite addrC -{2}(opprK b).
-by rewrite 2!ge_min safe_dist_itv !orbT.
-Qed.
-
-Lemma safe_dist_sym_itv2 : safe_dist <= c - b.
-Proof.
-by rewrite 2!ge_min safe_dist_itv orbT.
-Qed.
-
-End safe_dist_sym_props.
-
 Section extend_sol.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b c : R)
-  (u0 u1 : U) (k : R) (sol : R -> U) (r : {posnum R}).
+  (u0 u1 : U) (k : R) (r : {posnum R}) (sol : R -> U).
+
 Let B := closed_ball u1 r%:num.
 
 Hypothesis ab : a < b.
@@ -240,8 +181,8 @@ Qed.
 (* (* solution on max interval [a, b) *) *)
 (* Hypothesis is_integral_sol_co : forall b', b' \in `[a,b[%R -> is_integral_sol phi u0 a b' sol. *)
 
-Hypothesis sol_oo : forall b', b' \in `[a, b[%R ->
-  is_sol_cauchy_oo phi a b' u0 sol.
+Hypothesis sol_oo : forall t, t \in `[a, b[%R ->
+  is_sol_cauchy_oo phi a t u0 sol.
 
 (* limit at the right boundary is u1 and u1 is in safe area *)
 Hypothesis has_left_limit : sol @ b^'- --> u1.
@@ -252,18 +193,18 @@ Let rho1 : rho%:num < 1. Proof. by rewrite /rho/= invf_lt1// ltr1n. Qed.
 
 Let sol0 : sol a = u0.
 Proof.
-have h0 : a \in `[a, b[%R by rewrite bound_itvE.
-by apply (sol_oo h0).
+have /sol_oo : a \in `[a, b[%R by rewrite bound_itvE.
+by case.
 Qed.
 
 Let sol_deriv t : t \in `]a, b[%R -> derivable sol t 1 /\ sol^`() t = phi t (sol t).
 Proof.
 move=> tab.
 have [t' tt' t'ab] : exists2 t', t < t' & t' \in `[a, b[%R.
-  move: tab; rewrite in_itv/= => /andP[at0 tb0].
   exists ((t + b) / 2).
-    by rewrite midf_lt.
-  by rewrite in_itv/= midf_lt ?andbT// ltW// (lt_trans at0)// midf_lt.
+    by rewrite midf_lt ?(itvP tab).
+  rewrite in_itv/= midf_lt ?(itvP tab) ?andbT//.
+  by rewrite (@le_trans _ _ t) ?(itvP tab)// midf_le ?(itvP tab).
 have [_ [+ _]] := sol_oo t'ab.
 apply.
 move: tab.
@@ -274,16 +215,14 @@ Let sol_continuous t : t \in `]a, b[%R -> continuous_at t sol.
 Proof.
 move=> tab.
 have [t' tt' t'ab] : exists2 t', t < t' & t' \in `[a, b[%R.
-  move: tab; rewrite in_itv/= => /andP[at0 tb0].
   exists ((t + b) / 2).
-    by rewrite midf_lt.
-  by rewrite in_itv/= midf_lt ?andbT// ltW// (lt_trans at0)// midf_lt.
+    by rewrite midf_lt ?(itvP tab).
+  rewrite in_itv/= midf_lt ?(itvP tab) ?andbT//.
+  by rewrite (@le_trans _ _ t) ?(itvP tab)// midf_le ?(itvP tab).
 have [_ [_ +]] := sol_oo t'ab.
-have at' : a < t'.
-  apply/lt_trans/tt'.
-  by move: tab => /itvP ->.
+have at' : a < t' by rewrite (lt_trans _ tt')// (itvP tab).
 rewrite closure_itvoo//.
-move /(continuous_within_itvP _ at') => [+ _ _]; apply.
+move/(continuous_within_itvP _ at') => [+ _ _]; apply.
 by rewrite in_itv/= tt' (itvP tab).
 Qed.
 
@@ -303,10 +242,9 @@ Let sol_extended0 := patch sol [set b] (cst u1).
 Lemma sol_extends_pt : is_sol_cauchy_oo phi a b u0 sol_extended0.
 Proof.
 rewrite /sol_extended0.
-split; first by rewrite patchC // in_setC in_set1 lt_eqF //.
+split; first by rewrite patchC // in_setC in_set1 lt_eqF.
 split.
-  move => t tab.
-  have := tab.
+  move=> t /[dup] tab.
   rewrite in_itv/= => /andP[at0 tb0].
   have  hn : {near t, sol =1 patch sol [set b] (cst u1)}.
     near=> x.
@@ -321,23 +259,23 @@ split.
   by rewrite patchC // ?in_setC ?in_set1 ?lt_eqF // -derive1E; apply sol_deriv.
 rewrite closure_itvoo//.
 apply/continuous_within_itvP => //; split.
-- move=> x xab.
-  have := xab; rewrite in_itv/= => /andP[ax xb].
+- move=> x /[dup] xab.
+  rewrite in_itv/= => /andP[ax xb].
   apply : cvg_trans.
-    apply: (near_eq_cvg (f:=sol)).
-    near=>t.
+    apply: (near_eq_cvg (f := sol)).
+    near=> t.
     rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //.
     by near: t; exact: lt_nbhsl.
   by rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //; apply sol_continuous.
-- rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //.
+- rewrite patchC // ?in_setC ?in_set1 ?lt_eqF//.
   apply: cvg_trans; last by apply sol_continuous_left.
-  apply: (near_eq_cvg (f:=sol)).
-  near=>t.
-  rewrite patchC // ?in_setC ?in_set1 ?lt_eqF //.
+  apply: (near_eq_cvg (f := sol)).
+  near=> t.
+  by rewrite patchC // ?in_setC ?in_set1 ?lt_eqF.
 - rewrite patch_in ?in_set1 //.
   apply: cvg_trans; last by apply has_left_limit.
-  apply: (near_eq_cvg (f:=sol)).
-  near=>t.
+  apply: (near_eq_cvg (f := sol)).
+  near=> t.
   by rewrite patchC // in_setC in_set1.
  Unshelve. all: by end_near. Qed.
 
@@ -345,12 +283,12 @@ apply/continuous_within_itvP => //; split.
 Local Notation safe_dist_fwd := (@safe_dist R n phi b c u1 (r%:num / 2)%:pos k rho).
 Local Notation safe_dist := (@safe_dist_sym R n phi a c u1 r k b).
 
-Local Lemma bac : b \in `]a, c[%R.
+Let bac : b \in `]a, c[%R.
 Proof. by rewrite in_itv /= ab bc. Qed.
 
-Let sol2 := cauchy_lipschitz_f_sym  k0 cont1 lip2 bac.
+Let sol2 := cauchy_lipschitz_f_sym k0 cont1 lip2 bac.
 
-Let sol2_sol : is_sol_cauchy_oo phi (b-safe_dist) (b + safe_dist)
+Let sol2_sol : is_sol_cauchy_oo phi (b - safe_dist) (b + safe_dist)
   (sol2 (b - safe_dist)) sol2.
 Proof. by apply cauchy_lipschitz_sym_oo. Qed.
 
@@ -362,7 +300,7 @@ Proof. by apply cauchy_lipschitz_sym_oo. Qed.
 Let sol2_init : sol2 b = u1.
 Proof. by apply cauchy_lipschitz_sym. Qed.
 
-Definition sol_extended := patch sol2 `[a,b] sol_extended0.
+Definition sol_extended := patch sol2 `[a, b] sol_extended0.
 
 Let ac : a < c.
 Proof. exact: (lt_trans ab). Qed.
@@ -384,7 +322,7 @@ Qed.
 Let sol_extended_init : sol_extended a = u0.
 Proof.
 rewrite /sol_extended /sol_extended0 patch_in ?patchC ?in_setC ?in_set1 ?lt_eqF //.
-by rewrite inE /=in_itv/= lexx ltW.
+by rewrite inE/= bound_itvE ltW.
 Qed.
 
 Let sol_extended_near_b : {near b, sol2 =1 sol_extended}.
@@ -392,26 +330,26 @@ Proof.
 near=>t.
 rewrite /sol_extended/patch.
 case: ifP => //.
-move => tab.
-have := tab; rewrite inE /= in_itv/= => -/andP[_ tb].
+move => /[dup] tab.
+rewrite inE /= in_itv/= => -/andP[_ tb].
 have := sol_extends_pt.
 have <- : sol_extended0 a = u0 by apply sol_extends_pt.
-move /(is_sol_cauchy_oo_rev ab) => hext0.
+move /(is_sol_cauchy_ooN _ _ (ltW ab)) => hext0.
 rewrite /sol2 cauchy_lipschitz_sym_left /=; last first.
   have -> : sol_extended0 t = (sol_extended0 \o -%R) (-t) by rewrite /= opprK.
   apply: cauchy_lipschitz_unique.
-  have <- : (sol_extended0 \o -%R) (- b) = u1.
-   by rewrite /= opprK /sol_extended0 patch_in //= in_set1.
-  apply /is_sol_cauchy_oo_subset/hext0=>//.
-    by rewrite ltrDl safe_dist_gt0 // ltrN2.
+    have <- : (sol_extended0 \o -%R) (- b) = u1.
+      by rewrite /= opprK /sol_extended0 patch_in //= in_set1.
+    apply /is_sol_cauchy_oo_subset/hext0=>//.
+      by rewrite ltrDl safe_dist_gt0 // ltrN2.
     by rewrite -lerBDl;apply safe_dist_itv.
-    rewrite oppr_itv/= opprD !opprK in_itv/= tb andbT.
-    apply ltW.
-    near: t; apply: lt_nbhsr.
-    by rewrite gtrBl safe_dist_gt0 // ltrN2.
-  rewrite in_itv/=tb andbT ltW //=.
-  near:t; apply: lt_nbhsr.
-  by rewrite gtrBl safe_dist_sym_gt0 // ltrN2.
+  rewrite oppr_itv/= opprD !opprK in_itv/= tb andbT.
+  apply ltW.
+  near: t; apply: lt_nbhsr.
+  by rewrite gtrBl safe_dist_gt0 // ltrN2.
+rewrite in_itv/= tb andbT ltW//=.
+near: t; apply: lt_nbhsr.
+by rewrite gtrBl safe_dist_sym_gt0 // ltrN2.
 Unshelve. all: by end_near. Qed.
 
 Lemma solution_extends : is_sol_cauchy_oo phi a (b + safe_dist) u0 sol_extended.
@@ -501,8 +439,8 @@ End extend_sol.
 
 (* maybe not useful? *)
 Section extend_from_lipschitz.
-Context {R : realType} {n} (U := 'rV[R]_n)
-  (phi : R -> U -> U) (u0 : U) (a b c : R) (sol : R -> U).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b c : R)
+  (u0 : U) (sol : R -> U).
 
 Hypothesis ab : a < b.
 Hypothesis bc : b < c.
@@ -523,15 +461,12 @@ Hypothesis cont1 :
 Hypothesis lip2 :
   {in `[a, c]%R, forall x, k.-lipschitz_B (phi x)}.
 Hypothesis sol_lip :
-  forall s t,
-    s \in `]a, b[%R ->
-    t \in `]a, b[%R ->
-    `| sol t - sol s | <= k * `|t - s|.
+  {in `]a, b[%R &, forall s t, `| sol t - sol s | <= k * `|t - s|}.
 
 Let has_left_limit : sol @ b^'- --> u1.
 Proof.
 rewrite /u1.
-by apply /lipschitz_has_left_limit/sol_lip.
+exact/(@lipschitz_has_left_limit _ _ a b k).
 Qed.
 
 Local Notation sol_extended := (sol_extended sol ab bc k0 cont1 lip2 ).
@@ -544,8 +479,8 @@ Proof. by apply : solution_extends. Qed.
 End extend_from_lipschitz.
 
 Section extend_from_compact_containment.
-Context {R : realType} {n} (U := 'rV[R]_n)
-  (phi : R -> U -> U) (u0 : U) (a b c : R) (sol : R -> U).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b c : R)
+  (u0 : U) (sol : R -> U).
 
 Variable K : set U.
 
@@ -589,7 +524,7 @@ exact: phi_cont.
 Qed.
 
 Lemma sol_is_lipschitz : exists2 M, 0 < M &
-  forall s t : R, s \in `]a, b[%R -> t \in `]a, b[%R -> `|sol t - sol s| <= M * `|t - s|.
+  {in `]a, b[%R &, forall s t, `|sol t - sol s| <= M * `|t - s|}.
 Proof.
 have [M [mr h]] := rhs_bounded_on_solution;exists (`| M|+1) => [ | s t asb tab].
   by rewrite ltr_wpDl.
@@ -600,7 +535,7 @@ wlog st : s t asb tab / s <= t.
   rewrite distrC (distrC t).
   apply H => //.
   by apply ltW.
-set b' := t + (b - t)/2.
+set b' := t + (b - t) / 2.
 have bb' : b' < b.
   rewrite /b' -ltrBrDl ltr_pdivrMr // mulr2n mulrDr mulr1 ltrDl subr_gt0.
   by rewrite (itvP tab).
@@ -614,11 +549,9 @@ have b'ab : b' \in `[a, b[%R.
   move/le_trans; apply.
   by rewrite ltW.
 have atb' : t \in `]a, b'[%R.
-  move: tab.
-  by rewrite !in_itv/= tb' andbT => /andP[].
+  by move: tab; rewrite !in_itv/= tb' andbT => /andP[].
 have sab' : s \in `]a, b'[%R.
-  move: asb.
-  rewrite !in_itv/= => /andP[-> _]/=.
+  move: asb; rewrite !in_itv/= => /andP[-> _]/=.
   by apply (le_lt_trans st).
 apply/bounded_derivative_lipschitz/atb'/sab'.
 - by rewrite addr_ge0.
@@ -632,10 +565,9 @@ move /(_ _ xab) => [hd ->].
 split=>//.
 have MM' : M < `|M| + 1 by rewrite (le_lt_trans (ler_norm _))// ltrDl.
 have := h _ MM' `|phi x (sol x)| .
-rewrite /=normr_id; apply.
+rewrite /= normr_id; apply.
 exists x => //.
-move: xab.
-rewrite !in_itv/= => /andP[/ltW -> /=].
+move: xab; rewrite !in_itv/= => /andP[/ltW -> /=].
 by move/lt_trans; apply.
 Qed.
 
@@ -871,36 +803,30 @@ split.
   exact: continuous_subspace0.
 Qed.
 
-Lemma sol_inftyP sol :
-  is_sol_cauchy phi a +oo%O u0 sol <->
-  (forall b, is_sol_cauchy_oo phi a b u0 sol).
+Lemma is_sol_cauchy_inftyP f : is_sol_cauchy phi a +oo%O u0 f <->
+  (forall b, is_sol_cauchy_oo phi a b u0 f).
 Proof.
 split.
-- move => [h1 [h2 h3]] b.
+- move => [fau0 [derivf contf]] b; split; first exact: fau0.
   split.
-  + by [].
-  + split.
-      move => t tab.
-      apply h2.
-      exact: subset_itvl tab.
-    apply/continuous_subspaceW/h3/closureS.
-    exact: subset_itvl.
-- move => h; split.
-    by apply h.
+    move=> t tab; apply derivf.
+    exact: subset_itvl tab.
+  apply/continuous_subspaceW/contf/closureS.
+  exact: subset_itvl.
+- move=> h; split; first by apply h.
   split.
-    move => t tab.
-    apply (h (t+1)).
-    move : tab.
-    by rewrite /=!in_itv/= ltrDl ltr01 => /andP[-> _].
+    move=> t tab.
+    apply (h (t + 1)).
+    by move: tab; rewrite /=!in_itv/= ltrDl ltr01 => /andP[-> _].
   rewrite closure_neitv_oy; apply/continuous_within_itvcyP.
   split.
-    move => /= t tab.
+    move=> /= t tab.
     have := (h (t + 1)).2.2.
     have at1 : a < t + 1 by rewrite ltr_wpDr// (itvP tab).
     rewrite closure_itvoo//.
     move=> /(continuous_within_itvP _ at1)[+ _ _].
     apply.
-    by rewrite in_itv/= ltrDl ltr01 (itvP tab).
+    by rewrite in_itv/= (itvP tab) ltrDl/=.
   have := (h (a + 1)).2.2.
   rewrite closure_itvoo.
     by rewrite ltrDl.
@@ -949,9 +875,8 @@ Lemma all_sols_global_sol :
 Proof.
 move => H.
 have [solt soltp] := (choice H).
-exists (fun t => solt (t+1) t).
-apply /sol_inftyP.
-move => b /=.
+exists (fun t => solt (t + 1) t).
+apply/is_sol_cauchy_inftyP => b /=.
 have [ab | ba]:= ltP a b; last first.
   split; first by apply soltp.
   split.
@@ -966,37 +891,35 @@ have [ab | ba]:= ltP a b; last first.
 suff heq : {in `[a,b],  solt b =1 (fun t => solt (t+1) t) }.
   by apply (solt_eq ab heq).
 move => t tab.
-have at1 : a < (t+1).
-  move : tab.
-  rewrite !inE/=!in_itv/=  => /andP[h _].
-  apply: (le_lt_trans h).
-  by rewrite ltrDl.
-suff -> : solt b t = solt (maxr (t+1) b) t.
-  apply: (locally_cauchy_lipschitz_unique  at1 _ (u0 := u0) ).
-  have <- :  solt (maxr (t+1) b) a = u0.
-    by apply (soltp (maxr (t+1) b)).
-  apply /is_sol_cauchy_oo_subset/(soltp _) => //=.
+have at1 : a < t + 1.
+  rewrite inE in tab.
+  by rewrite (@le_lt_trans _ _ t)// ?(itvP tab)// ltrDl.
+suff -> : solt b t = solt (maxr (t + 1) b) t.
+- apply: (locally_cauchy_lipschitz_unique  at1 _ (u0 := u0) ).
+  + have <- : solt (maxr (t + 1) b) a = u0.
+      by apply (soltp (maxr (t + 1) b)).
+    apply /is_sol_cauchy_oo_subset/(soltp _) => //=.
     by rewrite le_max lexx.
-  done.
-  move => t0 at0 t0t.
-  have [r [k [c1 l1]]] := phi_local_conds at1 (solt (maxr (t + 1) b) t0).
-  exists r, k => t' at'; split => //=.
-  exact: l1 t' at'.
-  by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
-  move : tab.
-  by rewrite inE/=!in_itv/= lerDl ler01 => /andP[-> _].
-  apply: (locally_cauchy_lipschitz_unique  ab (u0 := u0) ) => /=.
-  exact: soltp.
-  have <- : solt (maxr (t + 1) b) a = u0.
-    by apply (soltp (maxr (t+1) b)).
-  apply /is_sol_cauchy_oo_subset/(soltp _) => //=.
+  + done.
+    move => t0 at0 t0t.
+    have [r [k [c1 l1]]] := phi_local_conds at1 (solt (maxr (t + 1) b) t0).
+    exists r, k => t' at'; split => //=.
+      exact: l1 t' at'.
+    by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
+  + rewrite inE in tab.
+    by rewrite in_itv/= (itvP tab) lerDl/=.
+apply: (locally_cauchy_lipschitz_unique  ab (u0 := u0)) => /=.
+- exact: soltp.
+- have <- : solt (maxr (t + 1) b) a = u0.
+    by apply (soltp (maxr (t + 1) b)).
+  apply/is_sol_cauchy_oo_subset/(soltp _) => //=.
   by rewrite le_max lexx orbT.
-  move => t0 at0 t0t.
+- move => t0 at0 t0t.
   have [r [k [c1 l1]]] := phi_local_conds ab (solt b t0).
-  exists r, k => t' at'; split => //=.
-  exact: l1 t' at'.
+  exists r, k => t' at'; split => /=.
+    exact: l1 t' at'.
   by move => y hy; apply: continuous_subspaceT; apply: c1; rewrite inE.
-by move : tab;rewrite inE.
+by move: tab; rewrite inE.
 Qed.
 
 Lemma bset_down b c :
@@ -1012,10 +935,9 @@ Qed.
 
 Let asup_lt : has_sup bset -> a < sup bset.
 Proof.
-move => h.  
+move => h.
 have [x [bx ax]] := bset_min.
-apply (lt_le_trans ax).
-by apply sup_upper_bound.
+by rewrite (lt_le_trans ax)// sup_upper_bound.
 Qed.
 
 Lemma max_sol : has_sup bset ->
@@ -1164,14 +1086,14 @@ Qed.
 
 (* Thm 3.3 in Khalil *)
 Lemma compact_containment_global_sol :
-  (forall b sol, is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a,b[ `<=` K) ->
+  (forall b sol, is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a, b[ `<=` K) ->
   exists2 sol, is_sol_cauchy phi a +oo%O u0 sol &
-    (h^-1 *: (sol (a+h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
+    (h^-1 *: (sol (a + h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
 Proof.
 move => H.
 suff [sol [init [d cont]]] : exists sol, is_sol_cauchy phi a +oo%O u0 sol.
    have allsol : forall b, is_sol_cauchy_oo phi a b u0 sol.
-     by apply /sol_inftyP;split.
+     exact/is_sol_cauchy_inftyP.
    exists sol => //.
    apply/cvgrPdist_le => eps eps0.
    rewrite closure_neitv_oy in cont.
@@ -1189,9 +1111,7 @@ suff [sol [init [d cont]]] : exists sol, is_sol_cauchy phi a +oo%O u0 sol.
   have pair_cvg :
     (fun t => (t, sol t)) @ a^'+ --> (a, sol a).
     exact: cvg_pair ca cr.
-
-  have hphi :
-    phi t (sol t) @[t --> a^'+] --> phi a (sol a).
+  have hphi : phi t (sol t) @[t --> a^'+] --> phi a (sol a).
     apply/cvgrPdist_le => e e0.
     have /cvgrPdist_le /(_ _ e0) := Hj (a, sol a) pa.
     rewrite near_withinE => Hnear.
@@ -1199,99 +1119,100 @@ suff [sol [init [d cont]]] : exists sol, is_sol_cauchy phi a +oo%O u0 sol.
     have Hdomain : \forall t \near a^'+,(`[a, a + 1] `*` K) (t, sol t).
       near=> t; split.
         apply/andP; split.
-        by near: t; exact: nbhs_right_ge.
-        by near: t; apply: nbhs_right_le; rewrite ltrDl.
-        apply: (H (a+2) sol) => //; exists t=>//.
-          apply/andP; split.
           by near: t; exact: nbhs_right_ge.
-          by near: t; apply: nbhs_right_lt; rewrite ltrDl.
-  move: Hcomp Hdomain; apply: filter_app.
-  have heps2 : 0 < eps / 2 /2 by rewrite !divr_gt0.
-  have heps20 : 0 < eps / 2 by rewrite !divr_gt0.
-  move /cvgrPdist_le : hphi.
-  move /(_ _ heps2) => /nbhs_right0P hphi.
-  have [e [e0 he]] : exists e, 0 < e /\ forall e', e' < e -> 0 < e' -> `|phi a (sol a) - phi (a + e') (sol (a + e'))| <= eps / 2 / 2.
-     move : hphi.
-     rewrite nearE.
-     move => [e e0 ep].
-     exists e; split=>//.
-     move => e' e'e e'0.
-     apply ep=>//.
-     by rewrite /ball_/= ball_norm_sym/ball_//= subr0  gtr0_norm ?divr_gt0. 
-  near=>h.
-  have h0 : 0 < h.
-     by near:h; exact: nbhs_right_gt.
-   rewrite -(subrKA (phi (a+h) (sol (a+h)))) (le_trans  (ler_normD _ _)) // (splitr eps) lerD//.
+        by near: t; apply: nbhs_right_le; rewrite ltrDl.
+      apply: (H (a+2) sol) => //; exists t=>//.
+      apply/andP; split.
+        by near: t; exact: nbhs_right_ge.
+      by near: t; apply: nbhs_right_lt; rewrite ltrDl.
+    move: Hcomp Hdomain; apply: filter_app.
+    have heps2 : 0 < eps / 2 /2 by rewrite !divr_gt0.
+    have heps20 : 0 < eps / 2 by rewrite !divr_gt0.
+    move /cvgrPdist_le : hphi.
+    move /(_ _ heps2) => /nbhs_right0P hphi.
+    have [e [e0 he]] : exists e, 0 < e /\ forall e', e' < e -> 0 < e' -> `|phi a (sol a) - phi (a + e') (sol (a + e'))| <= eps / 2 / 2.
+      move : hphi.
+      rewrite nearE.
+      move => [e e0 ep].
+      exists e; split=>//.
+      move => e' e'e e'0.
+      apply ep=>//.
+      by rewrite /ball_/= ball_norm_sym/ball_//= subr0  gtr0_norm ?divr_gt0. 
+    near=>h.
+    have h0 : 0 < h.
+      by near:h; exact: nbhs_right_gt.
+    rewrite -(subrKA (phi (a+h) (sol (a+h)))) (le_trans  (ler_normD _ _)) // (splitr eps) lerD//.
       apply: le_trans.
       apply he => //.
       by rewrite !ler_pM// ?divr_ge0// ?ler_pdivrMr// ?ltW// mulrDr mulr1 ltrDl.
-      rewrite -(@ler_pM2l _ h)//  -{1}(gtr0_norm h0) -normrZ scalerBr scalerA divff// scale1r distrC.
-     rewrite /Num.norm/= !mx_normrE.
-     apply /bigmax_leP; split; first by rewrite ltW// mulr_gt0.
-     move=> /= [i j] _/=.
-     rewrite {i}ord1.
-     pose f := fun t => (sol t - sol a - (t - a) *: phi (a + h) (sol (a + h))) ord0 j.
-     suff : `|f (a + h)| <= h * (eps / 2).
-       by rewrite /f;apply le_trans; rewrite -(addrA a) subrKC.
-     have ah: a < a + h by rewrite ltrDl.
-     have fa0 : f a = 0.
-       by rewrite /f !subrr scale0r subrr mxE.
-     have df :  forall x : R, x \in `]a, a+h[%R ->is_derive x 1 f ((phi x (sol x) - phi (a + h) (sol (a +h))) ord0 j).
-       move => x xah.
-       rewrite /f !mxE.
-       under eq_fun do rewrite !mxE.
-       apply: is_deriveB.
-       rewrite -(subr0 (phi _ _)) !mxE.
-       rewrite (_ : (fun x0 => _) = (fun x0 => sol x0 ord0 j) - (cst (sol a ord0 j))).
-         by apply/funext.
-       have : is_derive x 1 (cst (sol a ord0 j)) 0.
-         by apply: is_derive_cst.
-       have : is_derive x 1 (fun x0 : R => sol x0 ord0 j) (phi x (sol x) ord0 j).
-         have [| deri1 d1] := (d x) .
-           by move : xah; rewrite !in_itv/= => /andP[-> _].
-         have /derivable_mxP deri1' := deri1.
-         split => //.
-         have := d1.
-         rewrite derive1E !derive_mx  //=.
-         move =>/rowP /(_ j).
-         by rewrite mxE.
-       apply: is_deriveB.
-       under eq_fun do rewrite mulrBl.
-       rewrite -{3}(subr0 ((phi (a+h) _) )) !mxE.
-       apply: is_deriveB.
-       set c := phi (a + h) (sol (a + h)) ord0 j.
-       have {2}-> : c = x *: 0 +  c *: 1.
-         by rewrite scaler0 scaler1 add0r.
-       apply : is_deriveM.
-       by apply: is_derive_cst.
-     have [| c cah] := MVT ah df.
-       rewrite /f.
-       suff /within_continuous_coord: {within `[a, a + h], continuous fun t : R =>
+    rewrite -(@ler_pM2l _ h)//  -{1}(gtr0_norm h0) -normrZ scalerBr scalerA divff// scale1r distrC.
+    rewrite /Num.norm/= !mx_normrE.
+    apply /bigmax_leP; split; first by rewrite ltW// mulr_gt0.
+    move=> /= [i j] _/=.
+    rewrite {i}ord1.
+    pose f := fun t => (sol t - sol a - (t - a) *: phi (a + h) (sol (a + h))) ord0 j.
+    suff : `|f (a + h)| <= h * (eps / 2).
+      by rewrite /f;apply le_trans; rewrite -(addrA a) subrKC.
+    have ah: a < a + h by rewrite ltrDl.
+    have fa0 : f a = 0.
+      by rewrite /f !subrr scale0r subrr mxE.
+    have df : forall x : R, x \in `]a, a + h[%R ->
+        is_derive x 1 f ((phi x (sol x) - phi (a + h) (sol (a + h))) 0 j).
+      move => x xah.
+      rewrite /f !mxE.
+      under eq_fun do rewrite !mxE.
+      apply: is_deriveB.
+        rewrite -(subr0 (phi _ _)) !mxE.
+        rewrite (_ : (fun x0 => _) = (fun x0 => sol x0 ord0 j) - (cst (sol a ord0 j))).
+          by apply/funext.
+        have : is_derive x 1 (cst (sol a ord0 j)) 0.
+          by apply: is_derive_cst.
+        have : is_derive x 1 (fun x0 : R => sol x0 ord0 j) (phi x (sol x) ord0 j).
+          have [| deri1 d1] := d x.
+            by move : xah; rewrite !in_itv/= => /andP[-> _].
+          have /derivable_mxP deri1' := deri1.
+          split => //.
+          have := d1.
+          rewrite derive1E !derive_mx//=.
+          move =>/rowP /(_ j).
+          by rewrite mxE.
+        exact: is_deriveB.
+      under eq_fun do rewrite mulrBl.
+      rewrite -{3}(subr0 (phi (a + h) _)) !mxE.
+      apply: is_deriveB.
+      set c := phi (a + h) (sol (a + h)) ord0 j.
+      have {2}-> : c = x *: 0 +  c *: 1.
+        by rewrite scaler0 scaler1 add0r.
+      apply : is_deriveM.
+      by apply: is_derive_cst.
+    have [| c cah] := MVT ah df.
+      rewrite /f.
+      suff /within_continuous_coord: {within `[a, a + h], continuous fun t : R =>
                                   (sol t - sol a - (t - a) *: phi (a + h) (sol (a + h)))} by [].
-       apply: within_continuousB.
-       apply: within_continuousB.
-       apply /continuous_subspaceW/cont.
-       by apply: subset_itvl.
-       by apply /continuous_subspaceT/cst_continuous.
-       rewrite /=.
-       under [X in {within _, continuous X}] eq_fun do rewrite scalerBl.
-       apply: within_continuousB.
-       apply /continuous_subspaceT/scalel_continuous.
-       apply /continuous_subspaceT/cst_continuous.
+      apply: within_continuousB.
+        apply: within_continuousB.
+          apply/continuous_subspaceW/cont.
+          exact: subset_itvl.
+        by apply /continuous_subspaceT/cst_continuous.
+      rewrite /=.
+      under [X in {within _, continuous X}] eq_fun do rewrite scalerBl.
+      apply: within_continuousB.
+        exact/continuous_subspaceT/scalel_continuous.
+      exact/continuous_subspaceT/cst_continuous.
     rewrite -(addrA a) subrKC fa0 subr0 => ->.
     rewrite mulrC normrM gtr0_norm// ler_pM //.
-   suff: `|(phi c (sol c) - phi (a + h) (sol (a + h)))| <= eps / 2.
-     apply /le_trans. 
-     rewrite {2}/Num.norm/= !mx_normrE.
-     by apply: le_bigmax (ord0, _).
-   rewrite -(subrKA (phi a (sol a))) (le_trans  (ler_normD _ _)) // (splitr (eps / 2)) lerD//.
-     rewrite distrC.
-     have -> : c = a + (c - a) by ring.
-     apply: he => //.
-     apply (@lt_trans _ _ h) => //.
-     by rewrite ltrBlDl;move : cah;rewrite in_itv/= => /andP[_ ->].
-     by rewrite subr_gt0;move : cah;rewrite in_itv/= => /andP[-> _].
-     by apply: he => //.
+    suff: `|(phi c (sol c) - phi (a + h) (sol (a + h)))| <= eps / 2.
+      apply /le_trans.
+      rewrite {2}/Num.norm/= !mx_normrE.
+      by apply: le_bigmax (ord0, _).
+    rewrite -(subrKA (phi a (sol a))) (le_trans  (ler_normD _ _)) // (splitr (eps / 2)) lerD//.
+      rewrite distrC.
+      have -> : c = a + (c - a) by ring.
+      apply: he => //.
+      apply (@lt_trans _ _ h) => //.
+        by rewrite ltrBlDl (itvP cah).
+      by rewrite subr_gt0 (itvP cah).
+    by apply: he.
 apply no_ub_global_sol.
 suff : ~ has_sup bset.
   by apply contra_not => hub;split=>//;apply bset_nonempty.
@@ -1301,25 +1222,17 @@ Unshelve. all: by end_near. Qed.
 End max_solution.
 
 Section compact_global_solution.
-
-Context {R : realType} {n : nat}.
-Notation U := 'rV[R]_n.
-
-Variables (a : R) (phi : R -> U -> U).
-Variables  (K : set U) (u0 : U).
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a : R) (u0 : U)
+  (K : set U).
 
 Hypothesis compactK : compact K.
 Hypothesis u0K : u0 \in K.
 
-Hypothesis phi_continuous :
-  forall x, continuous (phi ^~ x).
+Hypothesis phi_continuous : forall x, continuous (phi ^~ x).
 
-Hypothesis phi_locally_lipschitz :
-  forall b, a < b ->
-  forall x,
-    exists r k : {posnum R},
-      {in `[a, b]%R, forall t,
-        k%:num.-lipschitz_(closed_ball x r%:num) (phi t)}.
+Hypothesis phi_locally_lipschitz : forall b, a < b ->
+  forall x, exists r k : {posnum R},
+      {in `[a, b]%R, forall t, k%:num.-lipschitz_(closed_ball x r%:num) (phi t)}.
 
 Hypothesis solutions_in_K : forall b sol,
   is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a, b[ `<=` K.
@@ -1329,12 +1242,12 @@ Lemma compact_global_solution : exists2 sol,
   (h^-1 *: (sol (a + h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
 Proof. exact: (compact_containment_global_sol (K:=K)). Qed.
 
-Lemma global_solution_unique f f':
+Lemma global_solution_unique f f' :
   is_sol_cauchy phi a +oo%O u0 f ->
   is_sol_cauchy phi a +oo%O u0 f' ->
   {in `[a, +oo[%R, f =1 f'}.
 Proof.
-move => /sol_inftyP h1 /sol_inftyP h2 t tp.
+move=> /is_sol_cauchy_inftyP h1 /is_sol_cauchy_inftyP h2 t tp.
 apply: (@locally_cauchy_lipschitz_unique _ _ phi a (t + 1) u0) => //.
 - by rewrite ltr_pwDr// (itvP tp).
 - move => t0 at0 tt0.
@@ -1349,396 +1262,6 @@ apply: (@locally_cauchy_lipschitz_unique _ _ phi a (t + 1) u0) => //.
 Qed.
 
 End compact_global_solution.
-
-Section gronwall.
-Context {R : realType} (a b : R) (ab : a < b) (lambda : R -> R) (mu y : R -> R).
-Hypotheses (lambda_cont : {within `[a, b], continuous lambda})
-           (mu_cont : {within `[a, b], continuous mu})
-           (mu_ge0 : forall x, x \in `[a, b] -> 0 <= mu x)
-           (y_cont : {within `[a, b], continuous y}).
-
-Let lm := @lebesgue_measure R.
-
-Import MeasurableR.
-
-Lemma solve_diff_equa (z f : R -> R) : z a = 0 ->
-  {within `[a, b], continuous f} ->
-  {within `[a, b], continuous z} ->
-  {in `]a, b[, forall x, derivable z x 1} ->
-  (forall t, t \in `]a, b[ -> 'D_1 z t = mu t * z t + f t) ->
-  let phi t s := expR (\int[lm]_(tau in `[s, t]) mu tau) in
-  forall t, t \in `[a, b]%R ->
-    z t = \int[lm]_(s in `[a, t]) (phi t s * f s).
-Proof.
-move=> za0 cf contz derivable_z eqn phi t tab.
-have ? : measurable_fun `]a, t[ f.
-  apply: open_continuous_measurable_fun => //.
-  rewrite -continuous_open_subspace//.
-  apply: continuous_subspaceW cf.
-  by apply: subset_itv; rewrite bnd_simp// (itvP tab).
-have ? : measurable_fun `]a, t[ (phi t).
-  apply/measurableT_comp => //=.
-  apply: subspace_continuous_measurable_fun => //.
-  apply: (@continuous_subspaceW _ _ _ `[a, t]) => //.
-    exact: subset_itv_oo_cc.
-  apply: parameterized_integralN_continuous.
-    by rewrite (itvP tab).
-  apply: continuous_subspaceW mu_cont.
-  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-rewrite /Rintegral integral_itvbb_itvoo//=.
-  exact/measurable_EFinP/measurable_funM.
-have {}eqn : forall t : R, t \in `]a, b[ ->
-    ('D_1 z t - mu t * z t) * (phi t a)^-1 = f t * (phi t a)^-1.
-  move=> x xab.
-  by rewrite eqn// addrAC subrr add0r.
-have derivable_int_mu u : u \in `]a, b[ ->
-    derivable (fun x => \int[lm]_(tau in `[a, x]) mu tau) u 1.
-  move=> uab.
-  apply: (@continuous_FTC1 _ mu (BLeft a) u b _ _ _ _).1 => /=.
-  - by move: uab; rewrite inE => /itvP ->.
-  - by apply: continuous_compact_integrable mu_cont; exact: segment_compact.
-  - by rewrite lte_fin; move: uab; rewrite inE => /itvP ->.
-  - by move: uab; rewrite inE; exact: within_continuous_continuous.
-have derivablephiV u : u \in `]a, b[ ->
-    derivable (fun x : R => (phi x a)^-1) u 1.
-  move=> uab.
-  apply: derivableV => //; first by rewrite expR_eq0.
-  apply: diff_derivable. (* TODO: lemma derivable_comp *)
-  apply: differentiable_comp => /=; last first.
-    exact/derivable1_diffP/derivable_expR.
-  exact/derivable1_diffP/derivable_int_mu.
-have H u : u \in `]a, b[ ->
-  ('D_1 z u - mu u * z u) * (phi u a)^-1 =
-  'D_1 (fun t0 => z t0 * (phi t0 a)^-1) u.
-  move=> uab/=.
-  rewrite [in RHS]deriveM//=.
-    exact: derivable_z.
-    exact: derivablephiV.
-  rewrite [in RHS]addrC.
-  rewrite [in LHS]mulrBl [X in X - _]mulrC; congr (_ + _).
-  rewrite mulrAC mulrC -mulrN; congr (_ * _).
-  rewrite [X in 'D_1 X u](_ : _ =
-    (fun x => expR (- \int[lm]_(tau in `[a, x]) mu tau))).
-    by apply/funext => w; rewrite expRN.
-  rewrite -derive1E derive1_comp//.
-    exact/derivableN/derivable_int_mu.
-  rewrite derive1E derive1_comp//; first exact: derivable_int_mu.
-  rewrite derive1N// derive1_id mulN1r/=.
-  rewrite (@continuous_FTC1 _ _ (BLeft a) _ b _ _ _ _).2 //=.
-  - by move: uab; rewrite inE => /itvP ->.
-  - by apply: continuous_compact_integrable mu_cont; exact: segment_compact.
-  - by rewrite lte_fin; move: uab; rewrite inE => /itvP ->.
-  - by move: uab; rewrite inE; exact: within_continuous_continuous.
-  rewrite -mulNr [in RHS]mulrC; congr (_ * _).
-  by rewrite -expRN -[in LHS]derive_expR.
-have {}eqn u : u \in `]a, b[ ->
-    'D_1 (fun t0 => z t0 / phi t0 a) u = f u / phi u a.
-  move=> uab.
-  rewrite -eqn// deriveM/=.
-  + exact: derivable_z.
-  + exact: derivablephiV.
-  rewrite [in RHS]mulrBl.
-  rewrite [in LHS]addrC [X in X + _ = _]mulrC; congr (_ + _).
-  rewrite -[in RHS]mulrA [in RHS]mulrCA -[in RHS]mulrN; congr (_ * _).
-  rewrite [X in 'D_1 X u](_ : _ =
-      (fun x => expR (- \int[lm]_(tau in `[a, x]) mu tau))).
-    by apply/funext => w; rewrite expRN.
-  rewrite -derive1E derive1_comp//; first exact/derivableN/derivable_int_mu.
-  have [tau1 tau2] : derivable (fun x => \int[lm]_(t0 in `[a, x]) mu t0) u 1 /\
-      (fun x => \int[lm]_(t0 in `[a, x]) mu t0)^`() u = mu u.
-    apply: (@continuous_FTC1 _ mu (BLeft a) u b).
-    + by rewrite inE in uab; rewrite (itvP uab).
-    + by apply: continuous_compact_integrable => //; exact: segment_compact.
-    + by rewrite inE in uab; rewrite /= lte_fin (itvP uab).
-      move/continuous_within_itvP : mu_cont => /(_ ab)[+ _ _].
-      by apply; rewrite inE in uab.
-    + rewrite derive1N//= derive1E tau2 mulrN; congr (- _).
-      rewrite mulrC; congr (_ * _).
-      by rewrite /phi -expRN -[in RHS]derive_expR.
-suff: z t / phi t a =
-     fine (\int[lm]_(z0 in `]a, t[) (phi t z0 * f z0)%:E) / phi t a.
-  move=> /(congr1 (fun x => x * phi t a)).
-  by rewrite -!mulrA mulVf ?mulr1// gt_eqF// expR_gt0.
-have ? : {in `]a, t[, continuous (fun x0 : R => (phi x0 a)^-1)}.
-  rewrite -continuous_open_subspace//.
-  apply: derivable_within_continuous => /= x xat.
-  apply: derivablephiV.
-  rewrite inE.
-  by apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
-have ? : measurable_fun `]a, t[ (fun x : R => (phi x a)^-1).
-  exact: open_continuous_measurable_fun.
-have cphi : {within `[a, t], continuous phi^~ a}.
-  apply: (@within_continuous_comp _ _ _ _ _ expR) => /=.
-    by move=> x _; exact: continuous_expR.
-  apply: parameterized_integral_continuous.
-    by rewrite (itvP tab).
-  apply: continuous_compact_integrable; first exact: segment_compact.
-  apply: continuous_subspaceW mu_cont.
-  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-transitivity (\int[lm]_(z0 in `]a, t[)
-    'D_1 (fun t0 => z t0 / phi t0 a) z0) => /=.
-  have mzphi : measurable_fun `]a, t[(fun x => ('D_1 (fun t0 : R => z t0 / phi t0 a) x)).
-    apply/measurable_fun_eqP.
-      move=> x xat; rewrite eqn.
-      by rewrite inE in xat; rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
-      reflexivity.
-    rewrite /=.
-    exact: measurable_funM.
-  rewrite /Rintegral integral_itvob_itvcb//=.
-    exact/measurable_EFinP.
-  rewrite /Rintegral integral_itvbo_itvbc//=.
-    apply/measurable_EFinP.
-    exact/measurable_fun_itvob_itvcbP.
-  rewrite (_ : integral _ _ _ = (\int[lebesgue_measure]_(x in `[a, t]) ((f x / phi x a))%:E)%E).
-    rewrite integral_itvbb_itvoo//=.
-      by apply/measurable_EFinP.
-    rewrite [RHS]integral_itvbb_itvoo//=.
-      apply/measurable_EFinP => //.
-      by apply/measurable_funM.
-    apply: eq_integral => x xat/=.
-    rewrite eqn//.
-    by rewrite inE in xat; rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
-  have [<-|ta] := eqVneq a t.
-    by rewrite za0 mul0r set_itv1 integral_set1.
-  have {}tab : t \in `]a, b]%R.
-    rewrite in_itv/= lt_neqAle ta/=.
-    by rewrite in_itv in tab.
-  rewrite (@continuous_FTC2 _ _ (fun t0 : R => z t0 / phi t0 a)).
-    by rewrite (itvP tab).
-    rewrite /=.
-    apply: within_continuousM => //.
-    apply: continuous_subspaceW cf.
-    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-    apply: (@within_continuous_comp _ _ _ _ (phi ^~ a) (fun x => x^-1)).
-      move=> /= x.
-      rewrite inE/= => -[r rat <-].
-      apply: inv_continuous.
-      by rewrite gt_eqF// expR_gt0.
-    exact: cphi.
-    split => /=.
-    + move=> x xat.
-      apply: derivableM.
-        apply: derivable_z.
-        by rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
-      apply: derivablephiV => //.
-      by rewrite inE; apply: subset_itvl xat; rewrite bnd_simp (itvP tab).
-    + apply: cvgM.
-        by move/continuous_within_itvP : contz => /(_ ab)[].
-      apply: cvgV.
-        by rewrite gt_eqF// expR_gt0.
-      move/continuous_within_itvP : cphi => /(_ _)[].
-        by rewrite (itvP tab).
-      move=> _ + _.
-      exact.
-    + have {}contz : {within `[a, t], continuous z}.
-        apply: continuous_subspaceW contz.
-        by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-      apply: cvgM.
-        move/continuous_within_itvP : contz => /(_ _)[]; last by [].
-        by rewrite (itvP tab).
-      apply: cvgV.
-        by rewrite gt_eqF// expR_gt0.
-      move/continuous_within_itvP : cphi => /(_ _)[].
-        by rewrite (itvP tab).
-      by [].
-  move=> u uat.
-  rewrite derive1E eqn//.
-  by rewrite inE; apply: subset_itvl uat; rewrite bnd_simp (itvP tab).
-  by rewrite {3}/phi set_itv1 Rintegral_set1 expR0 divr1 za0 sube0/=.
-transitivity (\int[lm]_(z0 in `]a, t[) ((phi t z0 * f z0) / phi t a)); last first.
-  rewrite RintegralZr//=.
-  apply: (@integrableS _ _ _ lebesgue_measure (`[a, t]%classic)) => //=.
-    exact: subset_itv_oo_cc.
-  apply: continuous_compact_integrable; first exact: segment_compact.
-  apply: within_continuousM.
-    apply: within_continuous_comp.
-      by move=> x _; exact: continuous_expR.
-   apply: parameterized_integralN_continuous.
-    by rewrite (itvP tab).
-  apply: continuous_subspaceW mu_cont.
-  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-  apply: continuous_subspaceW cf.
-  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-apply: eq_Rintegral => u uat.
-rewrite eqn.
-  rewrite 2!inE in uat *.
-  by apply: subset_itvl uat; rewrite bnd_simp (itvP tab).
-rewrite mulrAC mulrC; congr (_ * _).
-rewrite /phi -expRB -expRN; congr expR.
-rewrite -opprB; congr (- _).
-apply/esym/eqP; rewrite subr_eq.
-rewrite [in X in _ + X]/Rintegral -integral_itvob_itvcb//=.
-  apply/measurable_EFinP.
-  apply/measurable_fun_itvbo_itvbcP.
-  apply: subspace_continuous_measurable_fun => //.
-  apply: continuous_subspaceW mu_cont.
-  apply: subset_itv; rewrite bnd_simp//.
-  by move: uat; rewrite inE => /itvP ->.
-  by rewrite (itvP tab).
-rewrite -[X in _ + X]/(Rintegral lm _ _) -Rintegral_setU//.
-- apply: continuous_compact_integrable => //.
-  + rewrite inE in uat.
-    rewrite -itv_bndbnd_setU// ?bnd_simp ?(itvP uat)//.
-    exact: segment_compact.
-  + rewrite inE in uat.
-    rewrite -itv_bndbnd_setU// ?bnd_simp ?(itvP uat)//.
-    apply: continuous_subspaceW mu_cont.
-    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-  + apply: lt_disjoint => v w/=.
-    rewrite !in_itv/= => /andP[av vu] /andP[uw wt].
-    by rewrite (le_lt_trans vu).
-- rewrite inE in uat.
-  by rewrite -itv_bndbnd_setU// ?bnd_simp// (itvP uat).
-Qed.
-
-Lemma gronwall :
-  (forall t, t \in `[a, b] ->
-    y t <= lambda t + \int[lm]_(s in `[a, t]) (mu s * y s)) ->
-  forall t, t \in `[a, b] ->
-    y t <= lambda t +
-      \int[lm]_(s in `[a, t])
-        (lambda s * mu s * expR (\int[lm]_(tau in `[s, t]) mu tau)).
-Proof.
-move=> lambdamuy t /[!inE] tab.
-pose z t := \int[lm]_(s in `[a, t]) (mu s * y s).
-pose v t := z t + lambda t - y t.
-have v_ge0 : forall x, x \in `]a, b[ -> 0 <= v x.
-  move=> x xab.
-  rewrite /v subr_ge0 (le_trans (lambdamuy _ _))//.
-    rewrite inE.
-    move: xab.
-    rewrite inE.
-    exact: subset_itv_oo_cc.
-  by rewrite addrC lerD2l.
-have FTC1z : forall x, x \in `]a, b[ ->
-    derivable
-      (fun x0 => \int[lm]_(t0 in `[a, x0]) (mu t0 * y t0)) x 1 /\
-    (fun x0 => \int[lm]_(t0 in `[a, x0]) (mu t0 * y t0))^`() x =
-  mu x * y x.
-  move=> x xab.
-  apply: (@continuous_FTC1_closed _ (fun s => mu s * y s) a x b _ _ _).
-  by move: xab; rewrite inE => /itvP ->.
-  apply: continuous_compact_integrable.
-  exact: segment_compact.
-  exact: within_continuousM.
-  by move: xab; rewrite inE => /itvP ->.
-  apply: continuousM.
-    apply: (@within_continuous_continuous _ _ _ a b) => //.
-    by rewrite inE in xab.
-  apply: (@within_continuous_continuous _ _ _ a b) => //.
-  by rewrite inE in xab.
-have derivez : forall x, x \in `]a, b[ ->
-    derive z x 1 = mu x * z x + mu x * lambda x - mu x * v x.
-  move=> x xab.
-  rewrite -derive1E.
-  rewrite (FTC1z _ _).2//.
-  rewrite /v.
-  by field.
-pose phi (t s : R) := expR (\int[lm]_(tau in `[s, t]) mu tau).
-have za0 : z a = 0 by rewrite /z set_itv1// Rintegral_set1.
-have contz : {within `[a, b], continuous z}.
-  apply: parameterized_integral_continuous => /=.
-    exact: ltW.
-  apply: continuous_compact_integrable; first exact: segment_compact.
-  by apply: within_continuousM => //=.
-have contv : {within `[a, b], continuous v}.
-  apply: within_continuousB => //=.
-  exact: within_continuousD.
-have contmu : {within `[a, t], continuous mu}.
-  apply: continuous_subspaceW mu_cont.
-  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-have contphi : {within `[a, t], continuous phi t}.
-  apply: (@within_continuous_comp _ _ _ _ _ expR) => /=.
-    by move=> x _; exact: continuous_expR.
-  apply: parameterized_integralN_continuous => //.
-  by rewrite (itvP tab).
-have zE : forall x, x \in `[a, b]%R ->
-    z x = \int[lm]_(s in `[a, x]) (phi x s * (mu s * lambda s - mu s * v s)).
-  move=> x.
-  rewrite in_itv/= => /andP[].
-  rewrite le_eqVlt => /predU1P[<- _|ax xb].
-    by rewrite za0 set_itv1 Rintegral_set1.
-  apply: solve_diff_equa => //=.
-  - apply: within_continuousB => /=.
-      by apply: within_continuousM => //=.
-    by apply: within_continuousM => //=.
-  - move=> u uab.
-    by apply: (FTC1z _ _).1.
-  - by move=> u uab; rewrite derivez// addrA.
-  - by rewrite in_itv/= (ltW ax) xb.
-have phimuv : 0 <= \int[lm]_(s in `[a, t]) (phi t s * mu s * v s).
-  rewrite /Rintegral integral_itvbb_itvoo//=.
-    apply/measurable_EFinP => /=; apply: measurable_funM => //=.
-      apply: measurable_funM => //=.
-      apply/measurable_fun_itvbo_itvbcP.
-      apply/measurable_fun_itvob_itvcbP.
-      exact: subspace_continuous_measurable_fun.
-    apply: subspace_continuous_measurable_fun => //.
-    apply: continuous_subspaceW contmu.
-    apply: subset_itv; rewrite bnd_simp//.
-    apply: subspace_continuous_measurable_fun => //.
-    apply: continuous_subspaceW contv.
-    by apply: subset_itv; rewrite bnd_simp// (itvP tab).
-  apply: Rintegral_ge0 => //= u uab.
-  rewrite -mulrA mulr_ge0// ?expR_ge0// mulr_ge0 ?v_ge0//.
-    by rewrite mu_ge0// inE; apply: subset_itv uab; rewrite bnd_simp// (itvP tab).
-  rewrite inE.
-  by apply: subset_itvl uab; rewrite bnd_simp (itvP tab).
-rewrite (le_trans (lambdamuy _ _))// 1?inE// lerD2l -/(z t).
-rewrite zE//.
-apply: (@le_trans _ _ (\int[lm]_(s in `[a, t]) (phi t s * mu s * lambda s)
-                   - \int[lm]_(s in `[a, t]) (phi t s * mu s * v s))).
-  rewrite -RintegralB//=.
-    apply: continuous_compact_integrable => /=; first exact: segment_compact.
-    apply: within_continuousM => /=.
-      apply: within_continuousM => /=.
-        apply: (within_continuous_comp _ _ expR).
-          by move=> x _; exact: continuous_expR.
-        apply: parameterized_integralN_continuous => //.
-        by rewrite (itvP tab).
-      apply: continuous_subspaceW mu_cont.
-      by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-    apply: continuous_subspaceW lambda_cont.
-    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-  apply: continuous_compact_integrable.
-    exact: segment_compact.
-  apply: within_continuousM => /=.
-    by apply: within_continuousM => //=.
-  apply: continuous_subspaceW contv.
-  by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-  apply: le_Rintegral => //=.
-    apply: continuous_compact_integrable; first exact: segment_compact.
-    apply: within_continuousM => //=.
-    apply: within_continuousB => /=.
-      apply: within_continuousM => //=.
-      apply: continuous_subspaceW lambda_cont.
-      by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-    apply: within_continuousM => //=.
-    apply: continuous_subspaceW contv.
-    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-    apply: continuous_compact_integrable; first exact: segment_compact.
-    apply: within_continuousB => /=.
-      apply: within_continuousM => //=.
-        by apply: within_continuousM => //=.
-      apply: continuous_subspaceW lambda_cont.
-      by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-    apply: within_continuousM => //=.
-      exact: within_continuousM.
-    apply: continuous_subspaceW contv.
-    by apply: subset_itvl; rewrite bnd_simp (itvP tab).
-  move=> u uat.
-  rewrite mulrBr.
-  rewrite le_eqVlt; apply/orP; left; apply/eqP.
-  by field.
-rewrite lerBlDl.
-rewrite ler_wpDl//.
-rewrite le_eqVlt; apply/orP; left; apply/eqP.
-apply: eq_Rintegral => //= u uat.
-rewrite -/(phi t u).
-by field.
-Qed.
-
-End gronwall.
 
 (* Theorem 3.4 from Khalil (p. 96),
    specialized to g := 0,
@@ -1775,7 +1298,6 @@ apply/le_trans/(@mu_ub a u0).
 rewrite /B inE.
 exact: closed_ballxx.
 Qed.
-
 
 Let gamma := `|u0 - v0|.
 Lemma thm34 t : t \in `[a, b] ->

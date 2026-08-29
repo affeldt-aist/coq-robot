@@ -77,8 +77,7 @@ Lemma bounded_derivative_lipschitz {R : realType} {n} (a b M : R)
   0 <= M ->
   {within `[a, b], continuous f} ->
   {in `]a, b[%R, forall x, derivable f x 1 /\ `| f^`() x | <= M} ->
-  {in `]a, b[%R&, forall s t,
-  `| f t - f s | <= M * `|t - s|}.
+  {in `]a, b[%R &, forall s t, `| f t - f s | <= M * `|t - s|}.
 Proof.
 move => M0 cont /= deri s t sab tab.
 rewrite {1}/Num.norm /= mx_normrE.
@@ -241,6 +240,42 @@ apply: le_closed_ball av.
 suff : minr r1 r2 <= r2 by [].
 by rewrite ge_min lexx orbT.
 Unshelve. all: by end_near. Qed.
+
+Section lipschitz_left_limit.
+Context {R : realType} {n} (U := 'rV[R]_n) (a b k : R) (f : R -> U).
+Hypothesis ab : a < b.
+Hypothesis k0 : 0 < k.
+Hypothesis f_lip sol :
+  {in `]a, b[%R &, forall s t, `| f t - f s | <= k * `|t - s|}.
+
+Lemma lipschitz_has_left_limit : f @ b^'- --> lim (f @ b^'-).
+Proof.
+apply/cauchy_cvgP; apply/cauchyP => eps eps0 /=.
+have e2k0 : 0 < eps / k / 2 by rewrite divr_gt0 // divr_gt0.
+near b^'- => s.
+exists (f s).
+near=> t.
+rewrite /= -ball_normE /=.
+apply: le_lt_trans; first apply f_lip.
+- rewrite in_itv/=; apply/andP; split.
+    near: t; apply: cvg_at_left_filter; first by apply cvg_id.
+    exact: lt_nbhsr.
+  by near: t; exact: nbhs_left_lt.
+- rewrite in_itv/=; apply/andP; split.
+    near: s; apply: cvg_at_left_filter; first by apply cvg_id.
+    exact: lt_nbhsr.
+  by near: s; exact: nbhs_left_lt.
+rewrite mulrC -ltr_pdivlMr//.
+rewrite -(subrKA b) (le_lt_trans (ler_normD _ _)) // (splitr (eps / k)) ltrD//.
+  suff: ball b (eps / k / 2) s by rewrite -ball_normE /ball_ /= distrC.
+  near: s; apply: cvg_at_left_filter; first by apply cvg_id.
+  exact: nbhsx_ballx.
+suff: ball b (eps / k / 2) t by rewrite -ball_normE /ball_ /= distrC.
+near: t; apply: cvg_at_left_filter; first by apply cvg_id.
+exact: nbhsx_ballx.
+Unshelve. all: by end_near. Qed.
+
+End lipschitz_left_limit.
 
 Lemma row_mx_norm_le_sum {R : realType} {n} (x : 'rV[R]_n) :
   `| x | <=  \sum_(i < n) `|x ord0 i|.

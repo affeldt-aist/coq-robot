@@ -64,13 +64,15 @@ Require Import tilt_mathcomp tilt_analysis vector_integral ode_common
 (* `is_sol_cauchy_oo`                                                         *)
 (* : specialization of `is_sol_cauchy` to an open interval                    *)
 (*                                                                            *)
-(* safe_dist == TODO                                                          *)
-(* is_integral_sol == TODO                                                    *)
+(* `safe_dist`                                                                *)
+(* : TODO                                                                     *)
+(*                                                                            *)
+(* `is_integral_sol f`                                                        *)
+(* : TODO                                                                     *)
 (*                                                                            *)
 (* `is_sol_cauchy_sym phi t0 d u0 f`                                          *)
-(* : f is a of the Cauchy problem `(phi, t0, u0)` over the interval           *)
-(* : `]t0-d,t0+[`                                                             *)
-(*                                                                            *)
+(* : f is a solution of of the Cauchy problem `(phi, t0, u0)` over the        *)
+(* : interval `]t0 - d, t0 + d[`                                              *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -933,12 +935,12 @@ Qed.
 Section is_integral_sol.
 Local Notation mu := lebesgue_measure.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
-  (u0 : U) (sol : R -> U).
+  (u0 : U).
 
 (* TODO: is this a good way to define it with the extra sol a = u0G?  *)
-Definition is_integral_sol := sol a = u0 /\
+Definition is_integral_sol (f : R -> U) := f a = u0 /\
   forall t, t \in `[a, b]%R ->
-    sol t = sol a + (\vint[mu]_(s in `[a, t]) phi s (sol s))%R.
+    f t = f a + \vint[mu]_(s in `[a, t]) phi s (f s).
 
 End is_integral_sol.
 
@@ -1944,6 +1946,8 @@ Hypothesis t0ab : t0 \in `]a, b[%R.
 
 Let amin1 : - t0 < - a. Proof. by rewrite ltrN2 (itvP t0ab). Qed.
 
+Let dminus_gt0 : 0 < dminus t0. Proof. exact: safe_dist_gt0. Qed.
+
 Let t0ab' : t0 \in `[a, b]%R. Proof. exact: subset_itv_oo_cc. Qed.
 
 Let fminus0 := @cauchy_lipschitz_f R n phi_sym (- t0) (- a) u0
@@ -1952,6 +1956,12 @@ Let fminus0 := @cauchy_lipschitz_f R n phi_sym (- t0) (- a) u0
 Let fminus := fminus0 \o -%R.
 
 Let t0b : t0 < b. Proof. by rewrite (itvP t0ab). Qed.
+
+Let dboth_gt0 : 0 < dboth t0.
+Proof.
+rewrite lt_min subr_gt0 (itvP t0ab)/=.
+by rewrite lt_min safe_dist_gt0//= lt_min dminus_gt0.
+Qed.
 
 Let fplus := @cauchy_lipschitz_f R n phi t0 b u0
   r4 k rho (ltW t0b) (ltW k0) (phi_lip2 t0ab') (phi_cont1 t0ab') rho1.
@@ -1977,14 +1987,13 @@ Proof.
 have solplus := cauchy_lipschitz_ex (ltW t0b) (ltW k0) (phi_lip2 t0ab')
   (phi_cont1 t0ab') rho1.
 have cplus := solution_stays_in_ball.
-have dminus0 : 0 < dminus t0 by exact: safe_dist_gt0.
 have solminus := cauchy_lipschitz_ex (ltW amin1) (ltW k0) (phi_sym_lip2 t0ab')
   (phi_sym_cont1 t0ab') rho1.
 have cminus := solution_stays_in_ball.
 have adplus : t0 < t0 + dplus t0 by rewrite ltrDl safe_dist_gt0.
 have cfplus := solplus.2.2.
 rewrite closure_itvoo in cfplus; first by rewrite ltrDl safe_dist_gt0.
-have amind : -t0 < -t0 + dminus t0 by rewrite ltrDl dminus0.
+have amind : -t0 < -t0 + dminus t0 by rewrite ltrDl dminus_gt0.
 have cfminus' := solminus.2.2.
 rewrite closure_itvoo in cfminus'; first by rewrite ltrDl.
 have cfminus : {within `[t0 - dminus t0, t0], continuous fminus}.
@@ -1993,10 +2002,6 @@ have cfminus : {within `[t0 - dminus t0, t0], continuous fminus}.
   apply/continuous_subspaceW/cfminus'.
   apply: subset_itvl; rewrite bnd_simp -/dminus.
   by rewrite opprD opprK.
-have dboth0 : 0 < dboth t0.
-  rewrite lt_min; apply/andP; split.
-    by rewrite subr_gt0 (itvP t0ab).
-  by rewrite lt_min safe_dist_gt0 //= lt_min dminus0.
 set uneg := cauchy_lipschitz_f_sym (t0 - dboth t0).
 have Buneg : closed_ball uneg (r%:num / 2) `<=` closed_ball u0 r%:num.
   rewrite /uneg/cauchy_lipschitz_f_sym patch_in /cauchy_lipschitz_f_sym/=.
@@ -2057,22 +2062,19 @@ have fc : {in `[t0-dboth t0, (t0 + dboth t0)], forall t,
       move: ht.
       rewrite inE/=!in_itv/= lerNr lerNl opprD !opprK => /andP[h1 ->//=].
       by rewrite (le_trans _ h1)// lerD2l lerN2 /safe_dist_sym !ge_min lexx !orbT.
-    rewrite inE.
-    rewrite !r42.
-    by move/closed_ball_split; exact.
+    by rewrite inE !r42 => /closed_ball_split; exact.
   - have : fplus t \in closed_ball u0 (r2%:num / 2).
       rewrite -r42.
       have ht' : t \in `[t0, t0 + dboth t0].
         have := tad.
-        rewrite !inE /=!in_itv/= => /andP[h1 ->]; apply /andP; split => //.
-        have [hat | hat] := lerP t0 t => //.
+        rewrite 2!inE /=!in_itv/= => /andP[h1 ->]; apply /andP; split => //.
+        have [hat//| hat] := lerP t0 t.
         rewrite -ht.
         by rewrite inE/=in_itv/= h1//= ltW.
-     apply mem_set; apply cplus.
-     move : ht'.
-     rewrite inE/= !in_itv/= => /andP[-> h1//=].
+     apply/mem_set/cplus.
+     move : ht'; rewrite inE/= !in_itv/= => /andP[-> h1//=].
      apply: (le_trans h1).
-     by rewrite lerD // /dboth /dplus 2!ge_min lexx !orbT.
+     by rewrite lerD// /dboth /dplus 2!ge_min lexx !orbT.
    rewrite inE => c2.
    exact: (closed_ball_split _ c2).
 split; first by [].
@@ -2085,8 +2087,7 @@ have at0t0 : a <= t0 - dboth t0.
   rewrite lerBrDl -lerBrDr.
   by rewrite /dboth /dminus /dplus !unlock/= !ge_min opprK (addrC t0) lexx /= !orbT.
 have t0t0b : t0 + dboth t0 <= b.
-  rewrite -lerBrDl.
-  by rewrite !ge_min lexx.
+  by rewrite -lerBrDl !ge_min lexx.
 apply/(integral_sol_iff_sol (r := r2)) => /=.
 - by rewrite lerD// gerN// ltW.
 - move=> t tab; apply/continuous_subspaceW/cont1.
@@ -2243,9 +2244,6 @@ Proof.
 split; last by apply cauchy_lipschitz_sym_oo.
 have solminus := cauchy_lipschitz_ex (ltW amin1) (ltW k0) (phi_sym_lip2 t0ab')
   (phi_sym_cont1 t0ab') rho1.
-have dboth0 : 0 < dboth t0.
-  rewrite !lt_min subr_gt0 (itvP t0ab)/=.
-  by rewrite /dminus /dplus !safe_dist_gt0.
 rewrite /cauchy_lipschitz_f_sym patch_in /fminus /=.
   by rewrite inE/= in_itv/= lexx gerBl ltW.
 by apply solminus.
@@ -2254,6 +2252,23 @@ Qed.
 End cauchy_lipschitz_sym.
 
 End cauchy_lipschitz_symmetric.
+
+Section safe_dist_sym_props.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b c : R)
+  (u0 : U) (r : {posnum R}) (k : R) (sol : R -> U).
+
+Local Notation safe_dist := (@safe_dist_sym R n phi a c u0 r k b).
+
+Hypothesis ab : a < b.
+Hypothesis bc : b < c.
+Hypothesis k0 : 0 < k.
+
+Lemma safe_dist_sym_gt0 : 0 < safe_dist.
+Proof.
+by rewrite lt_min subr_gt0 bc /= lt_min !safe_dist_gt0 // ltrNl opprK.
+Qed.
+
+End safe_dist_sym_props.
 
 Section integral_sol_between.
 Local Notation mu := lebesgue_measure.
