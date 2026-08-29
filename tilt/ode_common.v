@@ -467,22 +467,16 @@ by case: cf; exact.
 Qed.
 
 Section within_continuous_lipschitz.
-Context {R : realType} {U : normedModType R}.
-Variables (f : R -> U -> U) (a b : R).
-Variable (u0 : U) (r : {posnum R}).
-
-Variable (g : R -> U).
-Hypothesis cg : {within `[a, b], continuous g}.
+Context {R : realType} {U : normedModType R} (f : R -> U -> U) (a b : R)
+  (u0 : U) (r : {posnum R}) (k : R).
 
 Let B := closed_ball u0 r%:num.
 
-Variable k : R.
-(* properties of the function f defining the differential equation: *)
-(* k-lipschitz for all t *)
-Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (f x)}.
-(* within-continuous for all y *)
 Hypothesis cont1 : {in B, forall y, {within `[a, b], continuous f ^~ y}}.
+Hypothesis lip2 : {in `[a, b]%R, forall x, k.-lipschitz_B (f x)}.
 
+Variable g : R -> U.
+Hypothesis cg : {within `[a, b], continuous g}.
 Hypothesis imageg : g @` `[a, b] `<=` B.
 
 (* TODO: move *)

@@ -240,8 +240,10 @@ Let solP' y0 : y0 \in Tilt.Upsilon1 ->
   exists sol, is_sol_cauchy (fun => phi) 0 +oo%O y0 sol /\ (h^-1 *: (sol h - sol 0)) @[h --> 0^'+] --> phi (sol 0).
 Proof.
 move=> y0Upsilon1.
-suff [sol [solP1 solP2]]:  exists sol, is_sol_cauchy (fun => phi) 0 +oo%O y0 sol /\ (h^-1 *: (sol (0+h) - sol 0)) @[h --> 0^'+] --> phi (sol 0).
-  move : solP2;under eq_fun do rewrite add0r;move=>solP2.
+suff [sol [solP2 solP1]] : exists2 sol,
+    is_sol_cauchy (fun => phi) 0 +oo%O y0 sol &
+    (h^-1 *: (sol (0+h) - sol 0)) @[h --> 0^'+] --> phi (sol 0).
+  move : solP2; under eq_fun do rewrite add0r; move=>solP2.
   by exists sol.
   apply: (compact_global_solution (K:=sublevelUpsilon1 y0)) => /=.
 - exact: compact_sublevelUpsilon1.
@@ -254,7 +256,7 @@ move=> t y' [init [solp cont]] y1 [t0 /= t0t <-].
  split;last first.
   apply/(@tilt_state_spaceS  _ alpha1 gamma).
   exists y', t; split; rewrite ?init//.
-    by exists t0.
+  by exists t0.
 rewrite /sublevel/=.
 rewrite -init.
 apply: (V_nincr (D:=t)) => /=.
@@ -609,18 +611,16 @@ apply/cvgrPdist_le => //= e e0.
   have k'0 : 0 < k'%:num by [].
   near=>v.
   move => pv.
-  have := @continuous_dependence K 6 (fun=> phi) 0 (t + 1) u v r' k' t01 k'r'phi.
-  have : {in closed_ball u r'%:num,
-      forall y : 'rV_6, {within `[0, t + 1], continuous fun=> phi y} }.
-    move=> /= w wur ?//.
-    exact: cvg_cst.
-  move=> /[swap] /[apply].
+  have : {in closed_ball u r'%:num, forall y : 'rV_6,
+      {within `[0, t + 1], continuous fun=> phi y} }.
+    by move=> /= w wur ?//; exact: cvg_cst.
+  move/(@continuous_dependence K 6 (fun=> phi) 0 (t + 1) u v r' k' t01) => /(_ k'r'phi).
   have vUpsilon1 : v \in Tilt.Upsilon1 by move: pv => -[_ /mem_set].
   move=> /(_ (sol u) (sol v)).
   have u0u : sol u 0 = u by rewrite /sol; case: cid => //= phi' [+ _]; exact.
   have v0v : sol v 0 = v by rewrite /sol; case: cid => //= phi' [+ _]; exact.
   have uUpsilon1' : u \in Tilt.Upsilon1.
-    by apply mem_set;have /set_mem [_ +]  := uUpsilon1.
+    by apply mem_set; have /set_mem [_ +] := uUpsilon1.
   have := @isSol_oo u (t + 1) uUpsilon1'.
   rewrite u0u => /[swap] /[apply].
   have := @isSol_oo v (t + 1) vUpsilon1.
