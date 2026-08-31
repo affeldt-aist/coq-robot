@@ -7,7 +7,7 @@ From mathcomp Require Import matrix_normedtype exp.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
 Require Import lasalle (* to at least get the structure of filters on sets *).
-Require Import ode ode_common tilt_stability tilt_lyapunov.
+Require Import ode_common ode_local tilt_stability tilt_lyapunov ode_global.
 
 (**md**************************************************************************)
 (* # Formalization of [benallegue2023itac] (2/2)                              *)
@@ -158,8 +158,6 @@ Lemma sublevel_preimage (V : U -> R) c : sublevel V c = V @^-1` [set r | r <= c]
 Proof. by []. Qed.
 
 End sublevel.
-
-Require Import ode_global.
 
 Section LaSalle_tilt.
 Context {K : realType}.

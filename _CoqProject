@@ -23,8 +23,9 @@ pendulum.v
 
 tilt/ode_common.v
 tilt/ode_contseg.v
+tilt/picard_contraction.v
 tilt/vector_integral.v
-tilt/ode.v
+tilt/ode_local.v
 tilt/gronwall.v
 tilt/ode_global.v
 

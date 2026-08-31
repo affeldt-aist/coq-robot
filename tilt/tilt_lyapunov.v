@@ -1,10 +1,10 @@
 From HB Require Import structures.
 From mathcomp Require Import boot order algebra ring_tactic interval_inference.
 From mathcomp Require Import boolp classical_sets functions reals order
- topology normedtype landau sequences derive realfun matrix_normedtype.
+  topology normedtype landau sequences derive realfun matrix_normedtype.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot.
-Require Import ode tilt_stability.
+Require Import ode_local tilt_stability.
 
 (**md**************************************************************************)
 (* # Formalization of [benallegue2023itac] (1/2)                              *)

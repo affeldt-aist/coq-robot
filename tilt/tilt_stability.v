@@ -5,7 +5,7 @@ From mathcomp Require Import boolp classical_sets functions filter reals.
 From mathcomp Require Import topology prodnormedzmodule normedtype landau.
 From mathcomp Require Import sequences derive realfun.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
-Require Import tilt_mathcomp tilt_analysis tilt_robot ode.
+Require Import tilt_mathcomp tilt_analysis tilt_robot ode_local.
 
 (**md**************************************************************************)
 (* # Elements of stability theory                                             *)
