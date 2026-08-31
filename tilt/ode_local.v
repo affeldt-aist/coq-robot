@@ -103,17 +103,60 @@ Definition is_sol_cauchy_oo a b u0 := is_sol_cauchy a (BLeft b) u0.
 
 End is_sol.
 
-Lemma is_sol_cauchy_oo_subset {R : realType} {n} phi (u0 : 'rV[R]_n)
-    (a b c d : R) sol : a <= c -> d <= b ->
-  is_sol_cauchy_oo phi a b u0 sol -> is_sol_cauchy_oo phi c d (sol c) sol.
+Section is_sol_cauchy_oo_lemmas.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U).
+
+Lemma empty_itv_is_sol_cauchy (a b : R) u0 f : b <= a -> f a = u0 ->
+  is_sol_cauchy_oo phi a b u0 f.
 Proof.
-move=> ac bd isSol; split; first reflexivity.
+move=> ba f0; split; first by [].
 split.
-- move=> x xcd; apply isSol.
+  move => t; rewrite in_itv/= => /andP[ta tb].
+  by have := lt_trans ta tb; rewrite ltNge ba.
+rewrite set_itv_ge; first by rewrite -leNgt bnd_simp.
+by rewrite closure0; exact: continuous_subspace0.
+Qed.
+
+Lemma is_sol_cauchy_oo_subset (a b c d : R) u0 f : a <= c -> d <= b ->
+  is_sol_cauchy_oo phi a b u0 f -> is_sol_cauchy_oo phi c d (f c) f.
+Proof.
+move=> ac bd is_sol_f; split; first reflexivity.
+split.
+- move=> x xcd; apply is_sol_f.
   by apply: subset_itv xcd; rewrite bnd_simp.
-- have [_ [_ +]] := isSol.
+- have [_ [_ +]] := is_sol_f.
   exact/continuous_subspaceW/closureS/subset_itv.
 Qed.
+
+Lemma eq_is_sol_cauchy_oo (a b : R) u0 f1 f2 :
+  a <= b -> {in `[a, b]%R, f1 =1 f2} ->
+  is_sol_cauchy_oo phi a b u0 f1 -> is_sol_cauchy_oo phi a b u0 f2.
+Proof.
+move => ab hs [f1a [derf1 cont1]]; split.
+- by rewrite -f1a hs// bound_itvE.
+- split.
+  + move=> t tab; split.
+    * apply/near_eq_derivable/(derf1 _ tab).1 => //.
+      near=> t'.
+      apply hs.
+      apply: subset_itv_oo_cc.
+      by near: t'; exact: near_in_itvoo.
+    * have f1f2 :  {in `]a, b[%R, f1 =1 f2}.
+        move=> t' tab'.
+        apply hs.
+        exact: subset_itv_oo_cc.
+      rewrite -f1f2// -[LHS](@in_eq_derive1 _ _ `]a, b[ f1) //.
+      - by move=> x; rewrite inE; exact: f1f2.
+      - by rewrite inE.
+      - by apply derf1.
+  + apply: subspace_eq_continuous cont1.
+    move: ab; rewrite le_eqVlt => /predU1P[->|ab].
+      by rewrite set_itv_ge ?bnd_simp// => x; rewrite closure0 inE.
+    rewrite closure_itvoo// => x.
+    by rewrite inE => /hs.
+Unshelve. all: by end_near. Qed.
+
+End is_sol_cauchy_oo_lemmas.
 
 Section is_sol_integral.
 Local Notation mu := lebesgue_measure.
@@ -597,20 +640,16 @@ rewrite (rowRintegral_itv_split (c := b) (F := (fun x => phi x (patch f2 `[a, b]
 - rewrite p1s//.
   suff : f2 b = u0 + \vint[mu]_(s in `[a, b]) phi s (patch f2 `[a, b] f1 s).
     move=> ->.
-    rewrite -p0a.
-    rewrite [in RHS]addrA.
-    congr +%R.
-    apply eq_rowRintegral => /= x xbt.
-    rewrite /patch; case: ifPn => [ | ] => //.
-    rewrite inE/=in_itv/= => /andP [_ xleb].
-    move : xbt.
-    rewrite !inE/=!in_itv/= => /andP [h _].
+    rewrite -p0a [in RHS]addrA; congr +%R.
+    apply: eq_rowRintegral => /= x xbt.
+    rewrite /patch; case: ifPn => //.
+    rewrite inE/= in_itv/= => /andP [_ xb].
+    move: xbt.
+    rewrite inE /= in_itv/= => /andP[bx _].
     suff -> : x = b by rewrite p1a.
-    apply le_anti.
-    by rewrite xleb.
+    by apply/eqP; rewrite eq_le xb/=.
   rewrite p1a p0s; first by rewrite in_itv/= ltW/=.
-  rewrite p0a.
-  congr (u0 + _)%R.
+  rewrite p0a; congr (u0 + _)%R.
   rewrite /patch.
   by apply eq_rowRintegral => /= x ->.
 Qed.
@@ -1064,7 +1103,7 @@ Unshelve. all: by end_near. Qed.
 
 End loc_lip_uniqueness.
 
-Section uniqueness.
+Section cauchy_lipschitz_uniqueness.
 Context {R : realType} {n} (U := 'rV[R]_n) (phi : R -> U -> U) (a b : R)
   (u0 : U) (r : {posnum R}) (k : R).
 Hypothesis ab : a < b.
@@ -1118,7 +1157,7 @@ apply: subset_itvl.
 by rewrite bnd_simp -lerBrDl; apply safe_dist_itv.
 Qed.
 
-End uniqueness.
+End cauchy_lipschitz_uniqueness.
 
 (* TODO: move? *)
 Lemma patch_in {R X : Type} (f g : R -> X) S x : x \in S -> patch f S g x = g x.
