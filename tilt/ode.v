@@ -921,10 +921,10 @@ Definition is_sol_cauchy_oo a b u0 := is_sol_cauchy a (BLeft b) u0.
 End is_sol.
 
 Lemma is_sol_cauchy_oo_subset {R : realType} {n} phi (u0 : 'rV[R]_n)
-    (a b c d : R) sol : c < d -> a <= c -> d <= b ->
+    (a b c d : R) sol : a <= c -> d <= b ->
   is_sol_cauchy_oo phi a b u0 sol -> is_sol_cauchy_oo phi c d (sol c) sol.
 Proof.
-move=> cd ac bd isSol; split; first reflexivity.
+move=> ac bd isSol; split; first reflexivity.
 split.
 - move=> x xcd; apply isSol.
   by apply: subset_itv xcd; rewrite bnd_simp.
