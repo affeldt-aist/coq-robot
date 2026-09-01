@@ -8,6 +8,11 @@ Require Import ssr_ext euclidean rigid frame skew derive_matrix tilt_analysis.
 (**md**************************************************************************)
 (* # Additions to the RobotRocq library                                       *)
 (*                                                                            *)
+(* `sphere r`                                                                 *)
+(* : [set x : 'rV[R]_n | `|x| = r]                                            *)
+(*                                                                            *)
+(* Properties of enorm, etc.                                                  *)
+(*                                                                            *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -25,7 +30,8 @@ Variable K : realType.
 
 Lemma fact212 (v w : 'rV[K]_3) : \S(v) * \S(w) = w^T *m v - (v *m w^T)``_0 *: 1.
 Proof.
-apply/matrix3P/and9P; split; apply/eqP;  rewrite !(mxE,sum3E,spinij,sum1E); Simp.r.
+apply/matrix3P/and9P; split; apply/eqP;
+  rewrite !(mxE,sum3E,spinij,sum1E); Simp.r.
   ring.
 by rewrite mulrC.
 by rewrite mulrC.
@@ -37,7 +43,8 @@ by rewrite mulrC.
 by rewrite !opprD; ring.
 Qed.
 
-Lemma fact213 (v w : 'rV[K]_3) : \S(v) * \S(w) * \S(v) = - (v *m w^T) ``_0 *: \S(v).
+Lemma fact213 (v w : 'rV[K]_3) :
+  \S(v) * \S(w) * \S(v) = - (v *m w^T) ``_0 *: \S(v).
 Proof.
 rewrite fact212 mulrBl -mulmxE -mulmxA; have: v *m \S(v) = 0.
   apply: trmx_inj.
@@ -50,7 +57,7 @@ congr (- (_ *m _)).
 by rewrite scalemx1.
 Qed.
 
-Lemma fact215 ( v w : 'rV[K]_3) : \S(w *m \S(v)) = \S(w) * \S(v) - \S(v) * \S(w).
+Lemma fact215 (v w : 'rV[K]_3) : \S(w *m \S(v)) = \S(w) * \S(v) - \S(v) * \S(w).
 Proof.
 by rewrite spinE spin_crossmul.
 Qed.
@@ -154,7 +161,7 @@ rewrite -subr_ge0 mulrC.
 by rewrite dotmulvv mulrC in h2.
 Qed.
 
-(* not used *)
+(* NB: not used *)
 Lemma Young_inequality_rV {R : rcfType} {n : nat} (a b : 'rV[R]_n) :
   (a *d b) <= (2^-1 * (`|a|_e) ^+ 2) + (2^-1 * `|b|_e ^+ 2).
 Proof.
@@ -234,33 +241,61 @@ rewrite -[in RHS]deriveE; last first.
 rewrite derive_lsubmx//.
 Abort.*)
 
-Lemma derivable_row_mx {R : realFieldType} {n1 n2 : nat}
-    (f : R -> 'rV[R]_n1) (g : R -> 'rV[R]_n2) t v :
-  (forall x, derivable f x v) -> (forall x, derivable g x v) ->
-  derivable (fun x : R => row_mx (f x) (g x)) t v.
+Section sphere.
+Context {R : realType} {n : nat}.
+Local Open Scope classical_set_scope.
+
+Definition sphere r := [set x : 'rV[R]_n | `|x| = r].
+
+Lemma sphere_nonempty r : n != 0 -> 0 < r -> sphere r !=set0.
 Proof.
-move=> /= fv gv; apply/derivable_mxP => i j.
-rewrite (ord1 i)/=.
-have /cvg_ex[/= l Hl]:= fv t.
-have /cvg_ex[/= k Hk]:= gv t.
-apply/cvg_ex => /=; exists (row_mx l k)``_j.
-apply/cvgrPdist_le => /= e e0.
-move/cvgrPdist_le : Hl => /(_ _ e0) Hl.
-move/cvgrPdist_le : Hk => /(_ _ e0) Hk.
-move: Hl Hk; apply: filterS2 => x Hl Hk.
-rewrite !mxE.
-case: fintype.splitP => j1 jj1.
-  apply: le_trans Hl.
-  rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
-  apply: le_trans; last first.
-    exact: (le_bigmax _ _ (ord0, j1)).
-  by rewrite !mxE/=.
-apply: le_trans Hk.
-rewrite [in leRHS]/Num.Def.normr/= mx_normrE.
-apply: le_trans; last first.
-  exact: (le_bigmax _ _ (ord0, j1)).
-by rewrite !mxE/=.
+move=> n0 r_gt0.
+rewrite /sphere.
+exists (const_mx r).
+rewrite /sphere /= /normr/=.
+(* TODO: need lemma? *)
+rewrite mx_normrE/=.
+apply/eqP; rewrite eq_le; apply/andP; split.
+  apply: bigmax_le.
+    exact: ltW.
+  by move=> i _; rewrite mxE gtr0_norm.
+under eq_bigr do rewrite mxE gtr0_norm//.
+apply/le_bigmax => /=.
+destruct n as [|n'] => //.
+exact: (ord0, ord0).
 Qed.
+
+Lemma compact_sphere r : compact (sphere r).
+Proof.
+apply: bounded_closed_compact.
+  suff : \forall M \near +oo, forall p, sphere r p ->
+      forall i, `|p ord0 i| < M.
+    rewrite /bounded_set.
+    apply: filter_app; near=> M0.
+    move=> Kbnd /= p /Kbnd ltpM0.
+    rewrite /normr/= mx_normrE.
+    apply/bigmax_leP; split => //= i _.
+    by rewrite ord1; exact/ltW/ltpM0.
+  near=> M => v.
+  rewrite /sphere /= => vr i.
+  rewrite (@le_lt_trans _ _ r)//.
+    rewrite -vr [leRHS]/normr/= mx_normE.
+    under eq_bigr do rewrite ord1.
+    rewrite -(pair_big xpredT xpredT (fun _ j => `|v ord0 j|%:nng))//=.
+    rewrite big_ord_recr/= big_ord0.
+    rewrite max_r; first exact/bigmax_ge_id.
+    rewrite (bigD1 i)//= -maxE le_max.
+    by apply/orP; left.
+  clear v vr i.
+  by near: M; apply: nbhs_pinfty_gt; rewrite num_real.
+pose d := fun x : 'rV[R]_n  => `|x| : R.
+have contd : continuous d by move=> /= z; exact: norm_continuous.
+rewrite [X in closed X](_ : _ = d @^-1` [set r]).
+  by apply/seteqP; split.
+by apply continuous_closedP.
+Unshelve. all: by end_near. Qed.
+
+End sphere.
 
 Lemma char_poly2 (R : numFieldType) (M : 'M[R]_2) :
   char_poly M = 'X^2 - (\tr M)%:P * 'X + (\det M)%:P.
@@ -373,6 +408,19 @@ under eq_fun do rewrite -dotmulvv.
 exact: differentiable_dotmul.
 Qed.
 
+Lemma enorm_mxnorm {K : rcfType} {n} (x : 'rV[K]_n.+1) :
+  `|x|_e ^+ 2 <= n.+1%:R * `|x| ^ 2.
+Proof.
+rewrite sqr_enorm /=.
+apply : (@le_trans _ _ (\sum_(i0 < n.+1) `|x| ^+ 2)).
+  apply: ler_sum => k _.
+  rewrite -sqr_normr.
+  suff h : `|x ord0 k| <= `|x| by exact: ler_pM.
+  rewrite {2}/Num.norm/= !mx_normrE /=.
+  exact: (le_bigmax _ _ (ord0, k)).
+by rewrite big_const_ord mulr_natl iter_addr_0.
+Qed.
+
 Lemma spin_le_norm {K : rcfType} (x : 'rV[K]_3) : `|\S(x)| <= `|x|.
 Proof.
 rewrite {1}/Num.norm/= !mx_normrE.
@@ -409,17 +457,4 @@ rewrite (le_trans (mx_norm_mul _ _))//.
 rewrite ler_pM//.
   by rewrite ler_pM// spin_le_norm.
 exact: spin_le_norm.
-Qed.
-
-Lemma enorm_mxnorm {K : rcfType} {n} (x : 'rV[K]_n.+1) :
-  `|x|_e ^+ 2 <= n.+1%:R * `|x| ^ 2.
-Proof.
-rewrite sqr_enorm /=.
-apply : (@le_trans _ _ (\sum_(i0 < n.+1) `|x| ^+ 2)).
-  apply: ler_sum => k _.
-  rewrite -sqr_normr.
-  suff h : `|x ord0 k| <= `|x| by exact: ler_pM.
-  rewrite {2}/Num.norm/= !mx_normrE /=.
-  exact: (le_bigmax _ _ (ord0, k)).
-by rewrite big_const_ord mulr_natl iter_addr_0.
 Qed.

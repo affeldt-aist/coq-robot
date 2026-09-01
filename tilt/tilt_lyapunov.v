@@ -1119,9 +1119,8 @@ End tilt_eqn_Lyapunov.
 
 Section tilt_eqn_Lyapunov_global.
 Local Open Scope classical_set_scope.
-Context {R : realType} (alpha1 gamma : R).
+Context {R : realType} (alpha1 gamma : R) (phi := Tilt.eqn alpha1 gamma).
 Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
-Let phi := Tilt.eqn alpha1 gamma.
 
 Let c1 := 2^-1 / alpha1.
 Let c2 := 2^-1 / gamma.
@@ -1131,30 +1130,30 @@ Local Notation Right := (@rsubmx _ 1 3 3).
 
 (* todo: copy paste *)
 Lemma derive_zp10 (sol : R -> 'rV_6) :
-  sol_is_deriv_c0y phi sol ->
+  sol_is_deriv_c0y (fun=> phi) sol ->
   'D_1 (Left \o sol) 0 = - alpha1 *: Left (sol 0).
 Proof.
-move/sol_is_deriv_c0yP.
-move/(_ _ (lexx 0)) => [d0 +].
+move=> /(_ 0).
+rewrite in_itv/= andbT lexx => /(_ isT)[d0].
 move=> /(congr1 Left).
 rewrite derive1E row_mxKl => <-.
 by rewrite derive_lsubmx.
 Qed.
 
 Lemma derive_z20 (sol : R -> 'rV_6) :
-  sol_is_deriv_c0y phi sol ->
+  sol_is_deriv_c0y (fun=> phi) sol ->
   'D_1 (Right \o sol) 0 =
   gamma *: (Right (sol 0) - Left (sol 0)) *m \S('e_2 - Right (sol 0)) ^+ 2.
 Proof.
-move/sol_is_deriv_c0yP.
-move /(_ _ (lexx 0)) => [d0 +].
+move=> /(_ 0).
+rewrite in_itv/= andbT lexx => /(_ isT)[d0].
 move => /(congr1 Right).
 rewrite derive1E.
 by rewrite row_mxKr => ?; rewrite derive_rsubmx.
 Qed.
 
 Lemma V1dotE0 (sol : R -> 'rV_6) (zp1 := Left \o sol) (z2 := Right \o sol) :
-  sol_is_deriv_c0y phi sol ->
+  sol_is_deriv_c0y (fun=> phi) sol ->
   V1dot (sol 0) =
     c1 *: (2 *: 'D_1 zp1 0 *m (Left (sol 0))^T) 0 0 +
     c2 *: (2 *: 'D_1 z2 0 *m (Right (sol 0))^T) 0 0.
@@ -1180,15 +1179,15 @@ Qed.
 
 Lemma derive_along_V1_global t (sol : R -> 'rV_6) :
   0 <= t ->
-  sol_is_deriv_c0y phi sol ->
+  sol_is_deriv_c0y (fun=> phi) sol ->
   'D~(sol) (Tilt.V1 alpha1 gamma) t = V1dot (sol t).
 Proof.
 move=> t0 tilt_eqnx.
 have dif1 : forall t : R, 0 <= t -> differentiable sol t.
    move => /= t' t'0.
    apply/derivable1_diffP.
-   move/sol_is_deriv_c0yP in tilt_eqnx.
-   by apply tilt_eqnx.
+   apply tilt_eqnx.
+   by rewrite in_itv/= t'0.
 rewrite /Tilt.V1 derive_alongD.
   apply/differentiableM => //=.
   exact/differentiable_enorm_squared/differentiable_lsubmx_comp.
@@ -1228,16 +1227,16 @@ Qed.
 
 Lemma derive_along_V1_le0_global (sol : R -> 'rV[R]_6) :
   sol 0 \in Tilt.Upsilon1 ->
-  sol_is_deriv_c0y phi sol ->
+  sol_is_deriv_c0y (fun=> phi) sol ->
   forall t : R, 0 <= t  ->
   'D~(sol) (Tilt.V1 alpha1 gamma) t <= 0.
 Proof.
 move=> sol0 solves.
-have diff : forall (t : R), 0 <= t -> differentiable sol t.
-   move => /= t' t0'.
-   apply/derivable1_diffP.
-   move/sol_is_deriv_c0yP in solves.
-   by apply solves.
+have diff (t : R) : 0 <= t -> differentiable sol t.
+  move => /= t0.
+  apply/derivable1_diffP.
+  apply solves.
+  by rewrite in_itv/= t0.
 move => t t0.
 rewrite derive_along_V1_global//.
 have t0D : t \in `[0, t + 1[%R.
@@ -1275,17 +1274,17 @@ Qed.
 End tilt_eqn_Lyapunov_global.
 
 Section equilibrium_zero_stable.
-Context {R : realType} (gamma alpha1 : R).
-Hypotheses (gamma_gt0 : 0 < gamma) (alpha1_gt0 : 0 < alpha1).
-Let phi := Tilt.eqn alpha1 gamma.
-Variable Init : set 'rV[R]_6.
+Context {R : realType} (alpha1 gamma : R) (phi := Tilt.eqn alpha1 gamma)
+  (Init : set 'rV[R]_6).
+
+Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
 
 Lemma equilibrium_zero_stable :
   Tilt.point1 \in Init -> Init `<=` Tilt.Upsilon1 ->
   is_stable_at phi Init Tilt.point1.
 Proof.
 move=> Init0 Init_in_state.
-apply: (@Lyapunov_stability R _ phi setT openT Init (Tilt.V1 alpha1 gamma)).
+apply: (@Lyapunov_stability R _ phi _ Init (Tilt.V1 alpha1 gamma) openT).
 - exact: V1_diff.
 - move=> D /= f f0 sol_f t t0.
   apply: (@derive_along_V1_le0 _ _ _ _ _ D f) => //.

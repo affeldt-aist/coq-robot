@@ -13,19 +13,24 @@ Require Import tilt_mathcomp tilt_analysis tilt_robot ode_local.
 (* This file provides elements of stability theory including a proof of       *)
 (* Lyapunov's stability theorem.                                              *)
 (*                                                                            *)
-(* ```                                                                        *)
-(*                      posdefmx M == M is definite positive                  *)
-(*     is_Lyapunov_candidate V D x := x is in D, V x = 0, and V is positive   *)
-(*                                    everywhere in D except at x             *)
-(*                        'D~(f) V == derivative of V along the solution f    *)
-(* is_equilibrium_point phi Init x := x is in Init and cst x satisfies        *)
-(*                                    sol_is_deriv_co phi                     *)
-(*            state_space phi Init == the set points attainable by a solution *)
-(*                                    of the autonomous ODE phi starting from *)
-(*                                    Init                                    *)
-(*              is_stable_at f V x == Lyapunov stability                      *)
-(*  is_global_time_stable_at f V x == TODO                                    *)
-(* ```                                                                        *)
+(* `posdefmx M`                                                               *)
+(* : M is definite positive                                                   *)
+(*                                                                            *)
+(* `is_Lyapunov_candidate V D x`                                              *)
+(* : x is in D, V x = 0, and V is positive everywhere in D except at x        *)
+(*                                                                            *)
+(* `'D~(f) V`                                                                 *)
+(* : derivative of V along the solution f                                     *)
+(*                                                                            *)
+(* `is_equilibrium_point phi Init x`                                          *)
+(* : x is in Init and cst x satisfies sol_is_deriv                            *)
+(*                                                                            *)
+(* `state_space phi Init`                                                     *)
+(* : the set points attainable by a solution of the autonomous ODE phi        *)
+(* : starting from Init                                                       *)
+(*                                                                            *)
+(* `is_stable_at f V x`                                                       *)
+(* : Lyapunov stability                                                       *)
 (*                                                                            *)
 (* Reference:                                                                 *)
 (* - Hassan K. Khalil, Nonlinear systems, 2002                                *)
@@ -55,15 +60,16 @@ Implicit Types V : U -> R.
 Definition is_Lyapunov_candidate V (A : set U) (x : U) :=
   [/\ x \in A, V x = 0 & forall z, z \in A -> z != x -> V z > 0].
 
+(* NB: not used *)
 Definition locnegdef V (x : U) := V x = 0 /\ \forall z \near x^', V z < 0.
 
+(* NB: not used *)
 (* locally negative semidefinite *)
 Definition locnegsemidef V (x : U) := V x = 0 /\ \forall z \near x^', V z <= 0.
 
 End locdef.
 
 (* derivation along the solution f, see Khalil p.114 *)
-(* NB: we are not representing the initial state at t = 0 of the solution f *)
 Definition derive_along {R : numFieldType} {n} (U := 'rV[R]_n) (V : U -> R)
     (f : R -> U) t :=
   (jacobian1 V (f t))^T *d 'D_1 f t.
@@ -165,44 +171,8 @@ Definition derive_along_partial {R : realType} n (V : 'rV[R]_n -> R)
     (a : R -> 'rV[R]_n) (t : R) : R :=
   \sum_(i < n) (partial V (a t) i * ('D_1 a t) ``_ i).
 
-Section ode.
-Context {R : realType} {n} (U := 'rV[R]_n).
-Variable phi : U -> U.
-
-Lemma sol_is_deriv_c0oP (D : R) (f : R -> U) (e : {posnum R}) :
-  is_sol_cauchy_oo (fun=> phi) (- e%:num) D (f (- e%:num)) f ->
-  sol_is_deriv_co (fun=> phi) 0 D f.
-Proof.
-move=> [_ [H cf]] t t0D; apply H; rewrite inE/=; apply: subset_itv t0D => //.
-by rewrite bnd_simp.
-Qed.
-
-(* "global" solution *) (* TODO: move elsewhere? *)
-Definition sol_is_deriv_c0y (f : R -> U) :=
-  sol_is_deriv_cbnd (fun=> phi) 0 +oo%O f.
-
-(* TODO: generalize this lemma *)
-Lemma sol_is_deriv_c0yP (f : R -> U) : sol_is_deriv_c0y f <->
-  forall t, t >= 0 -> derivable f t 1 /\ f^`() t = phi (f t).
-Proof.
-split=> H t t0oo; apply: H.
-  by rewrite in_itv/= andbT.
-by move: t0oo; rewrite in_itv/= andbT.
-Qed.
-
-Lemma sol_is_deriv_c0yco f : sol_is_deriv_c0y f ->
-  forall D, sol_is_deriv_co (fun=> phi) 0 D f.
-Proof.
-move=> + D t t0D.
-apply.
-by move: t0D; rewrite !in_itv/= => /andP[->].
-Qed.
-
-End ode.
-
 Section state_space.
-Context {R : realType} {n} (U := 'rV[R]_n).
-Variable phi : U -> U.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : U -> U).
 
 Definition state_space (Init : set U) : set U :=
   [set x | exists f D, [/\ f 0 \in Init,
@@ -212,8 +182,7 @@ Definition state_space (Init : set U) : set U :=
 End state_space.
 
 Section equilibrium_point.
-Context {R : realType} {n} (U := 'rV[R]_n).
-Variable phi : U -> U.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : U -> U).
 
 Definition is_equilibrium_point (x : U) :=
    sol_is_deriv (fun=> phi) `[0, +oo[%R (cst x).
@@ -241,9 +210,7 @@ Qed.
 End equilibrium_point.
 
 Section stability.
-Context {R : realType} {n} (U := 'rV[R]_n).
-Variable phi : U -> U.
-Variable Init : set U.
+Context {R : realType} {n} (U := 'rV[R]_n) (phi : U -> U) (Init : set U).
 
 Definition is_stable_at (x : U) :=
   forall eps, eps > 0 -> exists2 d, d > 0 &
@@ -265,17 +232,16 @@ Definition is_stable_at (x : U) :=
 (* by rewrite in_itv/= t0/= ltrDl. *)
 (* Qed. *)
 
+(* TODO: not used *)
 Definition is_asymptotically_stable_at (x : U) (f : R -> U) : Prop :=
   exists2 d, d > 0 & `| f 0 - x | < d -> f t @[t --> +oo] --> x.
 
 End stability.
 
 Section about_Lyapunov_function.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.+1.
-Variable phi : U -> U.
-Variable D : R.
-Variable f : R -> U.
+Context {R : realType} {n : nat} (U := 'rV[R]_n.+1) (phi : U -> U)
+  (D : R) (f : R -> U).
+
 Hypothesis derivable_f : {in `]0, D[%R, forall t, derivable f t 1}.
 Hypothesis within_cont_f : {within `[0, D[, continuous f}.
 
@@ -316,63 +282,6 @@ apply: (@ler0_derive1_le_cc _ (V \o f) 0 b) => //=.
 Qed.
 
 End about_Lyapunov_function.
-
-(* TODO: move *)
-Section sphere.
-Context {R : realType} {n : nat}.
-Local Open Scope classical_set_scope.
-
-Definition sphere r := [set x : 'rV[R]_n | `|x| = r].
-
-Lemma sphere_nonempty r : n != 0 -> 0 < r -> sphere r !=set0.
-Proof.
-move=> n0 r_gt0.
-rewrite /sphere.
-exists (const_mx r).
-rewrite /sphere /= /normr/=.
-(* TODO: need lemma? *)
-rewrite mx_normrE/=.
-apply/eqP; rewrite eq_le; apply/andP; split.
-  apply: bigmax_le.
-    exact: ltW.
-  by move=> i _; rewrite mxE gtr0_norm.
-under eq_bigr do rewrite mxE gtr0_norm//.
-apply/le_bigmax => /=.
-destruct n as [|n'] => //.
-exact: (ord0, ord0).
-Qed.
-
-Lemma compact_sphere r : compact (sphere r).
-Proof.
-apply: bounded_closed_compact.
-  suff : \forall M \near +oo, forall p, sphere r p ->
-      forall i, `|p ord0 i| < M.
-    rewrite /bounded_set.
-    apply: filter_app; near=> M0.
-    move=> Kbnd /= p /Kbnd ltpM0.
-    rewrite /normr/= mx_normrE.
-    apply/bigmax_leP; split => //= i _.
-    by rewrite ord1; exact/ltW/ltpM0.
-  near=> M => v.
-  rewrite /sphere /= => vr i.
-  rewrite (@le_lt_trans _ _ r)//.
-    rewrite -vr [leRHS]/normr/= mx_normE.
-    under eq_bigr do rewrite ord1.
-    rewrite -(pair_big xpredT xpredT (fun _ j => `|v ord0 j|%:nng))//=.
-    rewrite big_ord_recr/= big_ord0.
-    rewrite max_r; first exact/bigmax_ge_id.
-    rewrite (bigD1 i)//= -maxE le_max.
-    by apply/orP; left.
-  clear v vr i.
-  by near: M; apply: nbhs_pinfty_gt; rewrite num_real.
-pose d := fun x : 'rV[R]_n  => `|x| : R.
-have contd : continuous d by move=> /= z; exact: norm_continuous.
-rewrite [X in closed X](_ : _ = d @^-1` [set r]).
-  by apply/seteqP; split.
-by apply continuous_closedP.
-Unshelve. all: by end_near. Qed.
-
-End sphere.
 
 Section Lyapunov_stability.
 Context {R : realType} {n} (U := 'rV[R]_n.+1).
@@ -660,15 +569,13 @@ Qed.
 End is_equilibrium_point_change_of_variables.
 
 Section Lyapunov_stability.
-Context {R : realType} {n} (U := 'rV[R]_n.+1).
-Variable phi : U -> U.
-Variable A : set U.
-Hypothesis openA : open A.
-Variable Init : set U.
+Context {R : realType} {n} (U := 'rV[R]_n.+1) (phi : U -> U)
+  (A : set U) (Init : set U) (V : U -> R).
 
-Variable V : U -> R.
-Hypothesis Vdiff : forall t : U, differentiable V t.
-Hypothesis V'_le0 : forall D (f : R -> U),
+Hypothesis openA : open A.
+
+Hypothesis Vdiff : forall t, differentiable V t.
+Hypothesis V'_le0 : forall D f,
   f 0 \in Init ->
   is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   forall t, t \in `]0, D[%R -> 'D~(f) V t <= 0.

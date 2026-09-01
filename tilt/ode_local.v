@@ -81,12 +81,23 @@ Definition sol_is_deriv_cbnd (a : R) (b : itv_bound R) (f : R -> U) :=
 
 Definition sol_is_deriv_co a b := sol_is_deriv_cbnd a (BLeft b).
 
+(* "global" solution *)
+Definition sol_is_deriv_c0y (f : R -> U) := sol_is_deriv_cbnd 0 +oo%O f.
+
+Lemma sol_is_deriv_c0yco (f : R -> U) : sol_is_deriv_c0y f ->
+  forall D, sol_is_deriv_co 0 D f.
+Proof.
+move=> + D t t0D; apply.
+by apply: subset_itvl t0D; rewrite bnd_simp.
+Qed.
+
+(* NB: not used
 Lemma sol_is_deriv_cy_co a b : sol_is_deriv phi `[a, +oo[%R `<=`
   sol_is_deriv_cbnd a (BLeft b).
 Proof.
-move=> f + t tab; apply.
-exact: subset_itvl tab.
+by move=> f + t tab; apply; exact: subset_itvl tab.
 Qed.
+*)
 
 Definition sol_is_deriv_obnd (a : R) (b : itv_bound R) (f : R -> U) :=
   sol_is_deriv phi (Interval (BRight a) b) f.
