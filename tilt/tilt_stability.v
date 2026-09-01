@@ -77,8 +77,7 @@ Definition derive_along {R : numFieldType} {n} (U := 'rV[R]_n) (V : U -> R)
 Notation "''D~(' f ) V" := (derive_along V f).
 
 Section derive_along.
-Context {R : realType} {n : nat}.
-Variable f : R -> 'rV[R]_n.
+Context {R : realType} {n : nat} (f : R -> 'rV[R]_n).
 
 Lemma derive_along_derive (U := 'rV[R]_n) (V : U -> R) (t : R) :
   differentiable V (f t) -> differentiable f t ->

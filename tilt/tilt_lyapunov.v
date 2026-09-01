@@ -147,7 +147,7 @@ Hypothesis v_derivable : forall t, derivable v t 1.
 (* section III.A in [benallegue2023itac] *)
 Section two_steps_first_order_estimator.
 Local Notation y_a := (y_a v).
-Variables gamma alpha1 : R.
+Context (gamma alpha1 : R).
 
 Variable x1_hat : R -> 'rV[R]_3. (* estimator *)
 Hypothesis derivable_x1_hat : forall t, derivable x1_hat t 1.
@@ -342,7 +342,7 @@ End PhysicalModel.
 Module Tilt.
 Section tilt.
 Context {R : realType}.
-Variables alpha1 gamma : R.
+Context (alpha1 gamma : R).
 
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
@@ -391,11 +391,8 @@ End Tilt.
 
 (* properties of Tilt.eqn *)
 Section tilt_eqn.
-Context {R : realType}.
-Variables alpha1 gamma : R.
-Hypothesis gamma_gt0 : 0 < gamma.
-Hypothesis alpha1_gt0 : 0 < alpha1.
-Let phi := Tilt.eqn alpha1 gamma.
+Context {R : realType} (alpha1 gamma : R) (phi := Tilt.eqn alpha1 gamma).
+Hypotheses (gamma_gt0 : 0 < gamma) (alpha1_gt0 : 0 < alpha1).
 
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).
@@ -764,10 +761,9 @@ End u2.
 
 Section V1.
 Local Open Scope classical_set_scope.
-Context {R : realType}.
-Variables alpha1 gamma : R.
-Hypothesis alpha1_gt0 : 0 < alpha1.
-Hypothesis gamma_gt0 : 0 < gamma.
+Context {R : realType} (alpha1 gamma : R).
+
+Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
 
 Local Notation Left := (@lsubmx _ 1 3 3).
 Local Notation Right := (@rsubmx _ 1 3 3).

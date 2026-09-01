@@ -152,8 +152,7 @@ have [hbv|hbv] := connected_subset V1V2sep Bto (Bcon _).
 Qed.
 
 Section sublevel.
-Context {R : realType} {n : nat}.
-Let U := 'rV[R]_n.
+Context {R : realType} {n : nat} (U := 'rV[R]_n).
 
 Definition sublevel (V : U -> R) c := [set x : U | V x <= c].
 
@@ -163,12 +162,10 @@ Proof. by []. Qed.
 End sublevel.
 
 Section LaSalle_tilt.
-Context {K : realType}.
-Let U := 'rV[K]_6.
-Variables gamma alpha1 : K.
-Hypothesis gamma_gt0 : 0 < gamma.
-Hypothesis alpha1_gt0 : 0 < alpha1.
-Let phi := Tilt.eqn alpha1 gamma.
+Context {K : realType} (U := 'rV[K]_6) (alpha1 gamma : K)
+  (phi := Tilt.eqn alpha1 gamma).
+
+Hypotheses (alpha1_gt0 : 0 < alpha1) (gamma_gt0 : 0 < gamma).
 
 Definition sublevelUpsilon1 (p : U) :=
   sublevel (Tilt.V1 alpha1 gamma) (Tilt.V1 alpha1 gamma p) `&` Tilt.Upsilon1.
