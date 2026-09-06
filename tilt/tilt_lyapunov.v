@@ -1083,8 +1083,7 @@ Lemma derive_along_V1_le0 (D : R) (f : R -> 'rV_6) :
   f 0 \in Tilt.Upsilon1 ->
   is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
   {in `]0, D[%R, forall t, differentiable f t} ->
-  forall t, t \in `]0, D[%R ->
-  'D~(f) (Tilt.V1 alpha1 gamma) t <= 0.
+  {in `]0, D[%R, forall t, 'D~(f) (Tilt.V1 alpha1 gamma) t <= 0}.
 Proof.
 move=> sol0 solP diff t t0.
 have {}t0 : t \in `]0, D[ by rewrite inE.
