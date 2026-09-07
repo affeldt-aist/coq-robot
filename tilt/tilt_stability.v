@@ -216,6 +216,25 @@ Definition is_stable_at (x : U) :=
   forall f D, f 0 \in Init -> is_sol_cauchy_oo (fun=> phi) 0 D (f 0) f ->
     `| f 0 - x | < d -> forall t, t \in `[0, D[%R -> `| f t - x | < eps.
 
+Lemma stable_equilibrium x sol D : 0 < D ->
+    is_sol_cauchy_oo (fun=> phi) 0 D x sol ->
+    x \in Init -> is_stable_at x -> is_equilibrium_point phi x.
+Proof.
+move=> D0 solD Ix Sx t _; split=> //=; rewrite derive1_cst.
+have [sol0 [sold _]] := solD.
+have solx : {in `]0, D[, sol =1 cst x}.
+  move=> s; rewrite inE/= => sD; apply/eqP; rewrite -subr_eq0 -normr_le0.
+  apply/ler_addgt0Pr => /= eps eps0; rewrite add0r.
+  have [d d0 stab] := Sx _ eps0.
+  apply/ltW/(stab sol D); rewrite ?sol0//.
+    by rewrite subrr normr0.
+  by rewrite in_itv/= !(itvP sD).
+have mD : `]0, D[ ((0 + D) / 2) by rewrite /= in_itv/= !midf_lt.
+have [_ +] := sold _ mD.
+rewrite solx /= ?inE// => <-.
+by rewrite (ode_common.in_eq_derive1 _ solx (mem_set mD)) ?derive1_cst.
+Qed.
+
 (* assuming solution exists for all time *)
 (* Definition is_global_time_stable_at (x : U) := *)
 (*   forall eps, eps > 0 -> exists2 d, d > 0 & *)
