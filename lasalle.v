@@ -198,34 +198,42 @@ Proof.
 by rewrite propeqE; split; rewrite -nearN oppr0.
 Qed.
 
+Section definitions_to_apply_LaSalle.
+Context {R : realType} {U : normedModType R}
+  (phi : U -> U) (* function defining the differential system *).
+
+Local Open Scope ring_scope.
+
+Definition lasalle_is_sol (y : R -> U) :=
+  (forall t, t < 0 -> y t = 2 *: (y 0) - (y (- t))) /\
+  forall t, 0 <= t -> is_derive (t : R^o) 1 y (phi (y t)).
+
+(* K: compact set used in LaSalle's invariance principle *)
+(* sol: solution function *)
+Definition lasalle_solP (K : set U) (sol : U -> R -> U) :=
+  forall y : R -> U, K (y 0) -> lasalle_is_sol y <-> y = sol (y 0).
+
+End definitions_to_apply_LaSalle.
+
 Section DifferentialSystem.
-Context {R : realType}.
-Variable U : normedModType R.
-Let hU : hausdorff_space U := @norm_hausdorff _ U.
+Context {R : realType} {U : normedModType R}
+  (hU : hausdorff_space U := @norm_hausdorff _ U)
+  (phi : U -> U).
 
-(* function defining the differential system *)
-Variable F : U -> U.
-
-Definition is_sol (y : [the normedModType _ of R^o] -> U) :=
-  (forall t, t < 0 -> y t = 2 *: (y 0) - (y (- t)))%R /\
-  forall t, (0 <= t)%R -> is_derive (t : R^o) 1%R y (F (y t)).
-
-(* compact set used in LaSalle's invariance principle *)
 Variable K : set U.
 Hypothesis Kco : compact K.
 
-(* solution function *)
 Variable sol : U -> R -> U.
-Hypothesis (sol0 : forall p, sol p 0 = p).
-Hypothesis solP : forall y : R -> U, K (y 0%R) -> is_sol y <-> y = sol (y 0%R).
+Hypothesis sol0 : forall p, sol p 0 = p.
+Hypothesis solP : lasalle_solP phi K sol.
 Hypothesis sol_cont : forall t, {within K, continuous (sol^~ t)}.
 
-Lemma sol_is_sol p : K p -> is_sol (sol p).
+Lemma sol_is_sol p : K p -> lasalle_is_sol phi (sol p).
 Proof. by move=> Kp; apply/solP; rewrite sol0. Qed.
 Hint Resolve sol_is_sol : core.
 
-Lemma uniq_sol (x y : R -> U) :
-  K (x 0%R) -> K (y 0%R) -> is_sol x -> is_sol y -> x 0%R = y 0%R -> x = y.
+Lemma uniq_sol (x y : R -> U) : K (x 0%R) -> K (y 0%R) ->
+  lasalle_is_sol phi x -> lasalle_is_sol phi y -> x 0%R = y 0%R -> x = y.
 Proof. by move=> Kx0 Ky0 /(solP Kx0)-> /(solP Ky0)->; rewrite !sol0 => ->. Qed.
 
 Definition is_invariant A := forall p, A p -> forall t, (0 <= t)%R -> A (sol p t).
@@ -235,7 +243,8 @@ Hypothesis Kinvar : is_invariant K.
 Definition shift_sol p t0 t :=
   (if t >= 0 then sol p (t + t0) else 2 *: (sol p t0) - (sol p (- t + t0)))%R.
 
-Lemma sol_shift p (t0 : R^o) : K p -> (0 <= t0)%R -> is_sol (shift_sol p t0).
+Lemma sol_shift p (t0 : R^o) : K p -> (0 <= t0)%R ->
+  lasalle_is_sol phi (shift_sol p t0).
 Proof.
 move=> Kp t0ge0; split=> [t tlt0|t tge0].
   rewrite /shift_sol leNgt tlt0/= lexx/=.
@@ -243,7 +252,7 @@ move=> Kp t0ge0; split=> [t tlt0|t tge0].
   rewrite [X in _ = (2 *: sol p X - _)%R](_ : _ = t0)//.
   by rewrite add0r.
 suff dshift : (shift_sol p t0) \o shift t = (cst (shift_sol p t0 t) +
-  (fun h : R^o => h *: F (shift_sol p t0 t)))%R +o_ (0%R : R^o) (id : R^o -> R^o).
+  (fun h : R^o => h *: phi (shift_sol p t0 t)))%R +o_ (0%R : R^o) (id : R^o -> R^o).
   move=> [:dshiftE].
   have diff_shift : differentiable (shift_sol p t0 : R^o -> _) t.
     apply/diff_locallyP; split; last first.
@@ -254,11 +263,11 @@ suff dshift : (shift_sol p t0) \o shift t = (cst (shift_sol p t0 t) +
   (cst (shift_sol p t0 t) + 'd (shift_sol p t0) t)%R *)
       congr +%R.
       abstract: dshiftE.
-      have lin_scal : linear (fun h : R^o => h *: F (shift_sol p t0 t))%R.
+      have lin_scal : linear (fun h : R^o => h *: phi (shift_sol p t0 t))%R.
         by move=> ???; rewrite scalerDl scalerA.
       pose glM := GRing.isLinear.Build _ _ _ _ _ lin_scal.
-      pose gL : {linear R^o -> U} := HB.pack ( *:%R^~ (F (shift_sol p t0 t))) glM.
-      have -> : (fun h : R^o => h *: F (shift_sol p t0 t))%R = gL by [].
+      pose gL : {linear R^o -> U} := HB.pack ( *:%R^~ (phi (shift_sol p t0 t))) glM.
+      have -> : (fun h : R^o => h *: phi (shift_sol p t0 t))%R = gL by [].
       apply/esym.
       apply: diff_unique; first exact: scalel_continuous.
       apply/eqaddoE; rewrite dshift.

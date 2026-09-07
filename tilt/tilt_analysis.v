@@ -1,6 +1,6 @@
 From HB Require Import structures.
 From mathcomp Require Import boot order algebra ring_tactic
-  interval_inference.
+  interval_inference finmap.
 From mathcomp Require Import boolp classical_sets functions filter reals
   topology ereal prodnormedzmodule normedtype sequences derive realfun
   landau measure lebesgue_integral lebesgue_measure
@@ -648,7 +648,59 @@ apply/closureS/disjoints_subset.
 by rewrite setIC.
 Qed.
 
-(* TODO: move *)
+(* finite intersection property *)
+(* NB: not used? *)
+Lemma compact_decreasing_bigcap d {K : orderType d} (k0 : K)
+  (X : ptopologicalType) (B : K -> set X) (O : set X) :
+  hausdorff_space X ->
+  (forall i : K, (k0 <= i)%O -> compact (B i)) ->
+  (forall i j : K, (i <= j)%O -> B j `<=` B i) ->
+  open O ->
+  (\bigcap_(i in [set i | (k0 <= i)%O]) B i `<=` O) ->
+  exists i0, (k0 <= i0)%O /\ B i0 `<=` O.
+Proof.
+move => H comp decr openO subO.
+set V := fun i => B i `&` ~` O.
+have comp' i : (k0 <= i)%O -> compact (V i).
+  move=> i0.
+  apply: compact_closedI.
+    by apply comp.
+  by apply open_closedC.
+have decr' i j : (i <= j)%O -> V j `<=` V i.
+  move=> ij.
+  rewrite /V.
+  by apply: setSI; exact: decr.
+apply/not_existsP => hf.
+suff /set0P : \bigcap_(i in [set t | k0 <= t]%O) V i !=set0.
+  rewrite bigcapIl; first by exists k0 => /=; exact: lexx.
+  by move/eqP/subsets_disjoint.
+have cf : closed_fam_of (B k0) [set t | t >= k0]%O V.
+  exists V => t t0 //.
+    apply closedI.
+      apply compact_closed => //.
+      exact: comp.
+    exact: open_closedC.
+  rewrite /V setIA.
+  congr (_ `&` _).
+  rewrite setIC.
+  exact/esym/setIidl/decr.
+have : compact (B k0) by apply comp.
+rewrite compact_In0/=; apply => //.
+move=> D Ds.
+set m := \big[Order.max/k0]_(z <- D) z.
+have M x : x \in D -> (x <= m)%O by move=> xD; exact: le_bigmax_seq.
+suff Vm : V m `<=` \bigcap_(i in [set` D]) V i.
+  apply: (subset_nonempty Vm).
+  have := hf m.
+  apply: contra_notP.
+  move/nonemptyPn => Ve; split.
+    exact: bigmax_ge_id.
+  by apply subsets_disjoint.
+apply sub_bigcap => i Di.
+exact/decr'/M.
+Qed.
+
+(* TODO: PR? *)
 Lemma separated_closedUP {T : topologicalType} (A B : set T) : separated A B ->
   closed (A `|` B) <-> closed A /\ closed B.
 Proof.
@@ -670,6 +722,74 @@ have [_ /seteqP[+ _]] := ABsep.
 case /(_ x).
 by split.
 by rewrite inE.
+Qed.
+
+(* NB: should be possible to generalize without normal_space X *)
+(* TODO: PR? *)
+Lemma compact_connected_cluster {K : realType}
+  (X : ptopologicalType) (f : K -> X) (A : set X) :
+  hausdorff_space X ->
+  normal_space X ->
+  continuous f ->
+  compact A ->
+  (forall t, 0 <= t -> f t \in A) ->
+  connected (cluster (f t @[t --> +oo])).
+Proof.
+move => H Hn contf compactf imagef.
+set B := fun t => closure (f @` `[t, +oo[).
+have Bcon t : connected (B t).
+  apply: connected_closure.
+  apply: connected_continuous_connected.
+  apply /connected_intervalP/interval_is_interval.
+  by apply continuous_subspaceT.
+have Bnonempty t : B t !=set0.
+  exists (f t); apply/subset_closure/set_mem/image_f.
+  by rewrite inE/= in_itv/= lexx.
+have Bmon s t : s <= t -> B t `<=` B s.
+  move=> st; apply/closureS/image_subset.
+  by apply: subset_itvr; rewrite bnd_simp.
+have Bcom t : 0 <= t -> compact (B t).
+  move=> t0; apply: (subclosed_compact _  compactf).
+    exact: closed_closure.
+  rewrite (closure_id A).1; first exact: compact_closed.
+  apply: closureS => _ [x tx] <-.
+  apply/set_mem/imagef.
+  by move: tx; rewrite /= in_itv/= andbT; exact: le_trans.
+have -> : cluster (f t @[t --> +oo]) = \bigcap_(t in [set t | 0 <= t]) B t.
+  rewrite clusterE; apply/seteqP; split.
+  - apply: sub_bigcap => /= t _.
+    apply: bigcap_inf.
+    exists t; split; first exact: num_real.
+    by move=> x tx; exists x => //; rewrite /= in_itv/= ltW.
+  - apply: sub_bigcap => b /= [t0 [_ /= h]].
+    apply: (subset_trans (bigcap_inf (i := Num.max 0 (t0 + 1)) _)) => //=.
+      by rewrite le_max lexx.
+    apply: closureS => _ /= [x xt] <-.
+    apply h.
+    move: xt; rewrite in_itv/= andbT; apply: lt_le_trans.
+    by rewrite lt_max ltrDl ltr01 orbT.
+apply/connectedP => E [Enonempty Eu Esep].
+have /(separated_closedUP Esep) [E1c E2c] : closed (E false `|` E true).
+  rewrite -Eu; apply: closed_bigI => i P; apply: compact_closed => //.
+  exact: Bcom.
+have /normal_openP := Hn.
+move /(_ K (E false) (E true)) => [//|//|| V1 [V2 [? ? EfalseV1 EtrueV2 ?]]].
+  exact: separated_disjoint.
+have V1V2o : open (V1 `|` V2) by exact: openU.
+have V1V2sep : separated V1 V2 by exact: open_disjoint_separated.
+have BV1V2 : \bigcap_(t in [set t | 0 <= t]) B t `<=` V1 `|` V2.
+  by rewrite Eu; exact: setUSS.
+case/compact_decreasing_bigcap : BV1V2 => // t0 [t0ge0 Bto] //.
+suff: V1 `&` V2 !=set0 by apply nonemptyPn.
+have [e1 E1] := Enonempty false.
+have [e2 E2] := Enonempty true.
+have EB : E false `|` E true `<=` B t0.
+  by rewrite - Eu; exact: bigcap_inf.
+have [hbv|hbv] := connected_subset V1V2sep Bto (Bcon _).
+- exists e2; split; last exact: EtrueV2.
+  by apply: hbv; apply: EB; right.
+- exists e1; split; first exact: EfalseV1.
+  by apply: hbv; apply: EB; left.
 Qed.
 
 Lemma cst_oo_cc {R : realType} (f : R -> R) y (a b : R) :

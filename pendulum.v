@@ -398,7 +398,7 @@ Qed.
   Cauchy-Lipschitz *)
 Variable sol : U -> R -> U.
 Hypothesis (sol0 : forall p, sol p 0 = p).
-Hypothesis solP : forall y, K (y 0) -> is_sol Fpendulum y <-> y = sol (y 0).
+Hypothesis solP : lasalle_solP Fpendulum K sol.
 Hypothesis sol_cont : forall t, {within K, continuous (sol^~ t)}.
 
 Lemma circ_invar p :
