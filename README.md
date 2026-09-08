@@ -83,6 +83,9 @@ skew-symmetric matrices, quaternions), rigid body transformations
 convention, screw motions), and an application to the SCARA robot
 manipulator.
 
+This library contains an updated version of work by Damien Rouhling:
+the files `lasalle.v` and `pendulum.v` from https://github.com/drouhling/LaSalle.
+
 Each file is documented more precisely in its header.
 
 Some references used in this work:
