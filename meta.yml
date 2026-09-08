@@ -32,7 +32,7 @@ license:
   file: LICENSE
 
 supported_rocq_versions:
-  text: Rocq 9.0--9.3
+  text: Rocq 9.1--9.3
   opam: '{ (>= "9.1" & < "9.4~") }'
 
 tested_rocq_opam_versions:
@@ -79,7 +79,7 @@ dependencies:
     [MathComp field](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-analysis
-    version: '{ (>= "1.17.0") }'
+    version: '{ (>= "1.18.0") }'
   description: |-
     [MathComp analysis](https://github.com/math-comp/analysis)
 - opam:

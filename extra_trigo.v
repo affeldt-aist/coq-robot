@@ -104,7 +104,7 @@ Proof.
 case: (a =P pi) => [->|/eqP aDpi].
   rewrite sinpi eq_sym oppr_eq0 oner_eq0 => _.
   rewrite -subr_eq0  opprK -{1}[pi]mulr1 -mulrDr mulf_eq0.
-  case: ltgtP (pi_gt0 R) => //= _ _.
+  case: ltgtP (@pi_gt0 R) => //= _ _.
   have -> : 1 + 2%:R^-1 = 3%:R / 2%:R :> R.
     by rewrite (natrD _  2 1) mulrDl divff ?mul1r // pnatr_eq0.
   by rewrite mulf_eq0 invr_eq0 ?pnatr_eq0.

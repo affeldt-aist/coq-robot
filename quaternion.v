@@ -1259,12 +1259,12 @@ Proof. by move=> p q; congr mkDual; rewrite /= subrr. Qed.
 
 HB.instance Definition _ := @Algebra.isZmodMorphism.Build _ _ _ duall_is_additive.
 
-Fact duall_is_multiplicative : multiplicative *%:dl.
+Fact duall_is_multiplicative : monoid_morphism *%:dl.
 Proof.
 by split => // p q; congr mkDual; rewrite /=; Simp.r.
 Qed.
 
-HB.instance Definition _ := @GRing.isMultiplicative.Build _ _ _ duall_is_multiplicative.
+HB.instance Definition _ := @GRing.isMonoidMorphism.Build _ _ _ duall_is_multiplicative.
 
 (* Sanity check : Taylor series for polynomial *)
 Lemma dual_deriv_poly (p : {poly R}) r :

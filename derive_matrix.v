@@ -36,74 +36,9 @@ Lemma mx_lin1N (R : pzRingType) n (M : 'M[R]_n) :
   mx_lin1 (- M) = -1 \*: mx_lin1 M :> ( _ -> _).
 Proof. by rewrite funeqE => v /=; rewrite scaleN1r mulmxN. Qed.
 
-Import Order.Def.
-
-(* NB: added to be able to produce the following instance to be able to use bigop lemmas *)
-Lemma nng_max0r {K : realFieldType} : left_id ((0:K)%:nng) (@maxr {nonneg K}).
-Proof.
-move=> x.
-rewrite /max; case: ifPn => //.
-rewrite -leNgt => x0.
-apply/eqP; rewrite eq_le; apply/andP; split; last first.
-  exact: x0.
-by have : 0 <= x%:nngnum by []. (* NB: this should be automatic *)
-Qed.
-
-(* TODO: backport to MCA *)
-HB.instance Definition _ {K : realFieldType} :=
-  Monoid.isComLaw.Build {nonneg K} 0%:nng max maxA maxC nng_max0r.
-
-Lemma norm_trmx (R : realFieldType) m n (M : 'M[R]_(m, n)) : `|M^T| = `|M|.
-Proof.
-rewrite [LHS]mx_normE/=.
-under eq_bigr do rewrite mxE.
-rewrite -(pair_big xpredT xpredT (fun i j => `|M j i|%:nng))/=.
-by rewrite exchange_big//= pair_big.
-Qed.
-
 Section pointwise_derivable.
 Context {R : realFieldType} {V W : normedModType R} {m n : nat}.
 Implicit Types M : V -> 'M[R]_(m, n).
-
-Lemma derivable_trmx M t v :
-  derivable (fun x => (M x)^T) t v = derivable M t v.
-Proof.
-rewrite propeqE; split; rewrite /derivable/=.
-- move=> /cvg_ex[/= l Hl].
-  apply/cvg_ex => /=; exists l^T.
-  apply/cvgrPdist_le => /= e e0.
-  move/cvgrPdist_le : Hl => /(_ _ e0)[/= r r0 re].
-  near=> x.
-  rewrite [leLHS](_ : _ =
-      `|l - x^-1 *: ((M (x *: v + t))^T - (M t)^T)|).
-    rewrite -[RHS]norm_trmx.
-    rewrite [in RHS]linearD/=.
-    rewrite [in RHS]linearN/=.
-    congr (`| _ - _ |).
-    rewrite [RHS]linearZ/=.
-    rewrite [in RHS]linearB.
-    by rewrite /= !trmxK.
-  apply: re => /=.
-    rewrite sub0r normrN.
-    by near: x; exact: dnbhs0_lt.
-  by near: x; exact: nbhs_dnbhs_neq.
-- move=> /cvg_ex[/= l Hl].
-  apply/cvg_ex => /=; exists l^T.
-  apply/cvgrPdist_le => /= e e0.
-  move/cvgrPdist_le : Hl => /(_ _ e0)[/= r r0 re].
-  near=> x.
-  rewrite [leLHS](_ : _ = `|l - x^-1 *: ((M (x *: v + t)) - (M t))|).
-    rewrite -[RHS]norm_trmx.
-    rewrite [in RHS]linearD/=.
-    rewrite [in RHS]linearN/=.
-    congr (`| _ - _ |).
-    rewrite [RHS]linearZ/=.
-    by rewrite [in RHS]linearB.
-  apply: re => /=.
-    rewrite sub0r normrN.
-    by near: x; exact: dnbhs0_lt.
-  by near: x; exact: nbhs_dnbhs_neq.
-Unshelve. all: by end_near. Qed.
 
 Lemma derivable_coord (a : V -> 'rV[R]_n) t v (i : 'I_n) :
   derivable a t v ->
@@ -212,22 +147,6 @@ by apply: (@derivable_row_mx _ _ 1 1); exact: derivable_mx_is_scalar.
 Qed.
 
 End pointwise_derivable_TODO.
-
-Section pointwise_derive.
-Local Open Scope classical_set_scope.
-Context {R : realFieldType} {V W : normedModType R} .
-
-(* TODO: PR to MCA in progress *)
-Lemma derive_trmx {m n : nat} (M : V -> 'M[R]_(m, n)) t v :
-  derivable M t v -> 'D_v (trmx \o M) t = ('D_v M t)^T.
-Proof.
-move=> Mt1.
-rewrite !derive_mx//=; first by rewrite derivable_trmx.
-apply/matrixP => i j; rewrite !mxE.
-by under eq_fun do rewrite mxE.
-Qed.
-
-End pointwise_derive.
 
 (* TODO: PR to MCA *)
 Lemma derivable_lsubmx {R : realFieldType} {V : normedModType R} {n1 n2}

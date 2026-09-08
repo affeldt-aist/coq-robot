@@ -1644,7 +1644,7 @@ case/boolP : (u *d F|,2%:R == 0) => [/eqP|] u2.
     by rewrite oppr_cp0 !(pi_gt0, pi_ge0).
   - exists pi.
     rewrite sinpi cospi !(scaleN1r,scale0r,oppr0,add0r,addr0); split => //.
-    by rewrite lexx (lt_trans _ (pi_gt0 _)) // oppr_cp0 pi_gt0.
+    by rewrite lexx (lt_trans _ pi_gt0) // oppr_cp0 pi_gt0.
   have v1 : v *d F|,1 = 0.
     move/eqP: (frame_icrossk F); rewrite -eqr_oppLR => /eqP <-.
     rewrite dotmulvN -uva0 (@lieC _ (vec3 T)) /= dotmulvN opprK double_crossmul.
@@ -1680,7 +1680,7 @@ have pi2B : - pi < (pi : T) / 2%:R <= pi.
   by rewrite -subr_gte0 mulr_natr mulr2n addrK pi_ge0.
 have piN2B : - pi < - ((pi : T) / 2%:R) <= pi.
   rewrite ltrN2 ltr_pdivrMr// ltr_pMr ?pi_gt0// ltr1n/=.
-  by rewrite (le_trans _ (pi_ge0 T))// lerNl oppr0 divr_ge0// pi_ge0.
+  by rewrite (le_trans _ pi_ge0)// lerNl oppr0 divr_ge0// pi_ge0.
 case/boolP : (u *d F|,1 == 0) => [/eqP|] u1.
   have [/eqP {}u2|/eqP {}u2] : {u *d F|,2%:R == 1} + {u *d F|,2%:R == -1}.
     move: normu => /(congr1 (fun x => x ^+ 2)).
