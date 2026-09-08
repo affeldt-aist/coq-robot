@@ -538,6 +538,9 @@ Hypothesis phi_loc_lip :
       {in `[a, c]%R, forall t,
         k%:num.-lipschitz_(closed_ball y0 r%:num) (phi t)}.
 
+Hypothesis solutions_in_K : forall b sol,
+  is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a, b[ `<=` K.
+
 Let phi_local_conds c (ac : a < c) y0 :
   exists r k : {posnum R},
     {in closed_ball y0 r%:num, forall y,
@@ -549,7 +552,7 @@ have [r [k Hlip]] := @phi_loc_lip c ac y0.
 by exists r, k; split.
 Qed.
 
-Let phi_cont c (ac : a < c) :
+Definition phi_cont c (ac : a < c) :
   {within `[a, c] `*` K, continuous (fun p : (R * U)%type => phi p.1 p.2)}.
 Proof.
 apply/subspace_continuousP => /=  [[t0 y0] [/= pD1 pD2]].
@@ -781,135 +784,8 @@ apply: (compact_solution_extends (c := sup valid_right_endpoints + 1) (K := K)) 
 - apply: phi_cont.
   by rewrite ltr_pDr// lt_sup_valid_right_endpoints.
 Qed.
-
 (* Thm 3.3 in Khalil *)
-(* TODO: rename to compact_containment_is_sol_cauchy_infty ? *)
-Lemma compact_containment_global_is_sol_cauchy :
-  (forall b f, is_sol_cauchy_oo phi a b u0 f -> f @` `[a, b[ `<=` K) ->
-  exists2 f, is_sol_cauchy phi a +oo%O u0 f &
-    (h^-1 *: (f (a + h) - f a)) @[h --> 0^'+] --> phi a (f a).
-Proof.
-move=> is_sol_K.
-have [f [init [sol_is_deriv_f cont]]] : exists f, is_sol_cauchy phi a +oo%O u0 f.
-  apply: no_ub_global_sol.
-  suff : ~ has_sup valid_right_endpoints.
-    by apply contra_not => hub; split=>//; exact: valid_right_endpoints_nonempty.
-  exact: compact_containment_no_sup.
-have allsol : forall b, is_sol_cauchy_oo phi a b u0 f.
-   exact/is_sol_cauchy_inftyP.
-exists f => //.
-apply/cvgrPdist_le => eps eps0.
-move: cont; rewrite closure_neitv_oy => /[dup] cont.
-move/continuous_within_itvcyP => [_ cr].
-have : a < a + 1 by rewrite ltrDl.
-move=> /phi_cont /subspace_continuousP Hj.
-have pa : (`[a, a + 1] `*` K) (a, f a).
-  split; first by rewrite /= bound_itvE ltW ?ltrDl.
-  by rewrite init; move/set_mem: u0K.
-have ca : x @[x --> a^'+] --> a.
-  move=> S [e /= e0 Be].
-  exists e => // x0 bx0 _.
-  exact: Be.
-have pair_cvg : (fun t => (t, f t)) @ a^'+ --> (a, f a).
-  exact: cvg_pair ca cr.
-have hphi : phi t (f t) @[t --> a^'+] --> phi a (f a).
-  apply/cvgrPdist_le => e e0.
-  have /cvgrPdist_le /(_ _ e0) := Hj (a, f a) pa.
-  rewrite near_withinE => /pair_cvg Hcomp.
-  have Hdomain : \forall t \near a^'+,(`[a, a + 1] `*` K) (t, f t).
-    near=> t; split.
-      apply/andP; split.
-        by near: t; exact: nbhs_right_ge.
-      by near: t; apply: nbhs_right_le; rewrite ltrDl.
-    apply: (is_sol_K (a + 2) f) => //; exists t => //.
-    apply/andP; split.
-      by near: t; exact: nbhs_right_ge.
-    by near: t; apply: nbhs_right_lt; rewrite ltrDl.
-  by move: Hcomp Hdomain; apply: filter_app.
-have ? : 0 < eps / 2 by rewrite !divr_gt0.
-move/cvgrPdist_le : hphi.
-have : 0 < eps / 2 / 2 by rewrite !divr_gt0.
-move=> /[swap] /[apply] => /nbhs_right0P hphi.
-have [e e0 he] : exists2 e, 0 < e & forall e', e' < e -> 0 < e' ->
-    `|phi a (f a) - phi (a + e') (f (a + e'))| <= eps / 2 / 2.
-  move : hphi.
-  rewrite nearE => -[e e0 ep].
-  exists e => //= e' e'e e'0.
-  apply ep => //=.
-  by rewrite sub0r normrN gtr0_norm.
-near=> h.
-rewrite -(subrKA (phi (a+h) (f (a+h)))) (le_trans  (ler_normD _ _))//.
-rewrite (splitr eps) lerD//.
-   apply: (le_trans (he _ _ _)) => //.
-   by rewrite ler_piMr ?invf_le1 ?ler1n// divr_ge0// ltW.
-rewrite -(@ler_pM2l _ h)// -{1}(@gtr0_norm _ h)// -normrZ scalerBr scalerA.
-rewrite divff// scale1r distrC.
-rewrite /Num.norm/= !mx_normrE.
-apply/bigmax_leP; split; first by rewrite ltW// mulr_gt0.
-move=> /= [i j] _/=.
-rewrite {i}ord1.
-pose g t := (f t - f a - (t - a) *: phi (a + h) (f (a + h))) 0 j.
-suff : `|g (a + h)| <= h * (eps / 2).
-  by rewrite /g; apply le_trans; rewrite -(addrA a) subrKC.
-have ah: a < a + h by rewrite ltrDl.
-have fa0 : g a = 0 by rewrite /g !subrr scale0r subrr mxE.
-have df x : x \in `]a, a + h[%R ->
-    is_derive x 1 g ((phi x (f x) - phi (a + h) (f (a + h))) 0 j).
-  move => xah.
-  rewrite /g !mxE.
-  under eq_fun do rewrite !mxE.
-  apply: is_deriveB.
-    rewrite -(subr0 (phi _ _)) !mxE.
-    rewrite (_ : (fun x0 => _) = (fun x0 => f x0 0 j) - cst (f a 0 j)).
-      exact/funext.
-    have : is_derive x 1 (cst (f a 0 j)) 0 by exact: is_derive_cst.
-    have : is_derive x 1 (fun x0 => f x0 0 j) (phi x (f x) 0 j).
-      have [| deri1 d1] := sol_is_deriv_f x.
-        by move : xah; rewrite !in_itv/= => /andP[-> _].
-      have /derivable_mxP deri1' := deri1.
-      split => //.
-      have := d1.
-      rewrite derive1E !derive_mx//=.
-      move=> /rowP /(_ j).
-      by rewrite mxE.
-    exact: is_deriveB.
-  under eq_fun do rewrite mulrBl.
-  rewrite -{3}(subr0 (phi (a + h) _)) !mxE.
-  apply: is_deriveB; last exact: is_derive_cst.
-  set c := phi _ _  _ _.
-  have {2}-> : c = x *: 0 + c *: 1 by rewrite scaler0 scaler1 add0r.
-  exact: is_deriveM.
-have [| c cah] := MVT ah df.
-  rewrite /g.
-  suff /within_continuous_coord :
-    {within `[a, a + h], continuous fun t  => (f t - f a - (t - a) *: phi (a + h) (f (a + h)))}.
-    by [].
-  apply: within_continuousB => /=.
-    apply: within_continuousB.
-      apply/continuous_subspaceW/cont.
-      exact: subset_itvl.
-    exact/continuous_subspaceT/cst_continuous.
-  under [X in {within _, continuous X}] eq_fun do rewrite scalerBl.
-  apply: within_continuousB.
-    exact/continuous_subspaceT/scalel_continuous.
-  exact/continuous_subspaceT/cst_continuous.
-rewrite -(addrA a) subrKC fa0 subr0 => ->.
-rewrite mulrC normrM gtr0_norm// ler_pM//.
-suff: `|phi c (f c) - phi (a + h) (f (a + h))| <= eps / 2.
-  apply/le_trans.
-  rewrite {2}/Num.norm/= !mx_normrE.
-  exact: le_bigmax (ord0, _).
-rewrite -(subrKA (phi a (f a))) (le_trans  (ler_normD _ _))//.
-rewrite (splitr (eps / 2)) lerD//.
-  rewrite distrC.
-  have -> : c = a + (c - a) by ring.
-  apply: he => //.
-    apply (@lt_trans _ _ h) => //.
-    by rewrite ltrBlDl (itvP cah).
-  by rewrite subr_gt0 (itvP cah).
-exact: he.
-Unshelve. all: by end_near. Qed.
-
+           
 End max_solution.
 
 Section compact_global_solution.
@@ -929,10 +805,139 @@ Hypothesis solutions_in_K : forall b sol,
   is_sol_cauchy_oo phi a b u0 sol -> sol @` `[a, b[ `<=` K.
 
 (* TODO: rename to compact_is_sol_cauchy_infty? *)
-Theorem compact_global_solution : exists2 sol,
-  is_sol_cauchy phi a +oo%O u0 sol &
-  (h^-1 *: (sol (a + h) - sol a)) @[h --> 0^'+] --> phi a (sol a).
-Proof. exact: (compact_containment_global_is_sol_cauchy (K:=K)). Qed.
+
+Let no_ub : ~ has_ubound (valid_right_endpoints phi a u0). 
+Proof.
+suff : ~ has_sup (valid_right_endpoints phi a u0).
+ by apply contra_not => hub; split=>//; exact: valid_right_endpoints_nonempty.
+exact: (compact_containment_no_sup compactK).
+Qed.
+
+Definition global_sol := sval (cid (no_ub_global_sol phi_continuous phi_locally_lipschitz no_ub)).
+
+Lemma compact_is_sol_cauchy_infty :
+  is_sol_cauchy phi a +oo%O u0 global_sol.
+Proof. exact: svalP. Qed.
+  
+Lemma compact_sol_right_derivable : 
+    (h^-1 *: (global_sol (a + h) - global_sol a)) @[h --> 0^'+] --> phi a (global_sol a).
+Proof.
+have [init [sol_is_deriv_f cont]] := compact_is_sol_cauchy_infty.
+have allsol : forall b, is_sol_cauchy_oo phi a b u0 global_sol.
+   exact/is_sol_cauchy_inftyP.
+apply/cvgrPdist_le => eps eps0.
+move: cont; rewrite closure_neitv_oy => /[dup] cont.
+move/continuous_within_itvcyP => [_ cr].
+have : a < a + 1 by rewrite ltrDl.
+move=> /(phi_cont phi_continuous phi_locally_lipschitz (K := K))/subspace_continuousP Hj.
+have pa : (`[a, a + 1] `*` K) (a, global_sol a).
+  split; first by rewrite /= bound_itvE ltW ?ltrDl.
+  by rewrite init; move/set_mem: u0K.
+have ca : x @[x --> a^'+] --> a.
+  move=> S [e /= e0 Be].
+  exists e => // x0 bx0 _.
+  exact: Be.
+have pair_cvg : (fun t => (t, global_sol t)) @ a^'+ --> (a, global_sol a).
+  exact: cvg_pair ca cr.
+have hphi : phi t (global_sol t) @[t --> a^'+] --> phi a (global_sol a).
+  apply/cvgrPdist_le => e e0.
+  have /cvgrPdist_le /(_ _ e0) := Hj (a, global_sol a) pa.
+  rewrite near_withinE => /pair_cvg Hcomp.
+  have Hdomain : \forall t \near a^'+,(`[a, a + 1] `*` K) (t, global_sol t).
+    near=> t; split.
+      apply/andP; split.
+        by near: t; exact: nbhs_right_ge.
+      by near: t; apply: nbhs_right_le; rewrite ltrDl//.
+    apply: (@solutions_in_K (a + 2) global_sol) => //; exists t => //.
+    apply/andP; split.
+      by near: t; exact: nbhs_right_ge.
+    by near: t; apply: nbhs_right_lt; rewrite ltrDl.
+  by move: Hcomp Hdomain; apply: filter_app.
+have ? : 0 < eps / 2 by rewrite !divr_gt0.
+move/cvgrPdist_le : hphi.
+have : 0 < eps / 2 / 2 by rewrite !divr_gt0.
+move=> /[swap] /[apply] => /nbhs_right0P hphi.
+have [e e0 he] : exists2 e, 0 < e & forall e', e' < e -> 0 < e' ->
+    `|phi a (global_sol a) - phi (a + e') (global_sol (a + e'))| <= eps / 2 / 2.
+  move : hphi.
+  rewrite nearE => -[e e0 ep].
+  exists e => //= e' e'e e'0.
+  apply ep => //=.
+  by rewrite sub0r normrN gtr0_norm.
+near=> h.
+rewrite -(subrKA (phi (a+h) (global_sol (a+h)))) (le_trans  (ler_normD _ _))//.
+rewrite (splitr eps) lerD//.
+   apply: (le_trans (he _ _ _)) => //.
+   by rewrite ler_piMr ?invf_le1 ?ler1n// divr_ge0// ltW.
+rewrite -(@ler_pM2l _ h)// -{1}(@gtr0_norm _ h)// -normrZ scalerBr scalerA.
+rewrite divff// scale1r distrC.
+rewrite /Num.norm/= !mx_normrE.
+apply/bigmax_leP; split; first by rewrite ltW// mulr_gt0.
+move=> /= [i j] _/=.
+rewrite {i}ord1.
+pose g t := (global_sol t - global_sol a - (t - a) *: phi (a + h) (global_sol (a + h))) 0 j.
+suff : `|g (a + h)| <= h * (eps / 2).
+  by rewrite /g; apply le_trans; rewrite -(addrA a) subrKC.
+have ah: a < a + h by rewrite ltrDl.
+have fa0 : g a = 0 by rewrite /g !subrr scale0r subrr mxE.
+have df x : x \in `]a, a + h[%R ->
+    is_derive x 1 g ((phi x (global_sol x) - phi (a + h) (global_sol (a + h))) 0 j).
+  move => xah.
+  rewrite /g !mxE.
+  under eq_fun do rewrite !mxE.
+  apply: is_deriveB.
+    rewrite -(subr0 (phi _ _)) !mxE.
+    rewrite (_ : (fun x0 => _) = (fun x0 => global_sol x0 0 j) - cst (global_sol a 0 j)).
+      exact/funext.
+    have : is_derive x 1 (cst (global_sol a 0 j)) 0 by exact: is_derive_cst.
+    have : is_derive x 1 (fun x0 => global_sol x0 0 j) (phi x (global_sol x) 0 j).
+      have [| deri1 d1] := sol_is_deriv_f x.
+        by move : xah; rewrite !in_itv/= => /andP[-> _].
+      have /derivable_mxP deri1' := deri1.
+      split => //.
+      have := d1.
+      rewrite derive1E !derive_mx//=.
+      move=> /rowP /(_ j).
+      by rewrite mxE.
+    exact: is_deriveB.
+  under eq_fun do rewrite mulrBl.
+  rewrite -{3}(subr0 (phi (a + h) _)) !mxE.
+  apply: is_deriveB; last exact: is_derive_cst.
+  set c := phi _ _  _ _.
+  have {2}-> : c = x *: 0 + c *: 1 by rewrite scaler0 scaler1 add0r.
+  exact: is_deriveM.
+have [| c cah] := MVT ah df.
+  rewrite /g.
+  suff /within_continuous_coord :
+    {within `[a, a + h], continuous fun t  => (global_sol t - global_sol a - (t - a) *: phi (a + h) (global_sol (a + h)))}.
+    by [].
+  apply: within_continuousB => /=.
+    apply: within_continuousB.
+      apply/continuous_subspaceW/cont.
+      exact: subset_itvl.
+    exact/continuous_subspaceT/cst_continuous.
+  under [X in {within _, continuous X}] eq_fun do rewrite scalerBl.
+  apply: within_continuousB.
+    exact/continuous_subspaceT/scalel_continuous.
+  exact/continuous_subspaceT/cst_continuous.
+rewrite -(addrA a) subrKC fa0 subr0 => ->.
+rewrite mulrC normrM gtr0_norm// ler_pM//.
+suff: `|phi c (global_sol c) - phi (a + h) (global_sol (a + h))| <= eps / 2.
+  apply/le_trans.
+  rewrite {2}/Num.norm/= !mx_normrE.
+  exact: le_bigmax (ord0, _).
+rewrite -(subrKA (phi a (global_sol a))) (le_trans  (ler_normD _ _))//.
+rewrite (splitr (eps / 2)) lerD//.
+  rewrite distrC.
+  have -> : c = a + (c - a) by ring.
+  apply: he => //.
+    apply (@lt_trans _ _ h) => //.
+    by rewrite ltrBlDl (itvP cah).
+  by rewrite subr_gt0 (itvP cah).
+exact: he.
+Unshelve. all: by end_near. Qed.
+
+
 
 Lemma global_solution_unique f f' :
   is_sol_cauchy phi a +oo%O u0 f ->
