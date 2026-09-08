@@ -1,7 +1,7 @@
 From HB Require Import structures.
 From mathcomp Require Import boot order algebra ring_tactic.
 From mathcomp Require Import interval_inference.
-From mathcomp Require Import boolp classical_sets functions reals.
+From mathcomp Require Import unstable boolp classical_sets functions reals.
 From mathcomp Require Import topology normedtype derive realfun.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix tilt_analysis.
 
@@ -281,6 +281,7 @@ apply: bounded_closed_compact.
   rewrite (@le_lt_trans _ _ r)//.
     rewrite -vr [leRHS]/normr/= mx_normE.
     under eq_bigr do rewrite ord1.
+Import MaxNngComLaw.
     rewrite -(pair_big xpredT xpredT (fun _ j => `|v ord0 j|%:nng))//=.
     rewrite big_ord_recr/= big_ord0.
     rewrite max_r; first exact/bigmax_ge_id.

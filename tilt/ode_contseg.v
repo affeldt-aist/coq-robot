@@ -1,10 +1,10 @@
 From HB Require Import structures.
 From mathcomp Require Import boot order ssralg ssrnum matrix interval.
 From mathcomp Require Import poly generic_quotient ring_quotient.
-From mathcomp Require Import mathcomp_extra unstable boolp classical_sets.
+From mathcomp Require Import unstable boolp classical_sets.
 From mathcomp Require Import constructive_ereal.
 From mathcomp Require Import functions reals interval_inference topology.
-From mathcomp Require Import prodnormedzmodule tvs normedtype landau.
+From mathcomp Require Import tvs normedtype landau.
 From mathcomp Require Import ereal sequences derive numfun measure realfun.
 From mathcomp Require Import lebesgue_measure lebesgue_integral ftc.
 Require Import ode_common.

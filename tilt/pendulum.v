@@ -6,8 +6,8 @@ From HB Require Import structures.
 From mathcomp Require Import boot order ssrfun ssrbool ssrnat eqtype choice seq
   interval_inference fintype bigop ssralg ssrnum finmap interval ssrint
   matrix zmodp ring_tactic field_tactic.
-From mathcomp Require Import mathcomp_extra boolp reals classical_sets
-  functions topology normedtype prodnormedzmodule landau derive.
+From mathcomp Require Import boolp reals classical_sets
+  functions topology normedtype landau derive.
 Require Import lasalle.
 
 Set Implicit Arguments.

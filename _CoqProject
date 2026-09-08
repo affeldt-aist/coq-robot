@@ -18,9 +18,9 @@ scara.v
 derive_matrix.v
 differential_kinematics.v
 extra_trigo.v
-lasalle.v
-pendulum.v
 
+tilt/lasalle.v
+tilt/pendulum.v
 tilt/ode_common.v
 tilt/ode_contseg.v
 tilt/picard_contraction.v

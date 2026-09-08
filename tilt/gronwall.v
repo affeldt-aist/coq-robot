@@ -2,8 +2,8 @@ From HB Require Import structures.
 From mathcomp Require Import boot order ssralg ssrnum matrix interval
   poly archimedean generic_quotient ring_quotient interval_inference
   ring_tactic field_tactic.
-From mathcomp Require Import mathcomp_extra unstable boolp classical_sets
-  contra functions reals topology prodnormedzmodule tvs normedtype landau
+From mathcomp Require Import unstable boolp classical_sets
+  contra functions reals topology tvs normedtype landau
   ereal sequences exp derive numfun measure realfun measurable_realfun
   lebesgue_measure lebesgue_integral ftc.
 Require Import tilt_analysis.
@@ -71,7 +71,7 @@ have derivable_int_mu u : u \in `]a, b[%R ->
   - by move: uab; rewrite inE => /itvP ->.
   - by apply: continuous_compact_integrable mu_cont; exact: segment_compact.
   - by rewrite lte_fin; move: uab; rewrite inE => /itvP ->.
-  - by move: uab; rewrite inE; exact: within_continuous_continuous.
+  - by move: uab => /within_continuous_continuous; apply => //; exact: ltW.
 have derivablephiV u : u \in `]a, b[%R -> derivable (fun x => (phi x a)^-1) u 1.
   move=> uab.
   apply: derivableV => //; first by rewrite expR_eq0.
@@ -100,7 +100,7 @@ have H u : u \in `]a, b[%R ->
   - by move: uab; rewrite inE => /itvP ->.
   - by apply: continuous_compact_integrable mu_cont; exact: segment_compact.
   - by rewrite lte_fin; move: uab; rewrite inE => /itvP ->.
-  - by move: uab; rewrite inE; exact: within_continuous_continuous.
+  - by move: uab => /within_continuous_continuous; apply => //; exact: ltW.
   rewrite -mulNr [in RHS]mulrC; congr (_ * _).
   by rewrite -expRN -[in LHS]derive_expR.
 have {}eqn u : u \in `]a, b[%R ->
@@ -294,7 +294,7 @@ have FTC1z : forall x, x \in `]a, b[%R ->
   exact: segment_compact.
   exact: within_continuousM.
   by move: xab; rewrite inE => /itvP ->.
-  by apply: continuousM; exact: (@within_continuous_continuous _ _ _ a b).
+  by apply: continuousM; exact: (within_continuous_continuous (ltW ab)).
 have derivez : forall x, x \in `]a, b[%R ->
     derive z x 1 = mu x * z x + mu x * lambda x - mu x * v x.
   move=> x xab.

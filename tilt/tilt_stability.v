@@ -2,7 +2,7 @@ From HB Require Import structures.
 From mathcomp Require Import boot order algebra ring_tactic.
 From mathcomp Require Import interval_inference.
 From mathcomp Require Import boolp classical_sets functions filter reals.
-From mathcomp Require Import topology prodnormedzmodule normedtype landau.
+From mathcomp Require Import topology normedtype landau.
 From mathcomp Require Import sequences derive realfun.
 Require Import ssr_ext euclidean rigid frame skew derive_matrix.
 Require Import tilt_mathcomp tilt_analysis tilt_robot ode_local.

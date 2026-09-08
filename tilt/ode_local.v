@@ -3,7 +3,7 @@ From mathcomp Require Import boot order ssralg ssrnum matrix interval
   interval_inference poly archimedean generic_quotient ring_quotient.
 From mathcomp Require Import unstable.
 From mathcomp Require Import boolp classical_sets contra functions reals.
-From mathcomp Require Import topology prodnormedzmodule tvs normedtype.
+From mathcomp Require Import topology tvs normedtype.
 From mathcomp Require Import landau ereal sequences derive numfun measure.
 From mathcomp Require Import realfun measurable_realfun lebesgue_measure.
 From mathcomp Require Import lebesgue_integral ftc.

@@ -2,8 +2,8 @@ From HB Require Import structures.
 From mathcomp Require Import boot order ssralg ssrnum matrix interval
   poly archimedean generic_quotient ring_quotient interval_inference
   ring_tactic field_tactic.
-From mathcomp Require Import mathcomp_extra unstable boolp classical_sets
-  contra functions constructive_ereal reals topology prodnormedzmodule
+From mathcomp Require Import unstable boolp classical_sets
+  contra functions constructive_ereal reals topology
   tvs normedtype landau ereal sequences exp derive numfun measure
   realfun measurable_realfun lebesgue_measure lebesgue_integral ftc.
 Require Import tilt_mathcomp tilt_analysis.

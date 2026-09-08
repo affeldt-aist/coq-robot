@@ -1,8 +1,8 @@
 From HB Require Import structures.
 From mathcomp Require Import boot order algebra ring_tactic
   interval_inference finmap.
-From mathcomp Require Import boolp classical_sets functions filter reals
-  topology ereal prodnormedzmodule normedtype sequences derive realfun
+From mathcomp Require Import unstable boolp classical_sets functions filter
+  reals topology ereal normedtype sequences derive realfun
   landau measure lebesgue_integral lebesgue_measure
   lebesgue_stieltjes_measure measurable_realfun ftc.
 Require Import ssr_ext derive_matrix.
