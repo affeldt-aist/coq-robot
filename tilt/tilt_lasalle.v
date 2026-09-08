@@ -174,7 +174,7 @@ Qed.
 
 (* NB: this is the first part of the hypotheses to apply LaSalle's invariance principle *)
 Lemma tilt_solP : exists2 sol, (forall p, sol p 0 = p) &
-  lasalle_solP phi Tilt.Upsilon1 sol.
+  LaSalle.solP phi Tilt.Upsilon1 sol.
 Proof.
 have /choice [sol0 sol0P] : forall y0, exists sol, sol 0 = y0 /\
     (y0 \in Tilt.Upsilon1 -> is_sol_cauchy (fun => phi) 0 +oo%O y0 sol /\
@@ -299,7 +299,7 @@ Proof. by apply tilt_sol_spec. Qed.
 Let isSol p : p \in Tilt.Upsilon1 -> sol_is_deriv_c0y (fun=> phi) (tilt_sol p).
 Proof.
 move=> Kp t; rewrite in_itv/= andbT => t0.
-have [/= _ H] : lasalle_is_sol phi (tilt_sol p).
+have [/= _ H] : LaSalle.is_sol phi (tilt_sol p).
   by apply tilt_sol_spec; rewrite ?tilt_sol0//; exact/set_mem.
 split.
   by apply (H _ t0).
@@ -408,7 +408,7 @@ suff : forall t, 0 < t -> {in sublevelV1Upsilon1 p,
   have heq : {in sublevelV1Upsilon1 p,
       (fun p => 2 *: tilt_sol p 0 - tilt_sol p (- t)) =1 (tilt_sol^~ t)}.
     move => p' p's.
-    have [/= h _] : lasalle_is_sol phi (tilt_sol p').
+    have [/= h _] : LaSalle.is_sol phi (tilt_sol p').
       apply tilt_sol_spec; rewrite tilt_sol0//.
       by move: p's; rewrite inE => -[].
     by rewrite -h// lt_neqAle Ht.
@@ -523,6 +523,16 @@ have: ball u (e /  expR (k'%:num * t)) v.
 by rewrite -ball_normE/= => /ltW.
 Unshelve. all: by end_near. Qed.
 
+Let tilt_sol_spec' p : LaSalle.solP phi (sublevelV1Upsilon1 p) tilt_sol.
+Proof.
+move=> s [_ s0].
+have := tilt_sol_spec.2.
+by apply.
+Qed.
+
+Let hypos p := @LaSalle.mk _ _ phi _ (@compact_sublevelV1Upsilon1 p)
+  tilt_sol tilt_sol0 (@tilt_sol_spec' p) (@tilt_sol_cont p).
+
 Local Lemma sol_sublevelV1Upsilon1 p u :
   u \in sublevelV1Upsilon1 p -> sol_is_deriv_c0y (fun=> phi) (tilt_sol u).
 Proof.
@@ -557,11 +567,10 @@ Qed.
 Local Lemma tilt_sol_continuous p : p \in Tilt.Upsilon1 -> continuous (tilt_sol p).
 Proof.
 move => sp t.
-have [issol0 issol1]: lasalle_is_sol phi (tilt_sol p).
-  apply: (@lasalle.sol_is_sol _ _ _ Tilt.Upsilon1 tilt_sol) => /=.
-  - exact: tilt_sol0.
-  - by move => y Ky; apply tilt_sol_spec.
-  - exact/set_mem.
+have [issol0 issol1] : LaSalle.is_sol phi (tilt_sol p).
+  apply: (@LaSalle.sol_is_sol _ _ _ (@hypos p)) => //.
+  rewrite /hypos/=.
+  exact/set_mem/mem_sublevelV1Upsilon1/set_mem.
 apply/differentiable_continuous/derivable1_diffP.
 have [ht | ht] := ltP t 0; last first.
   apply: ex_derive.
@@ -585,7 +594,7 @@ Local Lemma tilt_limS_subset_V1dot0 p :
   [set x : 'rV[K]_6 | V1dot x = 0] `&` Tilt.Upsilon1.
 Proof.
 move => ps.
-have lasalle_sol : lasalle_solP phi (sublevelV1Upsilon1 p) tilt_sol.
+have lasalle_sol : LaSalle.solP phi (sublevelV1Upsilon1 p) tilt_sol.
   move=> y Ky.
   apply tilt_sol_spec.
   by apply Ky.
@@ -593,11 +602,8 @@ have H : lasalle.limS tilt_sol (sublevelV1Upsilon1 p) `<=`
          [set x | (Tilt.V1 alpha1 gamma \o tilt_sol x)^`()%classic 0 = 0] `&`
          Tilt.Upsilon1.
   rewrite subsetI; split.
-  - apply: (@lasalle.stable_limS _ _ _ _ (@compact_sublevelV1Upsilon1 p) _ _
-        lasalle_sol _ (@invariant_sublevelUpsilon1 p)
+  - apply: (@lasalle.stable_limS _ _ _ (@hypos p) (@invariant_sublevelUpsilon1 p)
         (Tilt.V1 alpha1 gamma)) => //=.
-    + exact: tilt_sol0.
-    + exact: tilt_sol_cont.
     + apply/continuous_subspaceT => x xK.
       apply: differentiable_continuous.
       exact: V1_diff.
@@ -694,7 +700,7 @@ have p0K : forall p0 : 'rV_6, p0 \in sublevelV1Upsilon1 p -> tilt_sol p0 0 = p0.
   exact: tilt_sol0.
 apply: (cvg_trans (lasalle.cvg_to_limS (@compact_sublevelV1Upsilon1 p)
                     (@invariant_sublevelUpsilon1 p) _)).
-  by apply/set_mem/mem_sublevelV1Upsilon1.
+  exact/set_mem/mem_sublevelV1Upsilon1.
 move => /= S [eps eps0 Be].
 exists eps => //.
 apply bigcup_sub => /= x H.

@@ -198,63 +198,108 @@ Proof.
 by rewrite propeqE; split; rewrite -nearN oppr0.
 Qed.
 
-Section definitions_to_apply_LaSalle.
+Definition limS {R : realType} {U : normedModType R} (sol : U -> R -> U)
+    (A : set U) :=
+  \bigcup_(q in A) cluster (sol q @ +oo%R).
+
+Definition is_invariant {R : realType} {U : normedModType R} (f : U -> R -> U)
+    (A : set U) :=
+  forall p, A p -> forall t, (0 <= t)%R -> A (f p t).
+
+Lemma cvg_to_limS {R : realType} {U : normedModType R} (sol : U -> R -> U)
+    (A : set U) : compact A -> is_invariant sol A ->
+  forall p, A p -> sol p @ +oo%R --> (limS sol A : set U).
+Proof.
+move=> Aco Ainvar p Ap B [_/posnumP[e] limSeB].
+apply: (cvg_to_plim _ Aco).
+  exists 0%R; split => //.
+  by move=> _/posnumP[?]; exact: Ainvar.
+exists e%:num%R=> //= q [r plimr re_q].
+by apply: limSeB; exists r => //; exists p.
+Qed.
+
+(* TODO: mv *)
+Lemma nincr_lb_cvg {R : realType} (f : R -> R) :
+  (forall x y, 0 <= x <= y -> f y <= f x)%R ->
+  (exists M, f @` (>= 0)%R `<=` (> M)%R) -> cvg (f @ +oo%R).
+Proof.
+move=> fnincr [M ltMf].
+apply/cvg_ex; exists (inf (fun x => x \in f @` (>= 0)%R)).
+move=> A /nbhs_ballP [_ /posnumP[e] infe_A].
+have imf_inf : has_inf (fun x => x \in f @` (>= 0)%R).
+  split; first by exists (f 0%R); rewrite in_setE; apply: imageP.
+  by exists M; apply/lbP => ?; rewrite in_setE => /ltMf /ltW.
+have := imf_inf => /inf_adherent => /(_ e%:num)%R.
+move=> /(_ (gt0 e)) [x].
+rewrite in_setE => -[t tge0 <-] ltftinfe.
+exists t; rewrite num_real; split => // s ltts; apply: infe_A.
+rewrite /ball/=.
+rewrite distrC ger0_norm; last first.
+  rewrite ltrBlDl.
+  by apply: le_lt_trans ltftinfe; apply: fnincr; rewrite tge0 (ltW ltts).
+rewrite subr_ge0.
+apply: ge_inf.
+  by case: imf_inf.
+rewrite in_setE; apply: imageP.
+by apply: ltW; exact: le_lt_trans ltts.
+Qed.
+
+Module LaSalle.
+Section lasalle.
 Context {R : realType} {U : normedModType R}
   (phi : U -> U) (* function defining the differential system *).
 
 Local Open Scope ring_scope.
 
-Definition lasalle_is_sol (y : R -> U) :=
+Section definitions_to_apply_LaSalle.
+
+Definition is_sol (y : R -> U) :=
   (forall t, t < 0 -> y t = 2 *: (y 0) - (y (- t))) /\
   forall t, 0 <= t -> is_derive (t : R^o) 1 y (phi (y t)).
 
 (* K: compact set used in LaSalle's invariance principle *)
 (* sol: solution function *)
-Definition lasalle_solP (K : set U) (sol : U -> R -> U) :=
-  forall y : R -> U, K (y 0) -> lasalle_is_sol y <-> y = sol (y 0).
+Definition solP (K : set U) (sol : U -> R -> U) :=
+  forall y : R -> U, K (y 0) -> is_sol y <-> y = sol (y 0).
 
 End definitions_to_apply_LaSalle.
 
-Section DifferentialSystem.
-Context {R : realType} {U : normedModType R}
-  (hU : hausdorff_space U := @norm_hausdorff _ U)
-  (phi : U -> U).
+Record hypos := mk {
+  K : set U ;
+  K_compact : compact K ;
+  sol : U -> R -> U ;
+  sol0 : forall p, sol p 0 = p ;
+  solP_sol : solP K sol ;
+  sol_cont : forall t, {within K, continuous (sol^~ t)}
+}.
 
-Variable K : set U.
-Hypothesis Kco : compact K.
+Section theory_of_hypos.
 
-Variable sol : U -> R -> U.
-Hypothesis sol0 : forall p, sol p 0 = p.
-Hypothesis solP : lasalle_solP phi K sol.
-Hypothesis sol_cont : forall t, {within K, continuous (sol^~ t)}.
+Lemma sol_is_sol (H : hypos) (p : U) : K H p -> is_sol (sol H p).
+Proof. by move=> Kp; apply/(@solP_sol H); rewrite sol0. Qed.
 
-Lemma sol_is_sol p : K p -> lasalle_is_sol phi (sol p).
-Proof. by move=> Kp; apply/solP; rewrite sol0. Qed.
-Hint Resolve sol_is_sol : core.
+(* NB: not used *)
+Lemma uniq_sol (H : hypos) (x y : R -> U) : K H (x 0) -> K H (y 0) ->
+  is_sol x -> is_sol y -> x 0 = y 0 -> x = y.
+Proof.
+by move=> Kx0 Ky0 /(solP_sol Kx0)-> /(solP_sol Ky0)->; rewrite !sol0 => ->.
+Qed.
 
-Lemma uniq_sol (x y : R -> U) : K (x 0%R) -> K (y 0%R) ->
-  lasalle_is_sol phi x -> lasalle_is_sol phi y -> x 0%R = y 0%R -> x = y.
-Proof. by move=> Kx0 Ky0 /(solP Kx0)-> /(solP Ky0)->; rewrite !sol0 => ->. Qed.
-
-Definition is_invariant A := forall p, A p -> forall t, (0 <= t)%R -> A (sol p t).
-
-Hypothesis Kinvar : is_invariant K.
-
-Definition shift_sol p t0 t :=
+Definition shift_sol (sol : U -> R -> U) p t0 t :=
   (if t >= 0 then sol p (t + t0) else 2 *: (sol p t0) - (sol p (- t + t0)))%R.
 
-Lemma sol_shift p (t0 : R^o) : K p -> (0 <= t0)%R ->
-  lasalle_is_sol phi (shift_sol p t0).
+Lemma sol_shift (H : hypos) (sol := sol H) p (t0 : R^o) : K H p -> (0 <= t0)%R ->
+  is_sol (shift_sol sol p t0).
 Proof.
 move=> Kp t0ge0; split=> [t tlt0|t tge0].
   rewrite /shift_sol leNgt tlt0/= lexx/=.
   rewrite ltW ?oppr_gt0//.
   rewrite [X in _ = (2 *: sol p X - _)%R](_ : _ = t0)//.
   by rewrite add0r.
-suff dshift : (shift_sol p t0) \o shift t = (cst (shift_sol p t0 t) +
-  (fun h : R^o => h *: phi (shift_sol p t0 t)))%R +o_ (0%R : R^o) (id : R^o -> R^o).
+suff dshift : (shift_sol sol p t0) \o shift t = (cst (shift_sol sol p t0 t) +
+  (fun h : R^o => h *: phi (shift_sol sol p t0 t)))%R +o_ (0%R : R^o) (id : R^o -> R^o).
   move=> [:dshiftE].
-  have diff_shift : differentiable (shift_sol p t0 : R^o -> _) t.
+  have diff_shift : differentiable (shift_sol sol p t0 : R^o -> _) t.
     apply/diff_locallyP; split; last first.
       apply/eqaddoE; rewrite dshift.
       congr +%R.
@@ -263,11 +308,11 @@ suff dshift : (shift_sol p t0) \o shift t = (cst (shift_sol p t0 t) +
   (cst (shift_sol p t0 t) + 'd (shift_sol p t0) t)%R *)
       congr +%R.
       abstract: dshiftE.
-      have lin_scal : linear (fun h : R^o => h *: phi (shift_sol p t0 t))%R.
+      have lin_scal : linear (fun h : R^o => h *: phi (shift_sol sol p t0 t))%R.
         by move=> ???; rewrite scalerDl scalerA.
       pose glM := GRing.isLinear.Build _ _ _ _ _ lin_scal.
-      pose gL : {linear R^o -> U} := HB.pack ( *:%R^~ (phi (shift_sol p t0 t))) glM.
-      have -> : (fun h : R^o => h *: phi (shift_sol p t0 t))%R = gL by [].
+      pose gL : {linear R^o -> U} := HB.pack ( *:%R^~ (phi (shift_sol sol p t0 t))) glM.
+      have -> : (fun h : R^o => h *: phi (shift_sol sol p t0 t))%R = gL by [].
       apply/esym.
       apply: diff_unique; first exact: scalel_continuous.
       apply/eqaddoE; rewrite dshift.
@@ -331,17 +376,41 @@ near: x.
 exact: (@eqoP _ _ _ _ (nbhs_filter_on (0%R : R^o)) id u).1.
 Unshelve. all: by end_near. Qed.
 
+End theory_of_hypos.
+
+End lasalle.
+
+End LaSalle.
+Hint Resolve LaSalle.sol_is_sol : core.
+
+Section DifferentialSystem.
+Context {R : realType} {U : normedModType R}
+  (hU : hausdorff_space U := @norm_hausdorff _ U)
+  (phi : U -> U).
+
+Variable hypos : LaSalle.hypos phi.
+
+Let K : set U := LaSalle.K hypos.
+Let Kco : compact K := @LaSalle.K_compact _ _ _ hypos.
+Let sol : U -> R -> U := @LaSalle.sol _ _ _ hypos.
+Let sol0 : forall p, sol p 0 = p := @LaSalle.sol0 _ _ _ hypos.
+Let solP : LaSalle.solP phi K sol := @LaSalle.solP_sol _ _ _ hypos.
+Let sol_cont : forall t, {within K, continuous (sol^~ t)} :=
+  @LaSalle.sol_cont _ _ _ hypos.
+
+Hypothesis Kinvar : is_invariant sol K.
+
 Lemma solD p t0 t :
   K p -> (0 <= t0)%R -> (0 <= t)%R -> sol p (t + t0) = sol (sol p t0) t.
 Proof.
-move=> Kp t0ge0 tge0; have /sol_shift /(_ t0ge0) /solP := Kp.
-rewrite [shift_sol _ _ _]/shift_sol lexx.
+move=> Kp t0ge0 tge0; have /LaSalle.sol_shift /(_ t0ge0) /solP := Kp.
+rewrite [LaSalle.shift_sol _ _ _]/LaSalle.shift_sol lexx.
 rewrite add0r.
 move=> <-; first exact: Kinvar.
-by rewrite /shift_sol tge0.
+by rewrite /LaSalle.shift_sol tge0.
 Qed.
 
-Lemma invariant_plim p : K p -> is_invariant (cluster (sol p @ +oo%R)).
+Lemma invariant_plim p : K p -> is_invariant sol (cluster (sol p @ +oo%R)).
 Proof.
 move=> Kp q plim_q t0 t0_ge0 A B [M].
 wlog Mge0 : M / (0 <= M)%R => [sufMge0|] [Mreal solpMinfty_A].
@@ -366,45 +435,18 @@ move=> /(_ Ksolpt) /=; rewrite -solD // => Bsolpt0t; exists (sol p (t0 + t)).
 by split=> //; exact/solpMinfty_A/ltr_wpDl.
 Qed.
 
-Definition limS (A : set U) := \bigcup_(q in A) cluster (sol q @ +oo%R).
-
-Lemma invariant_limS A : A `<=` K -> is_invariant (limS A).
+Lemma invariant_limS A : A `<=` K -> is_invariant sol (limS sol A).
 Proof.
 move=> sAK p [q Aq plimp] t tge0.
 by exists q => //; apply: invariant_plim => //; apply: sAK.
 Qed.
 
-Lemma nincr_lb_cvg (f : R -> R) :
-  (forall x y, 0 <= x <= y -> f y <= f x)%R ->
-  (exists M, f @` (>= 0)%R `<=` (> M)%R) -> cvg (f @ +oo%R).
-Proof.
-move=> fnincr [M ltMf].
-apply/cvg_ex; exists (inf (fun x => x \in f @` (>= 0)%R)).
-move=> A /nbhs_ballP [_ /posnumP[e] infe_A].
-have imf_inf : has_inf (fun x => x \in f @` (>= 0)%R).
-  split; first by exists (f 0%R); rewrite in_setE; apply: imageP.
-  by exists M; apply/lbP => ?; rewrite in_setE => /ltMf /ltW.
-have := imf_inf => /inf_adherent => /(_ e%:num)%R.
-move=> /(_ (gt0 e)) [x].
-rewrite in_setE => -[t tge0 <-] ltftinfe.
-exists t; rewrite num_real; split => // s ltts; apply: infe_A.
-rewrite /ball/=.
-rewrite distrC ger0_norm; last first.
-  rewrite ltrBlDl.
-  by apply: le_lt_trans ltftinfe; apply: fnincr; rewrite tge0 (ltW ltts).
-rewrite subr_ge0.
-apply: ge_inf.
-  by case: imf_inf.
-rewrite in_setE; apply: imageP.
-by apply: ltW; exact: le_lt_trans ltts.
-Qed.
-
-(* todo: use directional derivative *)
+(* NB: use directional derivative? *)
 Lemma stable_limS (V : U -> R^o) :
   {within K, continuous V} ->
   (forall p t, K p -> (0 <= t)%R -> derivable (V \o sol p : R^o -> R^o) t 1) ->
   (forall (p : U), K p -> (V \o sol p)^`() 0 <= 0)%R ->
-  limS K `<=` [set p | (V \o sol p)^`() 0 = 0]%R.
+  limS sol K `<=` [set p | (V \o sol p)^`() 0 = 0]%R.
 Proof.
 move=> Vcont Vsol_drvbl Vsol'le0 p [q Kq plimp].
 have ssqRpK : sol q @` (>= 0)%R `<=` K by move=> _ [t tge0 <-]; apply: Kinvar.
@@ -460,16 +502,5 @@ move=> [_/posnumP[e] Ae]; exists e%:num%R => //= x xe xgt0.
 have /Ae - /(_ xe) := xgt0.
 by rewrite sol0/= addr0 -solD// scaler1 ltW.
 Unshelve. all: by end_near. Qed.
-
-Lemma cvg_to_limS (A : set U) : compact A -> is_invariant A ->
-  forall p, A p -> sol p @ +oo%R --> (limS A : set U).
-Proof.
-move=> Aco Ainvar p Ap B [_/posnumP[e] limSeB].
-apply: (cvg_to_plim _ Aco).
-  exists 0%R; split => //.
-  by move=> _/posnumP[?]; exact: Ainvar.
-exists e%:num%R=> //= q [r plimr re_q].
-by apply: limSeB; exists r => //; exists p.
-Qed.
 
 End DifferentialSystem.

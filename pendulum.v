@@ -397,9 +397,11 @@ Qed.
 (* TODO: show that Fpendulum is smooth in K and remove these hypotheses using
   Cauchy-Lipschitz *)
 Variable sol : U -> R -> U.
-Hypothesis (sol0 : forall p, sol p 0 = p).
-Hypothesis solP : lasalle_solP Fpendulum K sol.
+Hypothesis sol0 : forall p, sol p 0 = p.
+Hypothesis solP : LaSalle.solP Fpendulum K sol.
 Hypothesis sol_cont : forall t, {within K, continuous (sol^~ t)}.
+
+Let hypos : LaSalle.hypos Fpendulum := LaSalle.mk K_compact sol0 solP sol_cont.
 
 Lemma circ_invar p :
   K p -> forall t, 0 <= t -> (sol p t)..[2] ^+ 2 + (sol p t)..[3] ^+ 2 = 1.
@@ -410,7 +412,7 @@ pose f s := (sol p s)..[2] ^+ 2 + (sol p s)..[3] ^+ 2; rewrite -!/(f _).
 apply (@eq0_derive1_cst R (f : R^o -> R^o) 0 t); last first.
   by rewrite in_itv/= lexx tge0.
 move=> s s0t; have sge0 : s >= 0 by rewrite (itvP s0t).
-have [_ /(_ _ sge0) dsol] := sol_is_sol sol0 solP Kp.
+have [_ /(_ _ sge0) dsol] := LaSalle.sol_is_sol (H := hypos) Kp.
 apply: is_derive_eq.
 rewrite 2!mxE/=.
 rewrite /GRing.scale/=.
@@ -422,7 +424,7 @@ Lemma is_derive_Esol p t :
   K p -> 0 <= t -> is_derive (t : R^o) 1 (E \o (sol p) : _ -> R^o)
   ((sol p t)..[1] * fctrl (sol p t)).
 Proof.
-move=> Kp tge0; have [_ /(_ _ tge0) sol_att] := sol_is_sol sol0 solP Kp.
+move=> Kp tge0; have [_ /(_ _ tge0) sol_att] := LaSalle.sol_is_sol (H := hypos) Kp.
 apply: is_derive_eq.
 have /eqP : (sol p t)..[2] ^+ 2 + (sol p t)..[3] ^+ 2 = 1 by apply: circ_invar.
 rewrite eq_sym addrC -subr_eq => /eqP circp.
@@ -468,7 +470,7 @@ Lemma is_deriv_Vsol p t :
     (- kd%:num * ((sol p t)..[1] ^+ 2)).
 Proof.
 move=> Kp tge0 Vsolpt_s.
-have [_ /(_ _ tge0) sol_att] := sol_is_sol sol0 solP Kp.
+have [_ /(_ _ tge0) sol_att] := LaSalle.sol_is_sol (H := hypos) Kp.
 have Esol' := is_derive_Esol Kp tge0; apply: is_derive_eq.
 rewrite [in X in _ + X]mxE /= -!mul2r -![_ *: _]/(_ * _).
 do 3 rewrite [_ / _]mulrC [_^-1 * _ * _]mulrCA -[_ ^-1 * _ * _]mulrA mulVKf //.
@@ -500,7 +502,7 @@ have infA : has_inf A.
 exfalso=> {t tge0}; have infge0 : 0 <= inf A.
   by apply: lb_le_inf => //; apply/lbP => ? /andP [].
 have Vsolp_drvbl t : 0 <= t -> derivable (V \o (sol p) : R^o -> R^o) t 1.
-  by move=> tge0; have [_ /(_ _ tge0) sol_att] := sol_is_sol sol0 solP Kp.
+  by move=> tge0; have [_ /(_ _ tge0) sol_att] := LaSalle.sol_is_sol (H := hypos) Kp.
 have Vsolpinf_geB : B <= V (sol p (inf A)).
   case: (lerP B (V (sol p (inf A)))) => // Vsolpinf_ltB; rewrite falseE.
   have Vsolp_cont : {for inf A, continuous (V \o (sol p))}.
@@ -606,7 +608,7 @@ Qed.
 Lemma limSKinvar : is_invariant sol (limS sol K).
 Proof.
 move=> p limSKp t tge0.
-exact: (@invariant_limS _ _ _ _ K_compact _ sol0 solP sol_cont Kinvar).
+exact: (invariant_limS (hypos := hypos) Kinvar).
 Qed.
 
 Lemma subset_limSK_K : limS sol K `<=` K.
@@ -630,9 +632,9 @@ have -> : derive1 (V \o sol p : _ -> R^o) t =
   have dVsolt := is_derive_Vsol Kp tge0; rewrite derive1E derive_val.
   have Ksolpt : K (sol p t) by apply: subset_limSK_K.
   have dVsolt' := is_derive_Vsol Ksolpt (lexx _); rewrite derive1E derive_val.
-  rewrite -(solD sol0 solP Kinvar) //.
+  have /= <-// := @solD _ _ _ hypos Kinvar p t 0.
   by rewrite add0r.
-apply: (stable_limS K_compact sol0 solP sol_cont Kinvar (V:=V)) limSKsolp.
+apply: (stable_limS (hypos := hypos) Kinvar (V := V)) limSKsolp.
 - apply/subspace_continuousP => q Kq; have /(_ q) := V_continuous; apply: cvg_trans.
   exact: cvg_app (@cvg_within _ _ _ _).
 - by move=> q s Kq sge0; have := is_derive_Vsol Kq sge0.
@@ -652,7 +654,7 @@ Lemma sol1'_eq0 p t : limS sol K p -> 0 <= t -> (Fpendulum (sol p t))..[1] = 0.
 Proof.
 move=> limSKp tge0; have := is_derive_cst (0 : R^o) (t : R^o) 1.
 have /subset_limSK_K Kp := limSKp.
-have [_ /(_ _ tge0) /(is_derive_component 1)] := sol_is_sol sol0 solP Kp.
+have [_ /(_ _ tge0) /(is_derive_component 1)] := LaSalle.sol_is_sol (H := hypos) Kp.
 by apply: is_derive_nneg_eq => // s sge0; rewrite sol1_eq0.
 Qed.
 
@@ -662,7 +664,7 @@ move=> limSKp tge0; rewrite -[p in RHS]sol0.
 apply (@eq0_derive1_cst R (fun s => (sol p s)..[0]) 0 t); last first.
   by rewrite in_itv/= lexx tge0.
 move=> s /andP [sge0 _]; have /subset_limSK_K Kp := limSKp.
-have [_ /(_ _ sge0) /(is_derive_component 0) dsol0] := sol_is_sol sol0 solP Kp.
+have [_ /(_ _ sge0) /(is_derive_component 0) dsol0] := LaSalle.sol_is_sol (H := hypos) Kp.
 by apply: DeriveDef => //; rewrite derive_val mxE /= sol1_eq0.
 Qed.
 
@@ -845,7 +847,7 @@ have sol423_val s : 0 <= s ->
   (sol p s)..[3] ^+ 2) + C1 * (sol p s)..[2]) = 0.
   move=> sge0; apply (is_derive_nneg_eq sol32_val sge0); last first.
     exact: is_derive_cst.
-  have [_ /(_ _ sge0) sol_ats] := sol_is_sol sol0 solP Kp; apply: is_derive_eq.
+  have [_ /(_ _ sge0) sol_ats] := LaSalle.sol_is_sol (H := hypos) Kp; apply: is_derive_eq.
   rewrite !mxE /=.
   rewrite /GRing.scale/=.
   ring.
@@ -855,7 +857,7 @@ have sol432_val' s : 0 <= s ->
     (sol p s)..[4] ^+ 2 * (12%:R * g%:num * (sol p s)..[2] + C1)) = 0.
   move=> sge0; apply (is_derive_nneg_eq sol423_val sge0); last first.
     exact: is_derive_cst.
-  have [_ /(_ _ sge0) sol_ats] := sol_is_sol sol0 solP Kp; apply: is_derive_eq.
+  have [_ /(_ _ sge0) sol_ats] := LaSalle.sol_is_sol (H := hypos) Kp; apply: is_derive_eq.
   rewrite Fpendulum4E // !mxE /=.
   set x2 := _ ..[ 2]; set x3 := _ ..[ 3]; set x4 := _ ..[ 4].
   by rewrite -![_ *: _]/(_ * _) [in LHS]addrC [in RHS]mulrBr; congr +%R; ring.
@@ -869,7 +871,7 @@ set f := fun i : 'I_4 => if i == 0 then - 1 else
 rewrite -[p in RHS]sol0.
 apply: (@continuous_finimage_cst (fun s => (sol p s)..[2]) _ f) tge0.
   move=> s sge0; apply: (@differentiable_continuous _ R^o R^o).
-  have [_ /(_ _ sge0) sol_ats]:= sol_is_sol sol0 solP Kp.
+  have [_ /(_ _ sge0) sol_ats] := LaSalle.sol_is_sol (H := hypos) Kp.
   exact/derivable1_diffP.
 move=> s sge0.
 have circsol : (sol p s)..[2] ^+ 2 + (sol p s)..[3] ^+ 2 = 1.
@@ -916,7 +918,7 @@ rewrite -[p in RHS]sol0.
 apply: (@continuous_finimage_cst (fun t => (sol p t)..[3]) _ h) tge0.
   move=> s sge0; apply: (@differentiable_continuous _ R^o R^o).
   have Kp : K p by apply: subset_limSK_K.
-  have [_ /(_ _ sge0) sol_ats]:= sol_is_sol sol0 solP Kp.
+  have [_ /(_ _ sge0) sol_ats]:= LaSalle.sol_is_sol (H := hypos) Kp.
   exact/derivable1_diffP.
 move=> s sge0.
 suff : (sol p s)..[3] ^+ 2 == (Num.sqrt (1 - p..[2] ^+ 2)) ^+2.
@@ -930,7 +932,7 @@ Lemma En0_sol4_eq0 p :
 Proof.
 move=> limSKp Epn0 t tge0.
 have Kp : K p by apply: subset_limSK_K.
-have [_ /(_ _ tge0) sol't] := sol_is_sol sol0 solP Kp.
+have [_ /(_ _ tge0) sol't] := LaSalle.sol_is_sol (H := hypos) Kp.
 have : (sol p t)..[3] * (sol p t)..[4] == 0.
   rewrite -oppr_eq0 -mulNr; apply/eqP.
   apply (is_derive_nneg_eq (En0_sol2_const limSKp Epn0) tge0); last first.
@@ -957,7 +959,7 @@ suff : (Fpendulum (sol p 0))..[4] = 0.
 apply (is_derive_nneg_eq (En0_sol4_eq0 limSKp Epn0) (lexx 0)); last first.
   exact: is_derive_cst.
 have Kp : K p by apply: subset_limSK_K.
-have [_ /(_ _ (lexx 0))] := sol_is_sol sol0 solP Kp.
+have [_ /(_ _ (lexx 0))] := LaSalle.sol_is_sol (H := hypos) Kp.
 exact: is_derive_component.
 Qed.
 
@@ -1001,7 +1003,8 @@ Qed.
 Lemma cvg_to_homoclinic_orbit p : K p ->
   sol p @ +oo --> (homoclinic_orbit : set [the pseudoMetricType _ of U]).
 Proof.
-move=> Kp A [_/posnumP[e] hoe_A]; apply: cvg_to_limS K_compact Kinvar _ Kp _ _.
+move=> Kp A [_/posnumP[e] hoe_A].
+apply: (@cvg_to_limS _ _ _ _ K_compact Kinvar _ Kp).
 exists e%:num => //= q [r /subset_limSK_homoclinic_orbit hor re_q].
 by apply: hoe_A; exists r.
 Qed.
