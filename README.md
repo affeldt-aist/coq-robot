@@ -26,6 +26,7 @@ Mathematical Components library.
 - License: [LGPL-2.1-or-later](LICENSE)
 - Additional dependencies:
   - Rocq core
+  - Rocq Stdlib
   - [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder)
   - [MathComp ssreflect](https://math-comp.github.io)
   - [MathComp fingroup](https://math-comp.github.io)
